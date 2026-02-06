@@ -1,0 +1,78 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/nemo",
+    "crates/nemo-config",
+    "crates/nemo-registry",
+    "crates/nemo-layout",
+    "crates/nemo-data",
+    "crates/nemo-extension",
+    "crates/nemo-integration",
+    "crates/nemo-events",
+    "crates/nemo-plugin-api",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/nemo"
+
+[workspace.dependencies]
+# GPUI
+gpui = "0.2.2"
+gpui-component = "0.5.1"
+
+# Async
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+futures = "0.3"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Error handling
+thiserror = "1"
+anyhow = "1"
+miette = { version = "7", features = ["fancy"] }
+
+# Configuration
+hcl-rs = "0.18"
+
+# Scripting
+rhai = "1.19"
+
+# Plugin loading
+libloading = "0.8"
+
+# Networking
+reqwest = { version = "0.12", features = ["json"] }
+tokio-tungstenite = "0.24"
+
+# Messaging
+rumqttc = "0.24"
+redis = { version = "0.27", features = ["tokio-comp"] }
+async-nats = "0.37"
+
+# File watching
+notify = "6"
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+indexmap = { version = "2", features = ["serde"] }
+semver = { version = "1", features = ["serde"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+clap = { version = "4", features = ["derive"] }
+
+# Internal crates
+nemo-config = { path = "crates/nemo-config" }
+nemo-registry = { path = "crates/nemo-registry" }
+nemo-layout = { path = "crates/nemo-layout" }
+nemo-data = { path = "crates/nemo-data" }
+nemo-extension = { path = "crates/nemo-extension" }
+nemo-integration = { path = "crates/nemo-integration" }
+nemo-events = { path = "crates/nemo-events" }
+nemo-plugin-api = { path = "crates/nemo-plugin-api" }
