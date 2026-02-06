@@ -153,7 +153,8 @@ impl NemoRootView {
                     .get("label")
                     .and_then(|v| v.as_str())
                     .unwrap_or("Button");
-                return div()
+
+                let mut button = div()
                     .px_4()
                     .py_2()
                     .bg(rgb(0x89b4fa))
@@ -162,6 +163,19 @@ impl NemoRootView {
                     .cursor_pointer()
                     .hover(|s| s.bg(rgb(0xb4befe)))
                     .child(label.to_string());
+
+                // Wire up click handler if present
+                if let Some(handler) = component.handlers.get("click") {
+                    let runtime = Arc::clone(&self.runtime);
+                    let component_id = component.id.clone();
+                    let handler = handler.clone();
+
+                    button = button.on_mouse_down(MouseButton::Left, move |_event, _window, _cx| {
+                        runtime.call_handler(&handler, &component_id, "click");
+                    });
+                }
+
+                return button;
             }
             "text" => {
                 let content = component

@@ -16,6 +16,8 @@ pub struct BuildResult {
     pub component_type: String,
     /// Resolved properties.
     pub properties: HashMap<String, Value>,
+    /// Event handlers (event name -> handler string).
+    pub handlers: HashMap<String, String>,
     /// Child build results.
     pub children: Vec<BuildResult>,
 }
@@ -89,6 +91,7 @@ impl LayoutBuilder {
             id,
             component_type: node.component_type.clone(),
             properties: resolved_props,
+            handlers: node.handlers.clone(),
             children,
         })
     }

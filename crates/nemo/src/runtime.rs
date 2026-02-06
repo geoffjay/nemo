@@ -154,10 +154,91 @@ impl NemoRuntime {
             Ok::<(), anyhow::Error>(())
         })?;
 
+        // Load scripts from configuration
+        self.load_scripts_from_config()?;
+
         // Apply layout from configuration
         self.apply_layout_from_config()?;
 
         info!("Runtime initialization complete");
+        Ok(())
+    }
+
+    /// Loads scripts specified in configuration.
+    fn load_scripts_from_config(&self) -> Result<()> {
+        let scripts_config = self.tokio_runtime.block_on(async {
+            let config = self.config.read().await;
+            config.get("scripts").cloned()
+        });
+
+        if let Some(scripts) = scripts_config {
+            // Handle scripts.path for directory-based loading
+            if let Some(path_str) = scripts.get("path").and_then(|v| v.as_str()) {
+                let scripts_path = if path_str.starts_with("./") || path_str.starts_with("../") {
+                    // Relative to config file
+                    self.config_path
+                        .parent()
+                        .unwrap_or(std::path::Path::new("."))
+                        .join(path_str)
+                } else {
+                    std::path::PathBuf::from(path_str)
+                };
+
+                if scripts_path.exists() && scripts_path.is_dir() {
+                    info!("Loading scripts from: {:?}", scripts_path);
+                    self.tokio_runtime.block_on(async {
+                        let mut ext = self.extension_manager.write().await;
+                        ext.add_script_path(&scripts_path);
+
+                        // Load all .rhai files in the directory
+                        if let Ok(entries) = std::fs::read_dir(&scripts_path) {
+                            for entry in entries.flatten() {
+                                let path = entry.path();
+                                if path.extension().map(|e| e == "rhai").unwrap_or(false) {
+                                    match ext.load_script(&path) {
+                                        Ok(id) => info!("Loaded script: {}", id),
+                                        Err(e) => {
+                                            tracing::warn!("Failed to load script {:?}: {}", path, e)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    debug!("Scripts path does not exist: {:?}", scripts_path);
+                }
+            }
+
+            // Handle individual script files specified in the config
+            if let Some(files) = scripts.get("files").and_then(|v| v.as_array()) {
+                for file_value in files {
+                    if let Some(file_path) = file_value.as_str() {
+                        let script_path = if file_path.starts_with("./") || file_path.starts_with("../") {
+                            self.config_path
+                                .parent()
+                                .unwrap_or(std::path::Path::new("."))
+                                .join(file_path)
+                        } else {
+                            std::path::PathBuf::from(file_path)
+                        };
+
+                        if script_path.exists() {
+                            self.tokio_runtime.block_on(async {
+                                let mut ext = self.extension_manager.write().await;
+                                match ext.load_script(&script_path) {
+                                    Ok(id) => info!("Loaded script: {}", id),
+                                    Err(e) => {
+                                        tracing::warn!("Failed to load script {:?}: {}", script_path, e)
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
         Ok(())
     }
 
@@ -209,6 +290,41 @@ impl NemoRuntime {
     pub fn set_config(&self, _path: &str, _value: Value) -> Result<()> {
         // Configuration is typically read-only after loading
         Ok(())
+    }
+
+    /// Calls an event handler.
+    ///
+    /// Handler format: "script_id::function_name" or just "function_name" (uses default script)
+    pub fn call_handler(&self, handler: &str, component_id: &str, event_data: &str) {
+        // Parse handler format: "script_id::function_name" or "function_name"
+        let (script_id, function_name) = if let Some(pos) = handler.find("::") {
+            (&handler[..pos], &handler[pos + 2..])
+        } else {
+            // Default to "handlers" script if no script specified
+            ("handlers", handler)
+        };
+
+        debug!(
+            "Calling handler: {}::{} for component {} with data: {}",
+            script_id, function_name, component_id, event_data
+        );
+
+        self.tokio_runtime.block_on(async {
+            let ext = self.extension_manager.read().await;
+            match ext.call_script::<()>(
+                script_id,
+                function_name,
+                (component_id.to_string(), event_data.to_string()),
+            ) {
+                Ok(_) => debug!("Handler {}::{} executed successfully", script_id, function_name),
+                Err(e) => tracing::warn!(
+                    "Handler {}::{} failed: {}",
+                    script_id,
+                    function_name,
+                    e
+                ),
+            }
+        });
     }
 
     /// Parses and applies the layout configuration.
@@ -359,8 +475,17 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
                 }
             }
             _ => {
-                // Regular property
-                node = node.with_prop(key.clone(), val.clone());
+                // Check if this is an event handler (on_* attributes)
+                if key.starts_with("on_") {
+                    if let Some(handler) = val.as_str() {
+                        // Extract event name (e.g., "on_click" -> "click")
+                        let event_name = &key[3..];
+                        node = node.with_handler(event_name, handler);
+                    }
+                } else {
+                    // Regular property
+                    node = node.with_prop(key.clone(), val.clone());
+                }
             }
         }
     }

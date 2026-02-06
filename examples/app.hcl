@@ -15,6 +15,11 @@ app {
   }
 }
 
+# Scripts configuration
+scripts {
+  path = "./scripts"
+}
+
 # Layout configuration
 layout {
   type = "stack"
@@ -30,6 +35,7 @@ layout {
     component "button" {
       type = "button"
       label = "Click Me"
+      on_click = "on_button_click"
     }
   }
 }

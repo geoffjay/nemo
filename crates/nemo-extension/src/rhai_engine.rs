@@ -109,6 +109,25 @@ impl RhaiEngine {
         engine.register_fn("replace", |s: &str, from: &str, to: &str| {
             s.replace(from, to)
         });
+
+        // Logging functions (using tracing)
+        engine.register_fn("log_debug", |msg: &str| {
+            tracing::debug!(target: "rhai_script", "{}", msg);
+        });
+        engine.register_fn("log_info", |msg: &str| {
+            tracing::info!(target: "rhai_script", "{}", msg);
+        });
+        engine.register_fn("log_warn", |msg: &str| {
+            tracing::warn!(target: "rhai_script", "{}", msg);
+        });
+        engine.register_fn("log_error", |msg: &str| {
+            tracing::error!(target: "rhai_script", "{}", msg);
+        });
+
+        // Print function for simple output
+        engine.register_fn("print", |msg: &str| {
+            println!("{}", msg);
+        });
     }
 
     /// Loads and compiles a script.

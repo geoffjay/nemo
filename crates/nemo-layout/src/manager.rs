@@ -25,7 +25,7 @@ pub struct LayoutManager {
 }
 
 /// A built component instance.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BuiltComponent {
     /// Component ID.
     pub id: String,
@@ -33,6 +33,8 @@ pub struct BuiltComponent {
     pub component_type: String,
     /// Current property values.
     pub properties: HashMap<String, Value>,
+    /// Event handlers (event name -> handler string).
+    pub handlers: HashMap<String, String>,
     /// Child component IDs.
     pub children: Vec<String>,
     /// Parent component ID (if any).
@@ -92,6 +94,7 @@ impl LayoutManager {
             id: result.id.clone(),
             component_type: result.component_type.clone(),
             properties: result.properties.clone(),
+            handlers: result.handlers.clone(),
             children: child_ids,
             parent,
         };
