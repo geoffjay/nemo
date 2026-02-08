@@ -7,6 +7,7 @@ use nemo_events::EventBus;
 use nemo_extension::ExtensionManager;
 use nemo_integration::IntegrationGateway;
 use nemo_layout::{LayoutConfig, LayoutManager, LayoutNode, LayoutType};
+use nemo_plugin_api::{LogLevel, PluginContext, PluginError, PluginValue};
 use nemo_registry::{register_all_builtins, ComponentRegistry};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -238,6 +239,18 @@ impl NemoRuntime {
                 }
             }
         }
+
+        // Register the runtime context with the extension manager for API access
+        let context = Arc::new(RuntimeContext::new(
+            Arc::clone(&self.config),
+            Arc::clone(&self.layout_manager),
+            Arc::clone(&self.event_bus),
+        ));
+
+        self.tokio_runtime.block_on(async {
+            let mut ext = self.extension_manager.write().await;
+            ext.register_context(context);
+        });
 
         Ok(())
     }
@@ -491,4 +504,157 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
     }
 
     Some(node)
+}
+
+/// Runtime context providing API access to scripts and plugins.
+pub struct RuntimeContext {
+    config: Arc<RwLock<Value>>,
+    layout_manager: Arc<RwLock<LayoutManager>>,
+    event_bus: Arc<EventBus>,
+}
+
+impl RuntimeContext {
+    /// Creates a new runtime context.
+    pub fn new(
+        config: Arc<RwLock<Value>>,
+        layout_manager: Arc<RwLock<LayoutManager>>,
+        event_bus: Arc<EventBus>,
+    ) -> Self {
+        Self {
+            config,
+            layout_manager,
+            event_bus,
+        }
+    }
+}
+
+impl PluginContext for RuntimeContext {
+    fn get_data(&self, path: &str) -> Option<PluginValue> {
+        // For now, data is stored in config under "data" key
+        // Use try_read to avoid blocking, fall back to None if locked
+        if let Ok(config) = self.config.try_read() {
+            get_nested_value(&config, &format!("data.{}", path)).map(value_to_plugin_value)
+        } else {
+            None
+        }
+    }
+
+    fn set_data(&self, path: &str, value: PluginValue) -> Result<(), PluginError> {
+        // Data setting would require mutable access and data store
+        // For now, log a warning
+        tracing::warn!("set_data not yet implemented: {} = {:?}", path, value);
+        Ok(())
+    }
+
+    fn emit_event(&self, event_type: &str, payload: PluginValue) {
+        let json_value = plugin_value_to_json(payload);
+        self.event_bus.emit_simple(event_type, json_value);
+    }
+
+    fn get_config(&self, path: &str) -> Option<PluginValue> {
+        if let Ok(config) = self.config.try_read() {
+            get_nested_value(&config, path).map(value_to_plugin_value)
+        } else {
+            None
+        }
+    }
+
+    fn log(&self, level: LogLevel, message: &str) {
+        match level {
+            LogLevel::Debug => tracing::debug!(target: "plugin", "{}", message),
+            LogLevel::Info => tracing::info!(target: "plugin", "{}", message),
+            LogLevel::Warn => tracing::warn!(target: "plugin", "{}", message),
+            LogLevel::Error => tracing::error!(target: "plugin", "{}", message),
+        }
+    }
+
+    fn get_component_property(&self, component_id: &str, property: &str) -> Option<PluginValue> {
+        if let Ok(layout_manager) = self.layout_manager.try_read() {
+            layout_manager
+                .get_component(component_id)
+                .and_then(|component| component.properties.get(property))
+                .map(value_to_plugin_value)
+        } else {
+            None
+        }
+    }
+
+    fn set_component_property(
+        &self,
+        component_id: &str,
+        property: &str,
+        value: PluginValue,
+    ) -> Result<(), PluginError> {
+        if let Ok(mut layout_manager) = self.layout_manager.try_write() {
+            let config_value = plugin_value_to_config_value(value);
+            layout_manager
+                .set_property(component_id, property, config_value)
+                .map_err(|e| PluginError::ComponentFailed(e.to_string()))
+        } else {
+            Err(PluginError::ComponentFailed("Layout manager is locked".to_string()))
+        }
+    }
+}
+
+/// Converts a nemo_config::Value to a PluginValue.
+fn value_to_plugin_value(value: &Value) -> PluginValue {
+    match value {
+        Value::Null => PluginValue::Null,
+        Value::Bool(b) => PluginValue::Bool(*b),
+        Value::Integer(i) => PluginValue::Integer(*i),
+        Value::Float(f) => PluginValue::Float(*f),
+        Value::String(s) => PluginValue::String(s.clone()),
+        Value::Array(arr) => {
+            PluginValue::Array(arr.iter().map(value_to_plugin_value).collect())
+        }
+        Value::Object(obj) => {
+            PluginValue::Object(
+                obj.iter()
+                    .map(|(k, v)| (k.clone(), value_to_plugin_value(v)))
+                    .collect(),
+            )
+        }
+    }
+}
+
+/// Converts a PluginValue to a nemo_config::Value.
+fn plugin_value_to_config_value(value: PluginValue) -> Value {
+    match value {
+        PluginValue::Null => Value::Null,
+        PluginValue::Bool(b) => Value::Bool(b),
+        PluginValue::Integer(i) => Value::Integer(i),
+        PluginValue::Float(f) => Value::Float(f),
+        PluginValue::String(s) => Value::String(s),
+        PluginValue::Array(arr) => {
+            Value::Array(arr.into_iter().map(plugin_value_to_config_value).collect())
+        }
+        PluginValue::Object(obj) => {
+            let map: indexmap::IndexMap<String, Value> = obj
+                .into_iter()
+                .map(|(k, v)| (k, plugin_value_to_config_value(v)))
+                .collect();
+            Value::Object(map)
+        }
+    }
+}
+
+/// Converts a PluginValue to a serde_json::Value for events.
+fn plugin_value_to_json(value: PluginValue) -> serde_json::Value {
+    match value {
+        PluginValue::Null => serde_json::Value::Null,
+        PluginValue::Bool(b) => serde_json::Value::Bool(b),
+        PluginValue::Integer(i) => serde_json::json!(i),
+        PluginValue::Float(f) => serde_json::json!(f),
+        PluginValue::String(s) => serde_json::Value::String(s),
+        PluginValue::Array(arr) => {
+            serde_json::Value::Array(arr.into_iter().map(plugin_value_to_json).collect())
+        }
+        PluginValue::Object(obj) => {
+            let map: serde_json::Map<String, serde_json::Value> = obj
+                .into_iter()
+                .map(|(k, v)| (k, plugin_value_to_json(v)))
+                .collect();
+            serde_json::Value::Object(map)
+        }
+    }
 }

@@ -16,11 +16,13 @@ nemo-data = { workspace = true }
 nemo-extension = { workspace = true }
 nemo-integration = { workspace = true }
 nemo-events = { workspace = true }
+nemo-plugin-api = { workspace = true }
 gpui = { workspace = true }
 gpui-component = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+indexmap = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }

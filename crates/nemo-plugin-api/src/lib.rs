@@ -164,6 +164,17 @@ pub trait PluginContext: Send + Sync {
 
     /// Logs a message.
     fn log(&self, level: LogLevel, message: &str);
+
+    /// Gets a component property by component ID and property name.
+    fn get_component_property(&self, component_id: &str, property: &str) -> Option<PluginValue>;
+
+    /// Sets a component property by component ID and property name.
+    fn set_component_property(
+        &self,
+        component_id: &str,
+        property: &str,
+        value: PluginValue,
+    ) -> Result<(), PluginError>;
 }
 
 /// Log level.

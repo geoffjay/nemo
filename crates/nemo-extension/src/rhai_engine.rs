@@ -98,6 +98,30 @@ impl RhaiEngine {
         engine.register_fn("max", |a: f64, b: f64| a.max(b));
         engine.register_fn("clamp", |x: i64, min: i64, max: i64| x.clamp(min, max));
         engine.register_fn("clamp", |x: f64, min: f64, max: f64| x.clamp(min, max));
+        engine.register_fn("floor", |x: f64| x.floor());
+        engine.register_fn("ceil", |x: f64| x.ceil());
+        engine.register_fn("round", |x: f64| x.round());
+        engine.register_fn("sqrt", |x: f64| x.sqrt());
+        engine.register_fn("pow", |x: f64, y: f64| x.powf(y));
+
+        // Type conversion functions
+        engine.register_fn("parse_float", |s: &str| -> f64 {
+            s.parse::<f64>().unwrap_or(0.0)
+        });
+        engine.register_fn("parse_int", |s: &str| -> i64 {
+            s.parse::<i64>().unwrap_or(0)
+        });
+        engine.register_fn("to_string", |x: i64| x.to_string());
+        engine.register_fn("to_string", |x: f64| {
+            // Format nicely: remove trailing zeros for whole numbers
+            if x == x.floor() && x.abs() < 1e15 {
+                format!("{}", x as i64)
+            } else {
+                format!("{}", x)
+            }
+        });
+        engine.register_fn("to_int", |x: f64| x as i64);
+        engine.register_fn("to_float", |x: i64| x as f64);
 
         // String functions
         engine.register_fn("trim", |s: &str| s.trim().to_string());
@@ -291,10 +315,76 @@ impl RhaiEngine {
             ctx.log(LogLevel::Warn, msg);
         });
 
-        let ctx = context;
+        let ctx = context.clone();
         self.engine.register_fn("log_error", move |msg: &str| {
             ctx.log(LogLevel::Error, msg);
         });
+
+        // Component property functions
+        let ctx = context.clone();
+        self.engine
+            .register_fn("get_component_property", move |component_id: &str, property: &str| -> Dynamic {
+                match ctx.get_component_property(component_id, property) {
+                    Some(value) => plugin_value_to_dynamic(value),
+                    None => Dynamic::UNIT,
+                }
+            });
+
+        let ctx = context.clone();
+        self.engine
+            .register_fn("set_component_property", move |component_id: &str, property: &str, value: Dynamic| {
+                let plugin_value = dynamic_to_plugin_value(value);
+                if let Err(e) = ctx.set_component_property(component_id, property, plugin_value) {
+                    tracing::warn!("Failed to set component property: {}", e);
+                }
+            });
+
+        // Convenience wrappers for common properties
+        let ctx = context.clone();
+        self.engine
+            .register_fn("get_component_label", move |component_id: &str| -> String {
+                ctx.get_component_property(component_id, "label")
+                    .and_then(|v| match v {
+                        PluginValue::String(s) => Some(s),
+                        _ => None,
+                    })
+                    .unwrap_or_default()
+            });
+
+        let ctx = context.clone();
+        self.engine
+            .register_fn("get_component_text", move |component_id: &str| -> String {
+                ctx.get_component_property(component_id, "text")
+                    .and_then(|v| match v {
+                        PluginValue::String(s) => Some(s),
+                        _ => None,
+                    })
+                    .unwrap_or_default()
+            });
+
+        let ctx = context.clone();
+        self.engine
+            .register_fn("set_component_text", move |component_id: &str, text: &str| {
+                if let Err(e) = ctx.set_component_property(
+                    component_id,
+                    "text",
+                    PluginValue::String(text.to_string()),
+                ) {
+                    tracing::warn!("Failed to set component text: {}", e);
+                }
+            });
+
+        let ctx = context;
+        self.engine
+            .register_fn("set_component_label", move |component_id: &str, label: &str| {
+                if let Err(e) = ctx.set_component_property(
+                    component_id,
+                    "label",
+                    PluginValue::String(label.to_string()),
+                ) {
+                    tracing::warn!("Failed to set component label: {}", e);
+                }
+            });
     }
 
     /// Lists all loaded script IDs.
@@ -333,6 +423,34 @@ fn plugin_value_to_dynamic(value: PluginValue) -> Dynamic {
                 .collect();
             Dynamic::from(map)
         }
+    }
+}
+
+/// Converts a RHAI Dynamic to a PluginValue.
+fn dynamic_to_plugin_value(value: Dynamic) -> PluginValue {
+    if value.is_unit() {
+        PluginValue::Null
+    } else if value.is_bool() {
+        PluginValue::Bool(value.as_bool().unwrap_or(false))
+    } else if value.is_int() {
+        PluginValue::Integer(value.as_int().unwrap_or(0))
+    } else if value.is_float() {
+        PluginValue::Float(value.as_float().unwrap_or(0.0))
+    } else if value.is_string() {
+        PluginValue::String(value.into_string().unwrap_or_default())
+    } else if value.is_array() {
+        let arr: Vec<Dynamic> = value.into_array().unwrap_or_default();
+        PluginValue::Array(arr.into_iter().map(dynamic_to_plugin_value).collect())
+    } else if value.is_map() {
+        let map: rhai::Map = value.cast();
+        let obj: std::collections::HashMap<String, PluginValue> = map
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), dynamic_to_plugin_value(v)))
+            .collect();
+        PluginValue::Object(obj)
+    } else {
+        // Try to convert to string as fallback
+        PluginValue::String(value.to_string())
     }
 }
 

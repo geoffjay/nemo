@@ -137,7 +137,26 @@ impl NemoRootView {
         layout_manager: &tokio::sync::RwLockReadGuard<'_, nemo_layout::LayoutManager>,
     ) -> Div {
         let mut container = match component.component_type.as_str() {
-            "stack" => div().flex().flex_col().gap_4(),
+            "stack" => {
+                let direction = component
+                    .properties
+                    .get("direction")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("vertical");
+
+                let spacing = component
+                    .properties
+                    .get("spacing")
+                    .and_then(|v| v.as_i64())
+                    .unwrap_or(4);
+
+                let base = div().flex().gap(px(spacing as f32));
+                if direction == "horizontal" {
+                    base.flex_row()
+                } else {
+                    base.flex_col()
+                }
+            }
             "panel" => div().flex().flex_col().p_4().rounded_md().bg(rgb(0x313244)),
             "label" => {
                 let text = component
