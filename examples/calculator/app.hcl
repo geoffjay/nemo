@@ -51,24 +51,32 @@ layout {
       component "btn_clear" {
         type = "button"
         label = "C"
+        width = 64
+        height = 64
         on_click = "on_clear"
       }
 
       component "btn_negate" {
         type = "button"
         label = "+/-"
+        width = 64
+        height = 64
         on_click = "on_negate"
       }
 
       component "btn_percent" {
         type = "button"
         label = "%"
+        width = 64
+        height = 64
         on_click = "on_percent"
       }
 
       component "btn_divide" {
         type = "button"
         label = "/"
+        width = 64
+        height = 64
         on_click = "on_operator"
       }
     }
@@ -82,24 +90,32 @@ layout {
       component "btn_7" {
         type = "button"
         label = "7"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_8" {
         type = "button"
         label = "8"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_9" {
         type = "button"
         label = "9"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_multiply" {
         type = "button"
         label = "*"
+        width = 64
+        height = 64
         on_click = "on_operator"
       }
     }
@@ -113,24 +129,32 @@ layout {
       component "btn_4" {
         type = "button"
         label = "4"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_5" {
         type = "button"
         label = "5"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_6" {
         type = "button"
         label = "6"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_subtract" {
         type = "button"
         label = "-"
+        width = 64
+        height = 64
         on_click = "on_operator"
       }
     }
@@ -144,24 +168,32 @@ layout {
       component "btn_1" {
         type = "button"
         label = "1"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_2" {
         type = "button"
         label = "2"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_3" {
         type = "button"
         label = "3"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_add" {
         type = "button"
         label = "+"
+        width = 64
+        height = 64
         on_click = "on_operator"
       }
     }
@@ -175,18 +207,24 @@ layout {
       component "btn_0" {
         type = "button"
         label = "0"
+        width = 64
+        height = 64
         on_click = "on_digit"
       }
 
       component "btn_decimal" {
         type = "button"
         label = "."
+        width = 64
+        height = 64
         on_click = "on_decimal"
       }
 
       component "btn_equals" {
         type = "button"
         label = "="
+        width = 64
+        height = 64
         on_click = "on_equals"
       }
     }

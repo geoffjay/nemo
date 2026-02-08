@@ -173,6 +173,10 @@ impl NemoRootView {
                     .and_then(|v| v.as_str())
                     .unwrap_or("Button");
 
+                let width = component.properties.get("width").and_then(|v| v.as_i64());
+                let height = component.properties.get("height").and_then(|v| v.as_i64());
+                let flex = component.properties.get("flex").and_then(|v| v.as_f64());
+
                 let mut button = div()
                     .px_4()
                     .py_2()
@@ -181,7 +185,23 @@ impl NemoRootView {
                     .rounded_md()
                     .cursor_pointer()
                     .hover(|s| s.bg(rgb(0xb4befe)))
+                    .items_center()
+                    .justify_center()
                     .child(label.to_string());
+
+                // Apply sizing
+                if let Some(w) = width {
+                    button = button.w(px(w as f32));
+                }
+                if let Some(h) = height {
+                    button = button.h(px(h as f32));
+                }
+                if let Some(f) = flex {
+                    button = button.flex_grow().flex_basis(relative(f as f32));
+                } else if width.is_none() {
+                    // Default: buttons grow equally in horizontal stacks
+                    button = button.flex_1();
+                }
 
                 // Wire up click handler if present
                 if let Some(handler) = component.handlers.get("click") {

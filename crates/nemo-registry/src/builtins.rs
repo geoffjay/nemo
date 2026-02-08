@@ -90,6 +90,9 @@ fn register_input_components(registry: &ComponentRegistry) {
             PropertySchema::string().with_default("primary"),
         )
         .property("disabled", PropertySchema::boolean().with_default(false))
+        .property("width", PropertySchema::integer())
+        .property("height", PropertySchema::integer())
+        .property("flex", PropertySchema::float())
         .require("label");
     let _ = registry.register_component(button);
 
