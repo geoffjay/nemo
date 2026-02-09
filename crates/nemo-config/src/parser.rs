@@ -113,17 +113,46 @@ impl HclParser {
                 Value::Object(map)
             }
             hcl::Expression::TemplateExpr(template) => {
-                // Keep template expressions as strings with markers
-                Value::String(format!("${{{:?}}}", template))
+                // Parse template into elements and reconstruct with ${...} markers
+                // that the resolver can handle
+                let Ok(tpl) = hcl::template::Template::from_expr(template) else {
+                    return Value::String(format!("{}", template));
+                };
+                let mut result = String::new();
+                for element in tpl.elements() {
+                    match element {
+                        hcl::template::Element::Literal(s) => result.push_str(&s),
+                        hcl::template::Element::Interpolation(interp) => {
+                            let val = self.expression_to_value(&interp.expr);
+                            if let Value::String(s) = val {
+                                result.push_str(&s);
+                            } else {
+                                result.push_str(&val.to_string());
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Value::String(result)
             }
             hcl::Expression::Variable(var) => {
                 // Keep variable references as strings with markers
                 Value::String(format!("${{{}}}", var.as_str()))
             }
             hcl::Expression::Traversal(traversal) => {
-                // Keep traversals as strings - build path manually
+                // Keep traversals as strings - build path from operators
                 let root = format!("{}", traversal.expr);
-                let ops: Vec<String> = traversal.operators.iter().map(|op| format!("{:?}", op)).collect();
+                let ops: Vec<String> = traversal.operators.iter().map(|op| {
+                    match op {
+                        hcl::expr::TraversalOperator::GetAttr(ident) => ident.as_str().to_string(),
+                        hcl::expr::TraversalOperator::Index(expr) => {
+                            format!("[{}]", self.expression_to_value(expr))
+                        }
+                        hcl::expr::TraversalOperator::LegacyIndex(idx) => format!("[{}]", idx),
+                        hcl::expr::TraversalOperator::AttrSplat => "*".to_string(),
+                        hcl::expr::TraversalOperator::FullSplat => "[*]".to_string(),
+                    }
+                }).collect();
                 let path = if ops.is_empty() {
                     root
                 } else {

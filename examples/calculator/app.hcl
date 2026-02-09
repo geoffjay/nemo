@@ -1,5 +1,10 @@
 # Calculator Application Configuration
 
+variable "button_height" {
+  type = "int"
+  default = "${var.button_height}"
+}
+
 app {
   title = "Nemo Calculator"
 
@@ -63,7 +68,7 @@ layout {
         type = "button"
         label = "C"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_clear"
       }
 
@@ -71,7 +76,7 @@ layout {
         type = "button"
         label = "+/-"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_negate"
       }
 
@@ -79,7 +84,7 @@ layout {
         type = "button"
         label = "%"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_percent"
       }
 
@@ -87,7 +92,7 @@ layout {
         type = "button"
         label = "/"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_operator"
       }
     }
@@ -103,7 +108,7 @@ layout {
         type = "button"
         label = "7"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -111,7 +116,7 @@ layout {
         type = "button"
         label = "8"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -119,7 +124,7 @@ layout {
         type = "button"
         label = "9"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -127,7 +132,7 @@ layout {
         type = "button"
         label = "*"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_operator"
       }
     }
@@ -143,7 +148,7 @@ layout {
         type = "button"
         label = "4"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -151,7 +156,7 @@ layout {
         type = "button"
         label = "5"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -159,7 +164,7 @@ layout {
         type = "button"
         label = "6"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -167,7 +172,7 @@ layout {
         type = "button"
         label = "-"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_operator"
       }
     }
@@ -183,7 +188,7 @@ layout {
         type = "button"
         label = "1"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -191,7 +196,7 @@ layout {
         type = "button"
         label = "2"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -199,7 +204,7 @@ layout {
         type = "button"
         label = "3"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -207,7 +212,7 @@ layout {
         type = "button"
         label = "+"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_operator"
       }
     }
@@ -223,7 +228,7 @@ layout {
         type = "button"
         label = "0"
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_digit"
       }
 
@@ -231,7 +236,7 @@ layout {
         type = "button"
         label = "."
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_decimal"
       }
 
@@ -239,7 +244,7 @@ layout {
         type = "button"
         label = "="
         flex = 1
-        min_height = 64
+        min_height = "${var.button_height}"
         on_click = "on_equals"
       }
     }

@@ -186,21 +186,9 @@ impl ConfigResolver {
             }
         }
 
-        // Variable reference: var.name or env.NAME
-        if expr.starts_with("var.") {
-            let var_path = &expr[4..];
-            return self.resolve_variable_path(var_path, context);
-        }
-
-        if expr.starts_with("env.") {
-            let env_name = &expr[4..];
-            return Ok(context
-                .get_env(env_name)
-                .map(|s| Value::String(s.clone()))
-                .unwrap_or(Value::Null));
-        }
-
         // Conditional: cond ? true_val : false_val
+        // Must be checked before var./env. prefixes so expressions like
+        // "var.enabled ? \"yes\" : \"no\"" are split before the prefix match.
         if let Some(q_pos) = expr.find('?') {
             if let Some(c_pos) = expr.find(':') {
                 let cond = &expr[..q_pos].trim();
@@ -223,6 +211,7 @@ impl ConfigResolver {
         }
 
         // Comparison operators
+        // Must be checked before var./env. prefixes for the same reason.
         for op in &[" == ", " != ", " >= ", " <= ", " > ", " < "] {
             if let Some(pos) = expr.find(op) {
                 let left = self.resolve_expression(&expr[..pos], context)?;
@@ -238,6 +227,20 @@ impl ConfigResolver {
                 };
                 return Ok(Value::Bool(result));
             }
+        }
+
+        // Variable reference: var.name or env.NAME
+        if expr.starts_with("var.") {
+            let var_path = &expr[4..];
+            return self.resolve_variable_path(var_path, context);
+        }
+
+        if expr.starts_with("env.") {
+            let env_name = &expr[4..];
+            return Ok(context
+                .get_env(env_name)
+                .map(|s| Value::String(s.clone()))
+                .unwrap_or(Value::Null));
         }
 
         Err(ResolveError::UndefinedVariable {
