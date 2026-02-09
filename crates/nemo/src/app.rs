@@ -18,15 +18,14 @@ pub struct App {
 
 impl App {
     /// Creates a new Nemo application.
-    pub fn new(runtime: NemoRuntime, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let runtime = Arc::clone(&runtime);
+    pub fn new(runtime: Arc<NemoRuntime>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let header_bar = cx.new(|_cx| HeaderBar::new(window, _cx));
-        let default_view = cx.new(|_cx| DefaultView::new(runtime, window, _cx));
+        let default_view = cx.new(|_cx| DefaultView::new(Arc::clone(&runtime), window, _cx));
 
         let _subscriptions = vec![];
 
         Self {
-            runtime: Arc::new(runtime),
+            runtime,
             header_bar,
             default_view,
             _subscriptions,
@@ -95,7 +94,7 @@ impl App {
                     .get("text")
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
-                return div().child(text.to_string());
+                return div().child(text.to_string()).into_any_element();
             }
             "button" => {
                 let label = component
@@ -147,7 +146,7 @@ impl App {
                     });
                 }
 
-                return button;
+                return button.into_any_element();
             }
             "text" => {
                 let content = component
@@ -156,7 +155,7 @@ impl App {
                     .or_else(|| component.properties.get("text"))
                     .and_then(|v| v.as_str())
                     .unwrap_or("");
-                return div().child(content.to_string());
+                return div().child(content.to_string()).into_any_element();
             }
             _ => div().flex().flex_col(),
         };
@@ -169,7 +168,7 @@ impl App {
             }
         }
 
-        container
+        container.into_any_element()
     }
 }
 

@@ -19,6 +19,7 @@ nemo-events = { workspace = true }
 nemo-plugin-api = { workspace = true }
 gpui = { workspace = true }
 gpui-component = { workspace = true }
+gpui-component-assets = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

@@ -65,6 +65,7 @@ fn main() -> Result<()> {
         runtime.run_headless()?;
     } else {
         info!("Starting GPUI application...");
+        let runtime = Arc::new(runtime);
         let app = Application::new().with_assets(gpui_component_assets::Assets);
 
         app.run(move |cx| {
