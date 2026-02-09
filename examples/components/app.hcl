@@ -11,8 +11,8 @@ app {
   }
 
   theme {
-    name = "kanagawa"
-    mode = "dark"
+    name = "tokyo night"
+    mode = "light"
   }
 }
 

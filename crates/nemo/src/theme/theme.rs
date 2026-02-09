@@ -12,9 +12,12 @@ use tracing::info;
 
 const THEME_SOURCES: &[&str] = &[
     include_str!("./catppuccin.json"),
+    include_str!("./catppuccin-macchiato.json"),
     include_str!("./kanagawa.json"),
+    include_str!("./kanagawa-dragon.json"),
     include_str!("./tokyo-night.json"),
     include_str!("./gruvbox.json"),
+    include_str!("./nord.json"),
 ];
 
 /// All individual theme variants keyed by exact variant name (e.g. "Kanagawa Wave").
@@ -178,15 +181,26 @@ pub fn apply_configured_theme(
                 ThemeMode::Dark
             };
 
-            if let Some(mut config) = resolve_theme(name, mode) {
+            if let Some((mut light, mut dark)) = resolve_theme_pair(name) {
                 if let Some(ov) = overrides {
-                    config.colors = merge_theme_config_colors(&config.colors, ov);
+                    light.colors = merge_theme_config_colors(&light.colors, ov);
+                    dark.colors = merge_theme_config_colors(&dark.colors, ov);
                 }
 
-                let config = Rc::new(config);
+                let light = Rc::new(light);
+                let dark = Rc::new(dark);
+
                 let theme = Theme::global_mut(cx);
+                // Apply both variants so mode toggling works
+                theme.apply_config(&light);
+                theme.apply_config(&dark);
                 theme.mode = mode;
-                theme.apply_config(&config);
+                // Re-apply the active variant's colors
+                if mode == ThemeMode::Dark {
+                    theme.apply_config(&dark);
+                } else {
+                    theme.apply_config(&light);
+                }
 
                 info!("Applied theme '{}' in {:?} mode", name, mode);
             }
@@ -211,12 +225,14 @@ pub fn apply_theme(name: &str, cx: &mut App) {
     }
 }
 
-/// Apply a theme by color mode
+/// Toggle the color mode using the already-stored light/dark theme configs.
 pub fn change_color_mode(mode: ThemeMode, _win: &mut Window, cx: &mut App) {
-    let theme_name = match mode {
-        ThemeMode::Light => "Kanagawa Lotus",
-        ThemeMode::Dark => "Kanagawa Wave",
+    let theme = Theme::global_mut(cx);
+    let config = if mode == ThemeMode::Dark {
+        theme.dark_theme.clone()
+    } else {
+        theme.light_theme.clone()
     };
-
-    apply_theme(theme_name, cx);
+    theme.mode = mode;
+    theme.apply_config(&config);
 }

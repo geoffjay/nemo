@@ -12,8 +12,8 @@ app {
   }
 
   theme {
-    theme = "kanagawa"
-    mode = "light"
+    name = "nord"
+    mode = "dark"
   }
 }
 
@@ -44,6 +44,7 @@ layout {
     type = "stack"
     direction = "vertical"
     spacing = 6
+    padding = 8
 
     # Row 1: Clear, +/-, %, /
     component "row1" {
