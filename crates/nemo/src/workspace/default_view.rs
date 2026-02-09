@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_component::v_flex;
 use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
@@ -11,10 +12,6 @@ impl DefaultView {
     pub fn new(runtime: Arc<NemoRuntime>, _window: &mut Window, _cx: &mut Context<Self>) -> Self {
         Self { runtime }
     }
-
-    // pub fn view(window: &mut Window, cx: &mut App) -> Entity<Self> {
-    //     cx.new(|cx| Self::new(runtime, window, cx))
-    // }
 }
 
 impl Render for DefaultView {
@@ -25,9 +22,7 @@ impl Render for DefaultView {
             .and_then(|v| v.as_str().map(|s| s.to_string()))
             .unwrap_or_else(|| "Welcome to Nemo".to_string());
 
-        div()
-            .flex()
-            .flex_col()
+        v_flex()
             .items_center()
             .justify_center()
             .size_full()

@@ -98,12 +98,12 @@ fn main() -> Result<()> {
             let width = runtime
                 .get_config("app.window.width")
                 .and_then(|v| v.as_i64())
-                .unwrap_or(1200) as u32;
+                .map(|v| v as u32);
 
             let height = runtime
                 .get_config("app.window.height")
                 .and_then(|v| v.as_i64())
-                .unwrap_or(800) as u32;
+                .map(|v| v as u32);
 
             let runtime = Arc::clone(&runtime);
             let window_options = get_window_options(cx, title, width, height);

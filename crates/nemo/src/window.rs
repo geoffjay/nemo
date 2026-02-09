@@ -4,28 +4,22 @@ use gpui_component::TitleBar;
 pub fn get_window_options(
     cx: &mut App,
     _title: String,
-    _width: u32,
-    _height: u32,
+    width: Option<u32>,
+    height: Option<u32>,
 ) -> WindowOptions {
-    // Default window size when restored from maximized state
-    let restored_size = size(px(1200.), px(800.));
+    let effective_width = width.unwrap_or(1200) as f32;
+    let effective_height = height.unwrap_or(800) as f32;
+    let restored_size = size(px(effective_width), px(effective_height));
     let restored_bounds = Bounds::centered(None, restored_size, cx);
 
-    // TODO: read width and height from config and use those if they're provided,
-    // otherwise use maxmimized bounds
-    //
-    // Create the main window
-    // let window_options = WindowOptions {
-    //     window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
-    //         None,
-    //         size(px(width as f32), px(height as f32)),
-    //         cx,
-    //     ))),
-    //     ..Default::default()
-    // };
+    let window_bounds = if width.is_some() || height.is_some() {
+        Some(WindowBounds::Windowed(restored_bounds))
+    } else {
+        Some(WindowBounds::Maximized(restored_bounds))
+    };
 
     WindowOptions {
-        window_bounds: Some(WindowBounds::Maximized(restored_bounds)),
+        window_bounds,
         titlebar: Some(TitleBar::title_bar_options()),
         window_decorations: Some(WindowDecorations::Client),
         ..Default::default()

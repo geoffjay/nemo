@@ -5,8 +5,8 @@ app {
 
   window {
     title = "Nemo Example"
-    width = 1024
-    height = 768
+    # width = 1024
+    # height = 768
   }
 
   theme {
