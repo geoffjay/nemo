@@ -20,7 +20,6 @@ impl RenderOnce for Panel {
         div()
             .flex()
             .flex_col()
-            .p_4()
             .rounded_md()
             .bg(rgb(0x313244))
             .children(self.children)

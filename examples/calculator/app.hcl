@@ -29,12 +29,13 @@ layout {
   # Display showing current input and result
   component "display" {
     type = "panel"
-    padding = 15
+    margin = 8
 
     component "result" {
       type = "label"
       id = "display_result"
       text = "0"
+      margin = 16
     }
   }
 

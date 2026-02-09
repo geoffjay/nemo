@@ -54,7 +54,9 @@ fn register_layout_components(registry: &ComponentRegistry) {
         .property("height", PropertySchema::integer())
         .property("min_width", PropertySchema::integer())
         .property("min_height", PropertySchema::integer())
-        .property("flex", PropertySchema::float());
+        .property("flex", PropertySchema::float())
+        .property("padding", PropertySchema::integer())
+        .property("margin", PropertySchema::integer());
     let _ = registry.register_component(stack);
 
     // Panel - a generic container
@@ -66,12 +68,13 @@ fn register_layout_components(registry: &ComponentRegistry) {
     };
     panel.schema = ConfigSchema::new("panel")
         .property("title", PropertySchema::string())
-        .property("padding", PropertySchema::integer().with_default(0i64))
         .property("width", PropertySchema::integer())
         .property("height", PropertySchema::integer())
         .property("min_width", PropertySchema::integer())
         .property("min_height", PropertySchema::integer())
-        .property("flex", PropertySchema::float());
+        .property("flex", PropertySchema::float())
+        .property("padding", PropertySchema::integer())
+        .property("margin", PropertySchema::integer());
     let _ = registry.register_component(panel);
 
     // Tabs
@@ -105,6 +108,8 @@ fn register_input_components(registry: &ComponentRegistry) {
         .property("min_width", PropertySchema::integer())
         .property("min_height", PropertySchema::integer())
         .property("flex", PropertySchema::float())
+        .property("padding", PropertySchema::integer())
+        .property("margin", PropertySchema::integer())
         .require("label");
     let _ = registry.register_component(button);
 
