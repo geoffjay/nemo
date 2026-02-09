@@ -50,6 +50,7 @@ layout {
     direction = "vertical"
     spacing = 6
     padding = 8
+    flex = 1
 
     # Row 1: Clear, +/-, %, /
     component "row1" {
