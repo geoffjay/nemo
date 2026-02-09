@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 #[derive(IntoElement, NemoComponent)]
@@ -9,18 +10,18 @@ pub struct Table {
 }
 
 impl RenderOnce for Table {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         div()
             .flex()
             .flex_col()
             .rounded_md()
             .border_1()
-            .border_color(rgb(0x45475a))
+            .border_color(cx.theme().colors.border)
             .p_2()
             .child(
                 div()
                     .text_sm()
-                    .text_color(rgb(0x6c7086))
+                    .text_color(cx.theme().colors.muted_foreground)
                     .child("Table (placeholder)"),
             )
     }

@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 #[derive(IntoElement, NemoComponent)]
@@ -9,7 +10,7 @@ pub struct Tree {
 }
 
 impl RenderOnce for Tree {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         div()
             .flex()
             .flex_col()
@@ -17,7 +18,7 @@ impl RenderOnce for Tree {
             .child(
                 div()
                     .text_sm()
-                    .text_color(rgb(0x6c7086))
+                    .text_color(cx.theme().colors.muted_foreground)
                     .child("Tree (placeholder)"),
             )
     }

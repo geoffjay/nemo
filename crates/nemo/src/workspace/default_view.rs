@@ -1,5 +1,6 @@
 use gpui::*;
 use gpui_component::v_flex;
+use gpui_component::ActiveTheme;
 use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
@@ -15,7 +16,7 @@ impl DefaultView {
 }
 
 impl Render for DefaultView {
-    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let title = self
             .runtime
             .get_config("app.title")
@@ -31,7 +32,7 @@ impl Render for DefaultView {
             .child(
                 div()
                     .text_lg()
-                    .text_color(rgb(0x6c7086))
+                    .text_color(cx.theme().colors.muted_foreground)
                     .child("Configure your application in app.hcl"),
             )
     }

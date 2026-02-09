@@ -11,8 +11,8 @@ app {
   }
 
   theme {
-    background = "#1e1e2e"
-    foreground = "#cdd6f4"
+    name = "kanagawa"
+    mode = "dark"
   }
 }
 

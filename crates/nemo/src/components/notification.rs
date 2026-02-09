@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 #[derive(IntoElement, NemoComponent)]
@@ -10,12 +11,13 @@ pub struct Notification {
 }
 
 impl RenderOnce for Notification {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
+        let colors = &cx.theme().colors;
         let (bg, border_color) = match self.notification_type.as_str() {
-            "error" => (rgb(0x45262e), rgb(0xf38ba8)),
-            "warning" => (rgb(0x45392e), rgb(0xfab387)),
-            "success" => (rgb(0x2e4536), rgb(0xa6e3a1)),
-            _ => (rgb(0x2e3545), rgb(0x89b4fa)), // info
+            "error" => (colors.danger_hover, colors.danger),
+            "warning" => (colors.warning_hover, colors.warning),
+            "success" => (colors.success_hover, colors.success),
+            _ => (colors.info_hover, colors.info), // info
         };
 
         div()

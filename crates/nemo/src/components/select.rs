@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
 
@@ -27,7 +28,7 @@ impl Select {
 }
 
 impl RenderOnce for Select {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         // Extract options from source properties
         let options: Vec<String> = self
             .source
@@ -45,6 +46,10 @@ impl RenderOnce for Select {
         let change_handler = self.source.handlers.get("change").cloned();
         let component_id = self.source.id.clone();
 
+        let border_color = cx.theme().colors.border;
+        let accent = cx.theme().colors.accent;
+        let list_hover = cx.theme().colors.list_hover;
+
         let mut el = div()
             .flex()
             .flex_col()
@@ -53,7 +58,7 @@ impl RenderOnce for Select {
             .py_2()
             .rounded_md()
             .border_1()
-            .border_color(rgb(0x45475a));
+            .border_color(border_color);
 
         for option in options {
             let is_selected = option == selected;
@@ -71,9 +76,9 @@ impl RenderOnce for Select {
                 .child(option.clone());
 
             if is_selected {
-                item = item.bg(rgb(0x45475a));
+                item = item.bg(accent);
             } else {
-                item = item.hover(|s| s.bg(rgb(0x313244)));
+                item = item.hover(move |s| s.bg(list_hover));
             }
 
             item = item.on_mouse_down(MouseButton::Left, move |_event, _window, cx| {

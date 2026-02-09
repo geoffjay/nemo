@@ -12,8 +12,8 @@ app {
   }
 
   theme {
-    background = "#2b2b2b"
-    foreground = "#ffffff"
+    theme = "kanagawa"
+    mode = "light"
   }
 }
 

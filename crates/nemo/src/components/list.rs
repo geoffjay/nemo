@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 #[derive(IntoElement, NemoComponent)]
@@ -8,7 +9,7 @@ pub struct List {
 }
 
 impl RenderOnce for List {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let items: Vec<String> = self
             .source
             .properties
@@ -25,6 +26,7 @@ impl RenderOnce for List {
             })
             .unwrap_or_default();
 
+        let list_hover = cx.theme().colors.list_hover;
         let mut el = div().flex().flex_col().gap_1();
 
         for item in items {
@@ -33,7 +35,7 @@ impl RenderOnce for List {
                     .px_2()
                     .py_1()
                     .rounded_sm()
-                    .hover(|s| s.bg(rgb(0x313244)))
+                    .hover(move |s| s.bg(list_hover))
                     .child(item),
             );
         }

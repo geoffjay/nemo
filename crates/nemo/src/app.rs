@@ -3,6 +3,7 @@
 use gpui::*;
 use gpui_component::input::InputState;
 use gpui_component::v_flex;
+use gpui_component::ActiveTheme;
 use std::sync::Arc;
 
 use crate::components::state::{ComponentState, ComponentStates};
@@ -246,20 +247,8 @@ impl App {
 
 impl Render for App {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Get theme colors from config or use defaults
-        let bg_color = self
-            .runtime
-            .get_config("app.theme.background")
-            .and_then(|v| v.as_str().map(|s| s.to_string()))
-            .and_then(|s| parse_hex_color(&s))
-            .unwrap_or_else(|| rgb(0x1e1e2e).into());
-
-        let text_color = self
-            .runtime
-            .get_config("app.theme.foreground")
-            .and_then(|v| v.as_str().map(|s| s.to_string()))
-            .and_then(|s| parse_hex_color(&s))
-            .unwrap_or_else(|| rgb(0xcdd6f4).into());
+        let bg_color = cx.theme().colors.background;
+        let text_color = cx.theme().colors.foreground;
 
         v_flex()
             .size_full()
@@ -268,15 +257,4 @@ impl Render for App {
             .child(self.header_bar.clone())
             .child(self.render_layout(window, cx))
     }
-}
-
-/// Parses a hex color string to a Hsla color.
-fn parse_hex_color(s: &str) -> Option<Hsla> {
-    let s = s.trim_start_matches('#');
-    if s.len() != 6 {
-        return None;
-    }
-
-    let hex = u32::from_str_radix(s, 16).ok()?;
-    Some(rgb(hex).into())
 }

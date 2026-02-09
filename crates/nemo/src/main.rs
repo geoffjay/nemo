@@ -19,6 +19,7 @@ mod app;
 mod args;
 mod components;
 mod runtime;
+mod theme;
 mod window;
 mod workspace;
 
@@ -71,6 +72,43 @@ fn main() -> Result<()> {
 
         app.run(move |cx| {
             gpui_component::init(cx);
+
+            // Apply configured theme if specified
+            if let Some(theme_name) = runtime
+                .get_config("app.theme.name")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+            {
+                let mode = runtime
+                    .get_config("app.theme.mode")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+                    .unwrap_or_else(|| "dark".to_string());
+
+                // Parse extend block: app.theme.extend is { "theme_name": { key: val, ... } }
+                let overrides = runtime
+                    .get_config("app.theme.extend")
+                    .and_then(|extend_val| {
+                        let obj = extend_val.as_object()?;
+                        // Get the first (and typically only) labeled block's inner value
+                        let (_, inner) = obj.iter().next()?;
+                        let inner_obj = inner.as_object()?;
+                        // Convert to serde_json::Value for deserialization
+                        let json_obj: serde_json::Map<String, serde_json::Value> = inner_obj
+                            .iter()
+                            .filter_map(|(k, v)| {
+                                v.as_str()
+                                    .map(|s| (k.clone(), serde_json::Value::String(s.to_string())))
+                            })
+                            .collect();
+                        serde_json::from_value(serde_json::Value::Object(json_obj)).ok()
+                    });
+
+                theme::apply_configured_theme(
+                    &theme_name,
+                    &mode,
+                    overrides.as_ref(),
+                    cx,
+                );
+            }
 
             // Store the App entity so we can access it on window close
             let app_entity: Rc<RefCell<Option<Entity<App>>>> = Rc::new(RefCell::new(None));
