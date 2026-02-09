@@ -4,6 +4,7 @@ use gpui::*;
 use gpui_component::v_flex;
 use std::sync::Arc;
 
+use crate::components::{Button, Label, Panel, Stack, Text};
 use crate::runtime::NemoRuntime;
 use crate::workspace::{DefaultView, HeaderBar};
 use nemo_layout::BuiltComponent;
@@ -19,7 +20,11 @@ pub struct App {
 impl App {
     /// Creates a new Nemo application.
     pub fn new(runtime: Arc<NemoRuntime>, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let header_bar = cx.new(|_cx| HeaderBar::new(window, _cx));
+        let title = runtime
+            .get_config("app.window.title")
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_else(|| "Nemo Application".to_string());
+        let header_bar = cx.new(|_cx| HeaderBar::new(title, window, _cx));
         let default_view = cx.new(|_cx| DefaultView::new(Arc::clone(&runtime), window, _cx));
 
         let _subscriptions = vec![];
@@ -59,6 +64,21 @@ impl App {
         self.default_view.clone().into_any_element()
     }
 
+    /// Renders the children of a component.
+    fn render_children(
+        &self,
+        component: &BuiltComponent,
+        layout_manager: &tokio::sync::RwLockReadGuard<'_, nemo_layout::LayoutManager>,
+        entity_id: EntityId,
+    ) -> Vec<AnyElement> {
+        component
+            .children
+            .iter()
+            .filter_map(|child_id| layout_manager.get_component(child_id))
+            .map(|child| self.render_component(child, layout_manager, entity_id))
+            .collect()
+    }
+
     /// Renders a component and its children recursively.
     fn render_component(
         &self,
@@ -66,109 +86,30 @@ impl App {
         layout_manager: &tokio::sync::RwLockReadGuard<'_, nemo_layout::LayoutManager>,
         entity_id: EntityId,
     ) -> AnyElement {
-        let mut container = match component.component_type.as_str() {
+        match component.component_type.as_str() {
             "stack" => {
-                let direction = component
-                    .properties
-                    .get("direction")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("vertical");
-
-                let spacing = component
-                    .properties
-                    .get("spacing")
-                    .and_then(|v| v.as_i64())
-                    .unwrap_or(4);
-
-                let base = div().flex().gap(px(spacing as f32));
-                if direction == "horizontal" {
-                    base.flex_row()
-                } else {
-                    base.flex_col()
-                }
+                let children = self.render_children(component, layout_manager, entity_id);
+                Stack::new(component.clone())
+                    .children(children)
+                    .into_any_element()
             }
-            "panel" => div().flex().flex_col().p_4().rounded_md().bg(rgb(0x313244)),
-            "label" => {
-                let text = component
-                    .properties
-                    .get("text")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                return div().child(text.to_string()).into_any_element();
+            "panel" => {
+                let children = self.render_children(component, layout_manager, entity_id);
+                Panel::new(component.clone())
+                    .children(children)
+                    .into_any_element()
             }
-            "button" => {
-                let label = component
-                    .properties
-                    .get("label")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Button");
-
-                let width = component.properties.get("width").and_then(|v| v.as_i64());
-                let height = component.properties.get("height").and_then(|v| v.as_i64());
-                let flex = component.properties.get("flex").and_then(|v| v.as_f64());
-
-                let mut button = div()
-                    .px_4()
-                    .py_2()
-                    .bg(rgb(0x89b4fa))
-                    .text_color(rgb(0x1e1e2e))
-                    .rounded_md()
-                    .cursor_pointer()
-                    .hover(|s| s.bg(rgb(0xb4befe)))
-                    .items_center()
-                    .justify_center()
-                    .child(label.to_string());
-
-                // Apply sizing
-                if let Some(w) = width {
-                    button = button.w(px(w as f32));
-                }
-                if let Some(h) = height {
-                    button = button.h(px(h as f32));
-                }
-                if let Some(f) = flex {
-                    button = button.flex_grow().flex_basis(relative(f as f32));
-                } else if width.is_none() {
-                    // Default: buttons grow equally in horizontal stacks
-                    button = button.flex_1();
-                }
-
-                // Wire up click handler if present
-                if let Some(handler) = component.handlers.get("click") {
-                    let runtime = Arc::clone(&self.runtime);
-                    let component_id = component.id.clone();
-                    let handler = handler.clone();
-
-                    button = button.on_mouse_down(MouseButton::Left, move |_event, _window, cx| {
-                        runtime.call_handler(&handler, &component_id, "click");
-                        // Trigger re-render to reflect any state changes from the handler
-                        cx.notify(entity_id);
-                    });
-                }
-
-                return button.into_any_element();
-            }
-            "text" => {
-                let content = component
-                    .properties
-                    .get("content")
-                    .or_else(|| component.properties.get("text"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("");
-                return div().child(content.to_string()).into_any_element();
-            }
-            _ => div().flex().flex_col(),
-        };
-
-        // Render children
-        for child_id in &component.children {
-            if let Some(child) = layout_manager.get_component(child_id) {
-                container =
-                    container.child(self.render_component(child, layout_manager, entity_id));
+            "label" => Label::new(component.clone()).into_any_element(),
+            "button" => Button::new(component.clone())
+                .runtime(Arc::clone(&self.runtime))
+                .entity_id(entity_id)
+                .into_any_element(),
+            "text" => Text::new(component.clone()).into_any_element(),
+            _ => {
+                let children = self.render_children(component, layout_manager, entity_id);
+                div().flex().flex_col().children(children).into_any_element()
             }
         }
-
-        container.into_any_element()
     }
 }
 

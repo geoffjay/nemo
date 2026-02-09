@@ -1,12 +1,7 @@
 use gpui::*;
 use gpui_component::TitleBar;
 
-pub fn get_window_options(
-    cx: &mut App,
-    _title: String,
-    width: Option<u32>,
-    height: Option<u32>,
-) -> WindowOptions {
+pub fn get_window_options(cx: &mut App, width: Option<u32>, height: Option<u32>) -> WindowOptions {
     let effective_width = width.unwrap_or(1200) as f32;
     let effective_height = height.unwrap_or(800) as f32;
     let restored_size = size(px(effective_width), px(effective_height));

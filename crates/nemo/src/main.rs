@@ -17,6 +17,7 @@ use tracing_subscriber::FmtSubscriber;
 
 mod app;
 mod args;
+mod components;
 mod runtime;
 mod window;
 mod workspace;
@@ -89,12 +90,6 @@ fn main() -> Result<()> {
             })
             .detach();
 
-            // Get window configuration from config
-            let title = runtime
-                .get_config("app.window.title")
-                .and_then(|v| v.as_str().map(|s| s.to_string()))
-                .unwrap_or_else(|| "Nemo Application".to_string());
-
             let width = runtime
                 .get_config("app.window.width")
                 .and_then(|v| v.as_i64())
@@ -106,11 +101,9 @@ fn main() -> Result<()> {
                 .map(|v| v as u32);
 
             let runtime = Arc::clone(&runtime);
-            let window_options = get_window_options(cx, title, width, height);
+            let window_options = get_window_options(cx, width, height);
 
             cx.open_window(window_options, |window, cx| {
-                // window.set_window_title(&title);
-
                 let view = cx.new(|cx| App::new(runtime, window, cx));
                 *app_entity.borrow_mut() = Some(view.clone());
                 cx.new(|_cx| Root::new(view, window, _cx))

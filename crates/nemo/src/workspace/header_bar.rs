@@ -6,15 +6,13 @@ use gpui_component::{
     IconName, Sizable as _, TitleBar,
 };
 
-pub struct HeaderBar;
+pub struct HeaderBar {
+    title: String,
+}
 
 impl HeaderBar {
-    pub fn new(_window: &mut Window, _cx: &mut Context<Self>) -> Self {
-        Self {}
-    }
-
-    pub fn view(window: &mut Window, cx: &mut App) -> Entity<Self> {
-        cx.new(|cx| Self::new(window, cx))
+    pub fn new(title: String, _window: &mut Window, _cx: &mut Context<Self>) -> Self {
+        Self { title }
     }
 }
 
@@ -24,7 +22,9 @@ impl Render for HeaderBar {
             .icon(IconName::GitHub)
             .small()
             .ghost()
-            .on_click(|_, _, cx| cx.open_url("https://github.com/geoffjay/persona"));
+            .on_click(|_, _, cx| cx.open_url("https://github.com/geoffjay/nemo"));
+
+        let title = self.title.clone();
 
         TitleBar::new().child(
             h_flex()
@@ -32,7 +32,7 @@ impl Render for HeaderBar {
                 .h(px(32.))
                 .pr_2()
                 .justify_between()
-                .child(Label::new("Persona").text_xs())
+                .child(Label::new(title).text_xs())
                 .child(div().flex().items_center().child(github_button)),
         )
     }
