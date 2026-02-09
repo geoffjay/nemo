@@ -1,10 +1,15 @@
 //! GPUI application wrapper.
 
 use gpui::*;
+use gpui_component::input::InputState;
 use gpui_component::v_flex;
 use std::sync::Arc;
 
-use crate::components::{Button, Label, Panel, Stack, Text};
+use crate::components::state::{ComponentState, ComponentStates};
+use crate::components::{
+    Button, Checkbox, Icon, Image, Label, List, Modal, Notification, Panel, Progress, Select,
+    Stack, Table, Tabs, Text, Tooltip, Tree,
+};
 use crate::runtime::NemoRuntime;
 use crate::workspace::{DefaultView, HeaderBar};
 use nemo_layout::BuiltComponent;
@@ -14,6 +19,7 @@ pub struct App {
     runtime: Arc<NemoRuntime>,
     header_bar: Entity<HeaderBar>,
     default_view: Entity<DefaultView>,
+    component_states: ComponentStates,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -33,6 +39,7 @@ impl App {
             runtime,
             header_bar,
             default_view,
+            component_states: ComponentStates::new(),
             _subscriptions,
         }
     }
@@ -44,8 +51,27 @@ impl App {
         ()
     }
 
+    /// Gets or creates an InputState entity for the given component id.
+    fn get_or_create_input_state(
+        &mut self,
+        id: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<InputState> {
+        if let Some(ComponentState::Input(state)) = self.component_states.get(id) {
+            return state.clone();
+        }
+
+        let state = cx.new(|cx| InputState::new(window, cx));
+        self.component_states
+            .insert(id.to_string(), ComponentState::Input(state.clone()));
+        state
+    }
+
     /// Renders the layout from the layout manager.
-    fn render_layout(&self, entity_id: EntityId) -> impl IntoElement {
+    fn render_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
+        let entity_id = cx.entity_id();
+
         // Get the layout manager and render the component tree
         let layout_manager = self
             .runtime
@@ -55,46 +81,59 @@ impl App {
         // Get the root component
         if let Some(root_id) = layout_manager.root_id() {
             if let Some(root) = layout_manager.get_component(&root_id) {
-                return self.render_component(root, &layout_manager, entity_id);
+                let root = root.clone();
+                drop(layout_manager);
+                return self.render_component(&root, entity_id, window, cx);
             }
         }
 
-        // Fall back to default view if no layout
-        // self.render_default_view()
+        drop(layout_manager);
         self.default_view.clone().into_any_element()
     }
 
     /// Renders the children of a component.
     fn render_children(
-        &self,
+        &mut self,
         component: &BuiltComponent,
-        layout_manager: &tokio::sync::RwLockReadGuard<'_, nemo_layout::LayoutManager>,
         entity_id: EntityId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
-        component
+        let layout_manager = self
+            .runtime
+            .tokio_runtime
+            .block_on(async { self.runtime.layout_manager.read().await });
+
+        let children: Vec<BuiltComponent> = component
             .children
             .iter()
-            .filter_map(|child_id| layout_manager.get_component(child_id))
-            .map(|child| self.render_component(child, layout_manager, entity_id))
+            .filter_map(|child_id| layout_manager.get_component(child_id).cloned())
+            .collect();
+        drop(layout_manager);
+
+        children
+            .iter()
+            .map(|child| self.render_component(child, entity_id, window, cx))
             .collect()
     }
 
     /// Renders a component and its children recursively.
     fn render_component(
-        &self,
+        &mut self,
         component: &BuiltComponent,
-        layout_manager: &tokio::sync::RwLockReadGuard<'_, nemo_layout::LayoutManager>,
         entity_id: EntityId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
     ) -> AnyElement {
         match component.component_type.as_str() {
             "stack" => {
-                let children = self.render_children(component, layout_manager, entity_id);
+                let children = self.render_children(component, entity_id, window, cx);
                 Stack::new(component.clone())
                     .children(children)
                     .into_any_element()
             }
             "panel" => {
-                let children = self.render_children(component, layout_manager, entity_id);
+                let children = self.render_children(component, entity_id, window, cx);
                 Panel::new(component.clone())
                     .children(children)
                     .into_any_element()
@@ -105,8 +144,50 @@ impl App {
                 .entity_id(entity_id)
                 .into_any_element(),
             "text" => Text::new(component.clone()).into_any_element(),
+            "icon" => Icon::new(component.clone()).into_any_element(),
+            "checkbox" => Checkbox::new(component.clone())
+                .runtime(Arc::clone(&self.runtime))
+                .entity_id(entity_id)
+                .into_any_element(),
+            "input" => {
+                let input_state =
+                    self.get_or_create_input_state(&component.id, window, cx);
+                crate::components::Input::new(component.clone())
+                    .input_state(input_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "select" => Select::new(component.clone())
+                .runtime(Arc::clone(&self.runtime))
+                .entity_id(entity_id)
+                .into_any_element(),
+            "progress" => Progress::new(component.clone()).into_any_element(),
+            "image" => Image::new(component.clone()).into_any_element(),
+            "notification" => Notification::new(component.clone()).into_any_element(),
+            "tabs" => {
+                let children = self.render_children(component, entity_id, window, cx);
+                Tabs::new(component.clone())
+                    .children(children)
+                    .into_any_element()
+            }
+            "modal" => {
+                let children = self.render_children(component, entity_id, window, cx);
+                Modal::new(component.clone())
+                    .children(children)
+                    .into_any_element()
+            }
+            "tooltip" => {
+                let children = self.render_children(component, entity_id, window, cx);
+                Tooltip::new(component.clone())
+                    .children(children)
+                    .into_any_element()
+            }
+            "table" => Table::new(component.clone()).into_any_element(),
+            "list" => List::new(component.clone()).into_any_element(),
+            "tree" => Tree::new(component.clone()).into_any_element(),
             _ => {
-                let children = self.render_children(component, layout_manager, entity_id);
+                let children = self.render_children(component, entity_id, window, cx);
                 div().flex().flex_col().children(children).into_any_element()
             }
         }
@@ -114,7 +195,7 @@ impl App {
 }
 
 impl Render for App {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // Get theme colors from config or use defaults
         let bg_color = self
             .runtime
@@ -130,15 +211,12 @@ impl Render for App {
             .and_then(|s| parse_hex_color(&s))
             .unwrap_or_else(|| rgb(0xcdd6f4).into());
 
-        // Get the entity ID for re-render notifications
-        let entity_id = cx.entity_id();
-
         v_flex()
             .size_full()
             .bg(bg_color)
             .text_color(text_color)
             .child(self.header_bar.clone())
-            .child(self.render_layout(entity_id))
+            .child(self.render_layout(window, cx))
     }
 }
 

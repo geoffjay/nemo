@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::button::{Button as GpuiButton, ButtonVariants};
+use gpui_component::checkbox::Checkbox as GpuiCheckbox;
 use gpui_component::Disableable;
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
@@ -7,20 +7,20 @@ use std::sync::Arc;
 use crate::runtime::NemoRuntime;
 
 #[derive(IntoElement, NemoComponent)]
-pub struct Button {
+pub struct Checkbox {
     #[source]
     source: nemo_layout::BuiltComponent,
-    #[property(default = "Button")]
+    #[property(default = "")]
     label: String,
-    #[property(default = "secondary")]
-    variant: String,
+    #[property]
+    checked: Option<bool>,
     #[property]
     disabled: Option<bool>,
     runtime: Option<Arc<NemoRuntime>>,
     entity_id: Option<EntityId>,
 }
 
-impl Button {
+impl Checkbox {
     pub fn runtime(mut self, runtime: Arc<NemoRuntime>) -> Self {
         self.runtime = Some(runtime);
         self
@@ -32,37 +32,32 @@ impl Button {
     }
 }
 
-impl RenderOnce for Button {
+impl RenderOnce for Checkbox {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let click_handler = self.source.handlers.get("click").cloned();
+        let change_handler = self.source.handlers.get("change").cloned();
         let component_id = self.source.id.clone();
 
-        let mut btn = GpuiButton::new(SharedString::from(component_id.clone()))
-            .label(SharedString::from(self.label));
+        let mut cb = GpuiCheckbox::new(SharedString::from(component_id.clone()))
+            .checked(self.checked.unwrap_or(false));
 
-        btn = match self.variant.as_str() {
-            "primary" => btn.primary(),
-            "danger" => btn.danger(),
-            "ghost" => btn.ghost(),
-            "warning" => btn.warning(),
-            "success" => btn.success(),
-            "info" => btn.info(),
-            _ => btn,
-        };
-
-        if let Some(true) = self.disabled {
-            btn = btn.disabled(true);
+        if !self.label.is_empty() {
+            cb = cb.label(self.label);
         }
 
-        if let Some(handler) = click_handler {
+        if let Some(true) = self.disabled {
+            cb = cb.disabled(true);
+        }
+
+        if let Some(handler) = change_handler {
             if let (Some(runtime), Some(entity_id)) = (self.runtime, self.entity_id) {
-                btn = btn.on_click(move |_event, _window, cx| {
-                    runtime.call_handler(&handler, &component_id, "click");
+                cb = cb.on_click(move |new_checked, _window, cx| {
+                    let data = if *new_checked { "true" } else { "false" };
+                    runtime.call_handler(&handler, &component_id, data);
                     cx.notify(entity_id);
                 });
             }
         }
 
-        btn
+        cb
     }
 }

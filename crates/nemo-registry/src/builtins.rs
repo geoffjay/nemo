@@ -170,9 +170,20 @@ fn register_display_components(registry: &ComponentRegistry) {
     };
     image.schema = ConfigSchema::new("image")
         .property("src", PropertySchema::string())
-        .property("alt", PropertySchema::string())
-        .require("src");
+        .property("alt", PropertySchema::string());
     let _ = registry.register_component(image);
+
+    // Text
+    let mut text = ComponentDescriptor::new("text", ComponentCategory::Display);
+    text.metadata = ComponentMetadata {
+        display_name: "Text".to_string(),
+        description: "A text content block".to_string(),
+        ..Default::default()
+    };
+    text.schema = ConfigSchema::new("text")
+        .property("content", PropertySchema::string())
+        .require("content");
+    let _ = registry.register_component(text);
 
     // Progress
     let mut progress = ComponentDescriptor::new("progress", ComponentCategory::Display);
@@ -251,7 +262,7 @@ fn register_feedback_components(registry: &ComponentRegistry) {
     };
     notification.schema = ConfigSchema::new("notification")
         .property("message", PropertySchema::string())
-        .property("type", PropertySchema::string().with_default("info"))
+        .property("kind", PropertySchema::string().with_default("info"))
         .require("message");
     let _ = registry.register_component(notification);
 
