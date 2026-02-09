@@ -7,58 +7,29 @@
 //! - Launches the GPUI window
 
 use anyhow::{Context, Result};
-use clap::Parser;
-use std::path::PathBuf;
-use tracing::{info, Level};
+use gpui::*;
+use gpui_component::Root;
+use std::cell::RefCell;
+use std::rc::Rc;
+use std::sync::Arc;
+use tracing::info;
 use tracing_subscriber::FmtSubscriber;
 
 mod app;
+mod args;
 mod runtime;
+mod window;
+mod workspace;
 
-use app::NemoApp;
-
-/// Nemo - A configuration-driven application framework
-#[derive(Parser, Debug)]
-#[command(name = "nemo")]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Path to the main configuration file
-    #[arg(short, long, default_value = "app.hcl")]
-    config: PathBuf,
-
-    /// Additional configuration directories to scan
-    #[arg(short = 'd', long)]
-    config_dirs: Vec<PathBuf>,
-
-    /// Extension/plugin directories
-    #[arg(short, long)]
-    extension_dirs: Vec<PathBuf>,
-
-    /// Enable verbose logging
-    #[arg(short, long)]
-    verbose: bool,
-
-    /// Run in headless mode (no UI)
-    #[arg(long)]
-    headless: bool,
-
-    /// Validate configuration and exit
-    #[arg(long)]
-    validate_only: bool,
-}
+use app::App;
+use args::Args;
+use window::get_window_options;
 
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    // Initialize logging
-    let log_level = if args.verbose {
-        Level::DEBUG
-    } else {
-        Level::INFO
-    };
-
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(log_level)
+        .with_max_level(args.log_level())
         .with_target(true)
         .with_thread_ids(true)
         .finish();
@@ -68,20 +39,16 @@ fn main() -> Result<()> {
 
     info!("Nemo v{} starting...", env!("CARGO_PKG_VERSION"));
 
-    // Create the runtime
     let runtime = runtime::NemoRuntime::new(&args.config)?;
 
-    // Add additional config directories
     for dir in &args.config_dirs {
         runtime.add_config_dir(dir)?;
     }
 
-    // Add extension directories
     for dir in &args.extension_dirs {
         runtime.add_extension_dir(dir)?;
     }
 
-    // Load and validate configuration
     info!("Loading configuration from: {:?}", args.config);
     runtime.load_config()?;
 
@@ -90,7 +57,6 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    // Initialize all subsystems
     info!("Initializing subsystems...");
     runtime.initialize()?;
 
@@ -99,7 +65,57 @@ fn main() -> Result<()> {
         runtime.run_headless()?;
     } else {
         info!("Starting GPUI application...");
-        NemoApp::run(runtime)?;
+        let app = Application::new().with_assets(gpui_component_assets::Assets);
+
+        app.run(move |cx| {
+            gpui_component::init(cx);
+
+            // Store the App entity so we can access it on window close
+            let app_entity: Rc<RefCell<Option<Entity<App>>>> = Rc::new(RefCell::new(None));
+
+            // Close all sessions and quit the application when the window is closed
+            cx.on_window_closed({
+                let app_entity = app_entity.clone();
+                move |cx| {
+                    // Shutdown the app to close any open sessions
+                    if let Some(app) = app_entity.borrow().clone() {
+                        app.update(cx, |app, app_cx| {
+                            app.shutdown(app_cx);
+                        });
+                    }
+                    cx.quit();
+                }
+            })
+            .detach();
+
+            // Get window configuration from config
+            let title = runtime
+                .get_config("app.window.title")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                .unwrap_or_else(|| "Nemo Application".to_string());
+
+            let width = runtime
+                .get_config("app.window.width")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(1200) as u32;
+
+            let height = runtime
+                .get_config("app.window.height")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(800) as u32;
+
+            let runtime = Arc::clone(&runtime);
+            let window_options = get_window_options(cx, title, width, height);
+
+            cx.open_window(window_options, |window, cx| {
+                // window.set_window_title(&title);
+
+                let view = cx.new(|cx| App::new(runtime, window, cx));
+                *app_entity.borrow_mut() = Some(view.clone());
+                cx.new(|_cx| Root::new(view, window, _cx))
+            })
+            .expect("Failed to open window");
+        });
     }
 
     info!("Nemo shutdown complete");
