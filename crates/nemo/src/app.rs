@@ -31,7 +31,15 @@ impl App {
             .get_config("app.window.title")
             .and_then(|v| v.as_str().map(|s| s.to_string()))
             .unwrap_or_else(|| "Nemo Application".to_string());
-        let header_bar = cx.new(|_cx| HeaderBar::new(title, window, _cx));
+        let github_url = runtime
+            .get_config("app.window.header_bar.github_url")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+        let theme_toggle = runtime
+            .get_config("app.window.header_bar.theme_toggle")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let header_bar =
+            cx.new(|_cx| HeaderBar::new(title, github_url, theme_toggle, window, _cx));
         let default_view = cx.new(|_cx| DefaultView::new(Arc::clone(&runtime), window, _cx));
 
         let _subscriptions = vec![];

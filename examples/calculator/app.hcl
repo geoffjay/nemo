@@ -9,6 +9,11 @@ app {
     height = 480
     min_width = 280
     min_height = 400
+
+    header_bar {
+      github_url = "https://github.com/geoffjay/nemo"
+      theme_toggle = true
+    }
   }
 
   theme {

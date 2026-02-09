@@ -7,6 +7,11 @@ app {
     title = "Nemo Example"
     # width = 1024
     # height = 768
+
+    header_bar {
+      github_url = "https://github.com/geoffjay/nemo"
+      theme_toggle = true
+    }
   }
 
   theme {

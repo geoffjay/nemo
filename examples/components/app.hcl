@@ -8,6 +8,11 @@ app {
     title = "Component Gallery"
     width = 1200
     height = 800
+
+    header_bar {
+      github_url = "https://github.com/geoffjay/nemo"
+      theme_toggle = true
+    }
   }
 
   theme {
