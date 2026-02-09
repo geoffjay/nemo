@@ -100,8 +100,18 @@ fn main() -> Result<()> {
                 .and_then(|v| v.as_i64())
                 .map(|v| v as u32);
 
+            let min_width = runtime
+                .get_config("app.window.min_width")
+                .and_then(|v| v.as_i64())
+                .map(|v| v as u32);
+
+            let min_height = runtime
+                .get_config("app.window.min_height")
+                .and_then(|v| v.as_i64())
+                .map(|v| v as u32);
+
             let runtime = Arc::clone(&runtime);
-            let window_options = get_window_options(cx, width, height);
+            let window_options = get_window_options(cx, width, height, min_width, min_height);
 
             cx.open_window(window_options, |window, cx| {
                 let view = cx.new(|cx| App::new(runtime, window, cx));

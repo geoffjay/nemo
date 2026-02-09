@@ -1,0 +1,70 @@
+Build the Nemo application framework following the orchestration plan in ORCHESTRATION-PROMPT.md.
+
+## Context
+Nemo is a Rust meta-application framework that constructs desktop applications from HCL configuration. Complete architecture specs are in docs/planning/, and specialized implementation agents are configured in .claude/agents/.
+
+## Your Task
+Execute the full build in phases, delegating implementation to specialized agents.
+
+## Phase 0: Setup
+1. Read ORCHESTRATION-PROMPT.md for the complete build plan
+2. Read docs/planning/nemo-project-vision.md for project context
+3. Read docs/planning/nemo-system-architecture.md for subsystem relationships
+4. Set up the workspace Cargo.toml as specified in the orchestration doc
+5. Create the crates/ directory structure
+
+## Phase 1: Foundation (Parallel)
+Execute these in parallel as they have no dependencies on each other:
+
+**Event Bus:**
+Use the subagent task event-bus to implement crates/nemo-events. This agent should read docs/planning/nemo-system-architecture.md for context, then implement the Event Bus per their detailed prompt. Deliverables: EventBus, Event, EventFilter, EventSubscription, EventTracer, and tests.
+
+**Configuration Engine:**
+Use the subagent task configuration-engine to implement crates/nemo-config. This agent should read docs/planning/subsystems/configuration-engine.md and their prompt, then implement HCL parsing, schema validation, and expression resolution. Deliverables: Value, ConfigPath, ConfigSchema, HclParser, SchemaRegistry, ConfigValidator, ConfigResolver, ConfigurationLoader, and tests.
+
+After Phase 1: Run `cargo check --workspace` to verify.
+
+## Phase 2: Registry
+**Component Registry:**
+Use the subagent task component-registry to implement crates/nemo-registry. This agent should read docs/planning/subsystems/component-registry.md, then implement the registry with descriptors and placeholder factories for all gpui-component types. Deliverables: ComponentRegistry, ComponentDescriptor, DataSourceDescriptor, TransformDescriptor, ActionDescriptor, factory traits, built-in component schemas, and tests.
+
+After Phase 2: Run `cargo check --workspace` to verify.
+
+## Phase 3: Core Systems (Parallel)
+Execute these in parallel:
+
+**Layout Engine:**
+Use the subagent task layout-engine to implement crates/nemo-layout. This agent should read docs/planning/subsystems/layout-engine.md, then implement layout construction and component factories. Deliverables: LayoutBuilder, LayoutManager, DockController, BindingManager, NemoComponent wrapper, component factory implementations, and tests.
+
+**Data Flow Engine:**
+Use the subagent task data-flow-engine to implement crates/nemo-data. This agent should read docs/planning/subsystems/data-flow-engine.md, then implement data sources, transforms, and the action system. Deliverables: DataSource trait, HttpSource, WebSocketSource, TimerSource, Transform trait, built-in transforms, DataRepository, ActionSystem, and tests.
+
+After Phase 3: Run `cargo check --workspace` to verify.
+
+## Phase 4: Extensions (Parallel)
+Execute these in parallel:
+
+**Extension Manager:**
+Use the subagent task extension-manager to implement crates/nemo-extension and crates/nemo-plugin-api. This agent should read docs/planning/subsystems/extension-manager.md, then implement RHAI scripting and native plugin loading. Deliverables: RhaiEngine with sandboxing, PluginHost, ExtensionContext, plugin API crate with traits and declare_plugin! macro, and tests.
+
+**Integration Gateway:**
+Use the subagent task integration-gateway to implement crates/nemo-integration. This agent should read docs/planning/subsystems/integration-gateway.md, then implement protocol adapters and connection management. Deliverables: ProtocolAdapter trait, JsonRpcAdapter, MqttAdapter, ConnectionManager, CircuitBreaker, RpcClient, PubSubClient, and tests.
+
+After Phase 4: Run `cargo check --workspace` to verify.
+
+## Phase 5: Application Shell
+**Application Shell:**
+Use the subagent task application-shell to implement crates/nemo (main binary). This agent should read docs/planning/nemo-system-architecture.md for the bootstrap sequence, then wire all subsystems together. Deliverables: main.rs with CLI, bootstrap.rs for subsystem initialization, Root component, TitleBar component, and working binary.
+
+## Final Steps
+1. Run `cargo build --workspace` to verify full compilation
+2. Create examples/minimal.hcl as specified in ORCHESTRATION-PROMPT.md
+3. Test with `cargo run -- --config examples/minimal.hcl`
+4. Report final status and any issues encountered
+
+## Important Notes
+- Each agent has comprehensive implementation specs in their .claude/agents/ prompt file
+- Agents should use workspace.dependencies in their Cargo.toml
+- Run cargo check after each phase to catch integration issues early
+- If an agent encounters blocking issues, note them and continue with other work
+- The goal is a compiling workspace; full feature completion can iterate

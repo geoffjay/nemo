@@ -117,6 +117,45 @@ impl App {
             .collect()
     }
 
+    /// Wraps an element in a styled div if sizing properties are present.
+    fn apply_sizing(element: AnyElement, component: &BuiltComponent) -> AnyElement {
+        let props = &component.properties;
+        let width = props.get("width").and_then(|v| v.as_i64());
+        let height = props.get("height").and_then(|v| v.as_i64());
+        let min_width = props.get("min_width").and_then(|v| v.as_i64());
+        let min_height = props.get("min_height").and_then(|v| v.as_i64());
+        let flex = props
+            .get("flex")
+            .and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64)));
+
+        if width.is_none()
+            && height.is_none()
+            && min_width.is_none()
+            && min_height.is_none()
+            && flex.is_none()
+        {
+            return element;
+        }
+
+        let mut wrapper = div().flex().flex_col();
+        if let Some(w) = width {
+            wrapper = wrapper.w(px(w as f32));
+        }
+        if let Some(h) = height {
+            wrapper = wrapper.h(px(h as f32));
+        }
+        if let Some(mw) = min_width {
+            wrapper = wrapper.min_w(px(mw as f32));
+        }
+        if let Some(mh) = min_height {
+            wrapper = wrapper.min_h(px(mh as f32));
+        }
+        if flex.is_some() {
+            wrapper = wrapper.flex_1();
+        }
+        wrapper.child(element).into_any_element()
+    }
+
     /// Renders a component and its children recursively.
     fn render_component(
         &mut self,
@@ -125,7 +164,7 @@ impl App {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
-        match component.component_type.as_str() {
+        let element = match component.component_type.as_str() {
             "stack" => {
                 let children = self.render_children(component, entity_id, window, cx);
                 Stack::new(component.clone())
@@ -190,7 +229,8 @@ impl App {
                 let children = self.render_children(component, entity_id, window, cx);
                 div().flex().flex_col().children(children).into_any_element()
             }
-        }
+        };
+        Self::apply_sizing(element, component)
     }
 }
 

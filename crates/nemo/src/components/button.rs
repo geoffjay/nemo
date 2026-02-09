@@ -63,6 +63,19 @@ impl RenderOnce for Button {
             }
         }
 
+        // When sizing properties are present, make button fill its wrapper container.
+        // GpuiButton sets a fixed height internally (e.g. h_8), so we need to
+        // override it via the Styled trait so the button grows with its container.
+        let props = &self.source.properties;
+        let has_sizing = props.contains_key("width")
+            || props.contains_key("height")
+            || props.contains_key("min_width")
+            || props.contains_key("min_height")
+            || props.contains_key("flex");
+        if has_sizing {
+            btn = btn.w_full().h_full();
+        }
+
         btn
     }
 }

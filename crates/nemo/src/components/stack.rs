@@ -13,7 +13,7 @@ pub struct Stack {
 
 impl RenderOnce for Stack {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let mut base = div().flex().gap(px(self.spacing as f32));
+        let mut base = div().flex().flex_1().gap(px(self.spacing as f32));
         base = if self.direction == "horizontal" {
             base.flex_row()
         } else {
