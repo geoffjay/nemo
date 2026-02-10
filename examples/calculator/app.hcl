@@ -16,7 +16,7 @@ app {
     min_height = 400
 
     header_bar {
-      github_url = "https://github.com/geoffjay/nemo"
+      github_url = "https://github.com/geoffjay/nemo/tree/main/examples/calculator"
       theme_toggle = true
     }
   }

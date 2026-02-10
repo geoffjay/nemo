@@ -6,6 +6,7 @@ app {
     title = "Nemo Data Binding Demo"
 
     header_bar {
+      github_url = "https://github.com/geoffjay/nemo/tree/main/examples/data-binding"
       theme_toggle = true
     }
   }
