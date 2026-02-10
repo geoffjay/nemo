@@ -2,7 +2,7 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
-use super::resolve_color;
+use super::{apply_shadow, resolve_color};
 
 #[derive(IntoElement, NemoComponent)]
 pub struct Panel {
@@ -16,6 +16,8 @@ pub struct Panel {
     border: Option<i64>,
     #[property]
     border_color: Option<String>,
+    #[property]
+    shadow: Option<String>,
     #[children]
     children: Vec<AnyElement>,
 }

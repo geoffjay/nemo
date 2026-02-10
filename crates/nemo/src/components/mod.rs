@@ -132,6 +132,20 @@ fn resolve_theme_color(name: &str, cx: &App) -> Option<Hsla> {
     Some(color)
 }
 
+/// Applies a shadow preset to a div element.
+///
+/// Supported sizes: "sm", "md", "lg", "xl", "2xl"
+pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
+    match shadow {
+        Some("sm") => base.shadow_sm(),
+        Some("md") => base.shadow_md(),
+        Some("lg") => base.shadow_lg(),
+        Some("xl") => base.shadow_xl(),
+        Some("2xl") => base.shadow_2xl(),
+        _ => base,
+    }
+}
+
 pub use button::Button;
 pub use checkbox::Checkbox;
 pub use icon::Icon;
