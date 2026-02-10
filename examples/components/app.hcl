@@ -16,8 +16,8 @@ app {
   }
 
   theme {
-    name = "tokyo night"
-    mode = "light"
+    name = "tokyo-night"
+    mode = "dark"
   }
 }
 
@@ -42,6 +42,7 @@ layout {
         type = "stack"
         direction = "vertical"
         spacing = 4
+        padding = 16
 
         component "sidebar_title" {
           type = "label"
@@ -161,6 +162,7 @@ layout {
       type = "stack"
       direction = "vertical"
       spacing = 0
+      padding = 16
 
       # ── Button page (visible by default) ───────────────────
       component "page_button" {
@@ -171,6 +173,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "btn_title" {
             type = "label"
@@ -275,6 +278,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "lbl_title" {
             type = "label"
@@ -334,6 +338,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "icon_title" {
             type = "label"
@@ -486,6 +491,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "cb_title" {
             type = "label"
@@ -541,6 +547,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "inp_title" {
             type = "label"
@@ -587,6 +594,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "sel_title" {
             type = "label"
@@ -622,6 +630,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "prog_title" {
             type = "label"
@@ -706,6 +715,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "notif_title" {
             type = "label"
@@ -759,6 +769,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "modal_title" {
             type = "label"
@@ -807,6 +818,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "text_title" {
             type = "label"
@@ -846,6 +858,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "list_title" {
             type = "label"
@@ -880,6 +893,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "panel_title" {
             type = "label"
@@ -966,6 +980,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "table_title" {
             type = "label"
@@ -993,6 +1008,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "tree_title" {
             type = "label"
@@ -1020,6 +1036,7 @@ layout {
           type = "stack"
           direction = "vertical"
           spacing = 12
+          padding = 32
 
           component "image_title" {
             type = "label"

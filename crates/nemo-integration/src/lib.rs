@@ -16,7 +16,7 @@ pub mod websocket;
 
 pub use error::IntegrationError;
 pub use http::{HttpClient, HttpRequest, HttpResponse};
-pub use mqtt::{MqttClient, MqttMessage};
+pub use mqtt::{MqttClient, MqttMessage, QoS};
 pub use nats::{NatsClient, NatsMessage};
 pub use redis_pubsub::{RedisClient, RedisMessage};
 pub use websocket::{ManagedWebSocket, WebSocketClient, WebSocketHandler};

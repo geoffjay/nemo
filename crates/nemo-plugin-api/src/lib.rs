@@ -146,6 +146,9 @@ pub trait PluginRegistrar {
 
     /// Gets the plugin context for API access.
     fn context(&self) -> &dyn PluginContext;
+
+    /// Gets the plugin context as an Arc for use in background threads.
+    fn context_arc(&self) -> std::sync::Arc<dyn PluginContext>;
 }
 
 /// Context providing API access to plugins.

@@ -2,18 +2,31 @@
 
 use anyhow::{Context, Result};
 use nemo_config::{ConfigurationLoader, SchemaRegistry, Value};
-use nemo_data::DataFlowEngine;
+use nemo_data::{DataFlowEngine, DataRepository};
 use nemo_events::EventBus;
 use nemo_extension::ExtensionManager;
 use nemo_integration::IntegrationGateway;
 use nemo_layout::{LayoutConfig, LayoutManager, LayoutNode, LayoutType};
 use nemo_plugin_api::{LogLevel, PluginContext, PluginError, PluginValue};
 use nemo_registry::{register_all_builtins, ComponentRegistry};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use tokio::runtime::Runtime as TokioRuntime;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
+
+/// Sink configuration for outbound data publishing.
+#[derive(Debug, Clone)]
+pub struct SinkConfig {
+    /// Sink type (mqtt, redis, nats).
+    pub sink_type: String,
+    /// Target topic/channel/subject.
+    pub target: String,
+    /// Connection parameters.
+    pub params: HashMap<String, String>,
+}
 
 /// The Nemo runtime manages all subsystems.
 pub struct NemoRuntime {
@@ -43,6 +56,10 @@ pub struct NemoRuntime {
     pub integration: Arc<IntegrationGateway>,
     /// The tokio runtime for async operations.
     pub tokio_runtime: TokioRuntime,
+    /// Flag indicating data has changed and UI needs re-render.
+    pub data_dirty: Arc<AtomicBool>,
+    /// Sink configurations for outbound data publishing.
+    pub sink_configs: Arc<std::sync::RwLock<HashMap<String, SinkConfig>>>,
 }
 
 impl NemoRuntime {
@@ -76,6 +93,8 @@ impl NemoRuntime {
             extension_manager,
             integration,
             tokio_runtime,
+            data_dirty: Arc::new(AtomicBool::new(false)),
+            sink_configs: Arc::new(std::sync::RwLock::new(HashMap::new())),
         })
     }
 
@@ -161,6 +180,12 @@ impl NemoRuntime {
         // Apply layout from configuration
         self.apply_layout_from_config()?;
 
+        // Set up data sources from configuration
+        self.setup_data_sources()?;
+
+        // Set up data sinks from configuration
+        self.setup_data_sinks()?;
+
         info!("Runtime initialization complete");
         Ok(())
     }
@@ -245,6 +270,8 @@ impl NemoRuntime {
             Arc::clone(&self.config),
             Arc::clone(&self.layout_manager),
             Arc::clone(&self.event_bus),
+            Arc::clone(&self.data_engine.repository),
+            Arc::clone(&self.data_dirty),
         ));
 
         self.tokio_runtime.block_on(async {
@@ -371,6 +398,443 @@ impl NemoRuntime {
 
         Ok(())
     }
+
+    /// Parses data source configuration and registers sources with the DataFlowEngine.
+    fn setup_data_sources(&self) -> Result<()> {
+        let data_config = self.tokio_runtime.block_on(async {
+            let config = self.config.read().await;
+            config.get("data").cloned()
+        });
+
+        let data_config = match data_config {
+            Some(dc) => dc,
+            None => {
+                debug!("No data configuration found");
+                return Ok(());
+            }
+        };
+
+        // Parse source blocks: data { source "name" { type = "..." ... } }
+        let sources = match data_config.get("source") {
+            Some(s) => s.clone(),
+            None => {
+                debug!("No data sources configured");
+                return Ok(());
+            }
+        };
+
+        let source_obj = match sources.as_object() {
+            Some(obj) => obj.clone(),
+            None => return Ok(()),
+        };
+
+        self.tokio_runtime.block_on(async {
+            for (source_name, source_config) in &source_obj {
+                let source_type = source_config
+                    .get("type")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown");
+
+                info!("Configuring data source '{}' (type: {})", source_name, source_type);
+
+                match create_data_source(source_name, source_type, source_config) {
+                    Some(source) => {
+                        self.data_engine.register_source(source).await;
+                        info!("Registered data source '{}'", source_name);
+                    }
+                    None => {
+                        tracing::warn!(
+                            "Unknown data source type '{}' for source '{}'",
+                            source_type,
+                            source_name
+                        );
+                    }
+                }
+            }
+
+            // Start all registered sources
+            let results = self.data_engine.start_all().await;
+            for (id, result) in &results {
+                match result {
+                    Ok(()) => info!("Started data source '{}'", id),
+                    Err(e) => tracing::warn!("Failed to start data source '{}': {}", id, e),
+                }
+            }
+
+            // Start the data update loop for each source
+            self.start_data_update_loop().await;
+
+            Ok::<(), anyhow::Error>(())
+        })?;
+
+        Ok(())
+    }
+
+    /// Starts background tasks that consume data source updates and push them into the repository.
+    async fn start_data_update_loop(&self) {
+        let source_ids = self.data_engine.source_ids().await;
+
+        for source_id in source_ids {
+            if let Some(mut rx) = self.data_engine.subscribe_source(&source_id).await {
+                let data_engine = Arc::clone(&self.data_engine);
+                let data_dirty = Arc::clone(&self.data_dirty);
+
+                tokio::spawn(async move {
+                    loop {
+                        match rx.recv().await {
+                            Ok(update) => {
+                                if let Err(e) = data_engine.process_update(update).await {
+                                    tracing::warn!(
+                                        "Failed to process data update for '{}': {}",
+                                        source_id,
+                                        e
+                                    );
+                                } else {
+                                    data_dirty.store(true, Ordering::Release);
+                                }
+                            }
+                            Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                tracing::warn!(
+                                    "Data update receiver for '{}' lagged by {} messages",
+                                    source_id,
+                                    n
+                                );
+                            }
+                            Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                                debug!("Data source '{}' channel closed", source_id);
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+        }
+    }
+
+    /// Checks for pending data updates and propagates them through bindings.
+    /// Returns true if any updates were applied (indicating the UI needs re-render).
+    pub fn apply_pending_data_updates(&self) -> bool {
+        // Check and clear the dirty flag
+        if !self.data_dirty.swap(false, Ordering::AcqRel) {
+            return false;
+        }
+
+        let mut any_updates = false;
+
+        // Get source IDs and read their data from the repository
+        let source_ids = self.tokio_runtime.block_on(async {
+            self.data_engine.source_ids().await
+        });
+
+        for source_id in &source_ids {
+            let data_path = nemo_data::DataPath::from_source(source_id);
+            if let Some(value) = self.data_engine.repository.get(&data_path) {
+                let source_path = format!("data.{}", source_id);
+
+                if let Ok(mut layout_manager) = self.layout_manager.try_write() {
+                    let updates = layout_manager.on_data_changed(&source_path, &value);
+                    if !updates.is_empty() {
+                        layout_manager.apply_updates(updates);
+                        any_updates = true;
+                    }
+                }
+            }
+        }
+
+        any_updates
+    }
+
+    /// Parses sink configuration from HCL and stores sink configs.
+    fn setup_data_sinks(&self) -> Result<()> {
+        let data_config = self.tokio_runtime.block_on(async {
+            let config = self.config.read().await;
+            config.get("data").cloned()
+        });
+
+        let data_config = match data_config {
+            Some(dc) => dc,
+            None => return Ok(()),
+        };
+
+        let sinks = match data_config.get("sink") {
+            Some(s) => s.clone(),
+            None => return Ok(()),
+        };
+
+        let sink_obj = match sinks.as_object() {
+            Some(obj) => obj.clone(),
+            None => return Ok(()),
+        };
+
+        let mut configs = self.sink_configs.write().map_err(|e| {
+            anyhow::anyhow!("Failed to lock sink configs: {}", e)
+        })?;
+
+        for (sink_name, sink_config) in &sink_obj {
+            let sink_type = sink_config
+                .get("type")
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown")
+                .to_string();
+
+            let target = sink_config
+                .get("topic")
+                .or_else(|| sink_config.get("channel"))
+                .or_else(|| sink_config.get("subject"))
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+
+            let mut params = HashMap::new();
+            if let Some(obj) = sink_config.as_object() {
+                for (k, v) in obj {
+                    if let Some(s) = v.as_str() {
+                        params.insert(k.clone(), s.to_string());
+                    } else if let Some(i) = v.as_i64() {
+                        params.insert(k.clone(), i.to_string());
+                    }
+                }
+            }
+
+            info!("Configured data sink '{}' (type: {}, target: {})", sink_name, sink_type, target);
+            configs.insert(
+                sink_name.clone(),
+                SinkConfig {
+                    sink_type,
+                    target,
+                    params,
+                },
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Publishes data to a configured sink.
+    pub fn publish_to_sink(&self, sink_id: &str, payload: &str) -> Result<()> {
+        let sink_config = {
+            let configs = self.sink_configs.read().map_err(|e| {
+                anyhow::anyhow!("Failed to lock sink configs: {}", e)
+            })?;
+            configs.get(sink_id).cloned()
+        };
+
+        let sink_config = sink_config.ok_or_else(|| {
+            anyhow::anyhow!("Sink '{}' not found", sink_id)
+        })?;
+
+        let sink_name = sink_config
+            .params
+            .get("name")
+            .cloned()
+            .unwrap_or_else(|| sink_id.to_string());
+
+        self.tokio_runtime.block_on(async {
+            match sink_config.sink_type.as_str() {
+                "mqtt" => {
+                    if let Some(client_lock) = self.integration.mqtt(&sink_name).await {
+                        let client = client_lock.read().await;
+                        client
+                            .publish(
+                                &sink_config.target,
+                                payload.as_bytes().to_vec(),
+                                nemo_integration::QoS::AtLeastOnce,
+                                false,
+                            )
+                            .await
+                            .map_err(|e| anyhow::anyhow!("MQTT publish failed: {}", e))?;
+                    } else {
+                        tracing::warn!("No MQTT client registered for sink '{}'", sink_id);
+                    }
+                }
+                "redis" => {
+                    if let Some(client_lock) = self.integration.redis(&sink_name).await {
+                        let client = client_lock.read().await;
+                        client
+                            .publish(&sink_config.target, payload)
+                            .await
+                            .map_err(|e| anyhow::anyhow!("Redis publish failed: {}", e))?;
+                    } else {
+                        tracing::warn!("No Redis client registered for sink '{}'", sink_id);
+                    }
+                }
+                "nats" => {
+                    if let Some(client_lock) = self.integration.nats(&sink_name).await {
+                        let client = client_lock.read().await;
+                        client
+                            .publish(&sink_config.target, payload.as_bytes())
+                            .await
+                            .map_err(|e| anyhow::anyhow!("NATS publish failed: {}", e))?;
+                    } else {
+                        tracing::warn!("No NATS client registered for sink '{}'", sink_id);
+                    }
+                }
+                other => {
+                    tracing::warn!("Unknown sink type '{}' for sink '{}'", other, sink_id);
+                }
+            }
+            Ok(())
+        })
+    }
+}
+
+/// Creates a DataSource from HCL configuration.
+fn create_data_source(
+    name: &str,
+    source_type: &str,
+    config: &Value,
+) -> Option<Box<dyn nemo_data::DataSource>> {
+    match source_type {
+        "timer" => {
+            let interval_secs = config
+                .get("interval")
+                .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f as i64)))
+                .unwrap_or(1);
+            let immediate = config
+                .get("immediate")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+
+            let timer_config = nemo_data::TimerSourceConfig {
+                id: name.to_string(),
+                interval: std::time::Duration::from_secs(interval_secs as u64),
+                immediate,
+                payload: config.get("payload").cloned(),
+            };
+            Some(Box::new(nemo_data::TimerSource::new(timer_config)))
+        }
+        "http" => {
+            let url = config.get("url").and_then(|v| v.as_str())?.to_string();
+            let interval = config
+                .get("interval")
+                .and_then(|v| v.as_i64())
+                .map(|secs| std::time::Duration::from_secs(secs as u64));
+
+            let http_config = nemo_data::HttpSourceConfig {
+                id: name.to_string(),
+                url,
+                interval,
+                ..Default::default()
+            };
+            Some(Box::new(nemo_data::HttpSource::new(http_config)))
+        }
+        "websocket" => {
+            let url = config.get("url").and_then(|v| v.as_str())?.to_string();
+            let ws_config = nemo_data::WebSocketSourceConfig {
+                id: name.to_string(),
+                url,
+                ..Default::default()
+            };
+            Some(Box::new(nemo_data::WebSocketSource::new(ws_config)))
+        }
+        "mqtt" => {
+            let host = config
+                .get("host")
+                .and_then(|v| v.as_str())
+                .unwrap_or("localhost")
+                .to_string();
+            let port = config
+                .get("port")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(1883) as u16;
+            let topics: Vec<String> = config
+                .get("topics")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let qos = config
+                .get("qos")
+                .and_then(|v| v.as_i64())
+                .unwrap_or(0) as u8;
+            let client_id = config
+                .get("client_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+
+            let mqtt_config = nemo_data::MqttSourceConfig {
+                id: name.to_string(),
+                host,
+                port,
+                topics,
+                qos,
+                client_id,
+            };
+            Some(Box::new(nemo_data::MqttSource::new(mqtt_config)))
+        }
+        "redis" => {
+            let url = config
+                .get("url")
+                .and_then(|v| v.as_str())
+                .unwrap_or("redis://127.0.0.1:6379")
+                .to_string();
+            let channels: Vec<String> = config
+                .get("channels")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let redis_config = nemo_data::RedisSourceConfig {
+                id: name.to_string(),
+                url,
+                channels,
+            };
+            Some(Box::new(nemo_data::RedisSource::new(redis_config)))
+        }
+        "nats" => {
+            let url = config
+                .get("url")
+                .and_then(|v| v.as_str())
+                .unwrap_or("nats://127.0.0.1:4222")
+                .to_string();
+            let subjects: Vec<String> = config
+                .get("subjects")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            let nats_config = nemo_data::NatsSourceConfig {
+                id: name.to_string(),
+                url,
+                subjects,
+            };
+            Some(Box::new(nemo_data::NatsSource::new(nats_config)))
+        }
+        "file" => {
+            let path = config.get("path").and_then(|v| v.as_str())?.to_string();
+            let watch = config.get("watch").and_then(|v| v.as_bool()).unwrap_or(false);
+            let format_str = config
+                .get("format")
+                .and_then(|v| v.as_str())
+                .unwrap_or("raw");
+            let format = match format_str {
+                "json" => nemo_data::FileFormat::Json,
+                "lines" => nemo_data::FileFormat::Lines,
+                _ => nemo_data::FileFormat::Raw,
+            };
+
+            let file_config = nemo_data::FileSourceConfig {
+                id: name.to_string(),
+                path: std::path::PathBuf::from(path),
+                format,
+                watch,
+                ..Default::default()
+            };
+            Some(Box::new(nemo_data::FileSource::new(file_config)))
+        }
+        _ => None,
+    }
 }
 
 /// Gets a nested value from a configuration tree using dot notation.
@@ -495,6 +959,52 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
                         let event_name = &key[3..];
                         node = node.with_handler(event_name, handler);
                     }
+                } else if key.starts_with("bind_") {
+                    // Data binding: bind_text = "data.sensors.payload.temperature"
+                    if let Some(source_path) = val.as_str() {
+                        let target_prop = &key[5..]; // strip "bind_" prefix
+                        node.config
+                            .bindings
+                            .push(nemo_layout::BindingSpec::one_way(source_path, target_prop));
+                    }
+                } else if key == "binding" {
+                    // Explicit binding block(s)
+                    let binding_values = if let Some(arr) = val.as_array() {
+                        arr.clone()
+                    } else {
+                        vec![val.clone()]
+                    };
+                    for binding_val in &binding_values {
+                        if let Some(binding_obj) = binding_val.as_object() {
+                            let source = binding_obj
+                                .get("source")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or_default()
+                                .to_string();
+                            let target = binding_obj
+                                .get("target")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or_default()
+                                .to_string();
+                            let mode = binding_obj
+                                .get("mode")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("one_way");
+                            let transform = binding_obj
+                                .get("transform")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string());
+
+                            let mut spec = match mode {
+                                "two_way" => nemo_layout::BindingSpec::two_way(&source, &target),
+                                _ => nemo_layout::BindingSpec::one_way(&source, &target),
+                            };
+                            if let Some(t) = transform {
+                                spec = spec.with_transform(t);
+                            }
+                            node.config.bindings.push(spec);
+                        }
+                    }
                 } else {
                     // Regular property
                     node = node.with_prop(key.clone(), val.clone());
@@ -511,6 +1021,8 @@ pub struct RuntimeContext {
     config: Arc<RwLock<Value>>,
     layout_manager: Arc<RwLock<LayoutManager>>,
     event_bus: Arc<EventBus>,
+    data_repository: Arc<DataRepository>,
+    data_dirty: Arc<AtomicBool>,
 }
 
 impl RuntimeContext {
@@ -519,30 +1031,36 @@ impl RuntimeContext {
         config: Arc<RwLock<Value>>,
         layout_manager: Arc<RwLock<LayoutManager>>,
         event_bus: Arc<EventBus>,
+        data_repository: Arc<DataRepository>,
+        data_dirty: Arc<AtomicBool>,
     ) -> Self {
         Self {
             config,
             layout_manager,
             event_bus,
+            data_repository,
+            data_dirty,
         }
     }
 }
 
 impl PluginContext for RuntimeContext {
     fn get_data(&self, path: &str) -> Option<PluginValue> {
-        // For now, data is stored in config under "data" key
-        // Use try_read to avoid blocking, fall back to None if locked
-        if let Ok(config) = self.config.try_read() {
-            get_nested_value(&config, &format!("data.{}", path)).map(value_to_plugin_value)
-        } else {
-            None
-        }
+        // Read from the DataRepository under "data.<path>"
+        let data_path = nemo_data::DataPath::parse(&format!("data.{}", path)).ok()?;
+        self.data_repository
+            .get(&data_path)
+            .map(|v| value_to_plugin_value(&v))
     }
 
     fn set_data(&self, path: &str, value: PluginValue) -> Result<(), PluginError> {
-        // Data setting would require mutable access and data store
-        // For now, log a warning
-        tracing::warn!("set_data not yet implemented: {} = {:?}", path, value);
+        let data_path = nemo_data::DataPath::parse(&format!("data.{}", path))
+            .map_err(|e| PluginError::InvalidConfig(e.to_string()))?;
+        let config_value = plugin_value_to_config_value(value);
+        self.data_repository
+            .set(&data_path, config_value)
+            .map_err(|e| PluginError::InvalidConfig(e.to_string()))?;
+        self.data_dirty.store(true, Ordering::Release);
         Ok(())
     }
 

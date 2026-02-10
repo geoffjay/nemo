@@ -24,7 +24,8 @@ pub use error::{
 pub use repository::{DataPath, DataRepository, DataStore, MemoryStore, PathSegment, RepositoryChange};
 pub use source::{DataSchema, DataSource, DataUpdate, SchemaType, SourceConfig, SourceId, SourceStatus, UpdateType};
 pub use sources::{
-    FileFormat, FileSource, FileSourceConfig, HttpSource, HttpSourceConfig, TimerSource,
+    FileFormat, FileSource, FileSourceConfig, HttpSource, HttpSourceConfig, MqttSource,
+    MqttSourceConfig, NatsSource, NatsSourceConfig, RedisSource, RedisSourceConfig, TimerSource,
     TimerSourceConfig, WebSocketSource, WebSocketSourceConfig,
 };
 pub use transform::{
@@ -34,7 +35,7 @@ pub use transform::{
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tokio::sync::{broadcast, RwLock};
 
 /// The main data flow engine that orchestrates all data operations.
 pub struct DataFlowEngine {
@@ -132,6 +133,12 @@ impl DataFlowEngine {
         }
 
         results
+    }
+
+    /// Subscribes to updates from a specific source.
+    pub async fn subscribe_source(&self, id: &str) -> Option<broadcast::Receiver<DataUpdate>> {
+        let sources = self.sources.read().await;
+        sources.get(id).map(|source| source.subscribe())
     }
 
     /// Processes a data update from a source.

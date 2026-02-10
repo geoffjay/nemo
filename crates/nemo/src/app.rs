@@ -5,6 +5,7 @@ use gpui_component::input::InputState;
 use gpui_component::v_flex;
 use gpui_component::ActiveTheme;
 use std::sync::Arc;
+use std::time::Duration;
 
 use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::{
@@ -41,6 +42,22 @@ impl App {
         let header_bar =
             cx.new(|_cx| HeaderBar::new(title, github_url, theme_toggle, window, _cx));
         let default_view = cx.new(|_cx| DefaultView::new(Arc::clone(&runtime), window, _cx));
+
+        // Set up a polling timer that checks for data updates and triggers re-renders
+        let poll_runtime = Arc::clone(&runtime);
+        let _poll_task = cx.spawn(async move |this: WeakEntity<App>, cx: &mut AsyncApp| {
+            loop {
+                cx.background_executor()
+                    .timer(Duration::from_millis(50))
+                    .await;
+                if poll_runtime.apply_pending_data_updates() {
+                    let _ = this.update(cx, |_app: &mut App, cx: &mut Context<App>| {
+                        cx.notify();
+                    });
+                }
+            }
+        });
+        _poll_task.detach();
 
         let _subscriptions = vec![];
 

@@ -1,7 +1,8 @@
 //! MQTT client integration.
 
 use crate::error::IntegrationError;
-use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet, QoS};
+pub use rumqttc::QoS;
+use rumqttc::{AsyncClient, Event, EventLoop, MqttOptions, Packet};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, RwLock};

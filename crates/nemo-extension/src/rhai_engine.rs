@@ -293,6 +293,15 @@ impl RhaiEngine {
 
         let ctx = context.clone();
         self.engine
+            .register_fn("set_data", move |path: &str, value: Dynamic| {
+                let plugin_value = dynamic_to_plugin_value(value);
+                if let Err(e) = ctx.set_data(path, plugin_value) {
+                    tracing::warn!("Failed to set data: {}", e);
+                }
+            });
+
+        let ctx = context.clone();
+        self.engine
             .register_fn("get_config", move |path: &str| -> Dynamic {
                 match ctx.get_config(path) {
                     Some(value) => plugin_value_to_dynamic(value),

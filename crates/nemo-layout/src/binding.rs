@@ -215,8 +215,12 @@ impl BindingManager {
                         continue;
                     }
 
-                    // Apply transform if present (simplified - just pass through for now)
-                    let transformed = new_value.clone();
+                    // Apply transform if present
+                    let transformed = if let Some(ref transform) = binding.transform {
+                        apply_transform(transform, new_value)
+                    } else {
+                        new_value.clone()
+                    };
 
                     binding.last_value = Some(transformed.clone());
 
@@ -237,6 +241,54 @@ impl Default for BindingManager {
     fn default() -> Self {
         Self::new()
     }
+}
+
+/// Applies a binding transform to a value.
+///
+/// Supported transforms:
+/// - Field extraction: "payload.temperature" extracts a nested field from an Object
+/// - String format: any expression containing "value" does string interpolation
+/// - Identity: empty or unrecognized transform passes value through
+fn apply_transform(transform: &str, value: &Value) -> Value {
+    let transform = transform.trim();
+    if transform.is_empty() {
+        return value.clone();
+    }
+
+    // Field extraction: "field.subfield" extracts nested fields from Object values
+    if !transform.contains("value") && !transform.contains(' ') {
+        let parts: Vec<&str> = transform.split('.').collect();
+        let mut current = value;
+        for part in &parts {
+            match current {
+                Value::Object(obj) => {
+                    if let Some(v) = obj.get(*part) {
+                        current = v;
+                    } else {
+                        return value.clone();
+                    }
+                }
+                _ => return value.clone(),
+            }
+        }
+        return current.clone();
+    }
+
+    // String format: replace "value" with the stringified data
+    if transform.contains("value") {
+        let value_str = match value {
+            Value::String(s) => s.clone(),
+            Value::Integer(i) => i.to_string(),
+            Value::Float(f) => f.to_string(),
+            Value::Bool(b) => b.to_string(),
+            Value::Null => "null".to_string(),
+            _ => format!("{:?}", value),
+        };
+        return Value::String(transform.replace("value", &value_str));
+    }
+
+    // Fallback: pass through
+    value.clone()
 }
 
 /// A pending update from a binding.
