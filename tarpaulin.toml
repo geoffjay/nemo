@@ -1,0 +1,3 @@
+[test_config]
+name = "nemo"
+workspace = true

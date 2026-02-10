@@ -3,3 +3,4 @@
 .env
 
 target/
+build_rs_cov.profraw
