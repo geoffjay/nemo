@@ -89,10 +89,8 @@ impl ConfigResolver {
         match value {
             Value::String(s) => self.resolve_string(&s, context),
             Value::Array(arr) => {
-                let resolved: Result<Vec<_>, _> = arr
-                    .into_iter()
-                    .map(|v| self.resolve(v, context))
-                    .collect();
+                let resolved: Result<Vec<_>, _> =
+                    arr.into_iter().map(|v| self.resolve(v, context)).collect();
                 Ok(Value::Array(resolved?))
             }
             Value::Object(obj) => {
@@ -146,7 +144,11 @@ impl ConfigResolver {
     }
 
     /// Resolves a single expression.
-    pub fn resolve_expression(&self, expr: &str, context: &ResolveContext) -> Result<Value, ResolveError> {
+    pub fn resolve_expression(
+        &self,
+        expr: &str,
+        context: &ResolveContext,
+    ) -> Result<Value, ResolveError> {
         let expr = expr.trim();
 
         // String literal
@@ -219,10 +221,18 @@ impl ConfigResolver {
                 let result = match *op {
                     " == " => left == right,
                     " != " => left != right,
-                    " >= " => compare_values(&left, &right).map(|c| c >= 0).unwrap_or(false),
-                    " <= " => compare_values(&left, &right).map(|c| c <= 0).unwrap_or(false),
-                    " > " => compare_values(&left, &right).map(|c| c > 0).unwrap_or(false),
-                    " < " => compare_values(&left, &right).map(|c| c < 0).unwrap_or(false),
+                    " >= " => compare_values(&left, &right)
+                        .map(|c| c >= 0)
+                        .unwrap_or(false),
+                    " <= " => compare_values(&left, &right)
+                        .map(|c| c <= 0)
+                        .unwrap_or(false),
+                    " > " => compare_values(&left, &right)
+                        .map(|c| c > 0)
+                        .unwrap_or(false),
+                    " < " => compare_values(&left, &right)
+                        .map(|c| c < 0)
+                        .unwrap_or(false),
                     _ => unreachable!(),
                 };
                 return Ok(Value::Bool(result));
@@ -249,7 +259,11 @@ impl ConfigResolver {
     }
 
     /// Resolves a variable path (e.g., "user.name" from variables).
-    fn resolve_variable_path(&self, path: &str, context: &ResolveContext) -> Result<Value, ResolveError> {
+    fn resolve_variable_path(
+        &self,
+        path: &str,
+        context: &ResolveContext,
+    ) -> Result<Value, ResolveError> {
         let parts: Vec<&str> = path.split('.').collect();
 
         if parts.is_empty() {
@@ -259,12 +273,11 @@ impl ConfigResolver {
             });
         }
 
-        let mut current = context
-            .get_variable(parts[0])
-            .cloned()
-            .ok_or_else(|| ResolveError::UndefinedVariable {
+        let mut current = context.get_variable(parts[0]).cloned().ok_or_else(|| {
+            ResolveError::UndefinedVariable {
                 name: parts[0].to_string(),
-            })?;
+            }
+        })?;
 
         for part in &parts[1..] {
             current = current
@@ -343,13 +356,13 @@ impl ConfigFunction for UpperFunction {
         "upper"
     }
     fn call(&self, args: Vec<Value>) -> Result<Value, ResolveError> {
-        let s = args
-            .first()
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| ResolveError::InvalidArgument {
-                function: "upper".to_string(),
-                message: "expected string argument".to_string(),
-            })?;
+        let s =
+            args.first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| ResolveError::InvalidArgument {
+                    function: "upper".to_string(),
+                    message: "expected string argument".to_string(),
+                })?;
         Ok(Value::String(s.to_uppercase()))
     }
 }
@@ -360,13 +373,13 @@ impl ConfigFunction for LowerFunction {
         "lower"
     }
     fn call(&self, args: Vec<Value>) -> Result<Value, ResolveError> {
-        let s = args
-            .first()
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| ResolveError::InvalidArgument {
-                function: "lower".to_string(),
-                message: "expected string argument".to_string(),
-            })?;
+        let s =
+            args.first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| ResolveError::InvalidArgument {
+                    function: "lower".to_string(),
+                    message: "expected string argument".to_string(),
+                })?;
         Ok(Value::String(s.to_lowercase()))
     }
 }
@@ -377,13 +390,13 @@ impl ConfigFunction for TrimFunction {
         "trim"
     }
     fn call(&self, args: Vec<Value>) -> Result<Value, ResolveError> {
-        let s = args
-            .first()
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| ResolveError::InvalidArgument {
-                function: "trim".to_string(),
-                message: "expected string argument".to_string(),
-            })?;
+        let s =
+            args.first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| ResolveError::InvalidArgument {
+                    function: "trim".to_string(),
+                    message: "expected string argument".to_string(),
+                })?;
         Ok(Value::String(s.trim().to_string()))
     }
 }
@@ -434,13 +447,13 @@ impl ConfigFunction for EnvFunction {
         "env"
     }
     fn call(&self, args: Vec<Value>) -> Result<Value, ResolveError> {
-        let name = args
-            .first()
-            .and_then(|v| v.as_str())
-            .ok_or_else(|| ResolveError::InvalidArgument {
-                function: "env".to_string(),
-                message: "expected string argument".to_string(),
-            })?;
+        let name =
+            args.first()
+                .and_then(|v| v.as_str())
+                .ok_or_else(|| ResolveError::InvalidArgument {
+                    function: "env".to_string(),
+                    message: "expected string argument".to_string(),
+                })?;
         Ok(std::env::var(name)
             .map(Value::String)
             .unwrap_or(Value::Null))

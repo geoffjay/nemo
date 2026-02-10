@@ -107,8 +107,8 @@ impl FileSource {
 
         let value = match self.config.format {
             FileFormat::Json => {
-                let json: serde_json::Value =
-                    serde_json::from_str(&content).map_err(|e| DataSourceError::Parse(e.to_string()))?;
+                let json: serde_json::Value = serde_json::from_str(&content)
+                    .map_err(|e| DataSourceError::Parse(e.to_string()))?;
                 Value::from(json)
             }
             FileFormat::Raw => Value::String(content),
@@ -175,7 +175,9 @@ impl DataSource for FileSource {
 
             watcher
                 .watch(&path, RecursiveMode::NonRecursive)
-                .map_err(|e| DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+                .map_err(|e| {
+                    DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                })?;
 
             self._watcher = Some(watcher);
 

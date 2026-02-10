@@ -292,7 +292,10 @@ impl DataRepository {
 
         let mut root = indexmap::IndexMap::new();
         root.insert("data".to_string(), Value::Object(indexmap::IndexMap::new()));
-        root.insert("state".to_string(), Value::Object(indexmap::IndexMap::new()));
+        root.insert(
+            "state".to_string(),
+            Value::Object(indexmap::IndexMap::new()),
+        );
         root.insert("var".to_string(), Value::Object(indexmap::IndexMap::new()));
 
         Self {

@@ -189,12 +189,13 @@ impl LayoutManager {
         property: &str,
         value: Value,
     ) -> Result<(), LayoutError> {
-        let component = self.components.get_mut(component_id).ok_or_else(|| {
-            LayoutError::InvalidConfig {
-                component_id: component_id.to_string(),
-                reason: "Component not found".to_string(),
-            }
-        })?;
+        let component =
+            self.components
+                .get_mut(component_id)
+                .ok_or_else(|| LayoutError::InvalidConfig {
+                    component_id: component_id.to_string(),
+                    reason: "Component not found".to_string(),
+                })?;
 
         component.properties.insert(property.to_string(), value);
         Ok(())
@@ -260,13 +261,11 @@ mod tests {
     fn test_apply_simple_layout() {
         let mut manager = setup_manager();
 
-        let root = LayoutNode::new("stack")
-            .with_id("root")
-            .with_child(
-                LayoutNode::new("button")
-                    .with_id("btn1")
-                    .with_prop("label", Value::String("Click".into())),
-            );
+        let root = LayoutNode::new("stack").with_id("root").with_child(
+            LayoutNode::new("button")
+                .with_id("btn1")
+                .with_prop("label", Value::String("Click".into())),
+        );
 
         let config = LayoutConfig::new(LayoutType::Stack, root);
         manager.apply_layout(config).unwrap();
@@ -291,9 +290,11 @@ mod tests {
     fn test_parent_child_relationship() {
         let mut manager = setup_manager();
 
-        let root = LayoutNode::new("stack")
-            .with_id("parent")
-            .with_child(LayoutNode::new("button").with_id("child").with_prop("label", Value::String("Test".into())));
+        let root = LayoutNode::new("stack").with_id("parent").with_child(
+            LayoutNode::new("button")
+                .with_id("child")
+                .with_prop("label", Value::String("Test".into())),
+        );
 
         let config = LayoutConfig::new(LayoutType::Stack, root);
         manager.apply_layout(config).unwrap();
@@ -313,7 +314,10 @@ mod tests {
             .with_id("btn")
             .with_prop("label", Value::String("Initial".into()));
 
-        button.config.bindings.push(BindingSpec::one_way("data.text", "label"));
+        button
+            .config
+            .bindings
+            .push(BindingSpec::one_way("data.text", "label"));
 
         let root = LayoutNode::new("stack").with_id("root").with_child(button);
         let config = LayoutConfig::new(LayoutType::Stack, root);

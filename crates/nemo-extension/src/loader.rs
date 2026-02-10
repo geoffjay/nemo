@@ -229,7 +229,8 @@ mod tests {
 
     #[test]
     fn test_plugin_manifest() {
-        let manifest = ExtensionManifest::plugin("test", "Test Plugin", PathBuf::from("libtest.so"));
+        let manifest =
+            ExtensionManifest::plugin("test", "Test Plugin", PathBuf::from("libtest.so"));
         assert_eq!(manifest.id, "test");
         assert_eq!(manifest.extension_type, ExtensionType::Plugin);
     }

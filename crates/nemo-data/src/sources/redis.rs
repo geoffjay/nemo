@@ -118,20 +118,18 @@ impl DataSource for RedisSource {
                         };
 
                         // Try to parse as JSON, fall back to string
-                        let payload_value = if let Ok(json) =
-                            serde_json::from_str::<serde_json::Value>(&payload)
-                        {
-                            Value::from(json)
-                        } else {
-                            Value::String(payload)
-                        };
+                        let payload_value =
+                            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&payload) {
+                                Value::from(json)
+                            } else {
+                                Value::String(payload)
+                            };
 
                         let mut data = indexmap::IndexMap::new();
                         data.insert("channel".to_string(), Value::String(channel));
                         data.insert("payload".to_string(), payload_value);
 
-                        let update =
-                            DataUpdate::full(&source_id, Value::Object(data));
+                        let update = DataUpdate::full(&source_id, Value::Object(data));
                         let _ = sender.send(update);
                     }
                     None => {

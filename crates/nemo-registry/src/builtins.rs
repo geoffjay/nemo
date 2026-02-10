@@ -98,10 +98,7 @@ fn register_input_components(registry: &ComponentRegistry) {
     button.tags = vec!["interactive".to_string(), "clickable".to_string()];
     button.schema = ConfigSchema::new("button")
         .property("label", PropertySchema::string())
-        .property(
-            "variant",
-            PropertySchema::string().with_default("primary"),
-        )
+        .property("variant", PropertySchema::string().with_default("primary"))
         .property("disabled", PropertySchema::boolean().with_default(false))
         .property("width", PropertySchema::integer())
         .property("height", PropertySchema::integer())
@@ -242,8 +239,8 @@ fn register_data_components(registry: &ComponentRegistry) {
         description: "A data list".to_string(),
         ..Default::default()
     };
-    list.schema = ConfigSchema::new("list")
-        .property("items", PropertySchema::array(PropertySchema::any()));
+    list.schema =
+        ConfigSchema::new("list").property("items", PropertySchema::array(PropertySchema::any()));
     let _ = registry.register_component(list);
 
     // Tree
@@ -311,10 +308,7 @@ pub fn register_builtin_data_sources(registry: &ComponentRegistry) {
     http.schema = ConfigSchema::new("http")
         .property("url", PropertySchema::string())
         .property("method", PropertySchema::string().with_default("GET"))
-        .property(
-            "interval",
-            PropertySchema::integer().with_default(0i64),
-        )
+        .property("interval", PropertySchema::integer().with_default(0i64))
         .require("url");
     let _ = registry.register_data_source(http);
 
@@ -424,10 +418,7 @@ pub fn register_builtin_transforms(registry: &ComponentRegistry) {
     };
     sort.schema = ConfigSchema::new("sort")
         .property("by", PropertySchema::string())
-        .property(
-            "direction",
-            PropertySchema::string().with_default("asc"),
-        )
+        .property("direction", PropertySchema::string().with_default("asc"))
         .require("by");
     let _ = registry.register_transform(sort);
 
@@ -491,8 +482,7 @@ pub fn register_builtin_actions(registry: &ComponentRegistry) {
         idempotent: true,
         ..Default::default()
     };
-    refresh.schema = ConfigSchema::new("refresh")
-        .property("target", PropertySchema::string());
+    refresh.schema = ConfigSchema::new("refresh").property("target", PropertySchema::string());
     let _ = registry.register_action(refresh);
 
     // HTTP Request Action

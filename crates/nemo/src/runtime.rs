@@ -120,9 +120,10 @@ impl NemoRuntime {
         info!("Loading configuration...");
 
         if self.config_path.exists() {
-            let loaded = self.config_loader.load(&self.config_path).map_err(|e| {
-                anyhow::anyhow!("Failed to load config file: {}", e)
-            })?;
+            let loaded = self
+                .config_loader
+                .load(&self.config_path)
+                .map_err(|e| anyhow::anyhow!("Failed to load config file: {}", e))?;
 
             self.tokio_runtime.block_on(async {
                 let mut config = self.config.write().await;
@@ -224,7 +225,11 @@ impl NemoRuntime {
                                     match ext.load_script(&path) {
                                         Ok(id) => info!("Loaded script: {}", id),
                                         Err(e) => {
-                                            tracing::warn!("Failed to load script {:?}: {}", path, e)
+                                            tracing::warn!(
+                                                "Failed to load script {:?}: {}",
+                                                path,
+                                                e
+                                            )
                                         }
                                     }
                                 }
@@ -240,14 +245,15 @@ impl NemoRuntime {
             if let Some(files) = scripts.get("files").and_then(|v| v.as_array()) {
                 for file_value in files {
                     if let Some(file_path) = file_value.as_str() {
-                        let script_path = if file_path.starts_with("./") || file_path.starts_with("../") {
-                            self.config_path
-                                .parent()
-                                .unwrap_or(std::path::Path::new("."))
-                                .join(file_path)
-                        } else {
-                            std::path::PathBuf::from(file_path)
-                        };
+                        let script_path =
+                            if file_path.starts_with("./") || file_path.starts_with("../") {
+                                self.config_path
+                                    .parent()
+                                    .unwrap_or(std::path::Path::new("."))
+                                    .join(file_path)
+                            } else {
+                                std::path::PathBuf::from(file_path)
+                            };
 
                         if script_path.exists() {
                             self.tokio_runtime.block_on(async {
@@ -255,7 +261,11 @@ impl NemoRuntime {
                                 match ext.load_script(&script_path) {
                                     Ok(id) => info!("Loaded script: {}", id),
                                     Err(e) => {
-                                        tracing::warn!("Failed to load script {:?}: {}", script_path, e)
+                                        tracing::warn!(
+                                            "Failed to load script {:?}: {}",
+                                            script_path,
+                                            e
+                                        )
                                     }
                                 }
                             });
@@ -356,13 +366,11 @@ impl NemoRuntime {
                 function_name,
                 (component_id.to_string(), event_data.to_string()),
             ) {
-                Ok(_) => debug!("Handler {}::{} executed successfully", script_id, function_name),
-                Err(e) => tracing::warn!(
-                    "Handler {}::{} failed: {}",
-                    script_id,
-                    function_name,
-                    e
+                Ok(_) => debug!(
+                    "Handler {}::{} executed successfully",
+                    script_id, function_name
                 ),
+                Err(e) => tracing::warn!("Handler {}::{} failed: {}", script_id, function_name, e),
             }
         });
     }
@@ -435,7 +443,10 @@ impl NemoRuntime {
                     .and_then(|v| v.as_str())
                     .unwrap_or("unknown");
 
-                info!("Configuring data source '{}' (type: {})", source_name, source_type);
+                info!(
+                    "Configuring data source '{}' (type: {})",
+                    source_name, source_type
+                );
 
                 match create_data_source(source_name, source_type, source_config) {
                     Some(source) => {
@@ -522,9 +533,9 @@ impl NemoRuntime {
         let mut any_updates = false;
 
         // Get source IDs and read their data from the repository
-        let source_ids = self.tokio_runtime.block_on(async {
-            self.data_engine.source_ids().await
-        });
+        let source_ids = self
+            .tokio_runtime
+            .block_on(async { self.data_engine.source_ids().await });
 
         for source_id in &source_ids {
             let data_path = nemo_data::DataPath::from_source(source_id);
@@ -566,9 +577,10 @@ impl NemoRuntime {
             None => return Ok(()),
         };
 
-        let mut configs = self.sink_configs.write().map_err(|e| {
-            anyhow::anyhow!("Failed to lock sink configs: {}", e)
-        })?;
+        let mut configs = self
+            .sink_configs
+            .write()
+            .map_err(|e| anyhow::anyhow!("Failed to lock sink configs: {}", e))?;
 
         for (sink_name, sink_config) in &sink_obj {
             let sink_type = sink_config
@@ -596,7 +608,10 @@ impl NemoRuntime {
                 }
             }
 
-            info!("Configured data sink '{}' (type: {}, target: {})", sink_name, sink_type, target);
+            info!(
+                "Configured data sink '{}' (type: {}, target: {})",
+                sink_name, sink_type, target
+            );
             configs.insert(
                 sink_name.clone(),
                 SinkConfig {
@@ -613,15 +628,15 @@ impl NemoRuntime {
     /// Publishes data to a configured sink.
     pub fn publish_to_sink(&self, sink_id: &str, payload: &str) -> Result<()> {
         let sink_config = {
-            let configs = self.sink_configs.read().map_err(|e| {
-                anyhow::anyhow!("Failed to lock sink configs: {}", e)
-            })?;
+            let configs = self
+                .sink_configs
+                .read()
+                .map_err(|e| anyhow::anyhow!("Failed to lock sink configs: {}", e))?;
             configs.get(sink_id).cloned()
         };
 
-        let sink_config = sink_config.ok_or_else(|| {
-            anyhow::anyhow!("Sink '{}' not found", sink_id)
-        })?;
+        let sink_config =
+            sink_config.ok_or_else(|| anyhow::anyhow!("Sink '{}' not found", sink_id))?;
 
         let sink_name = sink_config
             .params
@@ -733,10 +748,7 @@ fn create_data_source(
                 .and_then(|v| v.as_str())
                 .unwrap_or("localhost")
                 .to_string();
-            let port = config
-                .get("port")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(1883) as u16;
+            let port = config.get("port").and_then(|v| v.as_i64()).unwrap_or(1883) as u16;
             let topics: Vec<String> = config
                 .get("topics")
                 .and_then(|v| v.as_array())
@@ -746,10 +758,7 @@ fn create_data_source(
                         .collect()
                 })
                 .unwrap_or_default();
-            let qos = config
-                .get("qos")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0) as u8;
+            let qos = config.get("qos").and_then(|v| v.as_i64()).unwrap_or(0) as u8;
             let client_id = config
                 .get("client_id")
                 .and_then(|v| v.as_str())
@@ -813,7 +822,10 @@ fn create_data_source(
         }
         "file" => {
             let path = config.get("path").and_then(|v| v.as_str())?.to_string();
-            let watch = config.get("watch").and_then(|v| v.as_bool()).unwrap_or(false);
+            let watch = config
+                .get("watch")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
             let format_str = config
                 .get("format")
                 .and_then(|v| v.as_str())
@@ -892,7 +904,9 @@ fn parse_layout_node_as_root(layout: &Value, layout_type: &LayoutType) -> Option
             if let Some(comp_obj) = components.as_object() {
                 // Each key is a component ID, value is the component config
                 for (component_id, component_config) in comp_obj {
-                    if let Some(child) = parse_component_from_value(component_config, Some(component_id)) {
+                    if let Some(child) =
+                        parse_component_from_value(component_config, Some(component_id))
+                    {
                         root = root.with_child(child);
                     }
                 }
@@ -915,10 +929,7 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
     let obj = value.as_object()?;
 
     // Get component type (required)
-    let component_type = obj
-        .get("type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("panel");
+    let component_type = obj.get("type").and_then(|v| v.as_str()).unwrap_or("panel");
 
     let mut node = LayoutNode::new(component_type);
 
@@ -938,7 +949,9 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
                 // e.g., component "button" { ... } becomes component: { button: {...} }
                 if let Some(comp_obj) = val.as_object() {
                     for (child_id, child_config) in comp_obj {
-                        if let Some(child) = parse_component_from_value(child_config, Some(child_id)) {
+                        if let Some(child) =
+                            parse_component_from_value(child_config, Some(child_id))
+                        {
                             node = node.with_child(child);
                         }
                     }
@@ -1109,7 +1122,9 @@ impl PluginContext for RuntimeContext {
                 .set_property(component_id, property, config_value)
                 .map_err(|e| PluginError::ComponentFailed(e.to_string()))
         } else {
-            Err(PluginError::ComponentFailed("Layout manager is locked".to_string()))
+            Err(PluginError::ComponentFailed(
+                "Layout manager is locked".to_string(),
+            ))
         }
     }
 }
@@ -1122,16 +1137,12 @@ fn value_to_plugin_value(value: &Value) -> PluginValue {
         Value::Integer(i) => PluginValue::Integer(*i),
         Value::Float(f) => PluginValue::Float(*f),
         Value::String(s) => PluginValue::String(s.clone()),
-        Value::Array(arr) => {
-            PluginValue::Array(arr.iter().map(value_to_plugin_value).collect())
-        }
-        Value::Object(obj) => {
-            PluginValue::Object(
-                obj.iter()
-                    .map(|(k, v)| (k.clone(), value_to_plugin_value(v)))
-                    .collect(),
-            )
-        }
+        Value::Array(arr) => PluginValue::Array(arr.iter().map(value_to_plugin_value).collect()),
+        Value::Object(obj) => PluginValue::Object(
+            obj.iter()
+                .map(|(k, v)| (k.clone(), value_to_plugin_value(v)))
+                .collect(),
+        ),
     }
 }
 

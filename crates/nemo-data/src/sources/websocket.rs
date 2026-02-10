@@ -163,7 +163,8 @@ impl DataSource for WebSocketSource {
                         while let Some(msg) = read.next().await {
                             match msg {
                                 Ok(Message::Text(text)) => {
-                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&text)
+                                    if let Ok(json) =
+                                        serde_json::from_str::<serde_json::Value>(&text)
                                     {
                                         let update =
                                             DataUpdate::full(&config.id, Value::from(json));

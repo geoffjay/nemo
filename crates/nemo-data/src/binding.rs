@@ -170,10 +170,7 @@ impl BindingSystem {
 
         // Add to path index
         let source_str = source.to_string();
-        self.path_index
-            .entry(source_str)
-            .or_default()
-            .push(id);
+        self.path_index.entry(source_str).or_default().push(id);
 
         // Add to target index
         self.target_index.insert(target, id);

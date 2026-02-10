@@ -11,15 +11,11 @@ pub struct Tree {
 
 impl RenderOnce for Tree {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        div()
-            .flex()
-            .flex_col()
-            .p_2()
-            .child(
-                div()
-                    .text_sm()
-                    .text_color(cx.theme().colors.muted_foreground)
-                    .child("Tree (placeholder)"),
-            )
+        div().flex().flex_col().p_2().child(
+            div()
+                .text_sm()
+                .text_color(cx.theme().colors.muted_foreground)
+                .child("Tree (placeholder)"),
+        )
     }
 }

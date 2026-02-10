@@ -57,10 +57,7 @@ impl TimerSource {
 
         let schema = DataSchema {
             name: config.id.clone(),
-            description: format!(
-                "Timer emitting every {:?}",
-                config.interval
-            ),
+            description: format!("Timer emitting every {:?}", config.interval),
             value_type: SchemaType::Object,
         };
 

@@ -67,12 +67,13 @@ impl NatsClient {
     /// Connects to the NATS server.
     pub async fn connect(&mut self) -> Result<(), IntegrationError> {
         let url = self.urls.join(",");
-        let client = async_nats::connect(&url).await.map_err(|e| {
-            IntegrationError::ConnectionFailed {
-                endpoint: url,
-                reason: e.to_string(),
-            }
-        })?;
+        let client =
+            async_nats::connect(&url)
+                .await
+                .map_err(|e| IntegrationError::ConnectionFailed {
+                    endpoint: url,
+                    reason: e.to_string(),
+                })?;
 
         self.client = Some(client);
         *self.connected.write().await = true;
@@ -80,7 +81,11 @@ impl NatsClient {
     }
 
     /// Publishes a message.
-    pub async fn publish(&self, subject: &str, payload: impl AsRef<[u8]>) -> Result<(), IntegrationError> {
+    pub async fn publish(
+        &self,
+        subject: &str,
+        payload: impl AsRef<[u8]>,
+    ) -> Result<(), IntegrationError> {
         let client = self.client.as_ref().ok_or(IntegrationError::NotConnected {
             endpoint: "NATS".to_string(),
         })?;

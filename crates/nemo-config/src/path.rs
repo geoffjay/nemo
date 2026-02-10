@@ -20,7 +20,9 @@ pub enum PathSegment {
 impl ConfigPath {
     /// Creates an empty (root) path.
     pub fn root() -> Self {
-        ConfigPath { segments: Vec::new() }
+        ConfigPath {
+            segments: Vec::new(),
+        }
     }
 
     /// Creates a path from a single key.

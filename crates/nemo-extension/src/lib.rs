@@ -9,8 +9,8 @@
 pub mod error;
 pub mod loader;
 pub mod plugin;
-pub mod rhai_engine;
 pub mod registry;
+pub mod rhai_engine;
 
 pub use error::ExtensionError;
 pub use loader::{ExtensionLoader, ExtensionManifest, ExtensionType};
@@ -71,11 +71,10 @@ impl ExtensionManager {
 
     /// Loads a script by path.
     pub fn load_script(&mut self, path: &std::path::Path) -> Result<String, ExtensionError> {
-        let source = std::fs::read_to_string(path)
-            .map_err(|e| ExtensionError::LoadError {
-                id: path.to_string_lossy().to_string(),
-                reason: e.to_string(),
-            })?;
+        let source = std::fs::read_to_string(path).map_err(|e| ExtensionError::LoadError {
+            id: path.to_string_lossy().to_string(),
+            reason: e.to_string(),
+        })?;
 
         let id = path
             .file_stem()
@@ -83,7 +82,8 @@ impl ExtensionManager {
             .unwrap_or_else(|| "unnamed".to_string());
 
         self.rhai_engine.load_script(&id, &source)?;
-        self.registry.register_script(id.clone(), path.to_path_buf());
+        self.registry
+            .register_script(id.clone(), path.to_path_buf());
 
         Ok(id)
     }
@@ -91,7 +91,8 @@ impl ExtensionManager {
     /// Loads a plugin by path.
     pub fn load_plugin(&mut self, path: &std::path::Path) -> Result<String, ExtensionError> {
         let id = self.plugin_host.load(path)?;
-        self.registry.register_plugin(id.clone(), path.to_path_buf());
+        self.registry
+            .register_plugin(id.clone(), path.to_path_buf());
         Ok(id)
     }
 
@@ -113,11 +114,10 @@ impl ExtensionManager {
     /// Reloads a script.
     pub fn reload_script(&mut self, id: &str) -> Result<(), ExtensionError> {
         if let Some(path) = self.registry.get_script_path(id) {
-            let source = std::fs::read_to_string(&path)
-                .map_err(|e| ExtensionError::LoadError {
-                    id: id.to_string(),
-                    reason: e.to_string(),
-                })?;
+            let source = std::fs::read_to_string(&path).map_err(|e| ExtensionError::LoadError {
+                id: id.to_string(),
+                reason: e.to_string(),
+            })?;
             self.rhai_engine.reload_script(id, &source)
         } else {
             Err(ExtensionError::NotFound { id: id.to_string() })

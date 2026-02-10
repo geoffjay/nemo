@@ -25,7 +25,9 @@ impl ConfigValidator {
         let schema = match self.schema_registry.get(schema_name) {
             Some(s) => s,
             None => {
-                result.errors.push(ValidationError::schema_not_found(schema_name));
+                result
+                    .errors
+                    .push(ValidationError::schema_not_found(schema_name));
                 return result;
             }
         };
@@ -101,11 +103,9 @@ impl ConfigValidator {
         // Validate rules
         for rule in &schema.rules {
             if let Err(msg) = self.validate_rule(value, rule) {
-                result.errors.push(ValidationError::rule_violation(
-                    path.clone(),
-                    rule,
-                    &msg,
-                ));
+                result
+                    .errors
+                    .push(ValidationError::rule_violation(path.clone(), rule, &msg));
             }
         }
 

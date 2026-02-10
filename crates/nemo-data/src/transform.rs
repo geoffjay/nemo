@@ -55,7 +55,11 @@ impl Pipeline {
     }
 
     /// Executes the pipeline on input data.
-    pub fn execute(&self, input: Value, context: &TransformContext) -> Result<Value, PipelineError> {
+    pub fn execute(
+        &self,
+        input: Value,
+        context: &TransformContext,
+    ) -> Result<Value, PipelineError> {
         if self.transforms.is_empty() {
             return Ok(input);
         }
@@ -122,7 +126,11 @@ impl MapTransform {
 }
 
 impl Transform for MapTransform {
-    fn transform(&self, input: Value, _context: &TransformContext) -> Result<Value, TransformError> {
+    fn transform(
+        &self,
+        input: Value,
+        _context: &TransformContext,
+    ) -> Result<Value, TransformError> {
         match input {
             Value::Array(items) => {
                 let mapped: Vec<Value> = items
@@ -201,7 +209,11 @@ impl FilterTransform {
 }
 
 impl Transform for FilterTransform {
-    fn transform(&self, input: Value, _context: &TransformContext) -> Result<Value, TransformError> {
+    fn transform(
+        &self,
+        input: Value,
+        _context: &TransformContext,
+    ) -> Result<Value, TransformError> {
         match input {
             Value::Array(items) => {
                 let filtered: Vec<Value> = items
@@ -239,7 +251,11 @@ impl SelectTransform {
 }
 
 impl Transform for SelectTransform {
-    fn transform(&self, input: Value, _context: &TransformContext) -> Result<Value, TransformError> {
+    fn transform(
+        &self,
+        input: Value,
+        _context: &TransformContext,
+    ) -> Result<Value, TransformError> {
         match input {
             Value::Array(items) => {
                 let selected: Vec<Value> = items
@@ -306,7 +322,11 @@ impl SortTransform {
 }
 
 impl Transform for SortTransform {
-    fn transform(&self, input: Value, _context: &TransformContext) -> Result<Value, TransformError> {
+    fn transform(
+        &self,
+        input: Value,
+        _context: &TransformContext,
+    ) -> Result<Value, TransformError> {
         match input {
             Value::Array(mut items) => {
                 let field = self.by.clone();
@@ -363,7 +383,11 @@ impl TakeTransform {
 }
 
 impl Transform for TakeTransform {
-    fn transform(&self, input: Value, _context: &TransformContext) -> Result<Value, TransformError> {
+    fn transform(
+        &self,
+        input: Value,
+        _context: &TransformContext,
+    ) -> Result<Value, TransformError> {
         match input {
             Value::Array(items) => {
                 let taken: Vec<Value> = items.into_iter().take(self.count).collect();
@@ -392,7 +416,11 @@ impl SkipTransform {
 }
 
 impl Transform for SkipTransform {
-    fn transform(&self, input: Value, _context: &TransformContext) -> Result<Value, TransformError> {
+    fn transform(
+        &self,
+        input: Value,
+        _context: &TransformContext,
+    ) -> Result<Value, TransformError> {
         match input {
             Value::Array(items) => {
                 let skipped: Vec<Value> = items.into_iter().skip(self.count).collect();

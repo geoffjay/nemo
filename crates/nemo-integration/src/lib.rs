@@ -157,7 +157,11 @@ impl IntegrationGateway {
                 let parts: Vec<&str> = config.url.split(':').collect();
                 let host = parts.first().unwrap_or(&"localhost");
                 let port: u16 = parts.get(1).and_then(|p| p.parse().ok()).unwrap_or(1883);
-                let client_id = config.options.get("client_id").cloned().unwrap_or_else(|| name.clone());
+                let client_id = config
+                    .options
+                    .get("client_id")
+                    .cloned()
+                    .unwrap_or_else(|| name.clone());
                 let client = MqttClient::new(&client_id, *host, port);
                 self.register_mqtt(name, client).await;
             }

@@ -102,12 +102,7 @@ fn main() -> Result<()> {
                         serde_json::from_value(serde_json::Value::Object(json_obj)).ok()
                     });
 
-                theme::apply_configured_theme(
-                    &theme_name,
-                    &mode,
-                    overrides.as_ref(),
-                    cx,
-                );
+                theme::apply_configured_theme(&theme_name, &mode, overrides.as_ref(), cx);
             }
 
             // Store the App entity so we can access it on window close

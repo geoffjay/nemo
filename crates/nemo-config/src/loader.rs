@@ -114,10 +114,7 @@ mod tests {
 
         let schema = ConfigSchema::new("application")
             .property("name", PropertySchema::string())
-            .property(
-                "version",
-                PropertySchema::string().with_default("1.0.0"),
-            )
+            .property("version", PropertySchema::string().with_default("1.0.0"))
             .require("name");
 
         registry.register(schema).unwrap();

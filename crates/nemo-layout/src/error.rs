@@ -11,7 +11,10 @@ pub enum LayoutError {
 
     /// Invalid component configuration.
     #[error("Invalid configuration for component '{component_id}': {reason}")]
-    InvalidConfig { component_id: String, reason: String },
+    InvalidConfig {
+        component_id: String,
+        reason: String,
+    },
 
     /// Binding error.
     #[error("Binding error for '{binding_id}': {reason}")]
@@ -23,7 +26,10 @@ pub enum LayoutError {
 
     /// Component render error.
     #[error("Render error for component '{component_id}': {reason}")]
-    RenderError { component_id: String, reason: String },
+    RenderError {
+        component_id: String,
+        reason: String,
+    },
 
     /// Missing required property.
     #[error("Missing required property '{property}' for component '{component_id}'")]

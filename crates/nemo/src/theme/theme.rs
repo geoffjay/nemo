@@ -171,7 +171,10 @@ pub fn apply_configured_theme(
                     theme.apply_config(&light);
                 }
 
-                info!("Applied theme '{}' in system mode (detected: {:?})", name, os_mode);
+                info!(
+                    "Applied theme '{}' in system mode (detected: {:?})",
+                    name, os_mode
+                );
             }
         }
         mode_str => {

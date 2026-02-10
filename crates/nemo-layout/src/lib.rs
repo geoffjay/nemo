@@ -22,7 +22,9 @@ pub use node::{
     Alignment, BindingMode, BindingSpec, ComponentConfig, LayoutConfig, LayoutHints, LayoutNode,
     LayoutType, Size,
 };
-pub use state::{ComponentState, MemoryPersistence, StateCoordinator, StatePersistence, StateMetadata};
+pub use state::{
+    ComponentState, MemoryPersistence, StateCoordinator, StateMetadata, StatePersistence,
+};
 
 #[cfg(test)]
 mod tests {

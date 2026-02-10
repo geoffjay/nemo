@@ -144,10 +144,9 @@ mod tests {
 
     #[test]
     fn test_and_filter() {
-        let filter = EventFilter::Prefix("data.".to_string())
-            .and(EventFilter::Not(Box::new(EventFilter::Type(
-                "data.heartbeat".to_string(),
-            ))));
+        let filter = EventFilter::Prefix("data.".to_string()).and(EventFilter::Not(Box::new(
+            EventFilter::Type("data.heartbeat".to_string()),
+        )));
 
         assert!(filter.matches(&make_event("data.updated")));
         assert!(!filter.matches(&make_event("data.heartbeat")));

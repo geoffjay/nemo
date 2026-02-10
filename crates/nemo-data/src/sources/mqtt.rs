@@ -96,11 +96,7 @@ impl DataSource for MqttSource {
             .clone()
             .unwrap_or_else(|| format!("nemo-{}", config.id));
 
-        let mut mqttoptions = rumqttc::MqttOptions::new(
-            &client_id,
-            &config.host,
-            config.port,
-        );
+        let mut mqttoptions = rumqttc::MqttOptions::new(&client_id, &config.host, config.port);
         mqttoptions.set_keep_alive(std::time::Duration::from_secs(30));
 
         let (client, mut eventloop) = rumqttc::AsyncClient::new(mqttoptions, 100);
@@ -127,25 +123,22 @@ impl DataSource for MqttSource {
                         *status.write().await = SourceStatus::Connected;
 
                         let topic = publish.topic.clone();
-                        let payload_str =
-                            String::from_utf8_lossy(&publish.payload).to_string();
+                        let payload_str = String::from_utf8_lossy(&publish.payload).to_string();
 
                         // Try to parse as JSON, fall back to string
-                        let payload_value =
-                            if let Ok(json) = serde_json::from_str::<serde_json::Value>(
-                                &payload_str,
-                            ) {
-                                Value::from(json)
-                            } else {
-                                Value::String(payload_str)
-                            };
+                        let payload_value = if let Ok(json) =
+                            serde_json::from_str::<serde_json::Value>(&payload_str)
+                        {
+                            Value::from(json)
+                        } else {
+                            Value::String(payload_str)
+                        };
 
                         let mut data = indexmap::IndexMap::new();
                         data.insert("topic".to_string(), Value::String(topic));
                         data.insert("payload".to_string(), payload_value);
 
-                        let update =
-                            DataUpdate::full(&source_id, Value::Object(data));
+                        let update = DataUpdate::full(&source_id, Value::Object(data));
                         let _ = sender.send(update);
                     }
                     Ok(rumqttc::Event::Incoming(rumqttc::Incoming::ConnAck(_))) => {
@@ -153,8 +146,7 @@ impl DataSource for MqttSource {
                     }
                     Ok(_) => {}
                     Err(e) => {
-                        *status.write().await =
-                            SourceStatus::Error(e.to_string());
+                        *status.write().await = SourceStatus::Error(e.to_string());
                         // Brief delay before retrying
                         tokio::time::sleep(std::time::Duration::from_secs(5)).await;
                     }

@@ -16,13 +16,20 @@ pub mod sources;
 pub mod transform;
 
 pub use action::{Action, ActionContext, ActionId, ActionSystem, ActionTrigger, TriggerCondition};
-pub use binding::{Binding, BindingConfig, BindingId, BindingMode, BindingSystem, BindingTarget, BindingUpdate};
+pub use binding::{
+    Binding, BindingConfig, BindingId, BindingMode, BindingSystem, BindingTarget, BindingUpdate,
+};
 pub use error::{
     ActionError, BindingError, DataFlowError, DataSourceError, PipelineError, RepositoryError,
     TransformError,
 };
-pub use repository::{DataPath, DataRepository, DataStore, MemoryStore, PathSegment, RepositoryChange};
-pub use source::{DataSchema, DataSource, DataUpdate, SchemaType, SourceConfig, SourceId, SourceStatus, UpdateType};
+pub use repository::{
+    DataPath, DataRepository, DataStore, MemoryStore, PathSegment, RepositoryChange,
+};
+pub use source::{
+    DataSchema, DataSource, DataUpdate, SchemaType, SourceConfig, SourceId, SourceStatus,
+    UpdateType,
+};
 pub use sources::{
     FileFormat, FileSource, FileSourceConfig, HttpSource, HttpSourceConfig, MqttSource,
     MqttSourceConfig, NatsSource, NatsSourceConfig, RedisSource, RedisSourceConfig, TimerSource,
@@ -86,7 +93,10 @@ impl DataFlowEngine {
 
     /// Sets a pipeline for a source.
     pub async fn set_pipeline(&self, source_id: &str, pipeline: Pipeline) {
-        self.pipelines.write().await.insert(source_id.to_string(), pipeline);
+        self.pipelines
+            .write()
+            .await
+            .insert(source_id.to_string(), pipeline);
     }
 
     /// Starts a source by ID.

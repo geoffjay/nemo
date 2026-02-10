@@ -136,7 +136,10 @@ impl ActionSystem {
     }
 
     /// Processes a repository change and fires matching triggers.
-    pub async fn on_data_changed(&self, change: &RepositoryChange) -> Vec<Result<Value, ActionError>> {
+    pub async fn on_data_changed(
+        &self,
+        change: &RepositoryChange,
+    ) -> Vec<Result<Value, ActionError>> {
         let mut results = Vec::new();
         let triggers = self.triggers.read().await.clone();
 
@@ -148,7 +151,9 @@ impl ActionSystem {
                 };
 
                 if let Some(action) = self.actions.read().await.get(&trigger.action) {
-                    let result = action.execute(trigger.action_params.clone(), &context).await;
+                    let result = action
+                        .execute(trigger.action_params.clone(), &context)
+                        .await;
                     results.push(result);
 
                     // Update trigger state
@@ -229,14 +234,15 @@ impl ActionSystem {
     fn compare_values(a: &Value, b: &Value) -> std::cmp::Ordering {
         match (a, b) {
             (Value::Integer(a), Value::Integer(b)) => a.cmp(b),
-            (Value::Float(a), Value::Float(b)) => a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal),
-            (Value::Integer(a), Value::Float(b)) => {
-                (*a as f64).partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
+            (Value::Float(a), Value::Float(b)) => {
+                a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal)
             }
-            (Value::Float(a), Value::Integer(b)) => {
-                a.partial_cmp(&(*b as f64))
-                    .unwrap_or(std::cmp::Ordering::Equal)
-            }
+            (Value::Integer(a), Value::Float(b)) => (*a as f64)
+                .partial_cmp(b)
+                .unwrap_or(std::cmp::Ordering::Equal),
+            (Value::Float(a), Value::Integer(b)) => a
+                .partial_cmp(&(*b as f64))
+                .unwrap_or(std::cmp::Ordering::Equal),
             (Value::String(a), Value::String(b)) => a.cmp(b),
             _ => std::cmp::Ordering::Equal,
         }
@@ -263,7 +269,12 @@ impl ActionSystem {
 
     /// Lists all trigger IDs.
     pub async fn list_triggers(&self) -> Vec<String> {
-        self.triggers.read().await.iter().map(|t| t.id.clone()).collect()
+        self.triggers
+            .read()
+            .await
+            .iter()
+            .map(|t| t.id.clone())
+            .collect()
     }
 }
 
@@ -365,9 +376,7 @@ mod tests {
     #[tokio::test]
     async fn test_action_system_register() {
         let system = ActionSystem::new();
-        system
-            .register_action("log", Arc::new(LogAction))
-            .await;
+        system.register_action("log", Arc::new(LogAction)).await;
 
         let actions = system.list_actions().await;
         assert!(actions.contains(&"log".to_string()));
@@ -388,9 +397,7 @@ mod tests {
     #[tokio::test]
     async fn test_trigger_path_changed() {
         let system = ActionSystem::new();
-        system
-            .register_action("log", Arc::new(LogAction))
-            .await;
+        system.register_action("log", Arc::new(LogAction)).await;
 
         let trigger = ActionTrigger {
             id: "test-trigger".to_string(),

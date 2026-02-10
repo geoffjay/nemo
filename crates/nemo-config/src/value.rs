@@ -207,10 +207,8 @@ impl From<serde_json::Value> for Value {
                 Value::Array(arr.into_iter().map(Value::from).collect())
             }
             serde_json::Value::Object(obj) => {
-                let map: IndexMap<String, Value> = obj
-                    .into_iter()
-                    .map(|(k, v)| (k, Value::from(v)))
-                    .collect();
+                let map: IndexMap<String, Value> =
+                    obj.into_iter().map(|(k, v)| (k, Value::from(v))).collect();
                 Value::Object(map)
             }
         }

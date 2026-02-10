@@ -222,7 +222,9 @@ impl RhaiEngine {
         scope: &mut Scope,
         expr: &str,
     ) -> Result<T, ExtensionError> {
-        self.engine.eval_with_scope(scope, expr).map_err(|e| e.into())
+        self.engine
+            .eval_with_scope(scope, expr)
+            .map_err(|e| e.into())
     }
 
     /// Runs a script and returns the result.
@@ -277,7 +279,8 @@ impl RhaiEngine {
 
     /// Registers a custom module.
     pub fn register_module(&mut self, name: &str, module: Module) {
-        self.engine.register_static_module(name, std::rc::Rc::new(module));
+        self.engine
+            .register_static_module(name, std::rc::Rc::new(module));
     }
 
     /// Registers the plugin context API.
@@ -331,22 +334,26 @@ impl RhaiEngine {
 
         // Component property functions
         let ctx = context.clone();
-        self.engine
-            .register_fn("get_component_property", move |component_id: &str, property: &str| -> Dynamic {
+        self.engine.register_fn(
+            "get_component_property",
+            move |component_id: &str, property: &str| -> Dynamic {
                 match ctx.get_component_property(component_id, property) {
                     Some(value) => plugin_value_to_dynamic(value),
                     None => Dynamic::UNIT,
                 }
-            });
+            },
+        );
 
         let ctx = context.clone();
-        self.engine
-            .register_fn("set_component_property", move |component_id: &str, property: &str, value: Dynamic| {
+        self.engine.register_fn(
+            "set_component_property",
+            move |component_id: &str, property: &str, value: Dynamic| {
                 let plugin_value = dynamic_to_plugin_value(value);
                 if let Err(e) = ctx.set_component_property(component_id, property, plugin_value) {
                     tracing::warn!("Failed to set component property: {}", e);
                 }
-            });
+            },
+        );
 
         // Convenience wrappers for common properties
         let ctx = context.clone();
@@ -372,8 +379,9 @@ impl RhaiEngine {
             });
 
         let ctx = context.clone();
-        self.engine
-            .register_fn("set_component_text", move |component_id: &str, text: &str| {
+        self.engine.register_fn(
+            "set_component_text",
+            move |component_id: &str, text: &str| {
                 if let Err(e) = ctx.set_component_property(
                     component_id,
                     "text",
@@ -381,11 +389,13 @@ impl RhaiEngine {
                 ) {
                     tracing::warn!("Failed to set component text: {}", e);
                 }
-            });
+            },
+        );
 
         let ctx = context;
-        self.engine
-            .register_fn("set_component_label", move |component_id: &str, label: &str| {
+        self.engine.register_fn(
+            "set_component_label",
+            move |component_id: &str, label: &str| {
                 if let Err(e) = ctx.set_component_property(
                     component_id,
                     "label",
@@ -393,7 +403,8 @@ impl RhaiEngine {
                 ) {
                     tracing::warn!("Failed to set component label: {}", e);
                 }
-            });
+            },
+        );
     }
 
     /// Lists all loaded script IDs.

@@ -8,7 +8,10 @@ use thiserror::Error;
 pub enum RegistrationError {
     /// Entity is already registered.
     #[error("{entity_type:?} '{name}' is already registered")]
-    AlreadyRegistered { entity_type: EntityType, name: String },
+    AlreadyRegistered {
+        entity_type: EntityType,
+        name: String,
+    },
 
     /// Invalid descriptor.
     #[error("Invalid descriptor: {0}")]

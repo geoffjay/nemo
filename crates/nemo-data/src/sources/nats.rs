@@ -112,8 +112,7 @@ impl DataSource for NatsSource {
 
                 handles.push(tokio::spawn(async move {
                     while let Some(msg) = sub.next().await {
-                        let payload_str =
-                            String::from_utf8_lossy(&msg.payload).to_string();
+                        let payload_str = String::from_utf8_lossy(&msg.payload).to_string();
 
                         // Try to parse as JSON, fall back to string
                         let payload_value = if let Ok(json) =
@@ -131,8 +130,7 @@ impl DataSource for NatsSource {
                         );
                         data.insert("payload".to_string(), payload_value);
 
-                        let update =
-                            DataUpdate::full(&source_id, Value::Object(data));
+                        let update = DataUpdate::full(&source_id, Value::Object(data));
                         let _ = sender.send(update);
                     }
 

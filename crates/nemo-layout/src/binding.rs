@@ -120,10 +120,7 @@ impl BindingManager {
         let id = binding.id;
 
         // Add to indices
-        self.source_index
-            .entry(source)
-            .or_default()
-            .push(id);
+        self.source_index.entry(source).or_default().push(id);
         self.component_index
             .entry(component_id)
             .or_default()
@@ -161,11 +158,7 @@ impl BindingManager {
     pub fn bindings_for_source(&self, source: &str) -> Vec<&ActiveBinding> {
         self.source_index
             .get(source)
-            .map(|ids| {
-                ids.iter()
-                    .filter_map(|id| self.bindings.get(id))
-                    .collect()
-            })
+            .map(|ids| ids.iter().filter_map(|id| self.bindings.get(id)).collect())
             .unwrap_or_default()
     }
 
@@ -173,11 +166,7 @@ impl BindingManager {
     pub fn bindings_for_component(&self, component_id: &str) -> Vec<&ActiveBinding> {
         self.component_index
             .get(component_id)
-            .map(|ids| {
-                ids.iter()
-                    .filter_map(|id| self.bindings.get(id))
-                    .collect()
-            })
+            .map(|ids| ids.iter().filter_map(|id| self.bindings.get(id)).collect())
             .unwrap_or_default()
     }
 
@@ -200,11 +189,7 @@ impl BindingManager {
     }
 
     /// Processes a data change and returns updates to apply.
-    pub fn on_data_changed(
-        &mut self,
-        source_path: &str,
-        new_value: &Value,
-    ) -> Vec<BindingUpdate> {
+    pub fn on_data_changed(&mut self, source_path: &str, new_value: &Value) -> Vec<BindingUpdate> {
         let mut updates = Vec::new();
 
         if let Some(binding_ids) = self.source_index.get(source_path).cloned() {
@@ -336,7 +321,12 @@ mod tests {
 
         manager.bind("data.test", target1, BindingMode::OneWay, None);
         manager.bind("data.test", target2, BindingMode::OneWay, None);
-        manager.bind("data.other", ComponentProperty::new("comp3", "value"), BindingMode::OneWay, None);
+        manager.bind(
+            "data.other",
+            ComponentProperty::new("comp3", "value"),
+            BindingMode::OneWay,
+            None,
+        );
 
         let bindings = manager.bindings_for_source("data.test");
         assert_eq!(bindings.len(), 2);

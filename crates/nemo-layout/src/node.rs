@@ -331,8 +331,8 @@ mod tests {
 
     #[test]
     fn test_binding_spec() {
-        let binding = BindingSpec::one_way("data.users", "items")
-            .with_transform("item => item.name");
+        let binding =
+            BindingSpec::one_way("data.users", "items").with_transform("item => item.name");
 
         assert_eq!(binding.source, "data.users");
         assert_eq!(binding.target, "items");
@@ -341,9 +341,7 @@ mod tests {
 
     #[test]
     fn test_layout_hints() {
-        let hints = LayoutHints::new()
-            .with_size(100.0, 50.0)
-            .with_flex(1.0);
+        let hints = LayoutHints::new().with_size(100.0, 50.0).with_flex(1.0);
 
         assert_eq!(hints.size, Some(Size::new(100.0, 50.0)));
         assert_eq!(hints.flex, Some(1.0));

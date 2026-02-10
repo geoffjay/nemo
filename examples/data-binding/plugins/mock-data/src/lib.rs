@@ -33,18 +33,23 @@ fn init(registrar: &mut dyn PluginRegistrar) {
             let _ = ctx.set_data("mock.counter", PluginValue::Integer(counter));
 
             // Alternating status
-            let status = if counter % 10 < 7 { "online" } else { "maintenance" };
-            let _ = ctx.set_data(
-                "mock.status",
-                PluginValue::String(status.to_string()),
-            );
+            let status = if counter % 10 < 7 {
+                "online"
+            } else {
+                "maintenance"
+            };
+            let _ = ctx.set_data("mock.status", PluginValue::String(status.to_string()));
         }
     });
 }
 
 declare_plugin!(
-    PluginManifest::new("mock-data", "Mock Data Provider", semver::Version::new(0, 1, 0))
-        .with_description("Provides simulated sensor data for testing data bindings")
-        .with_capability(Capability::DataSource("mock".to_string())),
+    PluginManifest::new(
+        "mock-data",
+        "Mock Data Provider",
+        semver::Version::new(0, 1, 0)
+    )
+    .with_description("Provides simulated sensor data for testing data bindings")
+    .with_capability(Capability::DataSource("mock".to_string())),
     init
 );

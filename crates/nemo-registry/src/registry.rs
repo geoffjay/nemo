@@ -26,11 +26,20 @@ pub enum EntityType {
 #[derive(Debug, Clone)]
 pub enum RegistryChange {
     /// An entity was added.
-    Added { entity_type: EntityType, name: String },
+    Added {
+        entity_type: EntityType,
+        name: String,
+    },
     /// An entity was removed.
-    Removed { entity_type: EntityType, name: String },
+    Removed {
+        entity_type: EntityType,
+        name: String,
+    },
     /// An entity was updated.
-    Updated { entity_type: EntityType, name: String },
+    Updated {
+        entity_type: EntityType,
+        name: String,
+    },
 }
 
 /// Central registry for all component types.
@@ -59,7 +68,10 @@ impl ComponentRegistry {
         &self,
         descriptor: ComponentDescriptor,
     ) -> Result<(), RegistrationError> {
-        let mut components = self.components.write().map_err(|_| RegistrationError::LockError)?;
+        let mut components = self
+            .components
+            .write()
+            .map_err(|_| RegistrationError::LockError)?;
 
         if components.contains_key(&descriptor.name) {
             return Err(RegistrationError::AlreadyRegistered {
@@ -187,7 +199,10 @@ impl ComponentRegistry {
 
     /// Registers an action descriptor.
     pub fn register_action(&self, descriptor: ActionDescriptor) -> Result<(), RegistrationError> {
-        let mut actions = self.actions.write().map_err(|_| RegistrationError::LockError)?;
+        let mut actions = self
+            .actions
+            .write()
+            .map_err(|_| RegistrationError::LockError)?;
 
         if actions.contains_key(&descriptor.name) {
             return Err(RegistrationError::AlreadyRegistered {
@@ -312,9 +327,14 @@ impl ComponentRegistry {
                 c.values()
                     .filter(|d| {
                         d.name.to_lowercase().contains(&query_lower)
-                            || d.metadata.display_name.to_lowercase().contains(&query_lower)
+                            || d.metadata
+                                .display_name
+                                .to_lowercase()
+                                .contains(&query_lower)
                             || d.metadata.description.to_lowercase().contains(&query_lower)
-                            || d.tags.iter().any(|t| t.to_lowercase().contains(&query_lower))
+                            || d.tags
+                                .iter()
+                                .any(|t| t.to_lowercase().contains(&query_lower))
                     })
                     .cloned()
                     .collect()
@@ -326,7 +346,10 @@ impl ComponentRegistry {
 
     /// Unregisters a component.
     pub fn unregister_component(&self, name: &str) -> Option<ComponentDescriptor> {
-        self.components.write().ok().and_then(|mut c| c.remove(name))
+        self.components
+            .write()
+            .ok()
+            .and_then(|mut c| c.remove(name))
     }
 
     /// Unregisters a data source.
@@ -339,7 +362,10 @@ impl ComponentRegistry {
 
     /// Unregisters a transform.
     pub fn unregister_transform(&self, name: &str) -> Option<TransformDescriptor> {
-        self.transforms.write().ok().and_then(|mut t| t.remove(name))
+        self.transforms
+            .write()
+            .ok()
+            .and_then(|mut t| t.remove(name))
     }
 
     /// Unregisters an action.
@@ -380,7 +406,10 @@ mod tests {
         registry.register_component(d1).unwrap();
         let result = registry.register_component(d2);
 
-        assert!(matches!(result, Err(RegistrationError::AlreadyRegistered { .. })));
+        assert!(matches!(
+            result,
+            Err(RegistrationError::AlreadyRegistered { .. })
+        ));
     }
 
     #[test]
@@ -391,10 +420,16 @@ mod tests {
             .register_component(ComponentDescriptor::new("button", ComponentCategory::Input))
             .unwrap();
         registry
-            .register_component(ComponentDescriptor::new("label", ComponentCategory::Display))
+            .register_component(ComponentDescriptor::new(
+                "label",
+                ComponentCategory::Display,
+            ))
             .unwrap();
         registry
-            .register_component(ComponentDescriptor::new("checkbox", ComponentCategory::Input))
+            .register_component(ComponentDescriptor::new(
+                "checkbox",
+                ComponentCategory::Input,
+            ))
             .unwrap();
 
         let inputs = registry.list_by_category(ComponentCategory::Input);

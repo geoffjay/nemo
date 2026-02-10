@@ -53,4 +53,3 @@ impl RenderOnce for Panel {
         base.children(self.children).into_any_element()
     }
 }
-

@@ -48,11 +48,7 @@ impl MqttMessage {
 
 impl MqttClient {
     /// Creates a new MQTT client.
-    pub fn new(
-        id: impl Into<String>,
-        host: impl Into<String>,
-        port: u16,
-    ) -> Self {
+    pub fn new(id: impl Into<String>, host: impl Into<String>, port: u16) -> Self {
         let mut options = MqttOptions::new(id, host, port);
         options.set_keep_alive(Duration::from_secs(30));
 

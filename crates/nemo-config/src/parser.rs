@@ -142,8 +142,10 @@ impl HclParser {
             hcl::Expression::Traversal(traversal) => {
                 // Keep traversals as strings - build path from operators
                 let root = format!("{}", traversal.expr);
-                let ops: Vec<String> = traversal.operators.iter().map(|op| {
-                    match op {
+                let ops: Vec<String> = traversal
+                    .operators
+                    .iter()
+                    .map(|op| match op {
                         hcl::expr::TraversalOperator::GetAttr(ident) => ident.as_str().to_string(),
                         hcl::expr::TraversalOperator::Index(expr) => {
                             format!("[{}]", self.expression_to_value(expr))
@@ -151,8 +153,8 @@ impl HclParser {
                         hcl::expr::TraversalOperator::LegacyIndex(idx) => format!("[{}]", idx),
                         hcl::expr::TraversalOperator::AttrSplat => "*".to_string(),
                         hcl::expr::TraversalOperator::FullSplat => "[*]".to_string(),
-                    }
-                }).collect();
+                    })
+                    .collect();
                 let path = if ops.is_empty() {
                     root
                 } else {

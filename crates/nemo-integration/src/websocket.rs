@@ -35,12 +35,13 @@ impl WebSocketClient {
 
     /// Connects to the WebSocket server.
     pub async fn connect(&mut self) -> Result<(), IntegrationError> {
-        let (ws_stream, _) = connect_async(&self.url).await.map_err(|e| {
-            IntegrationError::ConnectionFailed {
-                endpoint: self.url.clone(),
-                reason: e.to_string(),
-            }
-        })?;
+        let (ws_stream, _) =
+            connect_async(&self.url)
+                .await
+                .map_err(|e| IntegrationError::ConnectionFailed {
+                    endpoint: self.url.clone(),
+                    reason: e.to_string(),
+                })?;
 
         let (mut write, mut read) = ws_stream.split();
         let (tx, mut rx) = mpsc::channel::<String>(100);

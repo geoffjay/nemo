@@ -39,22 +39,19 @@ impl App {
             .get_config("app.window.header_bar.theme_toggle")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let header_bar =
-            cx.new(|_cx| HeaderBar::new(title, github_url, theme_toggle, window, _cx));
+        let header_bar = cx.new(|_cx| HeaderBar::new(title, github_url, theme_toggle, window, _cx));
         let default_view = cx.new(|_cx| DefaultView::new(Arc::clone(&runtime), window, _cx));
 
         // Set up a polling timer that checks for data updates and triggers re-renders
         let poll_runtime = Arc::clone(&runtime);
-        let _poll_task = cx.spawn(async move |this: WeakEntity<App>, cx: &mut AsyncApp| {
-            loop {
-                cx.background_executor()
-                    .timer(Duration::from_millis(50))
-                    .await;
-                if poll_runtime.apply_pending_data_updates() {
-                    let _ = this.update(cx, |_app: &mut App, cx: &mut Context<App>| {
-                        cx.notify();
-                    });
-                }
+        let _poll_task = cx.spawn(async move |this: WeakEntity<App>, cx: &mut AsyncApp| loop {
+            cx.background_executor()
+                .timer(Duration::from_millis(50))
+                .await;
+            if poll_runtime.apply_pending_data_updates() {
+                let _ = this.update(cx, |_app: &mut App, cx: &mut Context<App>| {
+                    cx.notify();
+                });
             }
         });
         _poll_task.detach();
@@ -220,8 +217,7 @@ impl App {
                 .entity_id(entity_id)
                 .into_any_element(),
             "input" => {
-                let input_state =
-                    self.get_or_create_input_state(&component.id, window, cx);
+                let input_state = self.get_or_create_input_state(&component.id, window, cx);
                 crate::components::Input::new(component.clone())
                     .input_state(input_state)
                     .runtime(Arc::clone(&self.runtime))
@@ -258,7 +254,11 @@ impl App {
             "tree" => Tree::new(component.clone()).into_any_element(),
             _ => {
                 let children = self.render_children(component, entity_id, window, cx);
-                div().flex().flex_col().children(children).into_any_element()
+                div()
+                    .flex()
+                    .flex_col()
+                    .children(children)
+                    .into_any_element()
             }
         };
         Self::apply_sizing(element, component)

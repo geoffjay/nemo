@@ -20,10 +20,7 @@ impl SchemaRegistry {
 
     /// Registers a schema.
     pub fn register(&self, schema: ConfigSchema) -> Result<(), SchemaError> {
-        let mut schemas = self
-            .schemas
-            .write()
-            .map_err(|_| SchemaError::LockError)?;
+        let mut schemas = self.schemas.write().map_err(|_| SchemaError::LockError)?;
 
         if schemas.contains_key(&schema.name) {
             return Err(SchemaError::AlreadyRegistered {
@@ -92,8 +89,7 @@ mod tests {
     fn test_register_and_get() {
         let registry = SchemaRegistry::new();
 
-        let schema = ConfigSchema::new("test")
-            .property("name", PropertySchema::string());
+        let schema = ConfigSchema::new("test").property("name", PropertySchema::string());
 
         registry.register(schema).unwrap();
 

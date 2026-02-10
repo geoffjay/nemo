@@ -103,17 +103,19 @@ impl Default for MemoryPersistence {
 
 impl StatePersistence for MemoryPersistence {
     fn save(&self, states: &HashMap<String, ComponentState>) -> Result<(), StateError> {
-        let mut storage = self.states.write().map_err(|_| {
-            StateError::PersistenceFailed("Lock error".to_string())
-        })?;
+        let mut storage = self
+            .states
+            .write()
+            .map_err(|_| StateError::PersistenceFailed("Lock error".to_string()))?;
         *storage = states.clone();
         Ok(())
     }
 
     fn load(&self) -> Result<HashMap<String, ComponentState>, StateError> {
-        let storage = self.states.read().map_err(|_| {
-            StateError::PersistenceFailed("Lock error".to_string())
-        })?;
+        let storage = self
+            .states
+            .read()
+            .map_err(|_| StateError::PersistenceFailed("Lock error".to_string()))?;
         Ok(storage.clone())
     }
 }

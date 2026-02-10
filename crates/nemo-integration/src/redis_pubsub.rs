@@ -42,19 +42,19 @@ impl RedisClient {
 
     /// Connects to Redis.
     pub async fn connect(&mut self) -> Result<(), IntegrationError> {
-        let client = Client::open(self.url.as_str()).map_err(|e| {
-            IntegrationError::ConnectionFailed {
+        let client =
+            Client::open(self.url.as_str()).map_err(|e| IntegrationError::ConnectionFailed {
                 endpoint: self.url.clone(),
                 reason: e.to_string(),
-            }
-        })?;
+            })?;
 
-        let connection = client.get_multiplexed_async_connection().await.map_err(|e| {
-            IntegrationError::ConnectionFailed {
+        let connection = client
+            .get_multiplexed_async_connection()
+            .await
+            .map_err(|e| IntegrationError::ConnectionFailed {
                 endpoint: self.url.clone(),
                 reason: e.to_string(),
-            }
-        })?;
+            })?;
 
         self.connection = Some(connection);
         *self.connected.write().await = true;
@@ -92,7 +92,12 @@ impl RedisClient {
     }
 
     /// Sets a value with expiration.
-    pub async fn set_ex(&self, key: &str, value: &str, seconds: u64) -> Result<(), IntegrationError> {
+    pub async fn set_ex(
+        &self,
+        key: &str,
+        value: &str,
+        seconds: u64,
+    ) -> Result<(), IntegrationError> {
         let mut conn = self
             .connection
             .clone()
@@ -136,22 +141,26 @@ impl RedisClient {
     }
 
     /// Subscribes to channels and returns a receiver.
-    pub async fn subscribe(&self, channels: &[&str]) -> Result<broadcast::Receiver<RedisMessage>, IntegrationError> {
-        let client = Client::open(self.url.as_str()).map_err(|e| {
-            IntegrationError::ConnectionFailed {
+    pub async fn subscribe(
+        &self,
+        channels: &[&str],
+    ) -> Result<broadcast::Receiver<RedisMessage>, IntegrationError> {
+        let client =
+            Client::open(self.url.as_str()).map_err(|e| IntegrationError::ConnectionFailed {
                 endpoint: self.url.clone(),
                 reason: e.to_string(),
-            }
-        })?;
+            })?;
 
-        let mut pubsub = client.get_async_pubsub().await.map_err(|e| {
-            IntegrationError::Redis(e.to_string())
-        })?;
+        let mut pubsub = client
+            .get_async_pubsub()
+            .await
+            .map_err(|e| IntegrationError::Redis(e.to_string()))?;
 
         for channel in channels {
-            pubsub.subscribe(*channel).await.map_err(|e| {
-                IntegrationError::Redis(e.to_string())
-            })?;
+            pubsub
+                .subscribe(*channel)
+                .await
+                .map_err(|e| IntegrationError::Redis(e.to_string()))?;
         }
 
         let message_tx = self.message_tx.clone();

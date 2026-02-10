@@ -162,13 +162,7 @@ fn get_inner_type(ty: &Type) -> &Type {
 
 fn get_type_name(ty: &Type) -> String {
     if let Type::Path(type_path) = ty {
-        type_path
-            .path
-            .segments
-            .last()
-            .unwrap()
-            .ident
-            .to_string()
+        type_path.path.segments.last().unwrap().ident.to_string()
     } else {
         panic!("Unsupported type");
     }
@@ -180,11 +174,7 @@ fn generate_extraction(
     default: Option<&Lit>,
 ) -> proc_macro2::TokenStream {
     let is_optional = is_option_type(ty);
-    let inner_type = if is_optional {
-        get_inner_type(ty)
-    } else {
-        ty
-    };
+    let inner_type = if is_optional { get_inner_type(ty) } else { ty };
     let type_name = get_type_name(inner_type);
 
     let accessor = match type_name.as_str() {

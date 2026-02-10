@@ -48,9 +48,7 @@ fn parse_hex_color(hex: &str) -> Option<Hsla> {
     } else {
         255
     };
-    Some(
-        rgba(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32)).into(),
-    )
+    Some(rgba(((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (a as u32)).into())
 }
 
 fn resolve_theme_color(name: &str, cx: &App) -> Option<Hsla> {
