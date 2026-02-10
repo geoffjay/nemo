@@ -48,6 +48,8 @@ impl RenderOnce for Panel {
             base = base.border_color(color);
         }
 
+        base = apply_shadow(base, self.shadow.as_deref());
+
         base.children(self.children).into_any_element()
     }
 }

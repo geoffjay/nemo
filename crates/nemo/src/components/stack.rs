@@ -2,7 +2,7 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
-use super::resolve_color;
+use super::{apply_shadow, resolve_color};
 
 #[derive(IntoElement, NemoComponent)]
 pub struct Stack {
@@ -16,6 +16,8 @@ pub struct Stack {
     border: Option<i64>,
     #[property]
     border_color: Option<String>,
+    #[property]
+    shadow: Option<String>,
     #[children]
     children: Vec<AnyElement>,
 }
@@ -40,6 +42,7 @@ impl RenderOnce for Stack {
                 .unwrap_or(cx.theme().colors.border);
             base = base.border_color(color);
         }
+        base = apply_shadow(base, self.shadow.as_deref());
         base.children(self.children)
     }
 }
