@@ -22,7 +22,7 @@ app {
   }
 
   theme {
-    name = "nord"
+    name = "kanagawa"
     mode = "dark"
   }
 }

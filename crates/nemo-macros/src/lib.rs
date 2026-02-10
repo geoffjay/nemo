@@ -189,7 +189,10 @@ fn generate_extraction(
 
     let accessor = match type_name.as_str() {
         "String" => quote! {
-            component.properties.get(#prop_key).and_then(|v| v.as_str()).map(|s| s.to_string())
+            component.properties.get(#prop_key).map(|v| match v.as_str() {
+                Some(s) => s.to_string(),
+                None => v.to_string(),
+            })
         },
         "i64" => quote! {
             component.properties.get(#prop_key).and_then(|v| v.as_i64())

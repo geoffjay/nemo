@@ -4,11 +4,15 @@
 app {
   window {
     title = "Nemo Data Binding Demo"
-    width = 900
-    height = 600
+
     header_bar {
       theme_toggle = true
     }
+  }
+
+  theme {
+    name = "nord"
+    mode = "dark"
   }
 }
 
@@ -32,94 +36,275 @@ data {
   }
 
   // Uncomment to use MQTT (requires running broker - see docker-compose.yml)
-  // source "sensors" {
-  //   type      = "mqtt"
-  //   host      = "localhost"
-  //   port      = 1883
-  //   topics    = ["sensors/#"]
-  //   client_id = "nemo-demo"
-  // }
+  source "sensors" {
+    type      = "mqtt"
+    host      = "localhost"
+    port      = 1883
+    topics    = ["sensors/#"]
+    client_id = "nemo-demo"
+  }
 
   // Uncomment to use Redis pub/sub (requires running Redis)
-  // source "events" {
-  //   type     = "redis"
-  //   url      = "redis://127.0.0.1:6379"
-  //   channels = ["app-events", "notifications"]
-  // }
+  source "events" {
+    type     = "redis"
+    url      = "redis://127.0.0.1:6379"
+    channels = ["app-events", "notifications"]
+  }
 
   // Uncomment to use NATS (requires running NATS server)
-  // source "messages" {
-  //   type     = "nats"
-  //   url      = "nats://127.0.0.1:4222"
-  //   subjects = ["updates.>"]
-  // }
+  source "messages" {
+    type     = "nats"
+    url      = "nats://127.0.0.1:4222"
+    subjects = ["updates.>"]
+  }
 
   // Outbound sink for publishing data
-  // sink "commands" {
-  //   type  = "mqtt"
-  //   host  = "localhost"
-  //   port  = 1883
-  //   topic = "commands"
-  // }
+  sink "commands" {
+    type  = "mqtt"
+    host  = "localhost"
+    port  = 1883
+    topic = "commands"
+  }
 }
 
 // Layout
 layout {
   type = "stack"
 
+  component "title" {
+    type = "label"
+    text = "Data Binding Demo"
+    margin = 16
+  }
+
   component "main_panel" {
     type    = "panel"
-    padding = 16
+    margin = 16
 
-    component "title" {
-      type = "label"
-      text = "Data Binding Demo"
-    }
-
-    // Timer display - bound to the ticker data source
+    // ── Timer source ────────────────────────────────────────────────
+    // Emits: { tick: i64, timestamp: string }
     component "timer_section" {
       type    = "panel"
-      padding = 8
+      padding = 16
+      margin = 8
+      border  = 2
+      border_color = "theme.border"
 
-      component "timer_label" {
+      component "timer_heading" {
         type = "label"
-        text = "Timer Tick Count:"
+        text = "Timer Source (ticker)"
       }
 
-      component "tick_display" {
-        type     = "label"
-        text     = "Waiting for data..."
-        bind_text = "data.ticker"
+      component "tick_count" {
+        type = "label"
+        text = "Tick: waiting..."
 
         binding {
           source    = "data.ticker"
           target    = "text"
-          transform = "payload.tick"
+          transform = "tick"
+        }
+      }
+
+      component "tick_timestamp" {
+        type = "label"
+        text = "Timestamp: waiting..."
+
+        binding {
+          source    = "data.ticker"
+          target    = "text"
+          transform = "timestamp"
         }
       }
     }
 
-    // API response display
+    // ── HTTP source ─────────────────────────────────────────────────
+    // Polls httpbin.org and emits the full JSON response
     component "api_section" {
       type    = "panel"
-      padding = 8
+      padding = 16
+      margin = 8
+      border  = 2
+      border_color = "theme.border"
 
-      component "api_label" {
+      component "api_heading" {
         type = "label"
-        text = "HTTP API Status:"
+        text = "HTTP Source (api)"
       }
 
-      component "api_display" {
-        type     = "label"
-        text     = "Waiting for API response..."
-        bind_text = "data.api"
+      component "api_origin" {
+        type = "label"
+        text = "Origin: waiting..."
+
+        binding {
+          source    = "data.api"
+          target    = "text"
+          transform = "origin"
+        }
+      }
+
+      component "api_url" {
+        type = "label"
+        text = "URL: waiting..."
+
+        binding {
+          source    = "data.api"
+          target    = "text"
+          transform = "url"
+        }
+      }
+
+      component "api_raw" {
+        type         = "text"
+        content      = "Waiting for API response..."
+        bind_content = "data.api"
       }
     }
 
-    // Interactive section
+    // ── MQTT source ─────────────────────────────────────────────────
+    // Emits: { topic: string, payload: string|object }
+    // Requires: docker compose up -d mosquitto
+    component "mqtt_section" {
+      type    = "panel"
+      padding = 16
+      margin = 8
+      border  = 2
+      border_color = "theme.border"
+
+      component "mqtt_heading" {
+        type = "label"
+        text = "MQTT Source (sensors)"
+      }
+
+      component "mqtt_topic" {
+        type = "label"
+        text = "Topic: waiting for message..."
+
+        binding {
+          source    = "data.sensors"
+          target    = "text"
+          transform = "topic"
+        }
+      }
+
+      component "mqtt_payload" {
+        type = "label"
+        text = "Payload: --"
+
+        binding {
+          source    = "data.sensors"
+          target    = "text"
+          transform = "payload"
+        }
+      }
+
+      component "mqtt_raw" {
+        type         = "text"
+        content      = "No MQTT data yet"
+        bind_content = "data.sensors"
+      }
+    }
+
+    // ── Redis source ────────────────────────────────────────────────
+    // Emits: { channel: string, payload: string|object }
+    // Requires: docker compose up -d redis
+    component "redis_section" {
+      type    = "panel"
+      padding = 16
+      margin = 8
+      border  = 2
+      border_color = "theme.border"
+
+      component "redis_heading" {
+        type = "label"
+        text = "Redis Source (events)"
+      }
+
+      component "redis_channel" {
+        type = "label"
+        text = "Channel: waiting for message..."
+
+        binding {
+          source    = "data.events"
+          target    = "text"
+          transform = "channel"
+        }
+      }
+
+      component "redis_payload" {
+        type = "label"
+        text = "Payload: --"
+
+        binding {
+          source    = "data.events"
+          target    = "text"
+          transform = "payload"
+        }
+      }
+
+      component "redis_raw" {
+        type         = "text"
+        content      = "No Redis data yet"
+        bind_content = "data.events"
+      }
+    }
+
+    // ── NATS source ─────────────────────────────────────────────────
+    // Emits: { subject: string, payload: string|object }
+    // Requires: docker compose up -d nats
+    component "nats_section" {
+      type    = "panel"
+      padding = 16
+      margin = 8
+      border  = 2
+      border_color = "theme.border"
+
+      component "nats_heading" {
+        type = "label"
+        text = "NATS Source (messages)"
+      }
+
+      component "nats_subject" {
+        type = "label"
+        text = "Subject: waiting for message..."
+
+        binding {
+          source    = "data.messages"
+          target    = "text"
+          transform = "subject"
+        }
+      }
+
+      component "nats_payload" {
+        type = "label"
+        text = "Payload: --"
+
+        binding {
+          source    = "data.messages"
+          target    = "text"
+          transform = "payload"
+        }
+      }
+
+      component "nats_raw" {
+        type         = "text"
+        content      = "No NATS data yet"
+        bind_content = "data.messages"
+      }
+    }
+
+    // ── Interactive section ─────────────────────────────────────────
     component "actions_section" {
       type    = "panel"
-      padding = 8
+      padding = 16
+      margin = 8
+      border  = 2
+      border_color = "theme.border"
+
+      component "actions_heading" {
+        type = "label"
+        text = "Actions"
+      }
 
       component "refresh_btn" {
         type     = "button"

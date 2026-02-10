@@ -153,7 +153,6 @@ impl App {
         let flex = props
             .get("flex")
             .and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64)));
-        let padding = props.get("padding").and_then(|v| v.as_i64());
         let margin = props.get("margin").and_then(|v| v.as_i64());
 
         if width.is_none()
@@ -161,7 +160,6 @@ impl App {
             && min_width.is_none()
             && min_height.is_none()
             && flex.is_none()
-            && padding.is_none()
             && margin.is_none()
         {
             return element;
@@ -182,9 +180,6 @@ impl App {
         }
         if flex.is_some() {
             wrapper = wrapper.flex_1();
-        }
-        if let Some(p) = padding {
-            wrapper = wrapper.p(px(p as f32));
         }
         if let Some(m) = margin {
             wrapper = wrapper.m(px(m as f32));

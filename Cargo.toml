@@ -11,6 +11,7 @@ members = [
     "crates/nemo-events",
     "crates/nemo-plugin-api",
     "crates/nemo-macros",
+    "examples/data-binding/plugins/mock-data",
 ]
 
 [workspace.package]
