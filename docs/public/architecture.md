@@ -194,7 +194,7 @@ flowchart TB
     
     subgraph "GPUI Integration"
         root[NemoRootView]
-        render[render() method]
+        render[render method]
         gpui_tree[GPUI Element Tree]
     end
     
