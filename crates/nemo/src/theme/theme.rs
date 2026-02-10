@@ -50,6 +50,7 @@ pub static THEME_SETS: LazyLock<HashMap<String, Vec<ThemeConfig>>> = LazyLock::n
 ///
 /// First tries exact variant name match in `THEMES` (case-insensitive),
 /// then tries set name match in `THEME_SETS` (picks first variant matching requested mode).
+#[allow(dead_code)]
 pub fn resolve_theme(name: &str, mode: ThemeMode) -> Option<ThemeConfig> {
     let name_lower = name.to_lowercase();
 
@@ -212,6 +213,7 @@ pub fn apply_configured_theme(
 }
 
 /// Get a sorted list of all available theme names
+#[allow(dead_code)]
 pub fn get_theme_names() -> Vec<String> {
     let mut names: Vec<String> = THEMES.keys().map(|k| k.to_string()).collect();
     names.sort();
@@ -219,6 +221,7 @@ pub fn get_theme_names() -> Vec<String> {
 }
 
 /// Apply a theme by exact variant name
+#[allow(dead_code)]
 pub fn apply_theme(name: &str, cx: &mut App) {
     if let Some(theme_config) = THEMES.get(name) {
         let theme_config = Rc::new(theme_config.clone());

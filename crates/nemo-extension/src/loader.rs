@@ -120,7 +120,7 @@ impl ExtensionLoader {
             let entry = entry?;
             let path = entry.path();
 
-            if path.extension().map_or(false, |ext| ext == "rhai") {
+            if path.extension().is_some_and(|ext| ext == "rhai") {
                 let id = path
                     .file_stem()
                     .map(|s| s.to_string_lossy().to_string())
@@ -162,7 +162,7 @@ impl ExtensionLoader {
             let entry = entry?;
             let path = entry.path();
 
-            if path.extension().map_or(false, |ext| ext == extension) {
+            if path.extension().is_some_and(|ext| ext == extension) {
                 let id = path
                     .file_stem()
                     .map(|s| s.to_string_lossy().to_string())

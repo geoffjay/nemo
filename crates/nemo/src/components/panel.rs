@@ -7,6 +7,7 @@ use super::{apply_shadow, resolve_color};
 #[derive(IntoElement, NemoComponent)]
 pub struct Panel {
     #[source]
+    #[allow(dead_code)]
     source: nemo_layout::BuiltComponent,
     #[property]
     visible: Option<bool>,

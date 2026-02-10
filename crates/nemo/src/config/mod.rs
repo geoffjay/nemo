@@ -9,12 +9,20 @@ use app::AppConfig;
 /// Main application configuration loaded from TOML
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
-#[derive(Default)]
 pub struct NemoConfig {
     pub project_dir: PathBuf,
 
     /// Application settings
     pub app: AppConfig,
+}
+
+impl Default for NemoConfig {
+    fn default() -> Self {
+        Self {
+            project_dir: dirs::home_dir().unwrap_or_default(),
+            app: AppConfig::default(),
+        }
+    }
 }
 
 impl NemoConfig {
@@ -111,7 +119,7 @@ mod tests {
             // root defaults
             assert_eq!(
                 config.project_dir,
-                dirs::home_dir().unwrap().to_str().unwrap()
+                dirs::home_dir().unwrap()
             );
         }
     }
@@ -151,7 +159,7 @@ mod tests {
             let config = NemoConfig::from_toml(toml_str).expect("Failed to deserialize");
 
             // root should be default
-            assert_eq!(config.project_dir, PathBuf::from("/home/user/projects"));
+            assert_eq!(config.project_dir, dirs::home_dir().unwrap());
         }
 
         #[test]
@@ -161,7 +169,7 @@ mod tests {
 
             assert_eq!(
                 config.project_dir,
-                dirs::home_dir().unwrap().to_str().unwrap()
+                dirs::home_dir().unwrap()
             );
         }
     }
@@ -198,7 +206,7 @@ mod tests {
 
             assert_eq!(
                 config.project_dir,
-                dirs::home_dir().unwrap().to_str().unwrap()
+                dirs::home_dir().unwrap()
             );
         }
 

@@ -102,6 +102,7 @@ impl IntegrationGateway {
     }
 
     /// Registers an MQTT client.
+    #[allow(clippy::arc_with_non_send_sync)]
     pub async fn register_mqtt(&self, name: impl Into<String>, client: MqttClient) {
         let mut clients = self.mqtt_clients.write().await;
         clients.insert(name.into(), Arc::new(RwLock::new(client)));

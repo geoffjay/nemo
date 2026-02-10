@@ -121,7 +121,7 @@ impl HclParser {
                 let mut result = String::new();
                 for element in tpl.elements() {
                     match element {
-                        hcl::template::Element::Literal(s) => result.push_str(&s),
+                        hcl::template::Element::Literal(s) => result.push_str(s),
                         hcl::template::Element::Interpolation(interp) => {
                             let val = self.expression_to_value(&interp.expr);
                             if let Value::String(s) = val {

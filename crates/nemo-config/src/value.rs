@@ -4,10 +4,11 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 /// A configuration value that can hold any supported type.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Value {
     /// Null value.
+    #[default]
     Null,
     /// Boolean value.
     Bool(bool),
@@ -108,11 +109,6 @@ impl Value {
     }
 }
 
-impl Default for Value {
-    fn default() -> Self {
-        Value::Null
-    }
-}
 
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -224,7 +220,7 @@ mod tests {
         assert!(Value::Null.is_null());
         assert_eq!(Value::Bool(true).as_bool(), Some(true));
         assert_eq!(Value::Integer(42).as_i64(), Some(42));
-        assert_eq!(Value::Float(3.14).as_f64(), Some(3.14));
+        assert_eq!(Value::Float(3.125).as_f64(), Some(3.125));
         assert_eq!(Value::String("hello".into()).as_str(), Some("hello"));
     }
 

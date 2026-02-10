@@ -29,10 +29,11 @@ pub enum PluginError {
 }
 
 /// A configuration value (simplified for FFI safety).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PluginValue {
     /// Null value.
+    #[default]
     Null,
     /// Boolean value.
     Bool(bool),
@@ -46,12 +47,6 @@ pub enum PluginValue {
     Array(Vec<PluginValue>),
     /// Object (map) of values.
     Object(HashMap<String, PluginValue>),
-}
-
-impl Default for PluginValue {
-    fn default() -> Self {
-        Self::Null
-    }
 }
 
 /// Plugin manifest describing capabilities.
@@ -375,6 +370,7 @@ impl ActionSchema {
 }
 
 /// Plugin entry point function type.
+#[allow(improper_ctypes_definitions)]
 pub type PluginEntryFn = unsafe extern "C" fn(&mut dyn PluginRegistrar);
 
 /// Macro to declare a plugin entry point.

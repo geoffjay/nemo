@@ -159,7 +159,7 @@ impl StateCoordinator {
     pub fn get_or_create(&mut self, component_id: &str) -> &mut ComponentState {
         self.states
             .entry(component_id.to_string())
-            .or_insert_with(ComponentState::new)
+            .or_default()
     }
 
     /// Sets state for a component.

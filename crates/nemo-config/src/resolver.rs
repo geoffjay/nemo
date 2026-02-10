@@ -240,13 +240,11 @@ impl ConfigResolver {
         }
 
         // Variable reference: var.name or env.NAME
-        if expr.starts_with("var.") {
-            let var_path = &expr[4..];
+        if let Some(var_path) = expr.strip_prefix("var.") {
             return self.resolve_variable_path(var_path, context);
         }
 
-        if expr.starts_with("env.") {
-            let env_name = &expr[4..];
+        if let Some(env_name) = expr.strip_prefix("env.") {
             return Ok(context
                 .get_env(env_name)
                 .map(|s| Value::String(s.clone()))

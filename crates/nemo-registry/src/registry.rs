@@ -2,7 +2,7 @@
 
 use crate::descriptor::{
     ActionDescriptor, ComponentCategory, ComponentDescriptor, DataSourceDescriptor,
-    DescriptorSource, TransformDescriptor,
+    TransformDescriptor,
 };
 use crate::error::RegistrationError;
 use nemo_config::ConfigSchema;

@@ -11,9 +11,10 @@ use tokio::sync::broadcast;
 pub type SourceId = String;
 
 /// Status of a data source.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SourceStatus {
     /// Not connected.
+    #[default]
     Disconnected,
     /// Attempting to connect.
     Connecting,
@@ -21,12 +22,6 @@ pub enum SourceStatus {
     Connected,
     /// In error state.
     Error(String),
-}
-
-impl Default for SourceStatus {
-    fn default() -> Self {
-        Self::Disconnected
-    }
 }
 
 /// Type of data update.
@@ -99,9 +94,10 @@ pub struct DataSchema {
 }
 
 /// Type information for schema.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum SchemaType {
     /// Any type.
+    #[default]
     Any,
     /// Null value.
     Null,
@@ -117,12 +113,6 @@ pub enum SchemaType {
     Array(Box<SchemaType>),
     /// Object with string keys.
     Object,
-}
-
-impl Default for SchemaType {
-    fn default() -> Self {
-        Self::Any
-    }
 }
 
 /// Abstract interface for all data sources.

@@ -1,5 +1,4 @@
 use nemo_plugin_api::*;
-use std::sync::Arc;
 
 fn init(registrar: &mut dyn PluginRegistrar) {
     // Get the plugin context for background data updates

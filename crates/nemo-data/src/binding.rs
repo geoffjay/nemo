@@ -28,20 +28,15 @@ impl Default for BindingId {
 }
 
 /// Binding mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BindingMode {
     /// Source to target only.
+    #[default]
     OneWay,
     /// Bidirectional binding.
     TwoWay,
     /// Set once on initialization.
     OneTime,
-}
-
-impl Default for BindingMode {
-    fn default() -> Self {
-        Self::OneWay
-    }
 }
 
 /// Target of a binding (a component property).

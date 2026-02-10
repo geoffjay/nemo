@@ -1,6 +1,5 @@
 //! Binding management for connecting data to components.
 
-use crate::error::BindingError;
 use crate::node::BindingMode;
 use nemo_config::Value;
 use serde::{Deserialize, Serialize};

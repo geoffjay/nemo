@@ -86,6 +86,7 @@ impl Workspace {
                     return;
                 }
 
+                #[allow(clippy::arc_with_non_send_sync)]
                 let rt = Arc::new(rt);
 
                 // Apply theme from config
@@ -287,6 +288,7 @@ fn main() -> Result<()> {
                             let init_ok = config_ok && rt.initialize().is_ok();
 
                             if init_ok {
+                                #[allow(clippy::arc_with_non_send_sync)]
                                 let rt = Arc::new(rt);
                                 apply_theme_from_runtime(&rt, cx);
                                 let app_entity =

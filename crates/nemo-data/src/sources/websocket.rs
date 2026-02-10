@@ -47,7 +47,7 @@ pub struct HeartbeatConfig {
 }
 
 /// Configuration for a WebSocket data source.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct WebSocketSourceConfig {
     /// Unique ID for this source.
     pub id: String,
@@ -64,19 +64,6 @@ pub struct WebSocketSourceConfig {
     pub reconnect: ReconnectConfig,
     /// Heartbeat configuration.
     pub heartbeat: Option<HeartbeatConfig>,
-}
-
-impl Default for WebSocketSourceConfig {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            url: String::new(),
-            protocols: Vec::new(),
-            headers: HashMap::new(),
-            reconnect: ReconnectConfig::default(),
-            heartbeat: None,
-        }
-    }
 }
 
 /// WebSocket streaming data source.

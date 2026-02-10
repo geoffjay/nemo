@@ -13,10 +13,11 @@ use tokio::sync::{broadcast, mpsc, RwLock};
 use tokio::task::JoinHandle;
 
 /// File format.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FileFormat {
     /// JSON format.
+    #[default]
     Json,
     /// YAML format.
     Yaml,
@@ -28,12 +29,6 @@ pub enum FileFormat {
     Lines,
     /// Raw text.
     Raw,
-}
-
-impl Default for FileFormat {
-    fn default() -> Self {
-        Self::Json
-    }
 }
 
 /// Configuration for a file data source.
@@ -171,12 +166,12 @@ impl DataSource for FileSource {
             let mut watcher = notify::recommended_watcher(move |res| {
                 let _ = tx.blocking_send(res);
             })
-            .map_err(|e| DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+            .map_err(|e| DataSourceError::Io(std::io::Error::other(e)))?;
 
             watcher
                 .watch(&path, RecursiveMode::NonRecursive)
                 .map_err(|e| {
-                    DataSourceError::Io(std::io::Error::new(std::io::ErrorKind::Other, e))
+                    DataSourceError::Io(std::io::Error::other(e))
                 })?;
 
             self._watcher = Some(watcher);

@@ -105,7 +105,7 @@ impl DataSource for NatsSource {
 
             // Process messages from all subscriptions concurrently
             let mut handles = Vec::new();
-            for (subject, mut sub) in subscriptions {
+            for (_subject, mut sub) in subscriptions {
                 let sender = sender.clone();
                 let source_id = source_id.clone();
                 let status = status.clone();

@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 /// Main entry point for loading and processing configuration files.
 pub struct ConfigurationLoader {
+    #[allow(dead_code)]
     parser: HclParser,
     validator: ConfigValidator,
     resolver: ConfigResolver,

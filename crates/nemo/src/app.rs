@@ -66,7 +66,6 @@ impl App {
 
     /// Shutdown the application.
     pub fn shutdown(&mut self, _cx: &mut Context<Self>) {
-        ()
     }
 
     /// Gets or creates an InputState entity for the given component id.

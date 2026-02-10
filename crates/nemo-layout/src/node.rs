@@ -152,20 +152,15 @@ impl BindingSpec {
 }
 
 /// Binding mode.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum BindingMode {
     /// Data flows from source to target only.
+    #[default]
     OneWay,
     /// Data flows both directions.
     TwoWay,
     /// Data is set once at initialization.
     OneTime,
-}
-
-impl Default for BindingMode {
-    fn default() -> Self {
-        Self::OneWay
-    }
 }
 
 /// Size specification.
@@ -193,9 +188,10 @@ impl Size {
 }
 
 /// Alignment specification.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Alignment {
     /// Align to start.
+    #[default]
     Start,
     /// Align to center.
     Center,
@@ -203,12 +199,6 @@ pub enum Alignment {
     End,
     /// Stretch to fill.
     Stretch,
-}
-
-impl Default for Alignment {
-    fn default() -> Self {
-        Self::Start
-    }
 }
 
 /// Layout hints for a node.
@@ -259,22 +249,17 @@ impl LayoutHints {
 }
 
 /// Layout type.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum LayoutType {
     /// Dock-based layout with panels.
     Dock,
     /// Vertical or horizontal stack.
+    #[default]
     Stack,
     /// CSS Grid-like layout.
     Grid,
     /// Free-form tiles.
     Tiles,
-}
-
-impl Default for LayoutType {
-    fn default() -> Self {
-        Self::Stack
-    }
 }
 
 /// Root layout configuration.

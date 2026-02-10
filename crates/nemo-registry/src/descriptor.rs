@@ -1,6 +1,6 @@
 //! Component and entity descriptors.
 
-use nemo_config::{ConfigSchema, PropertySchema, Value};
+use nemo_config::{ConfigSchema, Value};
 use semver::Version;
 use std::sync::Arc;
 

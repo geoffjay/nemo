@@ -3,7 +3,7 @@
 use crate::binding::{BindingManager, BindingUpdate, ComponentProperty};
 use crate::builder::{BuildResult, LayoutBuilder};
 use crate::error::LayoutError;
-use crate::node::{BindingMode, LayoutConfig, LayoutNode};
+use crate::node::{LayoutConfig, LayoutNode};
 use crate::state::StateCoordinator;
 use nemo_config::Value;
 use nemo_registry::ComponentRegistry;

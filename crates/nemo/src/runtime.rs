@@ -12,13 +12,14 @@ use nemo_registry::{register_all_builtins, ComponentRegistry};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use tokio::runtime::Runtime as TokioRuntime;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 /// Sink configuration for outbound data publishing.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct SinkConfig {
     /// Sink type (mqtt, redis, nats).
     pub sink_type: String,
@@ -29,6 +30,7 @@ pub struct SinkConfig {
 }
 
 /// The Nemo runtime manages all subsystems.
+#[allow(dead_code)]
 pub struct NemoRuntime {
     /// Main configuration file path.
     config_path: PathBuf,
@@ -73,7 +75,9 @@ impl NemoRuntime {
 
         let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
         let data_engine = Arc::new(DataFlowEngine::new());
+        #[allow(clippy::arc_with_non_send_sync)]
         let extension_manager = Arc::new(RwLock::new(ExtensionManager::new()));
+        #[allow(clippy::arc_with_non_send_sync)]
         let integration = Arc::new(IntegrationGateway::new());
         let schema_registry = Arc::new(SchemaRegistry::new());
         let config_loader = ConfigurationLoader::new(Arc::clone(&schema_registry));
@@ -319,11 +323,13 @@ impl NemoRuntime {
     }
 
     /// Returns the event bus.
+    #[allow(dead_code)]
     pub fn event_bus(&self) -> &Arc<EventBus> {
         &self.event_bus
     }
 
     /// Returns the component registry.
+    #[allow(dead_code)]
     pub fn registry(&self) -> &Arc<ComponentRegistry> {
         &self.registry
     }
@@ -337,6 +343,7 @@ impl NemoRuntime {
     }
 
     /// Sets a configuration value (not implemented - config is read-only).
+    #[allow(dead_code)]
     pub fn set_config(&self, _path: &str, _value: Value) -> Result<()> {
         // Configuration is typically read-only after loading
         Ok(())
@@ -626,6 +633,7 @@ impl NemoRuntime {
     }
 
     /// Publishes data to a configured sink.
+    #[allow(dead_code)]
     pub fn publish_to_sink(&self, sink_id: &str, payload: &str) -> Result<()> {
         let sink_config = {
             let configs = self
@@ -966,16 +974,14 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
             }
             _ => {
                 // Check if this is an event handler (on_* attributes)
-                if key.starts_with("on_") {
+                if let Some(event_name) = key.strip_prefix("on_") {
                     if let Some(handler) = val.as_str() {
                         // Extract event name (e.g., "on_click" -> "click")
-                        let event_name = &key[3..];
                         node = node.with_handler(event_name, handler);
                     }
-                } else if key.starts_with("bind_") {
+                } else if let Some(target_prop) = key.strip_prefix("bind_") {
                     // Data binding: bind_text = "data.sensors.payload.temperature"
                     if let Some(source_path) = val.as_str() {
-                        let target_prop = &key[5..]; // strip "bind_" prefix
                         node.config
                             .bindings
                             .push(nemo_layout::BindingSpec::one_way(source_path, target_prop));

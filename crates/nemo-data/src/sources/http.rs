@@ -12,20 +12,15 @@ use tokio::sync::{broadcast, RwLock};
 use tokio::task::JoinHandle;
 
 /// HTTP method.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum HttpMethod {
+    #[default]
     Get,
     Post,
     Put,
     Patch,
     Delete,
-}
-
-impl Default for HttpMethod {
-    fn default() -> Self {
-        Self::Get
-    }
 }
 
 /// Retry configuration.

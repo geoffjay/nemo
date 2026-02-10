@@ -14,21 +14,12 @@ use tokio::sync::RwLock;
 pub type ActionId = String;
 
 /// Context provided to actions during execution.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ActionContext {
     /// The change that triggered this action (if any).
     pub trigger: Option<RepositoryChange>,
     /// Variables available during execution.
     pub variables: HashMap<String, Value>,
-}
-
-impl Default for ActionContext {
-    fn default() -> Self {
-        Self {
-            trigger: None,
-            variables: HashMap::new(),
-        }
-    }
 }
 
 /// Trait for executable actions.
@@ -87,6 +78,7 @@ pub struct ActionTrigger {
 /// State for a trigger (for debouncing/throttling).
 struct TriggerState {
     last_fired: Option<std::time::Instant>,
+    #[allow(dead_code)]
     pending: bool,
 }
 

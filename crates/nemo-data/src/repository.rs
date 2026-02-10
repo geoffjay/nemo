@@ -125,20 +125,18 @@ impl DataPath {
                                 actual: format!("{:?}", current),
                             });
                         }
-                    } else {
-                        if let Value::Object(obj) = current {
-                            if !obj.contains_key(key) {
-                                // Create intermediate object
-                                obj.insert(key.clone(), Value::Object(indexmap::IndexMap::new()));
-                            }
-                            current = obj.get_mut(key).unwrap();
-                        } else {
-                            return Err(RepositoryError::TypeMismatch {
-                                path: self.to_string(),
-                                expected: "object".to_string(),
-                                actual: format!("{:?}", current),
-                            });
+                    } else if let Value::Object(obj) = current {
+                        if !obj.contains_key(key) {
+                            // Create intermediate object
+                            obj.insert(key.clone(), Value::Object(indexmap::IndexMap::new()));
                         }
+                        current = obj.get_mut(key).unwrap();
+                    } else {
+                        return Err(RepositoryError::TypeMismatch {
+                            path: self.to_string(),
+                            expected: "object".to_string(),
+                            actual: format!("{:?}", current),
+                        });
                     }
                 }
                 PathSegment::Index(idx) => {
@@ -193,9 +191,12 @@ impl DataPath {
         true
     }
 
-    /// Returns the string representation.
-    pub fn to_string(&self) -> String {
-        self.segments
+}
+
+impl std::fmt::Display for DataPath {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = self
+            .segments
             .iter()
             .map(|s| match s {
                 PathSegment::Property(p) => p.clone(),
@@ -203,13 +204,8 @@ impl DataPath {
                 PathSegment::Wildcard => "*".to_string(),
             })
             .collect::<Vec<_>>()
-            .join(".")
-    }
-}
-
-impl std::fmt::Display for DataPath {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+            .join(".");
+        write!(f, "{}", s)
     }
 }
 
