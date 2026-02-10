@@ -1,0 +1,7 @@
+[project]
+name = "nemo-docs"
+version = "0.1.0"
+description = "Documentation for Nemo - The application with no name"
+readme = "README.md"
+requires-python = ">=3.12.2"
+dependencies = ["zensical>=0.0.20"]
