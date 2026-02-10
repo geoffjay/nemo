@@ -85,6 +85,7 @@ nav:
   - Getting Started: public/getting-started.md
   - CLI Reference: public/cli.md
   - Configuration: public/configuration.md
+  - Architecture: public/architecture.md
   - Development: public/develop.md
 
 extra:

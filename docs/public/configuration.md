@@ -1,0 +1,864 @@
+# Configuration Reference
+
+Nemo applications are defined in HCL (HashiCorp Configuration Language) files. This page is a complete reference for every block, attribute, and component type.
+
+## File Structure
+
+A Nemo configuration file contains up to five top-level blocks:
+
+```hcl
+variable "name" { ... }   # Variable definitions (0 or more)
+app { ... }                # Application and window settings
+scripts { ... }            # Script loading configuration
+data { ... }               # Data source and sink definitions
+layout { ... }             # UI component tree
+```
+
+All blocks are optional. A minimal valid configuration is an empty file, though it will produce a blank window.
+
+---
+
+## `variable` Block
+
+Define reusable variables with type and default value. Variables are referenced elsewhere via `${var.name}`.
+
+```hcl
+variable "button_height" {
+  type    = "int"
+  default = 48
+}
+
+variable "api_base" {
+  type    = "string"
+  default = "https://api.example.com"
+}
+```
+
+| Attribute | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `type` | string | No | Variable type: `"string"`, `"int"`, `"float"`, `"bool"` |
+| `default` | any | No | Default value |
+
+Use variables in any attribute value:
+
+```hcl
+min_height = "${var.button_height}"
+url        = "${var.api_base}/users"
+```
+
+---
+
+## `app` Block
+
+Application metadata, window settings, and theme configuration.
+
+```hcl
+app {
+  title = "My Application"
+
+  window {
+    title      = "Window Title"
+    width      = 1024
+    height     = 768
+    min_width  = 320
+    min_height = 240
+
+    header_bar {
+      github_url   = "https://github.com/user/repo"
+      theme_toggle = true
+    }
+  }
+
+  theme {
+    name = "kanagawa"
+    mode = "dark"
+
+    extend "custom" {
+      primary    = "#FF6600"
+      background = "#1A1A2E"
+    }
+  }
+}
+```
+
+### `app.window`
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `title` | string | `"Nemo Application"` | Window title text |
+| `width` | int | (maximized) | Window width in pixels. Omit for maximized. |
+| `height` | int | (maximized) | Window height in pixels. Omit for maximized. |
+| `min_width` | int | | Minimum window width |
+| `min_height` | int | | Minimum window height |
+
+### `app.window.header_bar`
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `github_url` | string | | URL for the GitHub link in the header |
+| `theme_toggle` | bool | `false` | Show light/dark mode toggle button |
+
+### `app.theme`
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | string | | Theme name (see [Available Themes](#available-themes)) |
+| `mode` | string | `"dark"` | `"dark"` or `"light"` |
+
+#### Available Themes
+
+| Theme Name | Mode | Description |
+|------------|------|-------------|
+| `kanagawa` | dark | Kanagawa Wave |
+| `kanagawa-dragon` | dark | Kanagawa Dragon |
+| `catppuccin` | light | Catppuccin Latte |
+| `catppuccin-macchiato` | dark | Catppuccin Macchiato |
+| `tokyo-night` | dark | Tokyo Night |
+| `gruvbox` | dark | Gruvbox |
+| `nord` | dark | Nord |
+
+Theme resolution is case-insensitive. If a theme set has multiple variants, the variant matching the requested mode is selected.
+
+The optional `extend` sub-block allows overriding individual theme colors.
+
+---
+
+## `scripts` Block
+
+Configure where RHAI scripts are loaded from.
+
+```hcl
+scripts {
+  path = "./scripts"
+}
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `path` | string | Directory containing `.rhai` script files |
+
+All `.rhai` files in the directory are loaded at startup. Scripts are identified by their filename without the extension (e.g., `handlers.rhai` becomes script ID `"handlers"`).
+
+---
+
+## `data` Block
+
+Define data sources (inputs) and sinks (outputs).
+
+```hcl
+data {
+  source "name" {
+    type = "..."
+    # source-specific attributes
+  }
+
+  sink "name" {
+    type = "..."
+    # sink-specific attributes
+  }
+}
+```
+
+### Data Source Types
+
+#### `timer`
+
+Emits an incrementing tick count at a fixed interval.
+
+```hcl
+source "ticker" {
+  type     = "timer"
+  interval = 1
+}
+```
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `interval` | int | | Seconds between ticks |
+
+**Emits:** `{ tick: <int>, timestamp: <string> }`
+
+#### `http`
+
+Polls an HTTP endpoint at a regular interval.
+
+```hcl
+source "api" {
+  type     = "http"
+  url      = "https://httpbin.org/get"
+  interval = 30
+  method   = "GET"
+  timeout  = 30
+}
+```
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `url` | string | (required) | The URL to fetch |
+| `interval` | int | | Polling interval in seconds. Omit for one-shot. |
+| `method` | string | `"GET"` | HTTP method: `GET`, `POST`, `PUT`, `PATCH`, `DELETE` |
+| `timeout` | int | 30 | Request timeout in seconds |
+| `body` | string | | Request body (for POST/PUT/PATCH) |
+| `headers` | object | | Custom request headers |
+
+**Emits:** Parsed JSON response body.
+
+#### `websocket`
+
+Maintains a persistent WebSocket connection with automatic reconnection.
+
+```hcl
+source "stream" {
+  type = "websocket"
+  url  = "wss://api.example.com/stream"
+}
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `url` | string | WebSocket URL (`ws://` or `wss://`) |
+
+**Emits:** Each received message as a parsed JSON value.
+
+#### `mqtt`
+
+Subscribes to MQTT topics.
+
+```hcl
+source "sensors" {
+  type      = "mqtt"
+  host      = "localhost"
+  port      = 1883
+  topics    = ["sensors/#", "alerts/high"]
+  client_id = "nemo-app"
+}
+```
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `host` | string | (required) | MQTT broker host |
+| `port` | int | `1883` | MQTT broker port |
+| `topics` | array | (required) | List of topic patterns to subscribe |
+| `client_id` | string | | MQTT client identifier |
+| `qos` | int | `0` | Quality of service level (0, 1, or 2) |
+
+**Emits:** `{ topic: <string>, payload: <string|object> }`
+
+#### `redis`
+
+Subscribes to Redis pub/sub channels.
+
+```hcl
+source "events" {
+  type     = "redis"
+  url      = "redis://127.0.0.1:6379"
+  channels = ["app-events", "notifications"]
+}
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `url` | string | Redis connection URL |
+| `channels` | array | List of channels to subscribe |
+
+**Emits:** `{ channel: <string>, payload: <string|object> }`
+
+#### `nats`
+
+Subscribes to NATS subjects.
+
+```hcl
+source "messages" {
+  type     = "nats"
+  url      = "nats://127.0.0.1:4222"
+  subjects = ["updates.>", "commands.*"]
+}
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `url` | string | NATS server URL |
+| `subjects` | array | List of subjects (supports NATS wildcards) |
+
+**Emits:** `{ subject: <string>, payload: <string|object> }`
+
+#### `file`
+
+Reads from the filesystem, optionally watching for changes.
+
+```hcl
+source "config_file" {
+  type   = "file"
+  path   = "/path/to/data.json"
+  watch  = true
+  format = "json"
+}
+```
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `path` | string | (required) | File path |
+| `watch` | bool | `false` | Watch for changes |
+| `format` | string | `"raw"` | Parse format: `"raw"`, `"json"`, `"lines"` |
+
+### Data Sink Types
+
+Sinks are destinations for publishing data from scripts.
+
+#### MQTT Sink
+
+```hcl
+sink "commands" {
+  type  = "mqtt"
+  host  = "localhost"
+  port  = 1883
+  topic = "commands"
+}
+```
+
+#### Redis Sink
+
+```hcl
+sink "outbound" {
+  type    = "redis"
+  url     = "redis://127.0.0.1:6379"
+  channel = "app-commands"
+}
+```
+
+#### NATS Sink
+
+```hcl
+sink "nats_out" {
+  type    = "nats"
+  url     = "nats://127.0.0.1:4222"
+  subject = "commands.>"
+}
+```
+
+---
+
+## `layout` Block
+
+Defines the UI component tree. The layout block specifies a root layout type and contains nested `component` blocks.
+
+```hcl
+layout {
+  type = "stack"
+
+  component "id" {
+    type = "component_type"
+    # properties...
+
+    component "child_id" {
+      type = "label"
+      text = "Nested child"
+    }
+  }
+}
+```
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `type` | string | Root layout type (typically `"stack"`) |
+
+---
+
+## Components
+
+### Common Properties
+
+These properties are available on all components:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `id` | string | Component identifier for script access. Defaults to the component block label. |
+| `visible` | bool | Show or hide the component. Default: `true`. |
+| `flex` | int | Flex grow factor |
+| `width` | int | Fixed width in pixels |
+| `height` | int | Fixed height in pixels |
+| `min_width` | int | Minimum width in pixels |
+| `min_height` | int | Minimum height in pixels |
+| `margin` | int | Outer spacing in pixels |
+
+### `stack`
+
+Arranges children in a vertical or horizontal flex layout.
+
+```hcl
+component "toolbar" {
+  type      = "stack"
+  direction = "horizontal"
+  spacing   = 8
+  padding   = 16
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `direction` | string | `"vertical"` | `"vertical"` or `"horizontal"` |
+| `spacing` | int | `4` | Gap between children in pixels |
+| `padding` | int | | Inner padding in pixels |
+| `border` | int | | Border width in pixels |
+| `border_color` | string | | Border color (theme ref or hex) |
+| `shadow` | string | | Shadow size: `"sm"`, `"md"`, `"lg"` |
+
+### `panel`
+
+A styled container with background, optional border, and shadow.
+
+```hcl
+component "card" {
+  type         = "panel"
+  padding      = 16
+  border       = 2
+  border_color = "theme.border"
+  shadow       = "md"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `padding` | int | | Inner padding in pixels |
+| `border` | int | | Border width in pixels |
+| `border_color` | string | | Border color |
+| `shadow` | string | | Shadow: `"sm"`, `"md"`, `"lg"` |
+| `visible` | bool | `true` | Visibility toggle |
+
+### `label`
+
+Displays text with configurable size.
+
+```hcl
+component "title" {
+  type = "label"
+  text = "Hello World"
+  size = "xl"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `text` | string | `""` | Display text |
+| `size` | string | `"md"` | Size: `"xs"`, `"sm"`, `"md"`, `"lg"`, `"xl"` |
+
+### `text`
+
+A block of text content.
+
+```hcl
+component "paragraph" {
+  type    = "text"
+  content = "A longer block of text content."
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `content` | string | `""` | Text content |
+
+### `button`
+
+A clickable button with style variants.
+
+```hcl
+component "submit" {
+  type     = "button"
+  label    = "Submit"
+  variant  = "primary"
+  on_click = "on_submit"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label` | string | `"Button"` | Button text |
+| `variant` | string | `"secondary"` | Visual style (see below) |
+| `disabled` | bool | `false` | Disable interaction |
+| `on_click` | string | | Handler function name |
+
+**Button Variants:** `primary`, `secondary`, `danger`, `ghost`, `warning`, `success`, `info`
+
+### `input`
+
+A text input field.
+
+```hcl
+component "name_input" {
+  type        = "input"
+  placeholder = "Enter your name"
+  disabled    = false
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `placeholder` | string | | Placeholder text |
+| `value` | string | | Initial value |
+| `disabled` | bool | `false` | Disable input |
+
+### `checkbox`
+
+A toggleable checkbox with optional label.
+
+```hcl
+component "agree" {
+  type     = "checkbox"
+  label    = "I agree to the terms"
+  checked  = false
+  on_click = "on_agree_changed"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label` | string | `""` | Checkbox label text |
+| `checked` | bool | `false` | Initial checked state |
+| `disabled` | bool | `false` | Disable interaction |
+
+The change handler receives `"true"` or `"false"` as event data.
+
+### `select`
+
+A dropdown selection component.
+
+```hcl
+component "color_picker" {
+  type    = "select"
+  options = ["Red", "Green", "Blue"]
+  value   = "Red"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `options` | array | | List of option strings |
+| `value` | string | | Currently selected value |
+
+### `icon`
+
+Displays a named icon.
+
+```hcl
+component "settings_icon" {
+  type = "icon"
+  name = "settings"
+  size = "md"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | string | | Icon name |
+| `size` | string | `"md"` | Icon size |
+
+### `image`
+
+Displays an image.
+
+```hcl
+component "logo" {
+  type = "image"
+  src  = "/path/to/image.png"
+  alt  = "Company logo"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `src` | string | | Image source path |
+| `alt` | string | | Alt text |
+
+### `progress`
+
+A progress bar.
+
+```hcl
+component "upload_progress" {
+  type  = "progress"
+  value = 75
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `value` | int | `0` | Progress value (0-100) |
+
+### `list`
+
+A vertical list of items.
+
+```hcl
+component "task_list" {
+  type  = "list"
+  items = ["Task 1", "Task 2", "Task 3"]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `items` | array | `[]` | List of string items |
+
+### `notification`
+
+A status notification message.
+
+```hcl
+component "alert" {
+  type    = "notification"
+  message = "Operation completed successfully"
+  kind    = "success"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `message` | string | | Notification text |
+| `kind` | string | `"info"` | Type: `"info"`, `"success"`, `"warning"`, `"error"` |
+
+### `modal`
+
+An overlay dialog, conditionally rendered.
+
+```hcl
+component "confirm_dialog" {
+  type  = "modal"
+  title = "Confirm Action"
+  open  = false
+
+  component "body" {
+    type    = "label"
+    text    = "Are you sure?"
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `title` | string | `""` | Modal title text |
+| `open` | bool | `false` | Whether the modal is visible |
+
+### `tooltip`
+
+Wraps child content with a tooltip.
+
+```hcl
+component "help" {
+  type    = "tooltip"
+  content = "This is additional context"
+
+  component "icon" {
+    type = "icon"
+    name = "help"
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `content` | string | | Tooltip text |
+
+### `tabs`
+
+A tabbed container.
+
+```hcl
+component "view_tabs" {
+  type = "tabs"
+
+  component "tab1" {
+    type = "label"
+    text = "Tab 1 Content"
+  }
+
+  component "tab2" {
+    type = "label"
+    text = "Tab 2 Content"
+  }
+}
+```
+
+### `table`
+
+Tabular data display.
+
+```hcl
+component "data_table" {
+  type    = "table"
+  columns = ["Name", "Value"]
+}
+```
+
+### `tree`
+
+Hierarchical tree view.
+
+```hcl
+component "file_tree" {
+  type = "tree"
+}
+```
+
+---
+
+## Data Binding
+
+Connect data sources to component properties so that components update automatically when data changes.
+
+### Binding Block
+
+```hcl
+component "display" {
+  type = "label"
+  text = "Waiting..."
+
+  binding {
+    source    = "data.ticker"
+    target    = "text"
+    transform = "tick"
+  }
+}
+```
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `source` | string | (required) | Data path (e.g., `"data.source_name"`) |
+| `target` | string | (required) | Component property to update |
+| `transform` | string | | Field name to extract from the data |
+| `mode` | string | `"one_way"` | Binding mode: `"one_way"` or `"two_way"` |
+
+### Shorthand Binding
+
+Use the `bind_` prefix as a shortcut:
+
+```hcl
+component "raw_data" {
+  type         = "text"
+  content      = "No data yet"
+  bind_content = "data.api"
+}
+```
+
+This is equivalent to:
+
+```hcl
+binding {
+  source = "data.api"
+  target = "content"
+}
+```
+
+### Transform
+
+The `transform` attribute extracts a field from the source data. Given data `{ tick: 42, timestamp: "2026-01-01" }`:
+
+- `transform = "tick"` produces `42`
+- `transform = "timestamp"` produces `"2026-01-01"`
+
+Nested paths are supported: `transform = "payload.temperature"`.
+
+### Multiple Bindings
+
+A component can have multiple bindings:
+
+```hcl
+component "sensor" {
+  type = "label"
+  text = "Loading..."
+
+  binding {
+    source    = "data.sensors"
+    target    = "text"
+    transform = "payload"
+  }
+}
+```
+
+---
+
+## Event Handlers
+
+Attach RHAI functions to component events using `on_<event>` attributes.
+
+```hcl
+component "btn" {
+  type     = "button"
+  label    = "Click"
+  on_click = "handle_click"
+}
+```
+
+The handler name references a function defined in a RHAI script. By default, Nemo looks for the function in the `handlers` script (loaded from `scripts/handlers.rhai`). To call a function in a different script, use the `script_id::function_name` format:
+
+```hcl
+on_click = "utils::format_data"
+```
+
+---
+
+## Expression Language
+
+HCL attributes support expressions inside `${}` delimiters.
+
+### Variable References
+
+```hcl
+min_height = "${var.button_height}"
+url        = "${var.api_base}/endpoint"
+```
+
+### Environment Variables
+
+```hcl
+path = "${env.HOME}/config"
+```
+
+### String Interpolation
+
+```hcl
+title = "Hello ${var.user_name}!"
+```
+
+### Built-in Functions
+
+| Function | Description |
+|----------|-------------|
+| `upper(s)` | Convert string to uppercase |
+| `lower(s)` | Convert string to lowercase |
+| `trim(s)` | Remove leading/trailing whitespace |
+| `length(v)` | Length of string, array, or object |
+| `coalesce(a, b, c)` | First non-null value |
+| `env("VAR")` | Get environment variable |
+
+### Conditional Expressions
+
+```hcl
+text = "${var.enabled ? \"Active\" : \"Inactive\"}"
+```
+
+---
+
+## Color References
+
+Properties that accept colors (like `border_color`) support two formats:
+
+### Theme References
+
+Reference colors from the active theme:
+
+| Reference | Description |
+|-----------|-------------|
+| `theme.border` | Theme border color |
+| `theme.accent` | Theme accent color |
+| `theme.danger` | Theme danger/error color |
+| `theme.background` | Theme background color |
+| `theme.foreground` | Theme foreground/text color |
+
+### Hex Colors
+
+Standard CSS hex colors:
+
+```hcl
+border_color = "#FF6600"
+border_color = "#FF660080"   # with alpha
+```
