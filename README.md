@@ -17,6 +17,11 @@
 
 # Nemo
 
+> [!WARNING]
+> Nemo is in a Beta state, it's safe to use but breaking changes are possible.
+
+![Nemo][logo]
+
 A configuration-driven desktop application framework. Define UI, data sources, and event handlers in HCL -- Nemo renders a native, GPU-accelerated application.
 
 Built on [GPUI](https://gpui.rs).
@@ -75,3 +80,7 @@ Full documentation is available at [geoffjay.github.io/nemo](https://geoffjay.gi
 ## License
 
 MIT OR Apache-2.0
+
+<!-- links -->
+
+[logo]: docs/assets/nemo.png
