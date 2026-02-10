@@ -2,6 +2,8 @@
 
 Demonstrates Nemo's data source binding system — HCL-configured data sources that feed live data into UI components through declarative bindings.
 
+![Screenshot](./screenshot.png)
+
 ## Quick Start (No External Dependencies)
 
 The example works out of the box with the built-in **timer** and **HTTP** data sources:
