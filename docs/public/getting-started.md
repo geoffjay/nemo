@@ -108,7 +108,7 @@ fn on_say_hello(component_id, event_data) {
 ### 3. Run It
 
 ```bash
-nemo --config app.hcl
+nemo --app-config app.hcl
 ```
 
 You should see a window with a title, a panel, a button, and a label. Clicking the button updates the label text via the RHAI script.
@@ -242,8 +242,8 @@ The `examples/` directory contains complete applications:
 Run any example:
 
 ```bash
-nemo --config examples/basic/app.hcl
-nemo --config examples/calculator/app.hcl
+nemo --app-config examples/basic/app.hcl
+nemo --app-config examples/calculator/app.hcl
 ```
 
 ## Next Steps

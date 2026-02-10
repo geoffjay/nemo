@@ -12,8 +12,8 @@ nemo [OPTIONS]
 
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
-| `--config <PATH>` | `-c` | `app.hcl` | Path to the main HCL configuration file |
-| `--config-dirs <DIR>` | `-d` | | Additional configuration directories to scan (repeatable) |
+| `--app-config <PATH>` | `-c` | `app.hcl` | Path to the main HCL configuration file |
+| `--app-config-dirs <DIR>` | `-d` | | Additional configuration directories to scan (repeatable) |
 | `--extension-dirs <DIR>` | `-e` | | Extension/plugin directories to load (repeatable) |
 | `--verbose` | `-v` | | Enable debug-level logging |
 | `--headless` | | | Run without opening a window |
@@ -26,7 +26,7 @@ nemo [OPTIONS]
 ### Run an application
 
 ```bash
-nemo --config app.hcl
+nemo --app-config app.hcl
 ```
 
 ### Run with verbose logging

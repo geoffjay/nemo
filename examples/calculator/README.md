@@ -7,7 +7,7 @@ A functional calculator built entirely with HCL configuration and RHAI scripting
 ## Run
 
 ```sh
-cargo run -- --config examples/calculator/app.hcl
+cargo run -- --app-config examples/calculator/app.hcl
 ```
 
 ## What It Shows

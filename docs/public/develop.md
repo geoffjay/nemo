@@ -267,7 +267,7 @@ enum PluginValue {
 Place compiled plugin libraries in a directory and pass it to Nemo:
 
 ```bash
-nemo --config app.hcl --extension-dirs ./plugins
+nemo --app-config app.hcl --extension-dirs ./plugins
 ```
 
 Nemo scans for `.so` (Linux), `.dylib` (macOS), or `.dll` (Windows) files and loads them at startup.
@@ -434,8 +434,8 @@ cargo test --workspace
 ### Running Examples
 
 ```bash
-cargo run -- --config examples/basic/app.hcl
-cargo run -- --config examples/calculator/app.hcl
-cargo run -- --config examples/components/app.hcl
-cargo run -- --config examples/data-binding/app.hcl
+cargo run -- --app-config examples/basic/app.hcl
+cargo run -- --app-config examples/calculator/app.hcl
+cargo run -- --app-config examples/components/app.hcl
+cargo run -- --app-config examples/data-binding/app.hcl
 ```

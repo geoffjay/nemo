@@ -9,7 +9,7 @@ Demonstrates Nemo's data source binding system — HCL-configured data sources t
 The example works out of the box with the built-in **timer** and **HTTP** data sources:
 
 ```sh
-cargo run -- --config examples/data-binding/app.hcl
+cargo run -- --app-config examples/data-binding/app.hcl
 ```
 
 - The timer source updates a tick counter every second

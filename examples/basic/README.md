@@ -7,7 +7,7 @@ A minimal Nemo application demonstrating the core structure: a window with a lab
 ## Run
 
 ```sh
-cargo run -- --config examples/basic/app.hcl
+cargo run -- --app-config examples/basic/app.hcl
 ```
 
 ## What It Shows

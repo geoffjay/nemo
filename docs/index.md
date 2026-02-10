@@ -47,7 +47,7 @@ layout {
 Run it:
 
 ```bash
-nemo --config app.hcl
+nemo --app-config app.hcl
 ```
 
 ## Project Structure

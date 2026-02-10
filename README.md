@@ -30,7 +30,7 @@ Built on [GPUI](https://gpui.rs).
 
 ```bash
 cargo build --release
-nemo --config app.hcl
+nemo --app-config app.hcl
 ```
 
 A minimal application:
@@ -67,10 +67,10 @@ layout {
 ## Examples
 
 ```bash
-nemo --config examples/basic/app.hcl
-nemo --config examples/calculator/app.hcl
-nemo --config examples/components/app.hcl
-nemo --config examples/data-binding/app.hcl
+nemo --app-config examples/basic/app.hcl
+nemo --app-config examples/calculator/app.hcl
+nemo --app-config examples/components/app.hcl
+nemo --app-config examples/data-binding/app.hcl
 ```
 
 ## Documentation

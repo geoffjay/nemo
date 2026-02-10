@@ -479,13 +479,13 @@ layout {
 cargo run
 
 # Run with specific config
-cargo run -- --config my-app.hcl
+cargo run -- --app-config my-app.hcl
 
 # Development mode with hot reload
-cargo run -- --config my-app.hcl --dev
+cargo run -- --app-config my-app.hcl --dev
 
 # With debug logging
-cargo run -- --config my-app.hcl --log-level debug
+cargo run -- --app-config my-app.hcl --log-level debug
 ```
 
 ---

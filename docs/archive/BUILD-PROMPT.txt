@@ -59,7 +59,7 @@ Use the subagent task application-shell to implement crates/nemo (main binary). 
 ## Final Steps
 1. Run `cargo build --workspace` to verify full compilation
 2. Create examples/minimal.hcl as specified in ORCHESTRATION-PROMPT.md
-3. Test with `cargo run -- --config examples/minimal.hcl`
+3. Test with `cargo run -- --app-config examples/minimal.hcl`
 4. Report final status and any issues encountered
 
 ## Important Notes

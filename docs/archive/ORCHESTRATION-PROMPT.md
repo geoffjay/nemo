@@ -238,4 +238,4 @@ layout {
 }
 ```
 
-Run with: `cargo run -- --config examples/minimal.hcl`
+Run with: `cargo run -- --app-config examples/minimal.hcl`
