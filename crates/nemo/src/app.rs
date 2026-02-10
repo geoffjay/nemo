@@ -13,14 +13,13 @@ use crate::components::{
     Stack, Table, Tabs, Text, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
-use crate::workspace::{DefaultView, HeaderBar};
+use crate::workspace::HeaderBar;
 use nemo_layout::BuiltComponent;
 
 /// The main Nemo GPUI application.
 pub struct App {
     runtime: Arc<NemoRuntime>,
     header_bar: Entity<HeaderBar>,
-    default_view: Entity<DefaultView>,
     component_states: ComponentStates,
     _subscriptions: Vec<Subscription>,
 }
@@ -40,7 +39,6 @@ impl App {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let header_bar = cx.new(|_cx| HeaderBar::new(title, github_url, theme_toggle, window, _cx));
-        let default_view = cx.new(|_cx| DefaultView::new(Arc::clone(&runtime), window, _cx));
 
         // Set up a polling timer that checks for data updates and triggers re-renders
         let poll_runtime = Arc::clone(&runtime);
@@ -61,15 +59,12 @@ impl App {
         Self {
             runtime,
             header_bar,
-            default_view,
             component_states: ComponentStates::new(),
             _subscriptions,
         }
     }
 
     /// Shutdown the application.
-    ///
-    /// This is currenty just a placeholder until more shutdown handling is required.
     pub fn shutdown(&mut self, _cx: &mut Context<Self>) {
         ()
     }
@@ -111,7 +106,26 @@ impl App {
         }
 
         drop(layout_manager);
-        self.default_view.clone().into_any_element()
+
+        // Fallback: empty layout
+        v_flex()
+            .items_center()
+            .justify_center()
+            .size_full()
+            .gap_4()
+            .child(
+                div()
+                    .text_3xl()
+                    .font_weight(FontWeight::BOLD)
+                    .child("Welcome to Nemo"),
+            )
+            .child(
+                div()
+                    .text_lg()
+                    .text_color(cx.theme().colors.muted_foreground)
+                    .child("Configure your application in app.hcl"),
+            )
+            .into_any_element()
     }
 
     /// Renders the children of a component.

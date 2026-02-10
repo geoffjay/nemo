@@ -6,10 +6,13 @@
 //! - Initializes all subsystems
 //! - Launches the GPUI window
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use gpui::*;
+use gpui_component::v_flex;
+use gpui_component::ActiveTheme;
 use gpui_component::Root;
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::Arc;
 use tracing::info;
@@ -18,14 +21,163 @@ use tracing_subscriber::FmtSubscriber;
 mod app;
 mod args;
 mod components;
+pub mod config;
 mod runtime;
 mod theme;
 mod window;
 mod workspace;
 
-use app::App;
 use args::Args;
+use config::NemoConfig;
 use window::get_window_options;
+use workspace::{ProjectLoaderView, ProjectSelected};
+
+/// The root workspace entity that manages the application state.
+/// It starts in either ProjectLoader mode (no app config) or Application mode.
+enum WorkspaceState {
+    ProjectLoader(Entity<ProjectLoaderView>),
+    Application(Entity<app::App>),
+}
+
+#[allow(dead_code)]
+struct Workspace {
+    state: WorkspaceState,
+    nemo_config: NemoConfig,
+    ws_args: WorkspaceArgs,
+}
+
+/// Subset of args needed after initial parse.
+#[derive(Clone)]
+struct WorkspaceArgs {
+    app_config_dirs: Vec<PathBuf>,
+    extension_dirs: Vec<PathBuf>,
+}
+
+impl Workspace {
+    fn load_project(
+        &mut self,
+        app_config_path: PathBuf,
+        window: &mut Window,
+        cx: &mut Context<'_, Self>,
+    ) {
+        info!("Loading project from: {:?}", app_config_path);
+
+        // Add to recent projects
+        let mut recent = config::recent::RecentProjects::load();
+        recent.add(app_config_path.clone());
+        recent.save();
+
+        // Create runtime and load config
+        match runtime::NemoRuntime::new(&app_config_path) {
+            Ok(rt) => {
+                for dir in &self.ws_args.app_config_dirs {
+                    let _ = rt.add_config_dir(dir);
+                }
+                for dir in &self.ws_args.extension_dirs {
+                    let _ = rt.add_extension_dir(dir);
+                }
+
+                if let Err(e) = rt.load_config() {
+                    tracing::error!("Failed to load config: {}", e);
+                    return;
+                }
+                if let Err(e) = rt.initialize() {
+                    tracing::error!("Failed to initialize runtime: {}", e);
+                    return;
+                }
+
+                let rt = Arc::new(rt);
+
+                // Apply theme from config
+                apply_theme_from_runtime(&rt, cx);
+
+                let app_entity =
+                    cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                self.state = WorkspaceState::Application(app_entity);
+                cx.notify();
+            }
+            Err(e) => {
+                tracing::error!("Failed to create runtime: {}", e);
+            }
+        }
+    }
+
+    /// Shut down the application entity if active.
+    fn shutdown(&self, cx: &mut Context<'_, Self>) {
+        if let WorkspaceState::Application(app) = &self.state {
+            app.update(cx, |a, cx| {
+                a.shutdown(cx);
+            });
+        }
+    }
+
+    /// Create a ProjectLoaderView and subscribe to its events.
+    fn create_loader(
+        nemo_config: &NemoConfig,
+        window: &mut Window,
+        cx: &mut Context<'_, Self>,
+    ) -> Entity<ProjectLoaderView> {
+        let loader = cx.new(|cx| ProjectLoaderView::new(nemo_config.clone(), window, cx));
+        cx.subscribe_in(
+            &loader,
+            window,
+            |ws: &mut Workspace, _loader, event: &ProjectSelected, window, cx| {
+                ws.load_project(event.0.clone(), window, cx);
+            },
+        )
+        .detach();
+        loader
+    }
+}
+
+impl Render for Workspace {
+    fn render(&mut self, _window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
+        let bg_color = cx.theme().colors.background;
+        let text_color = cx.theme().colors.foreground;
+
+        let content: AnyElement = match &self.state {
+            WorkspaceState::ProjectLoader(loader) => loader.clone().into_any_element(),
+            WorkspaceState::Application(app) => app.clone().into_any_element(),
+        };
+
+        v_flex()
+            .size_full()
+            .bg(bg_color)
+            .text_color(text_color)
+            .child(content)
+    }
+}
+
+/// Apply theme settings from a loaded runtime.
+fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gpui::App) {
+    if let Some(theme_name) = runtime
+        .get_config("app.theme.name")
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+    {
+        let mode = runtime
+            .get_config("app.theme.mode")
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_else(|| "dark".to_string());
+
+        let overrides = runtime
+            .get_config("app.theme.extend")
+            .and_then(|extend_val| {
+                let obj = extend_val.as_object()?;
+                let (_, inner) = obj.iter().next()?;
+                let inner_obj = inner.as_object()?;
+                let json_obj: serde_json::Map<String, serde_json::Value> = inner_obj
+                    .iter()
+                    .filter_map(|(k, v)| {
+                        v.as_str()
+                            .map(|s| (k.clone(), serde_json::Value::String(s.to_string())))
+                    })
+                    .collect();
+                serde_json::from_value(serde_json::Value::Object(json_obj)).ok()
+            });
+
+        theme::apply_configured_theme(&theme_name, &mode, overrides.as_ref(), cx);
+    }
+}
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -41,119 +193,135 @@ fn main() -> Result<()> {
 
     info!("Nemo v{} starting...", env!("CARGO_PKG_VERSION"));
 
-    let runtime = runtime::NemoRuntime::new(&args.config)?;
+    // Load NemoConfig (config.toml)
+    let nemo_config = NemoConfig::load_from(args.config.as_ref());
 
-    for dir in &args.config_dirs {
-        runtime.add_config_dir(dir)?;
-    }
+    // If app_config is provided via CLI/env, handle headless/validate modes
+    if let Some(ref app_config) = args.app_config {
+        if args.headless || args.validate_only {
+            let rt = runtime::NemoRuntime::new(app_config)?;
 
-    for dir in &args.extension_dirs {
-        runtime.add_extension_dir(dir)?;
-    }
-
-    info!("Loading configuration from: {:?}", args.config);
-    runtime.load_config()?;
-
-    if args.validate_only {
-        info!("Configuration validation successful");
-        return Ok(());
-    }
-
-    info!("Initializing subsystems...");
-    runtime.initialize()?;
-
-    if args.headless {
-        info!("Running in headless mode");
-        runtime.run_headless()?;
-    } else {
-        info!("Starting GPUI application...");
-        let runtime = Arc::new(runtime);
-        let app = Application::new().with_assets(gpui_component_assets::Assets);
-
-        app.run(move |cx| {
-            gpui_component::init(cx);
-
-            // Apply configured theme if specified
-            if let Some(theme_name) = runtime
-                .get_config("app.theme.name")
-                .and_then(|v| v.as_str().map(|s| s.to_string()))
-            {
-                let mode = runtime
-                    .get_config("app.theme.mode")
-                    .and_then(|v| v.as_str().map(|s| s.to_string()))
-                    .unwrap_or_else(|| "dark".to_string());
-
-                // Parse extend block: app.theme.extend is { "theme_name": { key: val, ... } }
-                let overrides = runtime
-                    .get_config("app.theme.extend")
-                    .and_then(|extend_val| {
-                        let obj = extend_val.as_object()?;
-                        // Get the first (and typically only) labeled block's inner value
-                        let (_, inner) = obj.iter().next()?;
-                        let inner_obj = inner.as_object()?;
-                        // Convert to serde_json::Value for deserialization
-                        let json_obj: serde_json::Map<String, serde_json::Value> = inner_obj
-                            .iter()
-                            .filter_map(|(k, v)| {
-                                v.as_str()
-                                    .map(|s| (k.clone(), serde_json::Value::String(s.to_string())))
-                            })
-                            .collect();
-                        serde_json::from_value(serde_json::Value::Object(json_obj)).ok()
-                    });
-
-                theme::apply_configured_theme(&theme_name, &mode, overrides.as_ref(), cx);
+            for dir in &args.app_config_dirs {
+                rt.add_config_dir(dir)?;
+            }
+            for dir in &args.extension_dirs {
+                rt.add_extension_dir(dir)?;
             }
 
-            // Store the App entity so we can access it on window close
-            let app_entity: Rc<RefCell<Option<Entity<App>>>> = Rc::new(RefCell::new(None));
+            info!("Loading configuration from: {:?}", app_config);
+            rt.load_config()?;
 
-            // Close all sessions and quit the application when the window is closed
-            cx.on_window_closed({
-                let app_entity = app_entity.clone();
-                move |cx| {
-                    // Shutdown the app to close any open sessions
-                    if let Some(app) = app_entity.borrow().clone() {
-                        app.update(cx, |app, app_cx| {
-                            app.shutdown(app_cx);
-                        });
-                    }
-                    cx.quit();
-                }
-            })
-            .detach();
+            if args.validate_only {
+                info!("Configuration validation successful");
+                return Ok(());
+            }
 
-            let width = runtime
-                .get_config("app.window.width")
-                .and_then(|v| v.as_i64())
-                .map(|v| v as u32);
+            info!("Initializing subsystems...");
+            rt.initialize()?;
 
-            let height = runtime
-                .get_config("app.window.height")
-                .and_then(|v| v.as_i64())
-                .map(|v| v as u32);
+            info!("Running in headless mode");
+            rt.run_headless()?;
 
-            let min_width = runtime
-                .get_config("app.window.min_width")
-                .and_then(|v| v.as_i64())
-                .map(|v| v as u32);
-
-            let min_height = runtime
-                .get_config("app.window.min_height")
-                .and_then(|v| v.as_i64())
-                .map(|v| v as u32);
-
-            let runtime = Arc::clone(&runtime);
-            let window_options = get_window_options(cx, width, height, min_width, min_height);
-
-            cx.open_window(window_options, |window, cx| {
-                let view = cx.new(|cx| App::new(runtime, window, cx));
-                *app_entity.borrow_mut() = Some(view.clone());
-                cx.new(|_cx| Root::new(view, window, _cx))
-            })
-            .expect("Failed to open window");
-        });
+            info!("Nemo shutdown complete");
+            return Ok(());
+        }
     }
+
+    // Launch GPUI application
+    info!("Starting GPUI application...");
+    let gpui_app = Application::new().with_assets(gpui_component_assets::Assets);
+
+    let app_config_path = args.app_config.clone();
+    let ws_args = WorkspaceArgs {
+        app_config_dirs: args.app_config_dirs.clone(),
+        extension_dirs: args.extension_dirs.clone(),
+    };
+
+    gpui_app.run(move |cx| {
+        gpui_component::init(cx);
+
+        // Store workspace entity for window close handler
+        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> =
+            Rc::new(RefCell::new(None));
+
+        cx.on_window_closed({
+            let workspace_entity = workspace_entity.clone();
+            move |cx| {
+                if let Some(ws) = workspace_entity.borrow().clone() {
+                    ws.update(cx, |ws, cx| {
+                        ws.shutdown(cx);
+                    });
+                }
+                cx.quit();
+            }
+        })
+        .detach();
+
+        // Default window options
+        let window_options = get_window_options(cx, None, None, None, None);
+
+        cx.open_window(window_options, |window, cx| {
+            let nemo_config = nemo_config.clone();
+            let ws_args = ws_args.clone();
+            let app_config_path = app_config_path.clone();
+
+            let ws = cx.new(|cx| {
+                let state = if let Some(config_path) = app_config_path {
+                    // Direct load: create runtime immediately
+                    info!("Loading project from: {:?}", config_path);
+
+                    let mut recent = config::recent::RecentProjects::load();
+                    recent.add(config_path.clone());
+                    recent.save();
+
+                    match runtime::NemoRuntime::new(&config_path) {
+                        Ok(rt) => {
+                            for dir in &ws_args.app_config_dirs {
+                                let _ = rt.add_config_dir(dir);
+                            }
+                            for dir in &ws_args.extension_dirs {
+                                let _ = rt.add_extension_dir(dir);
+                            }
+
+                            let config_ok = rt.load_config().is_ok();
+                            let init_ok = config_ok && rt.initialize().is_ok();
+
+                            if init_ok {
+                                let rt = Arc::new(rt);
+                                apply_theme_from_runtime(&rt, cx);
+                                let app_entity =
+                                    cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                                WorkspaceState::Application(app_entity)
+                            } else {
+                                tracing::error!("Failed to load/initialize project");
+                                let loader = Workspace::create_loader(&nemo_config, window, cx);
+                                WorkspaceState::ProjectLoader(loader)
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to create runtime: {}", e);
+                            let loader = Workspace::create_loader(&nemo_config, window, cx);
+                            WorkspaceState::ProjectLoader(loader)
+                        }
+                    }
+                } else {
+                    // No app config: show project loader
+                    let loader = Workspace::create_loader(&nemo_config, window, cx);
+                    WorkspaceState::ProjectLoader(loader)
+                };
+
+                Workspace {
+                    state,
+                    nemo_config,
+                    ws_args,
+                }
+            });
+
+            *workspace_entity.borrow_mut() = Some(ws.clone());
+            cx.new(|_cx| Root::new(ws, window, _cx))
+        })
+        .expect("Failed to open window");
+    });
 
     info!("Nemo shutdown complete");
     Ok(())

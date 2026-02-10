@@ -7,13 +7,19 @@ use tracing::Level;
 #[command(name = "nemo")]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// Path to the main configuration file
-    #[arg(short, long, default_value = "app.hcl")]
-    pub config: PathBuf,
+    /// Path to the HCL project configuration file (app.hcl).
+    /// When not provided, shows the project loader screen.
+    #[arg(long, env = "NEMO_APP_CONFIG")]
+    pub app_config: Option<PathBuf>,
+
+    /// Path to the TOML application config file (config.toml).
+    /// Defaults to $XDG_CONFIG_HOME/nemo/config.toml if not provided.
+    #[arg(short, long, env = "NEMO_CONFIG")]
+    pub config: Option<PathBuf>,
 
     /// Additional configuration directories to scan
     #[arg(short = 'd', long)]
-    pub config_dirs: Vec<PathBuf>,
+    pub app_config_dirs: Vec<PathBuf>,
 
     /// Extension/plugin directories
     #[arg(short, long)]
