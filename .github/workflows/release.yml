@@ -1,0 +1,158 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., v0.1.0)"
+        required: true
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  BINARY_NAME: nemo
+  APP_NAME: Nemo
+
+jobs:
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            arch: arm64
+          - os: macos-15-intel
+            target: x86_64-apple-darwin
+            arch: x86_64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          # Strip 'v' prefix for version number
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Create app bundle
+        run: ./scripts/bundle-macos.sh ${{ matrix.target }} ${{ steps.version.outputs.version }}
+
+      - name: Prepare data bundle
+        run: |
+          chmod +x ./scripts/prepare-data-bundle.sh
+          ./scripts/prepare-data-bundle.sh target/data-bundle
+
+      - name: Package binary with data (tar.gz)
+        run: |
+          STAGING_DIR="target/staging-${{ matrix.target }}"
+          mkdir -p "$STAGING_DIR/share/nemo"
+
+          # Copy binary
+          cp "target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}" "$STAGING_DIR/"
+
+          # Copy data bundle
+          cp -r target/data-bundle/* "$STAGING_DIR/share/nemo/"
+
+          # Create tarball
+          cd "$STAGING_DIR"
+          tar -czvf "../${{ env.BINARY_NAME }}-${{ matrix.target }}.tar.gz" .
+          mv "../${{ env.BINARY_NAME }}-${{ matrix.target }}.tar.gz" ../../
+
+      - name: Package app bundle (zip)
+        run: |
+          cd target/${{ matrix.target }}/release
+          zip -r ${{ env.APP_NAME }}-${{ matrix.target }}.zip ${{ env.APP_NAME }}.app
+          mv ${{ env.APP_NAME }}-${{ matrix.target }}.zip ../../../
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
+          path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.tar.gz
+
+      - name: Upload app bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ matrix.target }}
+          path: ${{ env.APP_NAME }}-${{ matrix.target }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: |
+          echo "Contents of artifacts directory:"
+          ls -la artifacts/
+          echo "File details:"
+          file artifacts/* || true
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum *.tar.gz *.zip > checksums.txt
+          cat checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.zip
+            artifacts/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
