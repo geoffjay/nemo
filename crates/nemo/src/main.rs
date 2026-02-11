@@ -132,7 +132,7 @@ impl Workspace {
 }
 
 impl Render for Workspace {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
         let bg_color = cx.theme().colors.background;
         let text_color = cx.theme().colors.foreground;
 
@@ -141,11 +141,20 @@ impl Render for Workspace {
             WorkspaceState::Application(app) => app.clone().into_any_element(),
         };
 
-        v_flex()
+        let mut container = v_flex()
             .size_full()
             .bg(bg_color)
             .text_color(text_color)
-            .child(content)
+            .child(content);
+
+        if let Some(dialog_layer) = Root::render_dialog_layer(window, cx) {
+            container = container.child(dialog_layer);
+        }
+        if let Some(notification_layer) = Root::render_notification_layer(window, cx) {
+            container = container.child(notification_layer);
+        }
+
+        container
     }
 }
 

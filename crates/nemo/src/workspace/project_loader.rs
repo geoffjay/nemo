@@ -59,11 +59,11 @@ impl ProjectLoaderView {
     fn clone_from_repo(&mut self, _: &ClickEvent, window: &mut Window, cx: &mut Context<Self>) {
         let project_dir = self.nemo_config.project_dir.clone();
         let entity = cx.entity().downgrade();
+        let input_state = cx.new(|cx| {
+            InputState::new(window, cx).placeholder("https://github.com/user/repo.git")
+        });
 
-        window.open_dialog(cx, move |dialog, window, cx| {
-            let input_state = cx.new(|cx| {
-                InputState::new(window, cx).placeholder("https://github.com/user/repo.git")
-            });
+        window.open_dialog(cx, move |dialog, _window, _cx| {
             let input_for_ok = input_state.clone();
             let project_dir = project_dir.clone();
             let entity = entity.clone();
