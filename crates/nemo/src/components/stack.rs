@@ -53,6 +53,7 @@ impl RenderOnce for Stack {
                 .id(SharedString::from(self.source.id.clone()))
                 .flex()
                 .flex_1()
+                .min_h(px(0.))
                 .gap(gap);
             base = if is_horizontal {
                 base.flex_row().overflow_x_scroll()
@@ -74,7 +75,7 @@ impl RenderOnce for Stack {
             base = Self::apply_shadow_stateful(base, self.shadow.as_deref());
             base.children(self.children).into_any_element()
         } else {
-            let mut base = div().flex().flex_1().gap(gap);
+            let mut base = div().flex().flex_1().min_h(px(0.)).gap(gap);
             base = if is_horizontal {
                 base.flex_row()
             } else {

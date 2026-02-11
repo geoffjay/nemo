@@ -290,6 +290,7 @@ impl Render for App {
 
         v_flex()
             .size_full()
+            .overflow_hidden()
             .bg(bg_color)
             .text_color(text_color)
             .child(self.header_bar.clone())
