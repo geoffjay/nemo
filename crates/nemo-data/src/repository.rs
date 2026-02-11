@@ -190,7 +190,6 @@ impl DataPath {
 
         true
     }
-
 }
 
 impl std::fmt::Display for DataPath {

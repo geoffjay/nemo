@@ -157,9 +157,7 @@ impl StateCoordinator {
 
     /// Gets or creates state for a component.
     pub fn get_or_create(&mut self, component_id: &str) -> &mut ComponentState {
-        self.states
-            .entry(component_id.to_string())
-            .or_default()
+        self.states.entry(component_id.to_string()).or_default()
     }
 
     /// Sets state for a component.

@@ -22,11 +22,7 @@ pub struct ProjectLoaderView {
 }
 
 impl ProjectLoaderView {
-    pub fn new(
-        nemo_config: NemoConfig,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
-    ) -> Self {
+    pub fn new(nemo_config: NemoConfig, _window: &mut Window, _cx: &mut Context<Self>) -> Self {
         let recent_projects = RecentProjects::load();
 
         Self {
@@ -59,9 +55,8 @@ impl ProjectLoaderView {
     fn clone_from_repo(&mut self, _: &ClickEvent, window: &mut Window, cx: &mut Context<Self>) {
         let project_dir = self.nemo_config.project_dir.clone();
         let entity = cx.entity().downgrade();
-        let input_state = cx.new(|cx| {
-            InputState::new(window, cx).placeholder("https://github.com/user/repo.git")
-        });
+        let input_state = cx
+            .new(|cx| InputState::new(window, cx).placeholder("https://github.com/user/repo.git"));
 
         window.open_dialog(cx, move |dialog, _window, _cx| {
             let input_for_ok = input_state.clone();
@@ -120,18 +115,15 @@ impl ProjectLoaderView {
                                 }
                             }
                             Ok(result) => {
-                                let stderr =
-                                    String::from_utf8_lossy(&result.stderr).to_string();
+                                let stderr = String::from_utf8_lossy(&result.stderr).to_string();
                                 let _ = entity.update(cx, |view, cx| {
-                                    view.clone_error =
-                                        Some(format!("Clone failed: {}", stderr));
+                                    view.clone_error = Some(format!("Clone failed: {}", stderr));
                                     cx.notify();
                                 });
                             }
                             Err(e) => {
                                 let _ = entity.update(cx, |view, cx| {
-                                    view.clone_error =
-                                        Some(format!("Failed to run git: {}", e));
+                                    view.clone_error = Some(format!("Failed to run git: {}", e));
                                     cx.notify();
                                 });
                             }
@@ -161,24 +153,21 @@ impl Render for ProjectLoaderView {
         let border_color = theme.colors.border;
         let list_active_bg = theme.colors.list_active;
 
-        let mut content = v_flex()
-            .gap_6()
-            .w(px(480.))
-            .child(
-                v_flex()
-                    .gap_1()
-                    .child(
-                        div()
-                            .text_2xl()
-                            .font_weight(FontWeight::BOLD)
-                            .child("Open a Project"),
-                    )
-                    .child(
-                        div()
-                            .text_color(muted)
-                            .child("Select a recent project or open a new one"),
-                    ),
-            );
+        let mut content = v_flex().gap_6().w(px(480.)).child(
+            v_flex()
+                .gap_1()
+                .child(
+                    div()
+                        .text_2xl()
+                        .font_weight(FontWeight::BOLD)
+                        .child("Open a Project"),
+                )
+                .child(
+                    div()
+                        .text_color(muted)
+                        .child("Select a recent project or open a new one"),
+                ),
+        );
 
         // Recent projects list
         let recent = self.recent_projects.list();
@@ -210,17 +199,8 @@ impl Render for ProjectLoaderView {
                         .hover(|s| s.bg(list_active_bg))
                         .child(
                             v_flex()
-                                .child(
-                                    div()
-                                        .font_weight(FontWeight::MEDIUM)
-                                        .child(name),
-                                )
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(muted)
-                                        .child(path_display),
-                                ),
+                                .child(div().font_weight(FontWeight::MEDIUM).child(name))
+                                .child(div().text_xs().text_color(muted).child(path_display)),
                         )
                         .on_click(cx.listener(move |this, _, window, cx| {
                             this.select_recent(config_path.clone(), window, cx);

@@ -92,8 +92,7 @@ impl Workspace {
                 // Apply theme from config
                 apply_theme_from_runtime(&rt, cx);
 
-                let app_entity =
-                    cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                 self.state = WorkspaceState::Application(app_entity);
                 cx.notify();
             }
@@ -251,8 +250,7 @@ fn main() -> Result<()> {
         gpui_component::init(cx);
 
         // Store workspace entity for window close handler
-        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> =
-            Rc::new(RefCell::new(None));
+        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
 
         cx.on_window_closed({
             let workspace_entity = workspace_entity.clone();

@@ -117,10 +117,7 @@ mod tests {
             let config = NemoConfig::default();
 
             // root defaults
-            assert_eq!(
-                config.project_dir,
-                dirs::home_dir().unwrap()
-            );
+            assert_eq!(config.project_dir, dirs::home_dir().unwrap());
         }
     }
 
@@ -167,10 +164,7 @@ mod tests {
             let toml_str = "";
             let config = NemoConfig::from_toml(toml_str).expect("Failed to deserialize");
 
-            assert_eq!(
-                config.project_dir,
-                dirs::home_dir().unwrap()
-            );
+            assert_eq!(config.project_dir, dirs::home_dir().unwrap());
         }
     }
 
@@ -204,10 +198,7 @@ mod tests {
             let config_path = PathBuf::from("/nonexistent/path/config.toml");
             let config = NemoConfig::load_from_path(&config_path);
 
-            assert_eq!(
-                config.project_dir,
-                dirs::home_dir().unwrap()
-            );
+            assert_eq!(config.project_dir, dirs::home_dir().unwrap());
         }
 
         #[test]

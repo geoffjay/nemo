@@ -71,8 +71,7 @@ impl RecentProjects {
             });
 
         // Remove existing entry for this path
-        self.projects
-            .retain(|p| p.config_path != config_path);
+        self.projects.retain(|p| p.config_path != config_path);
 
         self.projects.insert(
             0,

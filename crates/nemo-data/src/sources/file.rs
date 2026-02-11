@@ -170,9 +170,7 @@ impl DataSource for FileSource {
 
             watcher
                 .watch(&path, RecursiveMode::NonRecursive)
-                .map_err(|e| {
-                    DataSourceError::Io(std::io::Error::other(e))
-                })?;
+                .map_err(|e| DataSourceError::Io(std::io::Error::other(e)))?;
 
             self._watcher = Some(watcher);
 
