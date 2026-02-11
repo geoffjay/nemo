@@ -29,19 +29,26 @@ impl RenderOnce for PieChart {
         let counter = std::sync::atomic::AtomicUsize::new(0);
         let value_field = self.value_field.clone();
 
-        let mut chart = GpuiPieChart::new(data)
+        // Workaround for gpui-component bug: PieChart.get_outer_radius() returns 0.0
+        // when no explicit radius is set, which overrides the bounds-based auto-computed
+        // value in Arc::paint. We must always provide an explicit outer_radius.
+        let height = self
+            .source
+            .properties
+            .get("height")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(300) as f32;
+        let outer_radius = self.outer_radius.map(|r| r as f32).unwrap_or(height * 0.4);
+        let inner_radius = self.inner_radius.map(|r| r as f32).unwrap_or(0.0);
+
+        let chart = GpuiPieChart::new(data)
             .value(move |item: &Value| get_f64_field(item, &value_field) as f32)
             .color(move |_item: &Value| {
                 let idx = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 colors[idx % colors.len()]
-            });
-
-        if let Some(r) = self.outer_radius {
-            chart = chart.outer_radius(r as f32);
-        }
-        if let Some(r) = self.inner_radius {
-            chart = chart.inner_radius(r as f32);
-        }
+            })
+            .outer_radius(outer_radius)
+            .inner_radius(inner_radius);
 
         chart.into_any_element()
     }
