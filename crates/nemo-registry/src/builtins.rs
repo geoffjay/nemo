@@ -231,9 +231,12 @@ fn register_data_components(registry: &ComponentRegistry) {
             PropertySchema::array(PropertySchema::object(
                 ConfigSchema::new("column")
                     .property("key", PropertySchema::string())
-                    .property("label", PropertySchema::string()),
+                    .property("label", PropertySchema::string())
+                    .property("width", PropertySchema::integer()),
             )),
-        );
+        )
+        .property("stripe", PropertySchema::boolean().with_default(false))
+        .property("bordered", PropertySchema::boolean().with_default(true));
     let _ = registry.register_component(table);
 
     // List
@@ -254,7 +257,7 @@ fn register_data_components(registry: &ComponentRegistry) {
         description: "A tree view".to_string(),
         ..Default::default()
     };
-    tree.schema = ConfigSchema::new("tree").property("data", PropertySchema::any());
+    tree.schema = ConfigSchema::new("tree").property("items", PropertySchema::array(PropertySchema::any()));
     let _ = registry.register_component(tree);
 }
 

@@ -18,11 +18,11 @@ mod progress;
 mod select;
 mod stack;
 pub(crate) mod state;
-mod table;
+pub(crate) mod table;
 mod tabs;
 mod text;
 mod tooltip;
-mod tree;
+pub(crate) mod tree;
 
 use gpui::*;
 use gpui_component::ActiveTheme;

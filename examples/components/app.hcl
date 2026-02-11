@@ -47,13 +47,25 @@ layout {
         component "sidebar_title" {
           type = "label"
           text = "Components"
-          size = "lg"
+          size = "md"
+        }
+
+        # ── Basic ──────────────────────────────────────────────
+        component "cat_basic" {
+          type = "label"
+          text = "Basic"
+          size = "sm"
         }
 
         component "nav_button" {
           type = "button"
           label = "Button"
           variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
           on_click = "on_nav"
         }
 
@@ -61,6 +73,11 @@ layout {
           type = "button"
           label = "Label"
           variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
           on_click = "on_nav"
         }
 
@@ -68,48 +85,11 @@ layout {
           type = "button"
           label = "Icon"
           variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_checkbox" {
-          type = "button"
-          label = "Checkbox"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_input" {
-          type = "button"
-          label = "Input"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_select" {
-          type = "button"
-          label = "Select"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_progress" {
-          type = "button"
-          label = "Progress"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_notification" {
-          type = "button"
-          label = "Notification"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_modal" {
-          type = "button"
-          label = "Modal"
-          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
           on_click = "on_nav"
         }
 
@@ -117,34 +97,11 @@ layout {
           type = "button"
           label = "Text"
           variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_list" {
-          type = "button"
-          label = "List"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_panel" {
-          type = "button"
-          label = "Panel & Stack"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_table" {
-          type = "button"
-          label = "Table"
-          variant = "ghost"
-          on_click = "on_nav"
-        }
-
-        component "nav_tree" {
-          type = "button"
-          label = "Tree"
-          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
           on_click = "on_nav"
         }
 
@@ -152,6 +109,152 @@ layout {
           type = "button"
           label = "Image"
           variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_checkbox" {
+          type = "button"
+          label = "Checkbox"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_progress" {
+          type = "button"
+          label = "Progress"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        # ── Form ───────────────────────────────────────────────
+        component "cat_form" {
+          type = "label"
+          text = "Form"
+          size = "sm"
+        }
+
+        component "nav_input" {
+          type = "button"
+          label = "Input"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_select" {
+          type = "button"
+          label = "Select"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        # ── Layout ─────────────────────────────────────────────
+        component "cat_layout" {
+          type = "label"
+          text = "Layout"
+          size = "sm"
+        }
+
+        component "nav_panel" {
+          type = "button"
+          label = "Panel & Stack"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_list" {
+          type = "button"
+          label = "List"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_notification" {
+          type = "button"
+          label = "Notification"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_modal" {
+          type = "button"
+          label = "Modal"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        # ── Advanced ───────────────────────────────────────────
+        component "cat_advanced" {
+          type = "label"
+          text = "Advanced"
+          size = "sm"
+        }
+
+        component "nav_table" {
+          type = "button"
+          label = "Table"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_tree" {
+          type = "button"
+          label = "Tree"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
           on_click = "on_nav"
         }
 
@@ -159,6 +262,11 @@ layout {
           type = "button"
           label = "Charts"
           variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
           on_click = "on_nav"
         }
       }
@@ -998,11 +1106,25 @@ layout {
 
           component "table_desc" {
             type = "text"
-            content = "Table displays tabular data. Currently a placeholder awaiting full implementation."
+            content = "Table displays tabular data with columns, sorting, and row selection."
           }
 
           component "table_demo" {
             type = "table"
+            stripe = true
+            columns = [
+              { key = "name", label = "Name", width = 150 },
+              { key = "email", label = "Email", width = 220 },
+              { key = "role", label = "Role", width = 120 },
+              { key = "status", label = "Status", width = 100 }
+            ]
+            data = [
+              { name = "Alice Johnson", email = "alice@example.com", role = "Admin", status = "Active" },
+              { name = "Bob Smith", email = "bob@example.com", role = "Editor", status = "Active" },
+              { name = "Carol White", email = "carol@example.com", role = "Viewer", status = "Inactive" },
+              { name = "Dave Brown", email = "dave@example.com", role = "Editor", status = "Active" },
+              { name = "Eve Davis", email = "eve@example.com", role = "Admin", status = "Active" }
+            ]
           }
         }
       }
@@ -1026,11 +1148,40 @@ layout {
 
           component "tree_desc" {
             type = "text"
-            content = "Tree displays hierarchical data. Currently a placeholder awaiting full implementation."
+            content = "Tree displays hierarchical data with expand/collapse and keyboard navigation."
           }
 
           component "tree_demo" {
             type = "tree"
+            items = [
+              {
+                id = "src"
+                label = "src"
+                expanded = true
+                children = [
+                  {
+                    id = "src/main.rs"
+                    label = "main.rs"
+                  },
+                  {
+                    id = "src/lib.rs"
+                    label = "lib.rs"
+                  },
+                  {
+                    id = "src/components"
+                    label = "components"
+                    expanded = true
+                    children = [
+                      { id = "src/components/mod.rs", label = "mod.rs" },
+                      { id = "src/components/table.rs", label = "table.rs" },
+                      { id = "src/components/tree.rs", label = "tree.rs" }
+                    ]
+                  }
+                ]
+              },
+              { id = "Cargo.toml", label = "Cargo.toml" },
+              { id = "README.md", label = "README.md" }
+            ]
           }
         }
       }

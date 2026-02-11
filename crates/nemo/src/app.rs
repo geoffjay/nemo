@@ -2,12 +2,17 @@
 
 use gpui::*;
 use gpui_component::input::InputState;
+use gpui_component::table::TableState;
+use gpui_component::tree::TreeState;
 use gpui_component::v_flex;
 use gpui_component::ActiveTheme;
+use nemo_config::Value;
 use std::sync::Arc;
 use std::time::Duration;
 
 use crate::components::state::{ComponentState, ComponentStates};
+use crate::components::table::NemoTableDelegate;
+use crate::components::tree::values_to_tree_items;
 use crate::components::{
     AreaChart, BarChart, Button, CandlestickChart, Checkbox, Icon, Image, Label, LineChart, List,
     Modal, Notification, Panel, PieChart, Progress, Select, Stack, Table, Tabs, Text, Tooltip,
@@ -82,6 +87,81 @@ impl App {
         let state = cx.new(|cx| InputState::new(window, cx));
         self.component_states
             .insert(id.to_string(), ComponentState::Input(state.clone()));
+        state
+    }
+
+    /// Gets or creates a TableState entity for the given component.
+    fn get_or_create_table_state(
+        &mut self,
+        component: &BuiltComponent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<TableState<NemoTableDelegate>> {
+        let current_data = match component.properties.get("data") {
+            Some(Value::Array(arr)) => arr.clone(),
+            _ => Vec::new(),
+        };
+
+        if let Some(ComponentState::Table { state, last_data }) =
+            self.component_states.get_mut(&component.id)
+        {
+            if *last_data != current_data {
+                let new_data = current_data.clone();
+                state.update(cx, |s, cx| {
+                    s.delegate_mut().set_rows(new_data);
+                    s.refresh(cx);
+                });
+                *last_data = current_data;
+            }
+            return state.clone();
+        }
+
+        let delegate = NemoTableDelegate::from_properties(&component.properties);
+        let state = cx.new(|cx| TableState::new(delegate, window, cx));
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Table {
+                state: state.clone(),
+                last_data: current_data,
+            },
+        );
+        state
+    }
+
+    /// Gets or creates a TreeState entity for the given component.
+    fn get_or_create_tree_state(
+        &mut self,
+        component: &BuiltComponent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<TreeState> {
+        let current_items = match component.properties.get("items") {
+            Some(Value::Array(arr)) => arr.clone(),
+            _ => Vec::new(),
+        };
+
+        if let Some(ComponentState::Tree { state, last_items }) =
+            self.component_states.get_mut(&component.id)
+        {
+            if *last_items != current_items {
+                let tree_items = values_to_tree_items(&current_items);
+                state.update(cx, |s, cx| {
+                    s.set_items(tree_items, cx);
+                });
+                *last_items = current_items;
+            }
+            return state.clone();
+        }
+
+        let tree_items = values_to_tree_items(&current_items);
+        let state = cx.new(|cx| TreeState::new(cx).items(tree_items));
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Tree {
+                state: state.clone(),
+                last_items: current_items,
+            },
+        );
         state
     }
 
@@ -262,9 +342,21 @@ impl App {
                     .children(children)
                     .into_any_element()
             }
-            "table" => Table::new(component.clone()).into_any_element(),
+            "table" => {
+                let table_state =
+                    self.get_or_create_table_state(component, window, cx);
+                Table::new(component.clone())
+                    .table_state(table_state)
+                    .into_any_element()
+            }
             "list" => List::new(component.clone()).into_any_element(),
-            "tree" => Tree::new(component.clone()).into_any_element(),
+            "tree" => {
+                let tree_state =
+                    self.get_or_create_tree_state(component, window, cx);
+                Tree::new(component.clone())
+                    .tree_state(tree_state)
+                    .into_any_element()
+            }
             "line_chart" => LineChart::new(component.clone()).into_any_element(),
             "bar_chart" => BarChart::new(component.clone()).into_any_element(),
             "area_chart" => AreaChart::new(component.clone()).into_any_element(),
