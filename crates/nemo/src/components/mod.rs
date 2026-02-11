@@ -1,13 +1,19 @@
+mod area_chart;
+mod bar_chart;
 mod button;
+mod candlestick_chart;
+pub(crate) mod chart_utils;
 mod checkbox;
 mod icon;
 mod image;
 mod input;
 mod label;
+mod line_chart;
 mod list;
 mod modal;
 mod notification;
 mod panel;
+mod pie_chart;
 mod progress;
 mod select;
 mod stack;
@@ -144,16 +150,21 @@ pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
     }
 }
 
+pub use area_chart::AreaChart;
+pub use bar_chart::BarChart;
 pub use button::Button;
+pub use candlestick_chart::CandlestickChart;
 pub use checkbox::Checkbox;
 pub use icon::Icon;
 pub use image::Image;
 pub use input::Input;
 pub use label::Label;
+pub use line_chart::LineChart;
 pub use list::List;
 pub use modal::Modal;
 pub use notification::Notification;
 pub use panel::Panel;
+pub use pie_chart::PieChart;
 pub use progress::Progress;
 pub use select::Select;
 pub use stack::Stack;

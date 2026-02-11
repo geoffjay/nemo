@@ -16,7 +16,8 @@ let ALL_PAGES = [
     "page_panel",
     "page_table",
     "page_tree",
-    "page_image"
+    "page_image",
+    "page_charts"
 ];
 
 // Navigation handler: hides all pages, shows the one matching the clicked button
@@ -37,6 +38,7 @@ fn on_nav(component_id, event_data) {
     set_component_property("page_table", "visible", false);
     set_component_property("page_tree", "visible", false);
     set_component_property("page_image", "visible", false);
+    set_component_property("page_charts", "visible", false);
 
     // Derive page ID from nav button ID: "nav_button" -> "page_button"
     let page_id = replace(component_id, "nav_", "page_");

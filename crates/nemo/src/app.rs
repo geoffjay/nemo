@@ -9,8 +9,9 @@ use std::time::Duration;
 
 use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::{
-    Button, Checkbox, Icon, Image, Label, List, Modal, Notification, Panel, Progress, Select,
-    Stack, Table, Tabs, Text, Tooltip, Tree,
+    AreaChart, BarChart, Button, CandlestickChart, Checkbox, Icon, Image, Label, LineChart, List,
+    Modal, Notification, Panel, PieChart, Progress, Select, Stack, Table, Tabs, Text, Tooltip,
+    Tree,
 };
 use crate::runtime::NemoRuntime;
 use crate::workspace::HeaderBar;
@@ -264,6 +265,11 @@ impl App {
             "table" => Table::new(component.clone()).into_any_element(),
             "list" => List::new(component.clone()).into_any_element(),
             "tree" => Tree::new(component.clone()).into_any_element(),
+            "line_chart" => LineChart::new(component.clone()).into_any_element(),
+            "bar_chart" => BarChart::new(component.clone()).into_any_element(),
+            "area_chart" => AreaChart::new(component.clone()).into_any_element(),
+            "pie_chart" => PieChart::new(component.clone()).into_any_element(),
+            "candlestick_chart" => CandlestickChart::new(component.clone()).into_any_element(),
             _ => {
                 let children = self.render_children(component, entity_id, window, cx);
                 div()

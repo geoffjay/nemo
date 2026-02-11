@@ -23,6 +23,9 @@ pub fn register_builtin_components(registry: &ComponentRegistry) {
 
     // Feedback components
     register_feedback_components(registry);
+
+    // Chart components
+    register_chart_components(registry);
 }
 
 fn register_layout_components(registry: &ComponentRegistry) {
@@ -56,7 +59,8 @@ fn register_layout_components(registry: &ComponentRegistry) {
         .property("min_height", PropertySchema::integer())
         .property("flex", PropertySchema::float())
         .property("padding", PropertySchema::integer())
-        .property("margin", PropertySchema::integer());
+        .property("margin", PropertySchema::integer())
+        .property("scroll", PropertySchema::boolean().with_default(false));
     let _ = registry.register_component(stack);
 
     // Panel - a generic container
@@ -291,6 +295,98 @@ fn register_feedback_components(registry: &ComponentRegistry) {
         .property("content", PropertySchema::string())
         .require("content");
     let _ = registry.register_component(tooltip);
+}
+
+fn register_chart_components(registry: &ComponentRegistry) {
+    // Line Chart
+    let mut line_chart = ComponentDescriptor::new("line_chart", ComponentCategory::Charts);
+    line_chart.metadata = ComponentMetadata {
+        display_name: "Line Chart".to_string(),
+        description: "A line chart visualization".to_string(),
+        ..Default::default()
+    };
+    line_chart.schema = ConfigSchema::new("line_chart")
+        .property("x_field", PropertySchema::string())
+        .property("y_field", PropertySchema::string())
+        .property("data", PropertySchema::any())
+        .property("dot", PropertySchema::boolean())
+        .property("linear", PropertySchema::boolean())
+        .property("tick_margin", PropertySchema::integer())
+        .require("x_field")
+        .require("y_field");
+    let _ = registry.register_component(line_chart);
+
+    // Bar Chart
+    let mut bar_chart = ComponentDescriptor::new("bar_chart", ComponentCategory::Charts);
+    bar_chart.metadata = ComponentMetadata {
+        display_name: "Bar Chart".to_string(),
+        description: "A bar chart visualization".to_string(),
+        ..Default::default()
+    };
+    bar_chart.schema = ConfigSchema::new("bar_chart")
+        .property("x_field", PropertySchema::string())
+        .property("y_field", PropertySchema::string())
+        .property("data", PropertySchema::any())
+        .property("show_label", PropertySchema::boolean())
+        .property("tick_margin", PropertySchema::integer())
+        .require("x_field")
+        .require("y_field");
+    let _ = registry.register_component(bar_chart);
+
+    // Area Chart
+    let mut area_chart = ComponentDescriptor::new("area_chart", ComponentCategory::Charts);
+    area_chart.metadata = ComponentMetadata {
+        display_name: "Area Chart".to_string(),
+        description: "A stacked area chart visualization".to_string(),
+        ..Default::default()
+    };
+    area_chart.schema = ConfigSchema::new("area_chart")
+        .property("x_field", PropertySchema::string())
+        .property("y_fields", PropertySchema::array(PropertySchema::string()))
+        .property("data", PropertySchema::any())
+        .property("fill_opacity", PropertySchema::float())
+        .property("tick_margin", PropertySchema::integer())
+        .require("x_field")
+        .require("y_fields");
+    let _ = registry.register_component(area_chart);
+
+    // Pie Chart
+    let mut pie_chart = ComponentDescriptor::new("pie_chart", ComponentCategory::Charts);
+    pie_chart.metadata = ComponentMetadata {
+        display_name: "Pie Chart".to_string(),
+        description: "A pie or donut chart visualization".to_string(),
+        ..Default::default()
+    };
+    pie_chart.schema = ConfigSchema::new("pie_chart")
+        .property("value_field", PropertySchema::string())
+        .property("data", PropertySchema::any())
+        .property("outer_radius", PropertySchema::float())
+        .property("inner_radius", PropertySchema::float())
+        .require("value_field");
+    let _ = registry.register_component(pie_chart);
+
+    // Candlestick Chart
+    let mut candlestick =
+        ComponentDescriptor::new("candlestick_chart", ComponentCategory::Charts);
+    candlestick.metadata = ComponentMetadata {
+        display_name: "Candlestick Chart".to_string(),
+        description: "An OHLC candlestick chart for financial data".to_string(),
+        ..Default::default()
+    };
+    candlestick.schema = ConfigSchema::new("candlestick_chart")
+        .property("x_field", PropertySchema::string())
+        .property("open_field", PropertySchema::string())
+        .property("high_field", PropertySchema::string())
+        .property("low_field", PropertySchema::string())
+        .property("close_field", PropertySchema::string())
+        .property("data", PropertySchema::any())
+        .property("tick_margin", PropertySchema::integer())
+        .require("x_field")
+        .require("open_field")
+        .require("high_field")
+        .require("low_field")
+        .require("close_field");
+    let _ = registry.register_component(candlestick);
 }
 
 /// Registers all built-in data sources.
@@ -541,6 +637,13 @@ mod tests {
         assert!(registry.has_component("button"));
         assert!(registry.has_component("label"));
         assert!(registry.has_component("table"));
+
+        // Verify chart components
+        assert!(registry.has_component("line_chart"));
+        assert!(registry.has_component("bar_chart"));
+        assert!(registry.has_component("area_chart"));
+        assert!(registry.has_component("pie_chart"));
+        assert!(registry.has_component("candlestick_chart"));
 
         // Verify data sources
         assert!(registry.has_data_source("http"));

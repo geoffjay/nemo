@@ -154,6 +154,13 @@ layout {
           variant = "ghost"
           on_click = "on_nav"
         }
+
+        component "nav_charts" {
+          type = "button"
+          label = "Charts"
+          variant = "ghost"
+          on_click = "on_nav"
+        }
       }
     }
 
@@ -163,6 +170,7 @@ layout {
       direction = "vertical"
       spacing = 0
       padding = 16
+      scroll = true
 
       # ── Button page (visible by default) ───────────────────
       component "page_button" {
@@ -1063,6 +1071,162 @@ layout {
           component "image_another" {
             type = "image"
             alt = "Another image placeholder with alt text"
+          }
+        }
+      }
+
+      # ── Charts page ────────────────────────────────────────
+      component "page_charts" {
+        type = "panel"
+        visible = false
+
+        component "page_charts_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 16
+          padding = 32
+
+          component "charts_title" {
+            type = "label"
+            text = "Charts"
+            size = "lg"
+          }
+
+          component "charts_desc" {
+            type = "text"
+            content = "Chart components for data visualization. Supports line, bar, area, pie, and candlestick charts."
+          }
+
+          # ── Line Chart ──────────────────────────────────────
+          component "chart_section_line" {
+            type = "label"
+            text = "Line Chart"
+            size = "sm"
+          }
+
+          component "line_chart_demo" {
+            type = "line_chart"
+            x_field = "month"
+            y_field = "revenue"
+            dot = true
+            height = 300
+            data = [
+              { month = "Jan", revenue = 186 },
+              { month = "Feb", revenue = 305 },
+              { month = "Mar", revenue = 237 },
+              { month = "Apr", revenue = 73 },
+              { month = "May", revenue = 209 },
+              { month = "Jun", revenue = 214 }
+            ]
+          }
+
+          # ── Bar Chart ───────────────────────────────────────
+          component "chart_section_bar" {
+            type = "label"
+            text = "Bar Chart"
+            size = "sm"
+          }
+
+          component "bar_chart_demo" {
+            type = "bar_chart"
+            x_field = "month"
+            y_field = "visitors"
+            show_label = true
+            height = 300
+            data = [
+              { month = "Jan", visitors = 275 },
+              { month = "Feb", visitors = 200 },
+              { month = "Mar", visitors = 187 },
+              { month = "Apr", visitors = 173 },
+              { month = "May", visitors = 90 },
+              { month = "Jun", visitors = 301 }
+            ]
+          }
+
+          # ── Area Chart ──────────────────────────────────────
+          component "chart_section_area" {
+            type = "label"
+            text = "Area Chart (Multi-Series)"
+            size = "sm"
+          }
+
+          component "area_chart_demo" {
+            type = "area_chart"
+            x_field = "month"
+            y_fields = ["desktop", "mobile"]
+            height = 300
+            data = [
+              { month = "Jan", desktop = 186, mobile = 80 },
+              { month = "Feb", desktop = 305, mobile = 200 },
+              { month = "Mar", desktop = 237, mobile = 120 },
+              { month = "Apr", desktop = 73, mobile = 190 },
+              { month = "May", desktop = 209, mobile = 130 },
+              { month = "Jun", desktop = 214, mobile = 140 }
+            ]
+          }
+
+          # ── Pie Chart ───────────────────────────────────────
+          component "chart_section_pie" {
+            type = "label"
+            text = "Pie Chart"
+            size = "sm"
+          }
+
+          component "pie_chart_demo" {
+            type = "pie_chart"
+            value_field = "amount"
+            height = 300
+            data = [
+              { label = "Chrome", amount = 275 },
+              { label = "Safari", amount = 200 },
+              { label = "Firefox", amount = 187 },
+              { label = "Edge", amount = 173 },
+              { label = "Other", amount = 90 }
+            ]
+          }
+
+          # ── Donut Chart ─────────────────────────────────────
+          component "chart_section_donut" {
+            type = "label"
+            text = "Donut Chart (Pie with inner radius)"
+            size = "sm"
+          }
+
+          component "donut_chart_demo" {
+            type = "pie_chart"
+            value_field = "value"
+            inner_radius = 60.0
+            height = 300
+            data = [
+              { name = "Rent", value = 1200 },
+              { name = "Food", value = 450 },
+              { name = "Transport", value = 200 },
+              { name = "Utilities", value = 150 }
+            ]
+          }
+
+          # ── Candlestick Chart ───────────────────────────────
+          component "chart_section_candlestick" {
+            type = "label"
+            text = "Candlestick Chart"
+            size = "sm"
+          }
+
+          component "candlestick_chart_demo" {
+            type = "candlestick_chart"
+            x_field = "date"
+            open_field = "open"
+            high_field = "high"
+            low_field = "low"
+            close_field = "close"
+            height = 300
+            data = [
+              { date = "Mon", open = 100.0, high = 110.0, low = 95.0, close = 108.0 },
+              { date = "Tue", open = 108.0, high = 115.0, low = 102.0, close = 104.0 },
+              { date = "Wed", open = 104.0, high = 112.0, low = 100.0, close = 111.0 },
+              { date = "Thu", open = 111.0, high = 120.0, low = 108.0, close = 118.0 },
+              { date = "Fri", open = 118.0, high = 122.0, low = 110.0, close = 112.0 }
+            ]
           }
         }
       }
