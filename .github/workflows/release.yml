@@ -139,13 +139,19 @@ jobs:
           zip -r ${{ env.APP_NAME }}-${{ matrix.target }}.zip ${{ env.APP_NAME }}.app
           mv ${{ env.APP_NAME }}-${{ matrix.target }}.zip ../../../
 
-      - name: Upload binary artifact
+      - name: Upload binary artifact (tar.gz)
+        if: runner.os != 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
-          path: |
-            ${{ env.BINARY_NAME }}-${{ matrix.target }}.tar.gz
-            ${{ env.BINARY_NAME }}-${{ matrix.target }}.zip
+          path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.tar.gz
+
+      - name: Upload binary artifact (zip)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
+          path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.zip
 
       - name: Upload app bundle artifact (macOS)
         if: runner.os == 'macOS'
