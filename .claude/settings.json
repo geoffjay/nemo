@@ -1,5 +1,12 @@
 {
   "permissions": {
+    "allow": [
+      "Bash(td usage:*)",
+      "Bash(td query:*)",
+      "Bash(td help:*)",
+      "Bash(td add:*)",
+      "Bash(td deps:*)"
+    ],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
