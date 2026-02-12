@@ -35,8 +35,8 @@ impl RenderOnce for AreaChart {
         let x_field = self.x_field.clone();
         let opacity = self.fill_opacity.unwrap_or(0.4) as f32;
 
-        let mut chart = GpuiAreaChart::new(data)
-            .x(move |item: &Value| get_string_field(item, &x_field));
+        let mut chart =
+            GpuiAreaChart::new(data).x(move |item: &Value| get_string_field(item, &x_field));
 
         for (i, field) in y_fields.into_iter().enumerate() {
             let color = chart_color(i, cx);

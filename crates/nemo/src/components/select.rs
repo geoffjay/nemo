@@ -82,7 +82,10 @@ impl RenderOnce for Select {
             let shared_state = Arc::clone(&self.selected_value);
 
             let mut item = div()
-                .id(ElementId::Name(SharedString::from(format!("{}-{}", self.source.id, option))))
+                .id(ElementId::Name(SharedString::from(format!(
+                    "{}-{}",
+                    self.source.id, option
+                ))))
                 .px_2()
                 .py_1()
                 .rounded_sm()

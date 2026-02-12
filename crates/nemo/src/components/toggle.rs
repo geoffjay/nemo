@@ -49,8 +49,14 @@ impl RenderOnce for Toggle {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let label = props.get("label").and_then(|v| v.as_str()).map(|s| s.to_string());
-        let icon_name = props.get("icon").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let label = props
+            .get("label")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let icon_name = props
+            .get("icon")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         let accent = cx.theme().accent;
         let accent_fg = cx.theme().accent_foreground;

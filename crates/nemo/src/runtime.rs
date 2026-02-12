@@ -13,8 +13,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use tokio::runtime::Runtime as TokioRuntime;
 use std::sync::RwLock;
+use tokio::runtime::Runtime as TokioRuntime;
 use tracing::{debug, info};
 
 /// Sink configuration for outbound data publishing.
@@ -114,7 +114,10 @@ impl NemoRuntime {
     /// Adds an extension directory.
     pub fn add_extension_dir(&self, dir: &Path) -> Result<()> {
         debug!("Adding extension directory: {:?}", dir);
-        let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+        let mut ext = self
+            .extension_manager
+            .write()
+            .expect("extension_manager lock poisoned");
         ext.add_script_path(dir.join("scripts"));
         ext.add_plugin_path(dir.join("plugins"));
         Ok(())
@@ -151,12 +154,18 @@ impl NemoRuntime {
 
         // Initialize extensions (sync — no async work needed)
         {
-            let ext = self.extension_manager.read().expect("extension_manager lock poisoned");
+            let ext = self
+                .extension_manager
+                .read()
+                .expect("extension_manager lock poisoned");
             let manifests = ext.discover().unwrap_or_default();
             info!("Discovered {} extensions", manifests.len());
             drop(ext);
 
-            let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+            let mut ext = self
+                .extension_manager
+                .write()
+                .expect("extension_manager lock poisoned");
             for manifest in manifests {
                 match manifest.extension_type {
                     nemo_extension::ExtensionType::Script => {
@@ -216,7 +225,10 @@ impl NemoRuntime {
 
                 if scripts_path.exists() && scripts_path.is_dir() {
                     info!("Loading scripts from: {:?}", scripts_path);
-                    let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+                    let mut ext = self
+                        .extension_manager
+                        .write()
+                        .expect("extension_manager lock poisoned");
                     ext.add_script_path(&scripts_path);
 
                     // Load all .rhai files in the directory
@@ -227,11 +239,7 @@ impl NemoRuntime {
                                 match ext.load_script(&path) {
                                     Ok(id) => info!("Loaded script: {}", id),
                                     Err(e) => {
-                                        tracing::warn!(
-                                            "Failed to load script {:?}: {}",
-                                            path,
-                                            e
-                                        )
+                                        tracing::warn!("Failed to load script {:?}: {}", path, e)
                                     }
                                 }
                             }
@@ -257,15 +265,14 @@ impl NemoRuntime {
                             };
 
                         if script_path.exists() {
-                            let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+                            let mut ext = self
+                                .extension_manager
+                                .write()
+                                .expect("extension_manager lock poisoned");
                             match ext.load_script(&script_path) {
                                 Ok(id) => info!("Loaded script: {}", id),
                                 Err(e) => {
-                                    tracing::warn!(
-                                        "Failed to load script {:?}: {}",
-                                        script_path,
-                                        e
-                                    )
+                                    tracing::warn!("Failed to load script {:?}: {}", script_path, e)
                                 }
                             }
                         }
@@ -285,7 +292,10 @@ impl NemoRuntime {
         ));
 
         {
-            let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+            let mut ext = self
+                .extension_manager
+                .write()
+                .expect("extension_manager lock poisoned");
             ext.register_context(context);
         }
 
@@ -360,7 +370,10 @@ impl NemoRuntime {
             script_id, function_name, component_id, event_data
         );
 
-        let ext = self.extension_manager.read().expect("extension_manager lock poisoned");
+        let ext = self
+            .extension_manager
+            .read()
+            .expect("extension_manager lock poisoned");
         match ext.call_script::<()>(
             script_id,
             function_name,
@@ -1025,10 +1038,7 @@ fn find_and_inject_slot(template_value: &Value, instance_children: &Value) -> Op
             let mut slot_child = child_val.as_object().cloned().unwrap_or_default();
 
             // Merge instance children into the slot child's component children
-            let existing = slot_child
-                .get("component")
-                .cloned()
-                .unwrap_or(Value::Null);
+            let existing = slot_child.get("component").cloned().unwrap_or(Value::Null);
             let merged = if existing.is_null() {
                 instance_children.clone()
             } else {
@@ -1150,11 +1160,7 @@ fn expand_template(
 /// Renames template-originated child IDs by prefixing them with the parent
 /// instance ID. Only children whose original ID is in `template_child_ids`
 /// are renamed; instance children keep their original IDs.
-fn scope_template_children(
-    value: &Value,
-    parent_id: &str,
-    template_child_ids: &[String],
-) -> Value {
+fn scope_template_children(value: &Value, parent_id: &str, template_child_ids: &[String]) -> Value {
     if template_child_ids.is_empty() {
         return value.clone();
     }
@@ -1599,15 +1605,9 @@ mod template_tests {
                 obj(vec![
                     (
                         "nav_item",
-                        obj(vec![
-                            ("type", s("button")),
-                            ("variant", s("ghost")),
-                        ]),
+                        obj(vec![("type", s("button")), ("variant", s("ghost"))]),
                     ),
-                    (
-                        "page",
-                        obj(vec![("type", s("panel"))]),
-                    ),
+                    ("page", obj(vec![("type", s("panel"))])),
                 ]),
             )]),
         )]);
@@ -1629,13 +1629,13 @@ mod template_tests {
             ("variant", s("ghost")),
             ("size", s("sm")),
         ]);
-        let overlay = obj(vec![
-            ("variant", s("primary")),
-            ("label", s("Click")),
-        ]);
+        let overlay = obj(vec![("variant", s("primary")), ("label", s("Click"))]);
         let merged = deep_merge_values(&base, &overlay);
         assert_eq!(merged.get("type").and_then(|v| v.as_str()), Some("button"));
-        assert_eq!(merged.get("variant").and_then(|v| v.as_str()), Some("primary"));
+        assert_eq!(
+            merged.get("variant").and_then(|v| v.as_str()),
+            Some("primary")
+        );
         assert_eq!(merged.get("size").and_then(|v| v.as_str()), Some("sm"));
         assert_eq!(merged.get("label").and_then(|v| v.as_str()), Some("Click"));
     }
@@ -1676,10 +1676,7 @@ mod template_tests {
                 "component",
                 obj(vec![(
                     "inner",
-                    obj(vec![
-                        ("type", s("stack")),
-                        ("slot", Value::Bool(true)),
-                    ]),
+                    obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
                 )]),
             ),
         ]);
@@ -1724,22 +1721,13 @@ mod template_tests {
         let merged = merge_component_children(&base_children, &overlay_children);
         let comp = merged.as_object().unwrap();
         assert_eq!(comp.len(), 2);
-        assert_eq!(
-            comp["a"].get("text").and_then(|v| v.as_str()),
-            Some("new")
-        );
+        assert_eq!(comp["a"].get("text").and_then(|v| v.as_str()), Some("new"));
     }
 
     #[test]
     fn test_circular_reference_detected() {
-        let template_a = obj(vec![
-            ("template", s("b")),
-            ("type", s("panel")),
-        ]);
-        let template_b = obj(vec![
-            ("template", s("a")),
-            ("type", s("panel")),
-        ]);
+        let template_a = obj(vec![("template", s("b")), ("type", s("panel"))]);
+        let template_b = obj(vec![("template", s("a")), ("type", s("panel"))]);
 
         let mut templates = TemplateMap::new();
         templates.insert("a".to_string(), template_a);
@@ -1787,10 +1775,7 @@ mod runtime_tests {
     #[test]
     fn test_get_nested_value_simple() {
         let config = obj(vec![("app", obj(vec![("title", s("Hello"))]))]);
-        assert_eq!(
-            get_nested_value(&config, "app.title"),
-            Some(&s("Hello"))
-        );
+        assert_eq!(get_nested_value(&config, "app.title"), Some(&s("Hello")));
     }
 
     #[test]
@@ -1816,10 +1801,7 @@ mod runtime_tests {
     #[test]
     fn test_get_nested_value_single_key() {
         let config = obj(vec![("key", Value::Bool(true))]);
-        assert_eq!(
-            get_nested_value(&config, "key"),
-            Some(&Value::Bool(true))
-        );
+        assert_eq!(get_nested_value(&config, "key"), Some(&Value::Bool(true)));
     }
 
     // ── create_data_source ────────────────────────────────────────────
@@ -1860,7 +1842,10 @@ mod runtime_tests {
     fn test_create_data_source_http_missing_url() {
         let config = obj(vec![("type", s("http"))]);
         let source = create_data_source("api", "http", &config);
-        assert!(source.is_none(), "HTTP source without URL should return None");
+        assert!(
+            source.is_none(),
+            "HTTP source without URL should return None"
+        );
     }
 
     #[test]
@@ -1951,7 +1936,10 @@ mod runtime_tests {
                 ("type", s("stack")),
                 (
                     "component",
-                    obj(vec![("btn", obj(vec![("type", s("button")), ("label", s("OK"))]))]),
+                    obj(vec![(
+                        "btn",
+                        obj(vec![("type", s("button")), ("label", s("OK"))]),
+                    )]),
                 ),
             ]),
         )]);
@@ -1983,10 +1971,7 @@ mod runtime_tests {
                     "component",
                     obj(vec![(
                         "btn",
-                        obj(vec![
-                            ("type", s("button")),
-                            ("on_click", s("handle_click")),
-                        ]),
+                        obj(vec![("type", s("button")), ("on_click", s("handle_click"))]),
                     )]),
                 ),
             ]),
@@ -2101,11 +2086,17 @@ mod runtime_tests {
         let notify = Arc::new(tokio::sync::Notify::new());
 
         let ctx = RuntimeContext::new(
-            config, layout_manager, event_bus, repo, dirty.clone(), notify,
+            config,
+            layout_manager,
+            event_bus,
+            repo,
+            dirty.clone(),
+            notify,
         );
 
         // set_data should store and mark dirty
-        ctx.set_data("test.value", PluginValue::Integer(42)).unwrap();
+        ctx.set_data("test.value", PluginValue::Integer(42))
+            .unwrap();
         assert!(dirty.load(Ordering::Acquire));
 
         // get_data should retrieve it
@@ -2124,9 +2115,7 @@ mod runtime_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(
-            config, layout_manager, event_bus, repo, dirty, notify,
-        );
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
         assert_eq!(ctx.get_data("nonexistent"), None);
     }
 
@@ -2146,9 +2135,7 @@ mod runtime_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(
-            config, layout_manager, event_bus, repo, dirty, notify,
-        );
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
 
         assert_eq!(
             ctx.get_config("app.title"),
@@ -2176,12 +2163,11 @@ mod runtime_tests {
                     .with_id("lbl")
                     .with_prop("text", s("Hello")),
             );
-            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root)).unwrap();
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
         }
 
-        let ctx = RuntimeContext::new(
-            config, layout_manager, event_bus, repo, dirty, notify,
-        );
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
 
         assert_eq!(
             ctx.get_component_property("lbl", "text"),
@@ -2209,7 +2195,10 @@ mod runtime_tests {
             m.insert("count".to_string(), Value::Integer(7));
             m.insert("active".to_string(), Value::Bool(true));
             m.insert("ratio".to_string(), Value::Float(3.14));
-            m.insert("items".to_string(), Value::Array(vec![Value::Integer(1), Value::Integer(2)]));
+            m.insert(
+                "items".to_string(),
+                Value::Array(vec![Value::Integer(1), Value::Integer(2)]),
+            );
             m.insert("empty".to_string(), Value::Null);
             m
         });
@@ -2252,10 +2241,7 @@ mod template_tests_continued {
     #[test]
     fn test_template_key_stripped() {
         let template = obj(vec![("type", s("button")), ("variant", s("ghost"))]);
-        let instance = obj(vec![
-            ("template", s("btn")),
-            ("label", s("Click")),
-        ]);
+        let instance = obj(vec![("template", s("btn")), ("label", s("Click"))]);
 
         let mut templates = TemplateMap::new();
         templates.insert("btn".to_string(), template);
@@ -2273,10 +2259,7 @@ mod template_tests_continued {
                 "component",
                 obj(vec![(
                     "inner",
-                    obj(vec![
-                        ("type", s("stack")),
-                        ("slot", Value::Bool(true)),
-                    ]),
+                    obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
                 )]),
             ),
         ]);
@@ -2305,10 +2288,7 @@ mod template_tests_continued {
     #[test]
     fn test_recursive_template_resolution() {
         // "outer" references "inner", which is a plain template
-        let inner_template = obj(vec![
-            ("type", s("stack")),
-            ("direction", s("vertical")),
-        ]);
+        let inner_template = obj(vec![("type", s("stack")), ("direction", s("vertical"))]);
         let outer_template = obj(vec![
             ("template", s("inner")),
             ("spacing", Value::Integer(12)),
@@ -2420,7 +2400,10 @@ layout {
         let layout_config = parse_layout_config(&config).expect("Layout parse failed");
 
         let nav = &layout_config.root.children[0];
-        assert_eq!(nav.handlers.get("click").map(|s| s.as_str()), Some("on_nav"));
+        assert_eq!(
+            nav.handlers.get("click").map(|s| s.as_str()),
+            Some("on_nav")
+        );
     }
 
     #[test]
@@ -2480,7 +2463,10 @@ layout {
         let nav = &root.children[0];
         assert_eq!(nav.component_type, "button");
         assert_eq!(
-            nav.config.properties.get("variant").and_then(|v| v.as_str()),
+            nav.config
+                .properties
+                .get("variant")
+                .and_then(|v| v.as_str()),
             Some("ghost")
         );
         assert_eq!(
@@ -2509,11 +2495,7 @@ layout {
         let title = &inner.children[0];
         assert_eq!(title.component_type, "label");
         assert_eq!(
-            title
-                .config
-                .properties
-                .get("text")
-                .and_then(|v| v.as_str()),
+            title.config.properties.get("text").and_then(|v| v.as_str()),
             Some("Button Page")
         );
     }

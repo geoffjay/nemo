@@ -49,7 +49,10 @@ mod tests {
     fn test_bool_state_insert_and_retrieve() {
         let mut states = ComponentStates::new();
         let val = Arc::new(Mutex::new(false));
-        states.insert("switch1".into(), ComponentState::BoolState(Arc::clone(&val)));
+        states.insert(
+            "switch1".into(),
+            ComponentState::BoolState(Arc::clone(&val)),
+        );
 
         if let Some(ComponentState::BoolState(s)) = states.get("switch1") {
             assert!(!*s.lock().unwrap());
@@ -74,7 +77,10 @@ mod tests {
     fn test_bool_state_returns_existing() {
         let mut states = ComponentStates::new();
         let original = Arc::new(Mutex::new(true));
-        states.insert("tog".into(), ComponentState::BoolState(Arc::clone(&original)));
+        states.insert(
+            "tog".into(),
+            ComponentState::BoolState(Arc::clone(&original)),
+        );
 
         // Simulating get_or_create pattern: should return the existing one
         if let Some(ComponentState::BoolState(existing)) = states.get("tog") {
@@ -91,7 +97,10 @@ mod tests {
     fn test_selected_value_insert_and_retrieve() {
         let mut states = ComponentStates::new();
         let val = Arc::new(Mutex::new("option_a".to_string()));
-        states.insert("select1".into(), ComponentState::SelectedValue(Arc::clone(&val)));
+        states.insert(
+            "select1".into(),
+            ComponentState::SelectedValue(Arc::clone(&val)),
+        );
 
         if let Some(ComponentState::SelectedValue(s)) = states.get("select1") {
             assert_eq!(*s.lock().unwrap(), "option_a");
@@ -114,7 +123,10 @@ mod tests {
     fn test_selected_index_none_initial() {
         let mut states = ComponentStates::new();
         let val = Arc::new(Mutex::new(None::<usize>));
-        states.insert("radio1".into(), ComponentState::SelectedIndex(Arc::clone(&val)));
+        states.insert(
+            "radio1".into(),
+            ComponentState::SelectedIndex(Arc::clone(&val)),
+        );
 
         if let Some(ComponentState::SelectedIndex(s)) = states.get("radio1") {
             assert_eq!(*s.lock().unwrap(), None);
@@ -217,23 +229,53 @@ mod tests {
     #[test]
     fn test_different_state_types_coexist() {
         let mut states = ComponentStates::new();
-        states.insert("sw".into(), ComponentState::BoolState(Arc::new(Mutex::new(true))));
-        states.insert("sel".into(), ComponentState::SelectedValue(Arc::new(Mutex::new("x".into()))));
-        states.insert("rad".into(), ComponentState::SelectedIndex(Arc::new(Mutex::new(Some(1)))));
-        states.insert("acc".into(), ComponentState::Accordion(Arc::new(Mutex::new(HashSet::new()))));
+        states.insert(
+            "sw".into(),
+            ComponentState::BoolState(Arc::new(Mutex::new(true))),
+        );
+        states.insert(
+            "sel".into(),
+            ComponentState::SelectedValue(Arc::new(Mutex::new("x".into()))),
+        );
+        states.insert(
+            "rad".into(),
+            ComponentState::SelectedIndex(Arc::new(Mutex::new(Some(1)))),
+        );
+        states.insert(
+            "acc".into(),
+            ComponentState::Accordion(Arc::new(Mutex::new(HashSet::new()))),
+        );
 
         assert_eq!(states.len(), 4);
-        assert!(matches!(states.get("sw"), Some(ComponentState::BoolState(_))));
-        assert!(matches!(states.get("sel"), Some(ComponentState::SelectedValue(_))));
-        assert!(matches!(states.get("rad"), Some(ComponentState::SelectedIndex(_))));
-        assert!(matches!(states.get("acc"), Some(ComponentState::Accordion(_))));
+        assert!(matches!(
+            states.get("sw"),
+            Some(ComponentState::BoolState(_))
+        ));
+        assert!(matches!(
+            states.get("sel"),
+            Some(ComponentState::SelectedValue(_))
+        ));
+        assert!(matches!(
+            states.get("rad"),
+            Some(ComponentState::SelectedIndex(_))
+        ));
+        assert!(matches!(
+            states.get("acc"),
+            Some(ComponentState::Accordion(_))
+        ));
     }
 
     #[test]
     fn test_overwrite_state_with_same_id() {
         let mut states = ComponentStates::new();
-        states.insert("x".into(), ComponentState::BoolState(Arc::new(Mutex::new(false))));
-        states.insert("x".into(), ComponentState::BoolState(Arc::new(Mutex::new(true))));
+        states.insert(
+            "x".into(),
+            ComponentState::BoolState(Arc::new(Mutex::new(false))),
+        );
+        states.insert(
+            "x".into(),
+            ComponentState::BoolState(Arc::new(Mutex::new(true))),
+        );
 
         if let Some(ComponentState::BoolState(s)) = states.get("x") {
             assert!(*s.lock().unwrap()); // Should be the new value

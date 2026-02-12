@@ -27,10 +27,7 @@ pub struct Stack {
 }
 
 impl Stack {
-    fn apply_shadow_stateful(
-        base: Stateful<Div>,
-        shadow: Option<&str>,
-    ) -> Stateful<Div> {
+    fn apply_shadow_stateful(base: Stateful<Div>, shadow: Option<&str>) -> Stateful<Div> {
         match shadow {
             Some("sm") => base.shadow_sm(),
             Some("md") => base.shadow_md(),

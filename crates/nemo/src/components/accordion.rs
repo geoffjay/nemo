@@ -47,10 +47,9 @@ impl RenderOnce for Accordion {
 
         let current_open = self.open_indices.lock().unwrap().clone();
 
-        let mut accordion =
-            GpuiAccordion::new(SharedString::from(self.source.id.clone()))
-                .multiple(multiple)
-                .bordered(bordered);
+        let mut accordion = GpuiAccordion::new(SharedString::from(self.source.id.clone()))
+            .multiple(multiple)
+            .bordered(bordered);
 
         if let Some(Value::Array(items)) = props.get("items") {
             for (ix, item_val) in items.iter().enumerate() {
@@ -69,7 +68,9 @@ impl RenderOnce for Accordion {
                     let open = current_open.contains(&ix);
 
                     accordion = accordion.item(move |item: AccordionItem| {
-                        item.title(title).open(open).child(div().p_2().child(content))
+                        item.title(title)
+                            .open(open)
+                            .child(div().p_2().child(content))
                     });
                 }
             }

@@ -86,10 +86,6 @@ impl RenderOnce for Tree {
             .and_then(|v| v.as_i64())
             .unwrap_or(300) as f32;
 
-        div()
-            .w_full()
-            .h(px(height))
-            .child(tree)
-            .into_any_element()
+        div().w_full().h(px(height)).child(tree).into_any_element()
     }
 }

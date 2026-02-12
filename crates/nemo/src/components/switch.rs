@@ -50,8 +50,7 @@ impl RenderOnce for Switch {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
-        let mut sw = GpuiSwitch::new(SharedString::from(self.source.id.clone()))
-            .checked(checked);
+        let mut sw = GpuiSwitch::new(SharedString::from(self.source.id.clone())).checked(checked);
 
         if let Some(label) = props.get("label").and_then(|v| v.as_str()) {
             sw = sw.label(label.to_string());

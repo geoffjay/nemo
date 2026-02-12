@@ -16,9 +16,9 @@ use crate::components::table::NemoTableDelegate;
 use crate::components::tree::values_to_tree_items;
 use crate::components::{
     Accordion, Alert, AreaChart, Avatar, Badge, BarChart, Button, CandlestickChart, Checkbox,
-    Collapsible, DropdownButton, Icon, Image, Label, LineChart, List, Modal, Notification,
-    Panel, PieChart, Progress, Radio, Select, Slider, Spinner, Stack, Switch, Table, Tabs, Tag,
-    Text, Toggle, Tooltip, Tree,
+    Collapsible, DropdownButton, Icon, Image, Label, LineChart, List, Modal, Notification, Panel,
+    PieChart, Progress, Radio, Select, Slider, Spinner, Stack, Switch, Table, Tabs, Tag, Text,
+    Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
 use crate::workspace::HeaderBar;
@@ -178,22 +178,10 @@ impl App {
         }
 
         let props = &component.properties;
-        let min = props
-            .get("min")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32;
-        let max = props
-            .get("max")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(100.0) as f32;
-        let step = props
-            .get("step")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(1.0) as f32;
-        let value = props
-            .get("value")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0) as f32;
+        let min = props.get("min").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
+        let max = props.get("max").and_then(|v| v.as_f64()).unwrap_or(100.0) as f32;
+        let step = props.get("step").and_then(|v| v.as_f64()).unwrap_or(1.0) as f32;
+        let value = props.get("value").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32;
 
         let state = cx.new(|_cx| {
             SliderState::new()
@@ -229,40 +217,38 @@ impl App {
         }
 
         let state = Arc::new(Mutex::new(initial));
-        self.component_states
-            .insert(component.id.clone(), ComponentState::Accordion(Arc::clone(&state)));
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Accordion(Arc::clone(&state)),
+        );
         state
     }
 
     /// Gets or creates shared bool state for the given component (collapsible, switch, toggle).
-    fn get_or_create_bool_state(
-        &mut self,
-        id: &str,
-        initial: bool,
-    ) -> Arc<Mutex<bool>> {
+    fn get_or_create_bool_state(&mut self, id: &str, initial: bool) -> Arc<Mutex<bool>> {
         if let Some(ComponentState::BoolState(state)) = self.component_states.get(id) {
             return Arc::clone(state);
         }
 
         let state = Arc::new(Mutex::new(initial));
-        self.component_states
-            .insert(id.to_string(), ComponentState::BoolState(Arc::clone(&state)));
+        self.component_states.insert(
+            id.to_string(),
+            ComponentState::BoolState(Arc::clone(&state)),
+        );
         state
     }
 
     /// Gets or creates shared selected value state for a select component.
-    fn get_or_create_selected_value(
-        &mut self,
-        id: &str,
-        initial: String,
-    ) -> Arc<Mutex<String>> {
+    fn get_or_create_selected_value(&mut self, id: &str, initial: String) -> Arc<Mutex<String>> {
         if let Some(ComponentState::SelectedValue(state)) = self.component_states.get(id) {
             return Arc::clone(state);
         }
 
         let state = Arc::new(Mutex::new(initial));
-        self.component_states
-            .insert(id.to_string(), ComponentState::SelectedValue(Arc::clone(&state)));
+        self.component_states.insert(
+            id.to_string(),
+            ComponentState::SelectedValue(Arc::clone(&state)),
+        );
         state
     }
 
@@ -277,8 +263,10 @@ impl App {
         }
 
         let state = Arc::new(Mutex::new(initial));
-        self.component_states
-            .insert(id.to_string(), ComponentState::SelectedIndex(Arc::clone(&state)));
+        self.component_states.insert(
+            id.to_string(),
+            ComponentState::SelectedIndex(Arc::clone(&state)),
+        );
         state
     }
 
@@ -297,12 +285,7 @@ impl App {
             let components: HashMap<String, BuiltComponent> = layout_manager
                 .component_ids()
                 .into_iter()
-                .filter_map(|id| {
-                    layout_manager
-                        .get_component(&id)
-                        .cloned()
-                        .map(|c| (id, c))
-                })
+                .filter_map(|id| layout_manager.get_component(&id).cloned().map(|c| (id, c)))
                 .collect();
             (root_id, components)
         };
@@ -438,8 +421,12 @@ impl App {
                     .into_any_element()
             }
             "select" => {
-                let initial = component.properties.get("value")
-                    .and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let initial = component
+                    .properties
+                    .get("value")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
                 let sel_state = self.get_or_create_selected_value(&component.id, initial);
                 Select::new(component.clone())
                     .selected_value(sel_state)
@@ -469,16 +456,14 @@ impl App {
                     .into_any_element()
             }
             "table" => {
-                let table_state =
-                    self.get_or_create_table_state(component, window, cx);
+                let table_state = self.get_or_create_table_state(component, window, cx);
                 Table::new(component.clone())
                     .table_state(table_state)
                     .into_any_element()
             }
             "list" => List::new(component.clone()).into_any_element(),
             "tree" => {
-                let tree_state =
-                    self.get_or_create_tree_state(component, window, cx);
+                let tree_state = self.get_or_create_tree_state(component, window, cx);
                 Tree::new(component.clone())
                     .tree_state(tree_state)
                     .into_any_element()
@@ -505,8 +490,11 @@ impl App {
             }
             "collapsible" => {
                 let children = self.render_children(component, components, entity_id, window, cx);
-                let initial_open = component.properties.get("open")
-                    .and_then(|v| v.as_bool()).unwrap_or(false);
+                let initial_open = component
+                    .properties
+                    .get("open")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 let coll_state = self.get_or_create_bool_state(&component.id, initial_open);
                 Collapsible::new(component.clone())
                     .open_state(coll_state)
@@ -516,12 +504,17 @@ impl App {
             }
             "dropdown_button" => DropdownButton::new(component.clone()).into_any_element(),
             "radio" => {
-                let options: Vec<String> = component.properties.get("options")
+                let options: Vec<String> = component
+                    .properties
+                    .get("options")
                     .and_then(|v| v.as_array())
-                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                            .collect()
+                    })
                     .unwrap_or_default();
-                let initial_val = component.properties.get("value")
-                    .and_then(|v| v.as_str());
+                let initial_val = component.properties.get("value").and_then(|v| v.as_str());
                 let initial_ix = initial_val.and_then(|val| options.iter().position(|o| o == val));
                 let radio_state = self.get_or_create_selected_index(&component.id, initial_ix);
                 Radio::new(component.clone())
@@ -538,8 +531,11 @@ impl App {
             }
             "spinner" => Spinner::new(component.clone()).into_any_element(),
             "switch" => {
-                let initial = component.properties.get("checked")
-                    .and_then(|v| v.as_bool()).unwrap_or(false);
+                let initial = component
+                    .properties
+                    .get("checked")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 let sw_state = self.get_or_create_bool_state(&component.id, initial);
                 Switch::new(component.clone())
                     .checked_state(sw_state)
@@ -549,8 +545,11 @@ impl App {
             }
             "tag" => Tag::new(component.clone()).into_any_element(),
             "toggle" => {
-                let initial = component.properties.get("checked")
-                    .and_then(|v| v.as_bool()).unwrap_or(false);
+                let initial = component
+                    .properties
+                    .get("checked")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 let tog_state = self.get_or_create_bool_state(&component.id, initial);
                 Toggle::new(component.clone())
                     .checked_state(tog_state)

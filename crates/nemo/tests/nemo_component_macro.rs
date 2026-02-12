@@ -230,7 +230,10 @@ fn test_source_stores_built_component() {
     assert_eq!(w.label, "Hi");
     assert_eq!(w.source.id, "my_button");
     assert_eq!(w.source.component_type, "button");
-    assert_eq!(w.source.handlers.get("click").map(|s| s.as_str()), Some("on_click"));
+    assert_eq!(
+        w.source.handlers.get("click").map(|s| s.as_str()),
+        Some("on_click")
+    );
 }
 
 // ── Fields without attributes get Default ─────────────────────────────────

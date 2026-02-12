@@ -27,10 +27,7 @@ impl RenderOnce for Badge {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
         let props = &self.source.properties;
         let count = props.get("count").and_then(|v| v.as_i64());
-        let dot = props
-            .get("dot")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
+        let dot = props.get("dot").and_then(|v| v.as_bool()).unwrap_or(false);
 
         let mut badge = GpuiBadge::new();
 

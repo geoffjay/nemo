@@ -78,7 +78,11 @@ impl RenderOnce for Button {
             btn = btn.w_full().h_full();
         }
 
-        if props.get("full_width").and_then(|v| v.as_bool()).unwrap_or(false) {
+        if props
+            .get("full_width")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+        {
             btn = btn.w_full();
         }
 

@@ -94,11 +94,7 @@ impl TableDelegate for NemoTableDelegate {
         let text = self
             .rows
             .get(row_ix)
-            .and_then(|row| {
-                self.column_keys
-                    .get(col_ix)
-                    .and_then(|key| row.get(key))
-            })
+            .and_then(|row| self.column_keys.get(col_ix).and_then(|key| row.get(key)))
             .map(|v| v.to_string())
             .unwrap_or_default();
 
@@ -160,10 +156,6 @@ impl RenderOnce for Table {
             .and_then(|v| v.as_i64())
             .unwrap_or(300) as f32;
 
-        div()
-            .w_full()
-            .h(px(height))
-            .child(table)
-            .into_any_element()
+        div().w_full().h(px(height)).child(table).into_any_element()
     }
 }

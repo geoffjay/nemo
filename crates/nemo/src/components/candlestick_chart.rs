@@ -3,7 +3,9 @@ use gpui_component::chart::CandlestickChart as GpuiCandlestickChart;
 use nemo_config::Value;
 use nemo_macros::NemoComponent;
 
-use super::chart_utils::{empty_chart_placeholder, extract_data_array, get_f64_field, get_string_field};
+use super::chart_utils::{
+    empty_chart_placeholder, extract_data_array, get_f64_field, get_string_field,
+};
 
 #[derive(IntoElement, NemoComponent)]
 pub struct CandlestickChart {

@@ -118,10 +118,7 @@ fn register_basic_components(registry: &ComponentRegistry) {
     alert.schema = ConfigSchema::new("alert")
         .property("message", PropertySchema::string())
         .property("title", PropertySchema::string())
-        .property(
-            "variant",
-            PropertySchema::string().with_default("info"),
-        )
+        .property("variant", PropertySchema::string().with_default("info"))
         .require("message");
     let _ = registry.register_component(alert);
 
@@ -132,8 +129,7 @@ fn register_basic_components(registry: &ComponentRegistry) {
         description: "A user avatar showing initials".to_string(),
         ..Default::default()
     };
-    avatar.schema = ConfigSchema::new("avatar")
-        .property("name", PropertySchema::string());
+    avatar.schema = ConfigSchema::new("avatar").property("name", PropertySchema::string());
     let _ = registry.register_component(avatar);
 
     // Badge
@@ -161,7 +157,8 @@ fn register_basic_components(registry: &ComponentRegistry) {
     let _ = registry.register_component(collapsible);
 
     // Dropdown Button
-    let mut dropdown_button = ComponentDescriptor::new("dropdown_button", ComponentCategory::Display);
+    let mut dropdown_button =
+        ComponentDescriptor::new("dropdown_button", ComponentCategory::Display);
     dropdown_button.metadata = ComponentMetadata {
         display_name: "Dropdown Button".to_string(),
         description: "A button with a dropdown menu indicator".to_string(),
@@ -179,8 +176,8 @@ fn register_basic_components(registry: &ComponentRegistry) {
         description: "A loading spinner indicator".to_string(),
         ..Default::default()
     };
-    spinner.schema = ConfigSchema::new("spinner")
-        .property("size", PropertySchema::string().with_default("md"));
+    spinner.schema =
+        ConfigSchema::new("spinner").property("size", PropertySchema::string().with_default("md"));
     let _ = registry.register_component(spinner);
 
     // Tag
@@ -192,7 +189,10 @@ fn register_basic_components(registry: &ComponentRegistry) {
     };
     tag.schema = ConfigSchema::new("tag")
         .property("label", PropertySchema::string().with_default("Tag"))
-        .property("variant", PropertySchema::string().with_default("secondary"))
+        .property(
+            "variant",
+            PropertySchema::string().with_default("secondary"),
+        )
         .property("outline", PropertySchema::boolean().with_default(false));
     let _ = registry.register_component(tag);
 }
@@ -267,7 +267,10 @@ fn register_input_components(registry: &ComponentRegistry) {
     radio.schema = ConfigSchema::new("radio")
         .property("options", PropertySchema::array(PropertySchema::string()))
         .property("value", PropertySchema::string())
-        .property("direction", PropertySchema::string().with_default("vertical"));
+        .property(
+            "direction",
+            PropertySchema::string().with_default("vertical"),
+        );
     let _ = registry.register_component(radio);
 
     // Slider
@@ -417,7 +420,8 @@ fn register_data_components(registry: &ComponentRegistry) {
         description: "A tree view".to_string(),
         ..Default::default()
     };
-    tree.schema = ConfigSchema::new("tree").property("items", PropertySchema::array(PropertySchema::any()));
+    tree.schema =
+        ConfigSchema::new("tree").property("items", PropertySchema::array(PropertySchema::any()));
     let _ = registry.register_component(tree);
 }
 
@@ -529,8 +533,7 @@ fn register_chart_components(registry: &ComponentRegistry) {
     let _ = registry.register_component(pie_chart);
 
     // Candlestick Chart
-    let mut candlestick =
-        ComponentDescriptor::new("candlestick_chart", ComponentCategory::Charts);
+    let mut candlestick = ComponentDescriptor::new("candlestick_chart", ComponentCategory::Charts);
     candlestick.metadata = ComponentMetadata {
         display_name: "Candlestick Chart".to_string(),
         description: "An OHLC candlestick chart for financial data".to_string(),
