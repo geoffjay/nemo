@@ -869,12 +869,385 @@ fn get_nested_value<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
     Some(current)
 }
 
+// ── Template expansion ────────────────────────────────────────────────────
+
+type TemplateMap = HashMap<String, Value>;
+
+/// Extracts template definitions from the parsed config.
+///
+/// HCL `templates { template "name" { ... } }` parses as:
+/// `config["templates"]["template"]["name"] = { ... }`
+fn extract_templates(config: &Value) -> TemplateMap {
+    let mut map = TemplateMap::new();
+    if let Some(templates_block) = config.get("templates") {
+        if let Some(template_entries) = templates_block.get("template") {
+            if let Some(obj) = template_entries.as_object() {
+                for (name, value) in obj {
+                    map.insert(name.clone(), value.clone());
+                }
+            }
+        }
+    }
+    map
+}
+
+/// Deep-merges two `Value::Object`s. Overlay wins for scalars.
+/// Special handling for `component` children and `binding` blocks.
+/// The `template` key from the overlay is skipped (consumed during expansion).
+fn deep_merge_values(base: &Value, overlay: &Value) -> Value {
+    let base_obj = match base.as_object() {
+        Some(o) => o,
+        None => return overlay.clone(),
+    };
+    let overlay_obj = match overlay.as_object() {
+        Some(o) => o,
+        None => return overlay.clone(),
+    };
+
+    let mut result = base_obj.clone();
+
+    for (key, overlay_val) in overlay_obj {
+        if key == "template" {
+            continue; // consumed during expansion
+        }
+        match key.as_str() {
+            "component" => {
+                let base_children = result.get("component").cloned().unwrap_or(Value::Null);
+                let merged = merge_component_children(&base_children, overlay_val);
+                result.insert(key.clone(), merged);
+            }
+            "binding" => {
+                let base_bindings = result.get("binding").cloned().unwrap_or(Value::Null);
+                let merged = merge_bindings(&base_bindings, overlay_val);
+                result.insert(key.clone(), merged);
+            }
+            _ => {
+                // Scalar / any other key: overlay wins
+                result.insert(key.clone(), overlay_val.clone());
+            }
+        }
+    }
+
+    Value::Object(result)
+}
+
+/// Merges component children. For Object children (labeled blocks): base keys
+/// first, overlay keys appended. Same-ID overlay children replace base children.
+fn merge_component_children(base: &Value, overlay: &Value) -> Value {
+    match (base.as_object(), overlay.as_object()) {
+        (Some(base_obj), Some(overlay_obj)) => {
+            let mut result = base_obj.clone();
+            for (id, child) in overlay_obj {
+                // Same-ID replaces, new IDs are appended
+                result.insert(id.clone(), child.clone());
+            }
+            Value::Object(result)
+        }
+        (Some(_), None) if overlay.is_null() => base.clone(),
+        (None, Some(_)) | (None, None) => overlay.clone(),
+        _ => overlay.clone(),
+    }
+}
+
+/// Merges binding blocks by `target` property. Normalizes to arrays,
+/// instance wins for same target.
+fn merge_bindings(base: &Value, overlay: &Value) -> Value {
+    let base_arr = match base {
+        Value::Array(arr) => arr.clone(),
+        Value::Object(_) => vec![base.clone()],
+        _ => Vec::new(),
+    };
+    let overlay_arr = match overlay {
+        Value::Array(arr) => arr.clone(),
+        Value::Object(_) => vec![overlay.clone()],
+        _ => Vec::new(),
+    };
+
+    // Index overlay bindings by target
+    let mut overlay_targets: HashMap<String, Value> = HashMap::new();
+    for b in &overlay_arr {
+        if let Some(target) = b.get("target").and_then(|v| v.as_str()) {
+            overlay_targets.insert(target.to_string(), b.clone());
+        }
+    }
+
+    let mut result: Vec<Value> = Vec::new();
+    // Keep base bindings, replacing those with matching overlay targets
+    for b in &base_arr {
+        if let Some(target) = b.get("target").and_then(|v| v.as_str()) {
+            if let Some(replacement) = overlay_targets.remove(target) {
+                result.push(replacement);
+            } else {
+                result.push(b.clone());
+            }
+        } else {
+            result.push(b.clone());
+        }
+    }
+    // Append remaining overlay bindings (new targets)
+    for (_, b) in overlay_targets {
+        result.push(b);
+    }
+
+    if result.len() == 1 {
+        result.into_iter().next().unwrap()
+    } else {
+        Value::Array(result)
+    }
+}
+
+/// Removes specified keys from a `Value::Object`.
+fn strip_keys(value: &Value, keys: &[&str]) -> Value {
+    match value.as_object() {
+        Some(obj) => {
+            let mut result = obj.clone();
+            for key in keys {
+                result.shift_remove(*key);
+            }
+            Value::Object(result)
+        }
+        None => value.clone(),
+    }
+}
+
+/// Wraps a value in an object with a single "component" key.
+fn obj_with_component(children: &Value) -> Value {
+    let mut map = indexmap::IndexMap::new();
+    map.insert("component".to_string(), children.clone());
+    Value::Object(map)
+}
+
+/// Walks the template's `component` children looking for one with `slot = true`.
+/// If found, appends `instance_children` into that child's own `component`
+/// children and strips the `slot` key. If no slot found, returns None.
+fn find_and_inject_slot(template_value: &Value, instance_children: &Value) -> Option<Value> {
+    let obj = template_value.as_object()?;
+    let components = obj.get("component")?.as_object()?;
+
+    for (child_id, child_val) in components {
+        if let Some(true) = child_val.get("slot").and_then(|v| v.as_bool()) {
+            // Found the slot child — inject instance children into it
+            let mut new_components = components.clone();
+            let mut slot_child = child_val.as_object().cloned().unwrap_or_default();
+
+            // Merge instance children into the slot child's component children
+            let existing = slot_child
+                .get("component")
+                .cloned()
+                .unwrap_or(Value::Null);
+            let merged = if existing.is_null() {
+                instance_children.clone()
+            } else {
+                merge_component_children(&existing, instance_children)
+            };
+            slot_child.insert("component".to_string(), merged);
+            slot_child.shift_remove("slot"); // strip slot key
+
+            new_components.insert(child_id.clone(), Value::Object(slot_child));
+
+            let mut result = obj.clone();
+            result.insert("component".to_string(), Value::Object(new_components));
+            return Some(Value::Object(result));
+        }
+
+        // Recurse into this child to find a nested slot
+        if child_val.get("component").is_some() {
+            if let Some(injected_child) = find_and_inject_slot(child_val, instance_children) {
+                let mut new_components = components.clone();
+                new_components.insert(child_id.clone(), injected_child);
+                let mut result = obj.clone();
+                result.insert("component".to_string(), Value::Object(new_components));
+                return Some(Value::Object(result));
+            }
+        }
+    }
+
+    None
+}
+
+/// Expands a single component instance that may reference a template.
+/// `instance_id` is the labeled block name (e.g., "page_button") used to
+/// prefix template-originated child IDs for uniqueness.
+fn expand_template(
+    instance: &Value,
+    templates: &TemplateMap,
+    expansion_stack: &mut Vec<String>,
+    instance_id: Option<&str>,
+) -> Result<Value, String> {
+    let obj = match instance.as_object() {
+        Some(o) => o,
+        None => return Ok(instance.clone()),
+    };
+
+    // Check for template = "name"
+    let template_name = match obj.get("template").and_then(|v| v.as_str()) {
+        Some(name) => name.to_string(),
+        None => {
+            // No template reference — just recurse into children
+            return expand_children(instance, templates, expansion_stack);
+        }
+    };
+
+    // Circular reference check
+    if expansion_stack.contains(&template_name) {
+        return Err(format!(
+            "Circular template reference detected: {} -> {}",
+            expansion_stack.join(" -> "),
+            template_name
+        ));
+    }
+
+    // Look up the template
+    let template_def = templates
+        .get(&template_name)
+        .ok_or_else(|| format!("Unknown template: '{}'", template_name))?
+        .clone();
+
+    // Collect template child IDs so we can prefix them later for uniqueness
+    let template_child_ids: Vec<String> = template_def
+        .get("component")
+        .and_then(|c| c.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default();
+
+    // Recursively expand the template itself (template-of-template)
+    expansion_stack.push(template_name.clone());
+    let expanded_template = expand_template(&template_def, templates, expansion_stack, None)?;
+    expansion_stack.pop();
+
+    // Extract instance children before merging
+    let instance_children = obj.get("component").cloned();
+
+    // Merge instance properties (without children) onto the template first
+    let instance_without_children = strip_keys(instance, &["component"]);
+    let merged = deep_merge_values(&expanded_template, &instance_without_children);
+
+    // Handle children: if template has a slot, inject instance children there.
+    // Otherwise, merge children as siblings via deep_merge.
+    let with_slots = match &instance_children {
+        Some(children) if !children.is_null() => {
+            match find_and_inject_slot(&merged, children) {
+                Some(injected) => injected,
+                None => {
+                    // No slot found — merge children as siblings
+                    deep_merge_values(&merged, &obj_with_component(children))
+                }
+            }
+        }
+        _ => merged,
+    };
+
+    // Strip consumed keys
+    let stripped = strip_keys(&with_slots, &["template", "slot"]);
+
+    // Prefix template-originated child IDs with the instance ID for uniqueness.
+    // This prevents ID collisions when the same template is used by multiple
+    // instances (e.g., all content pages having a child named "inner").
+    let scoped = if let Some(parent_id) = instance_id {
+        scope_template_children(&stripped, parent_id, &template_child_ids)
+    } else {
+        stripped
+    };
+
+    // Recurse into merged children
+    expand_children(&scoped, templates, expansion_stack)
+}
+
+/// Renames template-originated child IDs by prefixing them with the parent
+/// instance ID. Only children whose original ID is in `template_child_ids`
+/// are renamed; instance children keep their original IDs.
+fn scope_template_children(
+    value: &Value,
+    parent_id: &str,
+    template_child_ids: &[String],
+) -> Value {
+    if template_child_ids.is_empty() {
+        return value.clone();
+    }
+
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => return value.clone(),
+    };
+
+    let components = match obj.get("component").and_then(|c| c.as_object()) {
+        Some(c) => c,
+        None => return value.clone(),
+    };
+
+    let mut new_components = indexmap::IndexMap::new();
+    for (id, child) in components {
+        if template_child_ids.contains(id) {
+            let new_id = format!("{}_{}", parent_id, id);
+            new_components.insert(new_id, child.clone());
+        } else {
+            new_components.insert(id.clone(), child.clone());
+        }
+    }
+
+    let mut result = obj.clone();
+    result.insert("component".to_string(), Value::Object(new_components));
+    Value::Object(result)
+}
+
+/// Iterates over all `component` children and expands templates in each.
+fn expand_children(
+    value: &Value,
+    templates: &TemplateMap,
+    expansion_stack: &mut Vec<String>,
+) -> Result<Value, String> {
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => return Ok(value.clone()),
+    };
+
+    let components = match obj.get("component") {
+        Some(c) => c,
+        None => return Ok(value.clone()),
+    };
+
+    let expanded_components = if let Some(comp_obj) = components.as_object() {
+        let mut result = indexmap::IndexMap::new();
+        for (id, child) in comp_obj {
+            let expanded = expand_template(child, templates, expansion_stack, Some(id.as_str()))?;
+            result.insert(id.clone(), expanded);
+        }
+        Value::Object(result)
+    } else if let Some(comp_arr) = components.as_array() {
+        let mut result = Vec::new();
+        for child in comp_arr {
+            let expanded = expand_template(child, templates, expansion_stack, None)?;
+            result.push(expanded);
+        }
+        Value::Array(result)
+    } else {
+        components.clone()
+    };
+
+    let mut result = obj.clone();
+    result.insert("component".to_string(), expanded_components);
+    Ok(Value::Object(result))
+}
+
+// ── Layout parsing ───────────────────────────────────────────────────────
+
 /// Parses layout configuration from a Value.
 fn parse_layout_config(config: &Value) -> Option<LayoutConfig> {
     let layout = config.get("layout")?;
+    let templates = extract_templates(config);
+
+    let expanded_layout = if templates.is_empty() {
+        layout.clone()
+    } else {
+        let mut stack = Vec::new();
+        expand_children(layout, &templates, &mut stack).unwrap_or_else(|e| {
+            tracing::error!("Template expansion failed: {}", e);
+            layout.clone()
+        })
+    };
 
     // Get layout type
-    let layout_type = layout
+    let layout_type = expanded_layout
         .get("type")
         .and_then(|v| v.as_str())
         .map(|s| match s.to_lowercase().as_str() {
@@ -886,7 +1259,7 @@ fn parse_layout_config(config: &Value) -> Option<LayoutConfig> {
         .unwrap_or(LayoutType::Stack);
 
     // Parse root node - the layout block itself acts as a container
-    let root = parse_layout_node_as_root(layout, &layout_type)?;
+    let root = parse_layout_node_as_root(&expanded_layout, &layout_type)?;
 
     Some(LayoutConfig::new(layout_type, root))
 }
@@ -1191,5 +1564,473 @@ fn plugin_value_to_json(value: PluginValue) -> serde_json::Value {
                 .collect();
             serde_json::Value::Object(map)
         }
+    }
+}
+
+#[cfg(test)]
+mod template_tests {
+    use super::*;
+    use indexmap::IndexMap;
+
+    /// Helper to build a Value::Object from key-value pairs.
+    fn obj(pairs: Vec<(&str, Value)>) -> Value {
+        let mut map = IndexMap::new();
+        for (k, v) in pairs {
+            map.insert(k.to_string(), v);
+        }
+        Value::Object(map)
+    }
+
+    fn s(val: &str) -> Value {
+        Value::String(val.to_string())
+    }
+
+    #[test]
+    fn test_extract_templates_empty() {
+        let config = obj(vec![("layout", obj(vec![("type", s("stack"))]))]);
+        let templates = extract_templates(&config);
+        assert!(templates.is_empty());
+    }
+
+    #[test]
+    fn test_extract_templates_basic() {
+        let config = obj(vec![(
+            "templates",
+            obj(vec![(
+                "template",
+                obj(vec![
+                    (
+                        "nav_item",
+                        obj(vec![
+                            ("type", s("button")),
+                            ("variant", s("ghost")),
+                        ]),
+                    ),
+                    (
+                        "page",
+                        obj(vec![("type", s("panel"))]),
+                    ),
+                ]),
+            )]),
+        )]);
+
+        let templates = extract_templates(&config);
+        assert_eq!(templates.len(), 2);
+        assert!(templates.contains_key("nav_item"));
+        assert!(templates.contains_key("page"));
+        assert_eq!(
+            templates["nav_item"].get("type").and_then(|v| v.as_str()),
+            Some("button")
+        );
+    }
+
+    #[test]
+    fn test_deep_merge_scalar_override() {
+        let base = obj(vec![
+            ("type", s("button")),
+            ("variant", s("ghost")),
+            ("size", s("sm")),
+        ]);
+        let overlay = obj(vec![
+            ("variant", s("primary")),
+            ("label", s("Click")),
+        ]);
+        let merged = deep_merge_values(&base, &overlay);
+        assert_eq!(merged.get("type").and_then(|v| v.as_str()), Some("button"));
+        assert_eq!(merged.get("variant").and_then(|v| v.as_str()), Some("primary"));
+        assert_eq!(merged.get("size").and_then(|v| v.as_str()), Some("sm"));
+        assert_eq!(merged.get("label").and_then(|v| v.as_str()), Some("Click"));
+    }
+
+    #[test]
+    fn test_children_appended_no_slot() {
+        let template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![("child_a", obj(vec![("type", s("label"))]))]),
+            ),
+        ]);
+        let instance = obj(vec![
+            ("template", s("test")),
+            (
+                "component",
+                obj(vec![("child_b", obj(vec![("type", s("button"))]))]),
+            ),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("test".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+
+        let comp = result.get("component").unwrap().as_object().unwrap();
+        assert!(comp.contains_key("child_a"));
+        assert!(comp.contains_key("child_b"));
+    }
+
+    #[test]
+    fn test_slot_injection() {
+        let template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![(
+                    "inner",
+                    obj(vec![
+                        ("type", s("stack")),
+                        ("slot", Value::Bool(true)),
+                    ]),
+                )]),
+            ),
+        ]);
+        let instance = obj(vec![
+            ("template", s("page")),
+            (
+                "component",
+                obj(vec![("my_child", obj(vec![("type", s("label"))]))]),
+            ),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("page".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+
+        // Instance children should be inside "inner", not at top level
+        let top_comp = result.get("component").unwrap().as_object().unwrap();
+        assert!(top_comp.contains_key("inner"));
+        assert!(!top_comp.contains_key("my_child"));
+
+        let inner = &top_comp["inner"];
+        let inner_comp = inner.get("component").unwrap().as_object().unwrap();
+        assert!(inner_comp.contains_key("my_child"));
+
+        // slot key should be stripped
+        assert!(inner.get("slot").is_none());
+    }
+
+    #[test]
+    fn test_same_id_child_override() {
+        let base_children = obj(vec![
+            ("a", obj(vec![("type", s("label")), ("text", s("old"))])),
+            ("b", obj(vec![("type", s("button"))])),
+        ]);
+        let overlay_children = obj(vec![(
+            "a",
+            obj(vec![("type", s("label")), ("text", s("new"))]),
+        )]);
+
+        let merged = merge_component_children(&base_children, &overlay_children);
+        let comp = merged.as_object().unwrap();
+        assert_eq!(comp.len(), 2);
+        assert_eq!(
+            comp["a"].get("text").and_then(|v| v.as_str()),
+            Some("new")
+        );
+    }
+
+    #[test]
+    fn test_circular_reference_detected() {
+        let template_a = obj(vec![
+            ("template", s("b")),
+            ("type", s("panel")),
+        ]);
+        let template_b = obj(vec![
+            ("template", s("a")),
+            ("type", s("panel")),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("a".to_string(), template_a);
+        templates.insert("b".to_string(), template_b);
+
+        let instance = obj(vec![("template", s("a"))]);
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("Circular"), "Error was: {}", err);
+    }
+
+    #[test]
+    fn test_missing_template_error() {
+        let templates = TemplateMap::new();
+        let instance = obj(vec![("template", s("nonexistent"))]);
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unknown template"));
+    }
+
+    #[test]
+    fn test_template_key_stripped() {
+        let template = obj(vec![("type", s("button")), ("variant", s("ghost"))]);
+        let instance = obj(vec![
+            ("template", s("btn")),
+            ("label", s("Click")),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("btn".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+        assert!(result.get("template").is_none());
+    }
+
+    #[test]
+    fn test_slot_key_stripped() {
+        let template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![(
+                    "inner",
+                    obj(vec![
+                        ("type", s("stack")),
+                        ("slot", Value::Bool(true)),
+                    ]),
+                )]),
+            ),
+        ]);
+
+        let instance = obj(vec![
+            ("template", s("t")),
+            (
+                "component",
+                obj(vec![("child", obj(vec![("type", s("label"))]))]),
+            ),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+
+        let inner = result
+            .get("component")
+            .and_then(|c| c.get("inner"))
+            .unwrap();
+        assert!(inner.get("slot").is_none());
+    }
+
+    #[test]
+    fn test_recursive_template_resolution() {
+        // "outer" references "inner", which is a plain template
+        let inner_template = obj(vec![
+            ("type", s("stack")),
+            ("direction", s("vertical")),
+        ]);
+        let outer_template = obj(vec![
+            ("template", s("inner")),
+            ("spacing", Value::Integer(12)),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("inner".to_string(), inner_template);
+        templates.insert("outer".to_string(), outer_template);
+
+        let instance = obj(vec![
+            ("template", s("outer")),
+            ("padding", Value::Integer(8)),
+        ]);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+        assert_eq!(result.get("type").and_then(|v| v.as_str()), Some("stack"));
+        assert_eq!(
+            result.get("direction").and_then(|v| v.as_str()),
+            Some("vertical")
+        );
+        assert_eq!(result.get("spacing").and_then(|v| v.as_i64()), Some(12));
+        assert_eq!(result.get("padding").and_then(|v| v.as_i64()), Some(8));
+        assert!(result.get("template").is_none());
+    }
+
+    #[test]
+    fn test_template_child_ids_scoped() {
+        // Two pages using the same template should get unique inner child IDs
+        let schema_registry = std::sync::Arc::new(SchemaRegistry::new());
+        let loader = ConfigurationLoader::new(schema_registry);
+
+        let hcl = r#"
+templates {
+  template "page" {
+    type    = "panel"
+    visible = false
+
+    component "inner" {
+      type = "stack"
+      slot = true
+    }
+  }
+}
+
+layout {
+  type = "stack"
+
+  component "page_a" {
+    template = "page"
+
+    component "child_a" {
+      type = "label"
+    }
+  }
+
+  component "page_b" {
+    template = "page"
+
+    component "child_b" {
+      type = "label"
+    }
+  }
+}
+"#;
+
+        let config = loader.load_string(hcl, "test").expect("HCL parse failed");
+        let layout_config = parse_layout_config(&config).expect("Layout parse failed");
+        let root = &layout_config.root;
+
+        // page_a's inner child should be "page_a_inner"
+        let page_a = &root.children[0];
+        assert_eq!(page_a.children[0].effective_id(), "page_a_inner");
+
+        // page_b's inner child should be "page_b_inner"
+        let page_b = &root.children[1];
+        assert_eq!(page_b.children[0].effective_id(), "page_b_inner");
+
+        // Both should contain their respective injected children
+        assert_eq!(page_a.children[0].children[0].effective_id(), "child_a");
+        assert_eq!(page_b.children[0].children[0].effective_id(), "child_b");
+    }
+
+    #[test]
+    fn test_template_handler_preserved() {
+        // on_click from template should survive expansion
+        let schema_registry = std::sync::Arc::new(SchemaRegistry::new());
+        let loader = ConfigurationLoader::new(schema_registry);
+
+        let hcl = r#"
+templates {
+  template "nav" {
+    type     = "button"
+    on_click = "on_nav"
+  }
+}
+
+layout {
+  type = "stack"
+
+  component "nav_btn" {
+    template = "nav"
+    label    = "Test"
+  }
+}
+"#;
+
+        let config = loader.load_string(hcl, "test").expect("HCL parse failed");
+        let layout_config = parse_layout_config(&config).expect("Layout parse failed");
+
+        let nav = &layout_config.root.children[0];
+        assert_eq!(nav.handlers.get("click").map(|s| s.as_str()), Some("on_nav"));
+    }
+
+    #[test]
+    fn test_template_integration() {
+        // Parse real HCL through the config loader
+        let schema_registry = std::sync::Arc::new(SchemaRegistry::new());
+        let loader = ConfigurationLoader::new(schema_registry);
+
+        let hcl = r#"
+templates {
+  template "nav" {
+    type         = "button"
+    variant      = "ghost"
+    size         = "sm"
+    on_click     = "on_nav"
+  }
+
+  template "page" {
+    type    = "panel"
+    visible = false
+
+    component "inner" {
+      type      = "stack"
+      direction = "vertical"
+      slot      = true
+    }
+  }
+}
+
+layout {
+  type = "stack"
+
+  component "nav_btn" {
+    template = "nav"
+    label    = "Button"
+  }
+
+  component "page_btn" {
+    template = "page"
+    visible  = true
+
+    component "title" {
+      type = "label"
+      text = "Button Page"
+    }
+  }
+}
+"#;
+
+        let config = loader.load_string(hcl, "test").expect("HCL parse failed");
+        let layout_config = parse_layout_config(&config).expect("Layout parse failed");
+
+        // nav_btn should be a ghost button with label
+        let root = &layout_config.root;
+        assert!(root.children.len() >= 2);
+
+        let nav = &root.children[0];
+        assert_eq!(nav.component_type, "button");
+        assert_eq!(
+            nav.config.properties.get("variant").and_then(|v| v.as_str()),
+            Some("ghost")
+        );
+        assert_eq!(
+            nav.config.properties.get("label").and_then(|v| v.as_str()),
+            Some("Button")
+        );
+        // template key should not leak through as a property
+        assert!(nav.config.properties.get("template").is_none());
+
+        // page_btn should be a panel with visible=true
+        let page = &root.children[1];
+        assert_eq!(page.component_type, "panel");
+        assert_eq!(
+            page.config
+                .properties
+                .get("visible")
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+
+        // The inner stack should contain the title label (slot injection)
+        assert!(!page.children.is_empty());
+        let inner = &page.children[0];
+        assert_eq!(inner.component_type, "stack");
+        assert!(!inner.children.is_empty());
+        let title = &inner.children[0];
+        assert_eq!(title.component_type, "label");
+        assert_eq!(
+            title
+                .config
+                .properties
+                .get("text")
+                .and_then(|v| v.as_str()),
+            Some("Button Page")
+        );
     }
 }
