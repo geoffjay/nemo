@@ -10,4 +10,6 @@ target/
 docs/site/
 
 build_rs_cov.profraw
+
+.sidecar/
 .todos/

@@ -8,9 +8,8 @@ use gpui_component::tree::TreeState;
 use gpui_component::v_flex;
 use gpui_component::ActiveTheme;
 use nemo_config::Value;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::table::NemoTableDelegate;
@@ -49,19 +48,18 @@ impl App {
             .unwrap_or(false);
         let header_bar = cx.new(|_cx| HeaderBar::new(title, github_url, theme_toggle, window, _cx));
 
-        // Set up a polling timer that checks for data updates and triggers re-renders
+        // Wait for data_notify signals and apply updates when data arrives.
         let poll_runtime = Arc::clone(&runtime);
-        let _poll_task = cx.spawn(async move |this: WeakEntity<App>, cx: &mut AsyncApp| loop {
-            cx.background_executor()
-                .timer(Duration::from_millis(50))
-                .await;
+        let data_notify = Arc::clone(&runtime.data_notify);
+        let _data_task = cx.spawn(async move |this: WeakEntity<App>, cx: &mut AsyncApp| loop {
+            data_notify.notified().await;
             if poll_runtime.apply_pending_data_updates() {
                 let _ = this.update(cx, |_app: &mut App, cx: &mut Context<App>| {
                     cx.notify();
                 });
             }
         });
-        _poll_task.detach();
+        _data_task.detach();
 
         let _subscriptions = vec![];
 
@@ -288,22 +286,33 @@ impl App {
     fn render_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let entity_id = cx.entity_id();
 
-        // Get the layout manager and render the component tree
-        let layout_manager = self
-            .runtime
-            .tokio_runtime
-            .block_on(async { self.runtime.layout_manager.read().await });
+        // Snapshot all components once to avoid re-acquiring the lock per component.
+        let (root_id, components) = {
+            let layout_manager = self
+                .runtime
+                .layout_manager
+                .read()
+                .expect("layout_manager lock poisoned");
+            let root_id = layout_manager.root_id();
+            let components: HashMap<String, BuiltComponent> = layout_manager
+                .component_ids()
+                .into_iter()
+                .filter_map(|id| {
+                    layout_manager
+                        .get_component(&id)
+                        .cloned()
+                        .map(|c| (id, c))
+                })
+                .collect();
+            (root_id, components)
+        };
 
-        // Get the root component
-        if let Some(root_id) = layout_manager.root_id() {
-            if let Some(root) = layout_manager.get_component(&root_id) {
-                let root = root.clone();
-                drop(layout_manager);
-                return self.render_component(&root, entity_id, window, cx);
+        // Render the root component from the snapshot
+        if let Some(root_id) = root_id {
+            if let Some(root) = components.get(&root_id) {
+                return self.render_component(root, &components, entity_id, window, cx);
             }
         }
-
-        drop(layout_manager);
 
         // Fallback: empty layout
         v_flex()
@@ -326,29 +335,20 @@ impl App {
             .into_any_element()
     }
 
-    /// Renders the children of a component.
+    /// Renders the children of a component using a pre-snapshotted component map.
     fn render_children(
         &mut self,
         component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
         entity_id: EntityId,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Vec<AnyElement> {
-        let layout_manager = self
-            .runtime
-            .tokio_runtime
-            .block_on(async { self.runtime.layout_manager.read().await });
-
-        let children: Vec<BuiltComponent> = component
+        component
             .children
             .iter()
-            .filter_map(|child_id| layout_manager.get_component(child_id).cloned())
-            .collect();
-        drop(layout_manager);
-
-        children
-            .iter()
-            .map(|child| self.render_component(child, entity_id, window, cx))
+            .filter_map(|child_id| components.get(child_id))
+            .map(|child| self.render_component(child, components, entity_id, window, cx))
             .collect()
     }
 
@@ -400,19 +400,20 @@ impl App {
     fn render_component(
         &mut self,
         component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
         entity_id: EntityId,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let element = match component.component_type.as_str() {
             "stack" => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 Stack::new(component.clone())
                     .children(children)
                     .into_any_element()
             }
             "panel" => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 Panel::new(component.clone())
                     .children(children)
                     .into_any_element()
@@ -450,19 +451,19 @@ impl App {
             "image" => Image::new(component.clone()).into_any_element(),
             "notification" => Notification::new(component.clone()).into_any_element(),
             "tabs" => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 Tabs::new(component.clone())
                     .children(children)
                     .into_any_element()
             }
             "modal" => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 Modal::new(component.clone())
                     .children(children)
                     .into_any_element()
             }
             "tooltip" => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 Tooltip::new(component.clone())
                     .children(children)
                     .into_any_element()
@@ -497,13 +498,13 @@ impl App {
             "alert" => Alert::new(component.clone()).into_any_element(),
             "avatar" => Avatar::new(component.clone()).into_any_element(),
             "badge" => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 Badge::new(component.clone())
                     .children(children)
                     .into_any_element()
             }
             "collapsible" => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 let initial_open = component.properties.get("open")
                     .and_then(|v| v.as_bool()).unwrap_or(false);
                 let coll_state = self.get_or_create_bool_state(&component.id, initial_open);
@@ -558,7 +559,7 @@ impl App {
                     .into_any_element()
             }
             _ => {
-                let children = self.render_children(component, entity_id, window, cx);
+                let children = self.render_children(component, components, entity_id, window, cx);
                 div()
                     .flex()
                     .flex_col()

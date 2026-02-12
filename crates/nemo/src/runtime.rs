@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::runtime::Runtime as TokioRuntime;
-use tokio::sync::RwLock;
+use std::sync::RwLock;
 use tracing::{debug, info};
 
 /// Sink configuration for outbound data publishing.
@@ -60,8 +60,10 @@ pub struct NemoRuntime {
     pub tokio_runtime: TokioRuntime,
     /// Flag indicating data has changed and UI needs re-render.
     pub data_dirty: Arc<AtomicBool>,
+    /// Notification signal for waking the UI when data changes.
+    pub data_notify: Arc<tokio::sync::Notify>,
     /// Sink configurations for outbound data publishing.
-    pub sink_configs: Arc<std::sync::RwLock<HashMap<String, SinkConfig>>>,
+    pub sink_configs: Arc<RwLock<HashMap<String, SinkConfig>>>,
 }
 
 impl NemoRuntime {
@@ -98,7 +100,8 @@ impl NemoRuntime {
             integration,
             tokio_runtime,
             data_dirty: Arc::new(AtomicBool::new(false)),
-            sink_configs: Arc::new(std::sync::RwLock::new(HashMap::new())),
+            data_notify: Arc::new(tokio::sync::Notify::new()),
+            sink_configs: Arc::new(RwLock::new(HashMap::new())),
         })
     }
 
@@ -111,11 +114,9 @@ impl NemoRuntime {
     /// Adds an extension directory.
     pub fn add_extension_dir(&self, dir: &Path) -> Result<()> {
         debug!("Adding extension directory: {:?}", dir);
-        self.tokio_runtime.block_on(async {
-            let mut ext = self.extension_manager.write().await;
-            ext.add_script_path(dir.join("scripts"));
-            ext.add_plugin_path(dir.join("plugins"));
-        });
+        let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+        ext.add_script_path(dir.join("scripts"));
+        ext.add_plugin_path(dir.join("plugins"));
         Ok(())
     }
 
@@ -129,10 +130,10 @@ impl NemoRuntime {
                 .load(&self.config_path)
                 .map_err(|e| anyhow::anyhow!("Failed to load config file: {}", e))?;
 
-            self.tokio_runtime.block_on(async {
-                let mut config = self.config.write().await;
+            {
+                let mut config = self.config.write().expect("config lock poisoned");
                 *config = loaded;
-            });
+            }
         } else {
             debug!(
                 "Config file {:?} not found, using defaults",
@@ -148,15 +149,14 @@ impl NemoRuntime {
     pub fn initialize(&self) -> Result<()> {
         info!("Initializing Nemo runtime...");
 
-        self.tokio_runtime.block_on(async {
-            // Initialize extensions
-            let ext = self.extension_manager.read().await;
+        // Initialize extensions (sync — no async work needed)
+        {
+            let ext = self.extension_manager.read().expect("extension_manager lock poisoned");
             let manifests = ext.discover().unwrap_or_default();
             info!("Discovered {} extensions", manifests.len());
             drop(ext);
 
-            // Load discovered scripts
-            let mut ext = self.extension_manager.write().await;
+            let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
             for manifest in manifests {
                 match manifest.extension_type {
                     nemo_extension::ExtensionType::Script => {
@@ -171,13 +171,12 @@ impl NemoRuntime {
                     }
                 }
             }
-            drop(ext);
+        }
 
-            // Set up event subscriptions
+        // Set up event subscriptions (async — needs tokio runtime)
+        self.tokio_runtime.block_on(async {
             self.setup_event_handlers().await;
-
-            Ok::<(), anyhow::Error>(())
-        })?;
+        });
 
         // Load scripts from configuration
         self.load_scripts_from_config()?;
@@ -197,10 +196,10 @@ impl NemoRuntime {
 
     /// Loads scripts specified in configuration.
     fn load_scripts_from_config(&self) -> Result<()> {
-        let scripts_config = self.tokio_runtime.block_on(async {
-            let config = self.config.read().await;
+        let scripts_config = {
+            let config = self.config.read().expect("config lock poisoned");
             config.get("scripts").cloned()
-        });
+        };
 
         if let Some(scripts) = scripts_config {
             // Handle scripts.path for directory-based loading
@@ -217,29 +216,27 @@ impl NemoRuntime {
 
                 if scripts_path.exists() && scripts_path.is_dir() {
                     info!("Loading scripts from: {:?}", scripts_path);
-                    self.tokio_runtime.block_on(async {
-                        let mut ext = self.extension_manager.write().await;
-                        ext.add_script_path(&scripts_path);
+                    let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+                    ext.add_script_path(&scripts_path);
 
-                        // Load all .rhai files in the directory
-                        if let Ok(entries) = std::fs::read_dir(&scripts_path) {
-                            for entry in entries.flatten() {
-                                let path = entry.path();
-                                if path.extension().map(|e| e == "rhai").unwrap_or(false) {
-                                    match ext.load_script(&path) {
-                                        Ok(id) => info!("Loaded script: {}", id),
-                                        Err(e) => {
-                                            tracing::warn!(
-                                                "Failed to load script {:?}: {}",
-                                                path,
-                                                e
-                                            )
-                                        }
+                    // Load all .rhai files in the directory
+                    if let Ok(entries) = std::fs::read_dir(&scripts_path) {
+                        for entry in entries.flatten() {
+                            let path = entry.path();
+                            if path.extension().map(|e| e == "rhai").unwrap_or(false) {
+                                match ext.load_script(&path) {
+                                    Ok(id) => info!("Loaded script: {}", id),
+                                    Err(e) => {
+                                        tracing::warn!(
+                                            "Failed to load script {:?}: {}",
+                                            path,
+                                            e
+                                        )
                                     }
                                 }
                             }
                         }
-                    });
+                    }
                 } else {
                     debug!("Scripts path does not exist: {:?}", scripts_path);
                 }
@@ -260,19 +257,17 @@ impl NemoRuntime {
                             };
 
                         if script_path.exists() {
-                            self.tokio_runtime.block_on(async {
-                                let mut ext = self.extension_manager.write().await;
-                                match ext.load_script(&script_path) {
-                                    Ok(id) => info!("Loaded script: {}", id),
-                                    Err(e) => {
-                                        tracing::warn!(
-                                            "Failed to load script {:?}: {}",
-                                            script_path,
-                                            e
-                                        )
-                                    }
+                            let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
+                            match ext.load_script(&script_path) {
+                                Ok(id) => info!("Loaded script: {}", id),
+                                Err(e) => {
+                                    tracing::warn!(
+                                        "Failed to load script {:?}: {}",
+                                        script_path,
+                                        e
+                                    )
                                 }
-                            });
+                            }
                         }
                     }
                 }
@@ -286,12 +281,13 @@ impl NemoRuntime {
             Arc::clone(&self.event_bus),
             Arc::clone(&self.data_engine.repository),
             Arc::clone(&self.data_dirty),
+            Arc::clone(&self.data_notify),
         ));
 
-        self.tokio_runtime.block_on(async {
-            let mut ext = self.extension_manager.write().await;
+        {
+            let mut ext = self.extension_manager.write().expect("extension_manager lock poisoned");
             ext.register_context(context);
-        });
+        }
 
         Ok(())
     }
@@ -336,10 +332,8 @@ impl NemoRuntime {
 
     /// Gets a configuration value by path.
     pub fn get_config(&self, path: &str) -> Option<Value> {
-        self.tokio_runtime.block_on(async {
-            let config = self.config.read().await;
-            get_nested_value(&config, path).cloned()
-        })
+        let config = self.config.read().expect("config lock poisoned");
+        get_nested_value(&config, path).cloned()
     }
 
     /// Sets a configuration value (not implemented - config is read-only).
@@ -366,28 +360,26 @@ impl NemoRuntime {
             script_id, function_name, component_id, event_data
         );
 
-        self.tokio_runtime.block_on(async {
-            let ext = self.extension_manager.read().await;
-            match ext.call_script::<()>(
-                script_id,
-                function_name,
-                (component_id.to_string(), event_data.to_string()),
-            ) {
-                Ok(_) => debug!(
-                    "Handler {}::{} executed successfully",
-                    script_id, function_name
-                ),
-                Err(e) => tracing::warn!("Handler {}::{} failed: {}", script_id, function_name, e),
-            }
-        });
+        let ext = self.extension_manager.read().expect("extension_manager lock poisoned");
+        match ext.call_script::<()>(
+            script_id,
+            function_name,
+            (component_id.to_string(), event_data.to_string()),
+        ) {
+            Ok(_) => debug!(
+                "Handler {}::{} executed successfully",
+                script_id, function_name
+            ),
+            Err(e) => tracing::warn!("Handler {}::{} failed: {}", script_id, function_name, e),
+        }
     }
 
     /// Parses and applies the layout configuration.
     pub fn apply_layout_from_config(&self) -> Result<()> {
-        let layout_config = self.tokio_runtime.block_on(async {
-            let config = self.config.read().await;
+        let layout_config = {
+            let config = self.config.read().expect("config lock poisoned");
             parse_layout_config(&config)
-        });
+        };
 
         if let Some(layout_config) = layout_config {
             info!(
@@ -395,17 +387,17 @@ impl NemoRuntime {
                 layout_config.root.children.len()
             );
 
-            self.tokio_runtime.block_on(async {
-                let mut layout_manager = self.layout_manager.write().await;
-                layout_manager
-                    .apply_layout(layout_config)
-                    .map_err(|e| anyhow::anyhow!("Failed to apply layout: {}", e))
-            })?;
+            self.layout_manager
+                .write()
+                .expect("layout_manager lock poisoned")
+                .apply_layout(layout_config)
+                .map_err(|e| anyhow::anyhow!("Failed to apply layout: {}", e))?;
 
-            let component_count = self.tokio_runtime.block_on(async {
-                let layout_manager = self.layout_manager.read().await;
-                layout_manager.component_count()
-            });
+            let component_count = self
+                .layout_manager
+                .read()
+                .expect("layout_manager lock poisoned")
+                .component_count();
             info!("Layout applied with {} components", component_count);
         } else {
             debug!("No layout configuration found, using default view");
@@ -416,10 +408,10 @@ impl NemoRuntime {
 
     /// Parses data source configuration and registers sources with the DataFlowEngine.
     fn setup_data_sources(&self) -> Result<()> {
-        let data_config = self.tokio_runtime.block_on(async {
-            let config = self.config.read().await;
+        let data_config = {
+            let config = self.config.read().expect("config lock poisoned");
             config.get("data").cloned()
-        });
+        };
 
         let data_config = match data_config {
             Some(dc) => dc,
@@ -496,6 +488,7 @@ impl NemoRuntime {
             if let Some(mut rx) = self.data_engine.subscribe_source(&source_id).await {
                 let data_engine = Arc::clone(&self.data_engine);
                 let data_dirty = Arc::clone(&self.data_dirty);
+                let data_notify = Arc::clone(&self.data_notify);
 
                 tokio::spawn(async move {
                     loop {
@@ -509,6 +502,7 @@ impl NemoRuntime {
                                     );
                                 } else {
                                     data_dirty.store(true, Ordering::Release);
+                                    data_notify.notify_one();
                                 }
                             }
                             Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
@@ -564,10 +558,10 @@ impl NemoRuntime {
 
     /// Parses sink configuration from HCL and stores sink configs.
     fn setup_data_sinks(&self) -> Result<()> {
-        let data_config = self.tokio_runtime.block_on(async {
-            let config = self.config.read().await;
+        let data_config = {
+            let config = self.config.read().expect("config lock poisoned");
             config.get("data").cloned()
-        });
+        };
 
         let data_config = match data_config {
             Some(dc) => dc,
@@ -1415,6 +1409,7 @@ pub struct RuntimeContext {
     event_bus: Arc<EventBus>,
     data_repository: Arc<DataRepository>,
     data_dirty: Arc<AtomicBool>,
+    data_notify: Arc<tokio::sync::Notify>,
 }
 
 impl RuntimeContext {
@@ -1425,6 +1420,7 @@ impl RuntimeContext {
         event_bus: Arc<EventBus>,
         data_repository: Arc<DataRepository>,
         data_dirty: Arc<AtomicBool>,
+        data_notify: Arc<tokio::sync::Notify>,
     ) -> Self {
         Self {
             config,
@@ -1432,6 +1428,7 @@ impl RuntimeContext {
             event_bus,
             data_repository,
             data_dirty,
+            data_notify,
         }
     }
 }
@@ -1453,6 +1450,7 @@ impl PluginContext for RuntimeContext {
             .set(&data_path, config_value)
             .map_err(|e| PluginError::InvalidConfig(e.to_string()))?;
         self.data_dirty.store(true, Ordering::Release);
+        self.data_notify.notify_one();
         Ok(())
     }
 
