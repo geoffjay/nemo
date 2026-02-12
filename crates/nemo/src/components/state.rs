@@ -32,3 +32,213 @@ pub enum ComponentState {
 }
 
 pub type ComponentStates = HashMap<String, ComponentState>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_component_states_new_is_empty() {
+        let states: ComponentStates = ComponentStates::new();
+        assert!(states.is_empty());
+    }
+
+    // ── BoolState ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_bool_state_insert_and_retrieve() {
+        let mut states = ComponentStates::new();
+        let val = Arc::new(Mutex::new(false));
+        states.insert("switch1".into(), ComponentState::BoolState(Arc::clone(&val)));
+
+        if let Some(ComponentState::BoolState(s)) = states.get("switch1") {
+            assert!(!*s.lock().unwrap());
+        } else {
+            panic!("Expected BoolState");
+        }
+    }
+
+    #[test]
+    fn test_bool_state_shared_mutation() {
+        let val = Arc::new(Mutex::new(false));
+        let clone = Arc::clone(&val);
+
+        // Simulate toggling from one reference
+        *clone.lock().unwrap() = true;
+
+        // Original should see the change
+        assert!(*val.lock().unwrap());
+    }
+
+    #[test]
+    fn test_bool_state_returns_existing() {
+        let mut states = ComponentStates::new();
+        let original = Arc::new(Mutex::new(true));
+        states.insert("tog".into(), ComponentState::BoolState(Arc::clone(&original)));
+
+        // Simulating get_or_create pattern: should return the existing one
+        if let Some(ComponentState::BoolState(existing)) = states.get("tog") {
+            let retrieved = Arc::clone(existing);
+            assert!(Arc::ptr_eq(&retrieved, &original));
+        } else {
+            panic!("Expected BoolState");
+        }
+    }
+
+    // ── SelectedValue ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_selected_value_insert_and_retrieve() {
+        let mut states = ComponentStates::new();
+        let val = Arc::new(Mutex::new("option_a".to_string()));
+        states.insert("select1".into(), ComponentState::SelectedValue(Arc::clone(&val)));
+
+        if let Some(ComponentState::SelectedValue(s)) = states.get("select1") {
+            assert_eq!(*s.lock().unwrap(), "option_a");
+        } else {
+            panic!("Expected SelectedValue");
+        }
+    }
+
+    #[test]
+    fn test_selected_value_mutation() {
+        let val = Arc::new(Mutex::new("a".to_string()));
+        let clone = Arc::clone(&val);
+        *clone.lock().unwrap() = "b".to_string();
+        assert_eq!(*val.lock().unwrap(), "b");
+    }
+
+    // ── SelectedIndex ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_selected_index_none_initial() {
+        let mut states = ComponentStates::new();
+        let val = Arc::new(Mutex::new(None::<usize>));
+        states.insert("radio1".into(), ComponentState::SelectedIndex(Arc::clone(&val)));
+
+        if let Some(ComponentState::SelectedIndex(s)) = states.get("radio1") {
+            assert_eq!(*s.lock().unwrap(), None);
+        } else {
+            panic!("Expected SelectedIndex");
+        }
+    }
+
+    #[test]
+    fn test_selected_index_with_value() {
+        let val: Arc<Mutex<Option<usize>>> = Arc::new(Mutex::new(Some(2)));
+        assert_eq!(*val.lock().unwrap(), Some(2));
+
+        *val.lock().unwrap() = Some(0);
+        assert_eq!(*val.lock().unwrap(), Some(0));
+    }
+
+    // ── Accordion ─────────────────────────────────────────────────────
+
+    #[test]
+    fn test_accordion_empty_initial() {
+        let val = Arc::new(Mutex::new(HashSet::<usize>::new()));
+        assert!(val.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_accordion_with_initial_open() {
+        let mut initial = HashSet::new();
+        initial.insert(0);
+        initial.insert(2);
+        let val = Arc::new(Mutex::new(initial));
+
+        let locked = val.lock().unwrap();
+        assert!(locked.contains(&0));
+        assert!(!locked.contains(&1));
+        assert!(locked.contains(&2));
+    }
+
+    #[test]
+    fn test_accordion_toggle() {
+        let val = Arc::new(Mutex::new(HashSet::new()));
+        let clone = Arc::clone(&val);
+
+        // Open index 1
+        clone.lock().unwrap().insert(1);
+        assert!(val.lock().unwrap().contains(&1));
+
+        // Close index 1
+        clone.lock().unwrap().remove(&1);
+        assert!(!val.lock().unwrap().contains(&1));
+    }
+
+    #[test]
+    fn test_accordion_init_from_items() {
+        // Simulate the logic from App::get_or_create_accordion_state
+        let items = vec![
+            Value::Object({
+                let mut m = indexmap::IndexMap::new();
+                m.insert("title".to_string(), Value::String("First".into()));
+                m.insert("open".to_string(), Value::Bool(true));
+                m
+            }),
+            Value::Object({
+                let mut m = indexmap::IndexMap::new();
+                m.insert("title".to_string(), Value::String("Second".into()));
+                m
+            }),
+            Value::Object({
+                let mut m = indexmap::IndexMap::new();
+                m.insert("title".to_string(), Value::String("Third".into()));
+                m.insert("open".to_string(), Value::Bool(true));
+                m
+            }),
+            Value::Object({
+                let mut m = indexmap::IndexMap::new();
+                m.insert("title".to_string(), Value::String("Fourth".into()));
+                m.insert("open".to_string(), Value::Bool(false));
+                m
+            }),
+        ];
+
+        let mut initial = HashSet::new();
+        for (ix, item_val) in items.iter().enumerate() {
+            if let Some(obj) = item_val.as_object() {
+                if obj.get("open").and_then(|v| v.as_bool()).unwrap_or(false) {
+                    initial.insert(ix);
+                }
+            }
+        }
+
+        assert_eq!(initial.len(), 2);
+        assert!(initial.contains(&0)); // First: open=true
+        assert!(!initial.contains(&1)); // Second: no open key
+        assert!(initial.contains(&2)); // Third: open=true
+        assert!(!initial.contains(&3)); // Fourth: open=false
+    }
+
+    // ── Type discrimination ───────────────────────────────────────────
+
+    #[test]
+    fn test_different_state_types_coexist() {
+        let mut states = ComponentStates::new();
+        states.insert("sw".into(), ComponentState::BoolState(Arc::new(Mutex::new(true))));
+        states.insert("sel".into(), ComponentState::SelectedValue(Arc::new(Mutex::new("x".into()))));
+        states.insert("rad".into(), ComponentState::SelectedIndex(Arc::new(Mutex::new(Some(1)))));
+        states.insert("acc".into(), ComponentState::Accordion(Arc::new(Mutex::new(HashSet::new()))));
+
+        assert_eq!(states.len(), 4);
+        assert!(matches!(states.get("sw"), Some(ComponentState::BoolState(_))));
+        assert!(matches!(states.get("sel"), Some(ComponentState::SelectedValue(_))));
+        assert!(matches!(states.get("rad"), Some(ComponentState::SelectedIndex(_))));
+        assert!(matches!(states.get("acc"), Some(ComponentState::Accordion(_))));
+    }
+
+    #[test]
+    fn test_overwrite_state_with_same_id() {
+        let mut states = ComponentStates::new();
+        states.insert("x".into(), ComponentState::BoolState(Arc::new(Mutex::new(false))));
+        states.insert("x".into(), ComponentState::BoolState(Arc::new(Mutex::new(true))));
+
+        if let Some(ComponentState::BoolState(s)) = states.get("x") {
+            assert!(*s.lock().unwrap()); // Should be the new value
+        } else {
+            panic!("Expected BoolState");
+        }
+    }
+}
