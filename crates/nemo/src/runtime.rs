@@ -1762,6 +1762,492 @@ mod template_tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("Unknown template"));
     }
+}
+
+#[cfg(test)]
+mod runtime_tests {
+    use super::*;
+    use indexmap::IndexMap;
+
+    /// Helper to build a Value::Object from key-value pairs.
+    fn obj(pairs: Vec<(&str, Value)>) -> Value {
+        let mut map = IndexMap::new();
+        for (k, v) in pairs {
+            map.insert(k.to_string(), v);
+        }
+        Value::Object(map)
+    }
+
+    fn s(val: &str) -> Value {
+        Value::String(val.to_string())
+    }
+
+    // ── get_nested_value ──────────────────────────────────────────────
+
+    #[test]
+    fn test_get_nested_value_simple() {
+        let config = obj(vec![("app", obj(vec![("title", s("Hello"))]))]);
+        assert_eq!(
+            get_nested_value(&config, "app.title"),
+            Some(&s("Hello"))
+        );
+    }
+
+    #[test]
+    fn test_get_nested_value_deep() {
+        let config = obj(vec![(
+            "a",
+            obj(vec![("b", obj(vec![("c", Value::Integer(42))]))]),
+        )]);
+        assert_eq!(
+            get_nested_value(&config, "a.b.c"),
+            Some(&Value::Integer(42))
+        );
+    }
+
+    #[test]
+    fn test_get_nested_value_missing() {
+        let config = obj(vec![("app", obj(vec![("title", s("Hello"))]))]);
+        assert_eq!(get_nested_value(&config, "app.missing"), None);
+        assert_eq!(get_nested_value(&config, "nonexistent"), None);
+        assert_eq!(get_nested_value(&config, "app.title.deep"), None);
+    }
+
+    #[test]
+    fn test_get_nested_value_single_key() {
+        let config = obj(vec![("key", Value::Bool(true))]);
+        assert_eq!(
+            get_nested_value(&config, "key"),
+            Some(&Value::Bool(true))
+        );
+    }
+
+    // ── create_data_source ────────────────────────────────────────────
+
+    #[test]
+    fn test_create_data_source_timer() {
+        let config = obj(vec![
+            ("type", s("timer")),
+            ("interval", Value::Integer(5)),
+            ("immediate", Value::Bool(false)),
+        ]);
+        let source = create_data_source("test_timer", "timer", &config);
+        assert!(source.is_some());
+        assert_eq!(source.unwrap().id(), "test_timer");
+    }
+
+    #[test]
+    fn test_create_data_source_timer_defaults() {
+        // Timer with no interval/immediate should use defaults
+        let config = obj(vec![("type", s("timer"))]);
+        let source = create_data_source("t", "timer", &config);
+        assert!(source.is_some());
+    }
+
+    #[test]
+    fn test_create_data_source_http() {
+        let config = obj(vec![
+            ("type", s("http")),
+            ("url", s("https://example.com/api")),
+            ("interval", Value::Integer(30)),
+        ]);
+        let source = create_data_source("api", "http", &config);
+        assert!(source.is_some());
+        assert_eq!(source.unwrap().id(), "api");
+    }
+
+    #[test]
+    fn test_create_data_source_http_missing_url() {
+        let config = obj(vec![("type", s("http"))]);
+        let source = create_data_source("api", "http", &config);
+        assert!(source.is_none(), "HTTP source without URL should return None");
+    }
+
+    #[test]
+    fn test_create_data_source_websocket() {
+        let config = obj(vec![
+            ("type", s("websocket")),
+            ("url", s("ws://localhost:8080")),
+        ]);
+        let source = create_data_source("ws", "websocket", &config);
+        assert!(source.is_some());
+    }
+
+    #[test]
+    fn test_create_data_source_websocket_missing_url() {
+        let config = obj(vec![("type", s("websocket"))]);
+        assert!(create_data_source("ws", "websocket", &config).is_none());
+    }
+
+    #[test]
+    fn test_create_data_source_mqtt() {
+        let config = obj(vec![
+            ("type", s("mqtt")),
+            ("host", s("broker.local")),
+            ("port", Value::Integer(1883)),
+            ("topics", Value::Array(vec![s("sensor/+")])),
+        ]);
+        let source = create_data_source("mqtt", "mqtt", &config);
+        assert!(source.is_some());
+    }
+
+    #[test]
+    fn test_create_data_source_mqtt_defaults() {
+        let config = obj(vec![("type", s("mqtt"))]);
+        let source = create_data_source("mqtt", "mqtt", &config);
+        assert!(source.is_some(), "MQTT should use default host/port");
+    }
+
+    #[test]
+    fn test_create_data_source_redis() {
+        let config = obj(vec![
+            ("type", s("redis")),
+            ("url", s("redis://127.0.0.1:6379")),
+            ("channels", Value::Array(vec![s("events")])),
+        ]);
+        assert!(create_data_source("r", "redis", &config).is_some());
+    }
+
+    #[test]
+    fn test_create_data_source_nats() {
+        let config = obj(vec![
+            ("type", s("nats")),
+            ("url", s("nats://127.0.0.1:4222")),
+            ("subjects", Value::Array(vec![s("updates.>")])),
+        ]);
+        assert!(create_data_source("n", "nats", &config).is_some());
+    }
+
+    #[test]
+    fn test_create_data_source_file() {
+        let config = obj(vec![
+            ("type", s("file")),
+            ("path", s("/tmp/data.json")),
+            ("format", s("json")),
+            ("watch", Value::Bool(true)),
+        ]);
+        assert!(create_data_source("f", "file", &config).is_some());
+    }
+
+    #[test]
+    fn test_create_data_source_file_missing_path() {
+        let config = obj(vec![("type", s("file"))]);
+        assert!(create_data_source("f", "file", &config).is_none());
+    }
+
+    #[test]
+    fn test_create_data_source_unknown_type() {
+        let config = obj(vec![("type", s("unknown"))]);
+        assert!(create_data_source("x", "unknown", &config).is_none());
+    }
+
+    // ── parse_layout_config ───────────────────────────────────────────
+
+    #[test]
+    fn test_parse_layout_config_stack() {
+        let config = obj(vec![(
+            "layout",
+            obj(vec![
+                ("type", s("stack")),
+                (
+                    "component",
+                    obj(vec![("btn", obj(vec![("type", s("button")), ("label", s("OK"))]))]),
+                ),
+            ]),
+        )]);
+        let layout = parse_layout_config(&config).unwrap();
+        assert_eq!(layout.root.children.len(), 1);
+        assert_eq!(layout.root.children[0].component_type, "button");
+    }
+
+    #[test]
+    fn test_parse_layout_config_dock() {
+        let config = obj(vec![("layout", obj(vec![("type", s("dock"))]))]);
+        let layout = parse_layout_config(&config).unwrap();
+        assert_eq!(layout.root.component_type, "dock");
+    }
+
+    #[test]
+    fn test_parse_layout_config_missing() {
+        let config = obj(vec![("app", obj(vec![]))]);
+        assert!(parse_layout_config(&config).is_none());
+    }
+
+    #[test]
+    fn test_parse_layout_config_with_handlers() {
+        let config = obj(vec![(
+            "layout",
+            obj(vec![
+                ("type", s("stack")),
+                (
+                    "component",
+                    obj(vec![(
+                        "btn",
+                        obj(vec![
+                            ("type", s("button")),
+                            ("on_click", s("handle_click")),
+                        ]),
+                    )]),
+                ),
+            ]),
+        )]);
+        let layout = parse_layout_config(&config).unwrap();
+        let btn = &layout.root.children[0];
+        assert_eq!(
+            btn.handlers.get("click").map(|s| s.as_str()),
+            Some("handle_click")
+        );
+    }
+
+    #[test]
+    fn test_parse_layout_config_with_bindings() {
+        let config = obj(vec![(
+            "layout",
+            obj(vec![
+                ("type", s("stack")),
+                (
+                    "component",
+                    obj(vec![(
+                        "lbl",
+                        obj(vec![
+                            ("type", s("label")),
+                            ("bind_text", s("data.sensors.temperature")),
+                        ]),
+                    )]),
+                ),
+            ]),
+        )]);
+        let layout = parse_layout_config(&config).unwrap();
+        let lbl = &layout.root.children[0];
+        assert_eq!(lbl.config.bindings.len(), 1);
+        assert_eq!(lbl.config.bindings[0].source, "data.sensors.temperature");
+        assert_eq!(lbl.config.bindings[0].target, "text");
+    }
+
+    // ── NemoRuntime basic construction ────────────────────────────────
+
+    #[test]
+    fn test_runtime_new_nonexistent_config() {
+        let rt = NemoRuntime::new(Path::new("/nonexistent/config.hcl")).unwrap();
+        // Should succeed — config file is checked lazily in load_config
+        assert!(rt.get_config("anything").is_none());
+    }
+
+    #[test]
+    fn test_runtime_load_config_missing_file() {
+        let rt = NemoRuntime::new(Path::new("/does/not/exist.hcl")).unwrap();
+        // load_config should succeed gracefully when file doesn't exist
+        assert!(rt.load_config().is_ok());
+    }
+
+    #[test]
+    fn test_runtime_get_config_empty() {
+        let rt = NemoRuntime::new(Path::new("/tmp/empty.hcl")).unwrap();
+        assert!(rt.get_config("app.title").is_none());
+    }
+
+    // ── call_handler parsing ──────────────────────────────────────────
+
+    #[test]
+    fn test_call_handler_with_script_prefix() {
+        // Just verify the parsing logic — handler execution will warn
+        // about missing scripts, which is fine for this test
+        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        rt.load_config().unwrap();
+        rt.initialize().unwrap();
+        // Should not panic; the handler will log a warning
+        rt.call_handler("my_script::on_click", "btn1", "click");
+    }
+
+    #[test]
+    fn test_call_handler_without_script_prefix() {
+        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        rt.load_config().unwrap();
+        rt.initialize().unwrap();
+        // Should default to "handlers" script
+        rt.call_handler("on_click", "btn1", "click");
+    }
+
+    // ── apply_pending_data_updates ────────────────────────────────────
+
+    #[test]
+    fn test_apply_pending_data_updates_when_clean() {
+        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        // data_dirty starts false, should return false
+        assert!(!rt.apply_pending_data_updates());
+    }
+
+    #[test]
+    fn test_apply_pending_data_updates_when_dirty_no_sources() {
+        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        rt.data_dirty.store(true, Ordering::Release);
+        // Dirty but no sources registered — still returns false (no updates to apply)
+        assert!(!rt.apply_pending_data_updates());
+        // Dirty flag should be cleared
+        assert!(!rt.data_dirty.load(Ordering::Acquire));
+    }
+
+    // ── RuntimeContext PluginContext impl ──────────────────────────────
+
+    #[test]
+    fn test_runtime_context_set_and_get_data() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(registry)));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        let ctx = RuntimeContext::new(
+            config, layout_manager, event_bus, repo, dirty.clone(), notify,
+        );
+
+        // set_data should store and mark dirty
+        ctx.set_data("test.value", PluginValue::Integer(42)).unwrap();
+        assert!(dirty.load(Ordering::Acquire));
+
+        // get_data should retrieve it
+        let val = ctx.get_data("test.value");
+        assert_eq!(val, Some(PluginValue::Integer(42)));
+    }
+
+    #[test]
+    fn test_runtime_context_get_data_missing() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(registry)));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        let ctx = RuntimeContext::new(
+            config, layout_manager, event_bus, repo, dirty, notify,
+        );
+        assert_eq!(ctx.get_data("nonexistent"), None);
+    }
+
+    #[test]
+    fn test_runtime_context_get_config() {
+        let mut map = IndexMap::new();
+        let mut app_map = IndexMap::new();
+        app_map.insert("title".to_string(), s("Test App"));
+        map.insert("app".to_string(), Value::Object(app_map));
+        let config = Arc::new(RwLock::new(Value::Object(map)));
+
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(registry)));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        let ctx = RuntimeContext::new(
+            config, layout_manager, event_bus, repo, dirty, notify,
+        );
+
+        assert_eq!(
+            ctx.get_config("app.title"),
+            Some(PluginValue::String("Test App".to_string()))
+        );
+        assert_eq!(ctx.get_config("app.missing"), None);
+    }
+
+    #[test]
+    fn test_runtime_context_component_property() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        // Apply a layout so there's a component to query
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root").with_child(
+                LayoutNode::new("label")
+                    .with_id("lbl")
+                    .with_prop("text", s("Hello")),
+            );
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root)).unwrap();
+        }
+
+        let ctx = RuntimeContext::new(
+            config, layout_manager, event_bus, repo, dirty, notify,
+        );
+
+        assert_eq!(
+            ctx.get_component_property("lbl", "text"),
+            Some(PluginValue::String("Hello".to_string()))
+        );
+        assert_eq!(ctx.get_component_property("lbl", "missing"), None);
+        assert_eq!(ctx.get_component_property("no_such_id", "text"), None);
+
+        // set_component_property
+        ctx.set_component_property("lbl", "text", PluginValue::String("World".to_string()))
+            .unwrap();
+        assert_eq!(
+            ctx.get_component_property("lbl", "text"),
+            Some(PluginValue::String("World".to_string()))
+        );
+    }
+
+    // ── Value conversion roundtrips ───────────────────────────────────
+
+    #[test]
+    fn test_value_to_plugin_value_roundtrip() {
+        let original = Value::Object({
+            let mut m = IndexMap::new();
+            m.insert("name".to_string(), s("test"));
+            m.insert("count".to_string(), Value::Integer(7));
+            m.insert("active".to_string(), Value::Bool(true));
+            m.insert("ratio".to_string(), Value::Float(3.14));
+            m.insert("items".to_string(), Value::Array(vec![Value::Integer(1), Value::Integer(2)]));
+            m.insert("empty".to_string(), Value::Null);
+            m
+        });
+        let plugin_val = value_to_plugin_value(&original);
+        let back = plugin_value_to_config_value(plugin_val);
+        assert_eq!(original, back);
+    }
+
+    #[test]
+    fn test_plugin_value_to_json() {
+        let pv = PluginValue::Object({
+            let mut m = HashMap::new();
+            m.insert("key".to_string(), PluginValue::String("val".to_string()));
+            m.insert("num".to_string(), PluginValue::Integer(99));
+            m
+        });
+        let json = plugin_value_to_json(pv);
+        assert_eq!(json["key"], "val");
+        assert_eq!(json["num"], 99);
+    }
+}
+
+#[cfg(test)]
+mod template_tests_continued {
+    use super::*;
+    use indexmap::IndexMap;
+
+    fn obj(pairs: Vec<(&str, Value)>) -> Value {
+        let mut map = IndexMap::new();
+        for (k, v) in pairs {
+            map.insert(k.to_string(), v);
+        }
+        Value::Object(map)
+    }
+
+    fn s(val: &str) -> Value {
+        Value::String(val.to_string())
+    }
 
     #[test]
     fn test_template_key_stripped() {

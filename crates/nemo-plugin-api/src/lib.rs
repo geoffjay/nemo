@@ -29,7 +29,7 @@ pub enum PluginError {
 }
 
 /// A configuration value (simplified for FFI safety).
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum PluginValue {
     /// Null value.
