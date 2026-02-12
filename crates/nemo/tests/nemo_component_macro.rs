@@ -85,8 +85,8 @@ struct FloatProp {
 
 #[test]
 fn test_f64_property_present() {
-    let c = make_component(vec![("ratio", Value::Float(3.14))]);
-    assert!((FloatProp::new(c).ratio - 3.14).abs() < f64::EPSILON);
+    let c = make_component(vec![("ratio", Value::Float(1.23))]);
+    assert!((FloatProp::new(c).ratio - 1.23).abs() < f64::EPSILON);
 }
 
 // ── Bool property ─────────────────────────────────────────────────────────

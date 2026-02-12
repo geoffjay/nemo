@@ -96,3 +96,93 @@ impl RecentProjects {
             .map(|p| p.join("nemo").join("recent_projects.json"))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_is_empty() {
+        let recent = RecentProjects::default();
+        assert!(recent.projects.is_empty());
+        assert!(recent.list().is_empty());
+    }
+
+    #[test]
+    fn test_add_single_project() {
+        let mut recent = RecentProjects::default();
+        recent.add(PathBuf::from("/home/user/project/app.hcl"));
+        assert_eq!(recent.projects.len(), 1);
+        assert_eq!(
+            recent.projects[0].config_path,
+            PathBuf::from("/home/user/project/app.hcl")
+        );
+        assert_eq!(recent.projects[0].name, "project");
+    }
+
+    #[test]
+    fn test_add_derives_name_from_parent_dir() {
+        let mut recent = RecentProjects::default();
+        recent.add(PathBuf::from("/workspace/my-dashboard/app.hcl"));
+        assert_eq!(recent.projects[0].name, "my-dashboard");
+    }
+
+    #[test]
+    fn test_add_deduplicates() {
+        let mut recent = RecentProjects::default();
+        let path = PathBuf::from("/home/user/project/app.hcl");
+        recent.add(path.clone());
+        recent.add(path.clone());
+        assert_eq!(recent.projects.len(), 1);
+    }
+
+    #[test]
+    fn test_add_moves_duplicate_to_front() {
+        let mut recent = RecentProjects::default();
+        recent.add(PathBuf::from("/a/app.hcl"));
+        recent.add(PathBuf::from("/b/app.hcl"));
+        recent.add(PathBuf::from("/a/app.hcl")); // re-add first
+
+        assert_eq!(recent.projects.len(), 2);
+        assert_eq!(recent.projects[0].config_path, PathBuf::from("/a/app.hcl"));
+        assert_eq!(recent.projects[1].config_path, PathBuf::from("/b/app.hcl"));
+    }
+
+    #[test]
+    fn test_add_truncates_at_max() {
+        let mut recent = RecentProjects::default();
+        for i in 0..10 {
+            recent.add(PathBuf::from(format!("/project{}/app.hcl", i)));
+        }
+        assert_eq!(recent.projects.len(), MAX_RECENT_PROJECTS);
+        // Most recent should be first
+        assert_eq!(
+            recent.projects[0].config_path,
+            PathBuf::from("/project9/app.hcl")
+        );
+    }
+
+    #[test]
+    fn test_list_returns_all() {
+        let mut recent = RecentProjects::default();
+        recent.add(PathBuf::from("/a/app.hcl"));
+        recent.add(PathBuf::from("/b/app.hcl"));
+        assert_eq!(recent.list().len(), 2);
+    }
+
+    #[test]
+    fn test_serialization_roundtrip() {
+        let mut recent = RecentProjects::default();
+        recent.add(PathBuf::from("/test/project/app.hcl"));
+
+        let json = serde_json::to_string(&recent).unwrap();
+        let deserialized: RecentProjects = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.projects.len(), 1);
+        assert_eq!(
+            deserialized.projects[0].config_path,
+            PathBuf::from("/test/project/app.hcl")
+        );
+        assert_eq!(deserialized.projects[0].name, "project");
+    }
+}

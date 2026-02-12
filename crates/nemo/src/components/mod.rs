@@ -197,3 +197,83 @@ pub use text::Text;
 pub use toggle::Toggle;
 pub use tooltip::Tooltip;
 pub use tree::Tree;
+
+#[cfg(test)]
+mod tests {
+    use super::parse_hex_color;
+
+    // ── parse_hex_color ───────────────────────────────────────────────
+
+    #[test]
+    fn test_hex_color_6_char_with_hash() {
+        let color = parse_hex_color("#FF0000").unwrap();
+        // Red: should have high hue saturation
+        assert!(color.a > 0.99); // fully opaque
+    }
+
+    #[test]
+    fn test_hex_color_6_char_without_hash() {
+        let color = parse_hex_color("00FF00").unwrap();
+        assert!(color.a > 0.99);
+    }
+
+    #[test]
+    fn test_hex_color_8_char_with_alpha() {
+        let color = parse_hex_color("#FF000080").unwrap();
+        // Alpha 0x80 = 128/255 ≈ 0.502
+        assert!(color.a > 0.49 && color.a < 0.51);
+    }
+
+    #[test]
+    fn test_hex_color_8_char_full_alpha() {
+        let color = parse_hex_color("4c566aff").unwrap();
+        assert!(color.a > 0.99);
+    }
+
+    #[test]
+    fn test_hex_color_black() {
+        let color = parse_hex_color("#000000").unwrap();
+        assert!(color.l < 0.01); // lightness near 0 = black
+    }
+
+    #[test]
+    fn test_hex_color_white() {
+        let color = parse_hex_color("#FFFFFF").unwrap();
+        assert!(color.l > 0.99); // lightness near 1 = white
+    }
+
+    #[test]
+    fn test_hex_color_invalid_length() {
+        assert!(parse_hex_color("#FFF").is_none()); // 3 chars
+        assert!(parse_hex_color("#FFFF").is_none()); // 4 chars
+        assert!(parse_hex_color("#FFFFFFFFF").is_none()); // 9 chars
+    }
+
+    #[test]
+    fn test_hex_color_invalid_chars() {
+        assert!(parse_hex_color("#GGHHII").is_none());
+        assert!(parse_hex_color("zzzzzz").is_none());
+    }
+
+    #[test]
+    fn test_hex_color_empty() {
+        assert!(parse_hex_color("").is_none());
+        assert!(parse_hex_color("#").is_none());
+    }
+
+    // ── resolve_color routing ─────────────────────────────────────────
+    // resolve_color and resolve_theme_color need a GPUI App context,
+    // but we can test the routing logic for hex colors since
+    // parse_hex_color is called for non-"theme." prefixes.
+
+    #[test]
+    fn test_parse_hex_color_consistency() {
+        // Same color with/without hash should produce same result
+        let a = parse_hex_color("#4c566a").unwrap();
+        let b = parse_hex_color("4c566a").unwrap();
+        assert!((a.h - b.h).abs() < 0.001);
+        assert!((a.s - b.s).abs() < 0.001);
+        assert!((a.l - b.l).abs() < 0.001);
+        assert!((a.a - b.a).abs() < 0.001);
+    }
+}

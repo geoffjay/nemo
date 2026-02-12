@@ -342,4 +342,104 @@ mod tests {
         assert_eq!(updates.len(), 1);
         assert_eq!(updates[0].value, Value::Integer(42));
     }
+
+    // ── apply_transform ───────────────────────────────────────────────
+
+    #[test]
+    fn test_transform_empty_passthrough() {
+        let val = Value::Integer(42);
+        assert_eq!(apply_transform("", &val), val);
+        assert_eq!(apply_transform("  ", &val), val);
+    }
+
+    #[test]
+    fn test_transform_field_extraction_single() {
+        let mut obj = indexmap::IndexMap::new();
+        obj.insert("temperature".to_string(), Value::Float(23.5));
+        obj.insert("humidity".to_string(), Value::Integer(65));
+        let val = Value::Object(obj);
+
+        assert_eq!(apply_transform("temperature", &val), Value::Float(23.5));
+        assert_eq!(apply_transform("humidity", &val), Value::Integer(65));
+    }
+
+    #[test]
+    fn test_transform_field_extraction_nested() {
+        let mut inner = indexmap::IndexMap::new();
+        inner.insert("temp".to_string(), Value::Float(22.0));
+        let mut outer = indexmap::IndexMap::new();
+        outer.insert("payload".to_string(), Value::Object(inner));
+        let val = Value::Object(outer);
+
+        assert_eq!(apply_transform("payload.temp", &val), Value::Float(22.0));
+    }
+
+    #[test]
+    fn test_transform_field_extraction_missing_key() {
+        let mut obj = indexmap::IndexMap::new();
+        obj.insert("a".to_string(), Value::Integer(1));
+        let val = Value::Object(obj);
+
+        // Missing key returns original value
+        assert_eq!(apply_transform("nonexistent", &val), val);
+    }
+
+    #[test]
+    fn test_transform_field_extraction_on_non_object() {
+        let val = Value::Integer(42);
+        // Extracting a field from a non-object returns original
+        assert_eq!(apply_transform("field", &val), val);
+    }
+
+    #[test]
+    fn test_transform_string_format_integer() {
+        let val = Value::Integer(42);
+        assert_eq!(
+            apply_transform("Temperature: value°C", &val),
+            Value::String("Temperature: 42°C".to_string())
+        );
+    }
+
+    #[test]
+    fn test_transform_string_format_string() {
+        let val = Value::String("Alice".to_string());
+        assert_eq!(
+            apply_transform("Hello, value!", &val),
+            Value::String("Hello, Alice!".to_string())
+        );
+    }
+
+    #[test]
+    fn test_transform_string_format_float() {
+        let val = Value::Float(3.5);
+        let result = apply_transform("value units", &val);
+        assert_eq!(result, Value::String("3.5 units".to_string()));
+    }
+
+    #[test]
+    fn test_transform_string_format_bool() {
+        let val = Value::Bool(true);
+        assert_eq!(
+            apply_transform("Status: value", &val),
+            Value::String("Status: true".to_string())
+        );
+    }
+
+    #[test]
+    fn test_transform_string_format_null() {
+        let val = Value::Null;
+        assert_eq!(
+            apply_transform("Got: value", &val),
+            Value::String("Got: null".to_string())
+        );
+    }
+
+    #[test]
+    fn test_transform_string_format_multiple_replacements() {
+        let val = Value::Integer(5);
+        assert_eq!(
+            apply_transform("value of value", &val),
+            Value::String("5 of 5".to_string())
+        );
+    }
 }

@@ -34,10 +34,6 @@ pub struct SinkConfig {
 pub struct NemoRuntime {
     /// Main configuration file path.
     config_path: PathBuf,
-    /// Additional configuration directories.
-    config_dirs: Vec<PathBuf>,
-    /// Extension directories.
-    extension_dirs: Vec<PathBuf>,
     /// The event bus.
     pub event_bus: Arc<EventBus>,
     /// The schema registry.
@@ -62,6 +58,8 @@ pub struct NemoRuntime {
     pub data_dirty: Arc<AtomicBool>,
     /// Notification signal for waking the UI when data changes.
     pub data_notify: Arc<tokio::sync::Notify>,
+    /// Cancellation signal for graceful shutdown of background tasks.
+    shutdown: Arc<tokio::sync::Notify>,
     /// Sink configurations for outbound data publishing.
     pub sink_configs: Arc<RwLock<HashMap<String, SinkConfig>>>,
 }
@@ -87,8 +85,6 @@ impl NemoRuntime {
 
         Ok(Self {
             config_path: config_path.to_path_buf(),
-            config_dirs: Vec::new(),
-            extension_dirs: Vec::new(),
             event_bus,
             schema_registry,
             config_loader,
@@ -101,14 +97,9 @@ impl NemoRuntime {
             tokio_runtime,
             data_dirty: Arc::new(AtomicBool::new(false)),
             data_notify: Arc::new(tokio::sync::Notify::new()),
+            shutdown: Arc::new(tokio::sync::Notify::new()),
             sink_configs: Arc::new(RwLock::new(HashMap::new())),
         })
-    }
-
-    /// Adds a configuration directory.
-    pub fn add_config_dir(&self, dir: &Path) -> Result<()> {
-        debug!("Adding config directory: {:?}", dir);
-        Ok(())
     }
 
     /// Adds an extension directory.
@@ -502,38 +493,68 @@ impl NemoRuntime {
                 let data_engine = Arc::clone(&self.data_engine);
                 let data_dirty = Arc::clone(&self.data_dirty);
                 let data_notify = Arc::clone(&self.data_notify);
+                let shutdown = Arc::clone(&self.shutdown);
 
                 tokio::spawn(async move {
                     loop {
-                        match rx.recv().await {
-                            Ok(update) => {
-                                if let Err(e) = data_engine.process_update(update).await {
-                                    tracing::warn!(
-                                        "Failed to process data update for '{}': {}",
-                                        source_id,
-                                        e
-                                    );
-                                } else {
-                                    data_dirty.store(true, Ordering::Release);
-                                    data_notify.notify_one();
-                                }
-                            }
-                            Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
-                                tracing::warn!(
-                                    "Data update receiver for '{}' lagged by {} messages",
-                                    source_id,
-                                    n
-                                );
-                            }
-                            Err(tokio::sync::broadcast::error::RecvError::Closed) => {
-                                debug!("Data source '{}' channel closed", source_id);
+                        tokio::select! {
+                            _ = shutdown.notified() => {
+                                debug!("Data update loop for '{}' shutting down", source_id);
                                 break;
+                            }
+                            result = rx.recv() => {
+                                match result {
+                                    Ok(update) => {
+                                        if let Err(e) = data_engine.process_update(update).await {
+                                            tracing::warn!(
+                                                "Failed to process data update for '{}': {}",
+                                                source_id,
+                                                e
+                                            );
+                                        } else {
+                                            data_dirty.store(true, Ordering::Release);
+                                            data_notify.notify_one();
+                                        }
+                                    }
+                                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                        tracing::warn!(
+                                            "Data update receiver for '{}' lagged by {} messages",
+                                            source_id,
+                                            n
+                                        );
+                                    }
+                                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                                        debug!("Data source '{}' channel closed", source_id);
+                                        break;
+                                    }
+                                }
                             }
                         }
                     }
                 });
             }
         }
+    }
+
+    /// Gracefully shuts down background tasks and stops data sources.
+    pub fn shutdown(&self) {
+        info!("Shutting down Nemo runtime...");
+
+        // Signal all background tasks to stop
+        self.shutdown.notify_waiters();
+
+        // Stop all data sources
+        self.tokio_runtime.block_on(async {
+            let results = self.data_engine.stop_all().await;
+            for (id, result) in &results {
+                match result {
+                    Ok(()) => debug!("Stopped data source '{}'", id),
+                    Err(e) => tracing::warn!("Failed to stop data source '{}': {}", id, e),
+                }
+            }
+        });
+
+        info!("Runtime shutdown complete");
     }
 
     /// Checks for pending data updates and propagates them through bindings.
@@ -2194,7 +2215,7 @@ mod runtime_tests {
             m.insert("name".to_string(), s("test"));
             m.insert("count".to_string(), Value::Integer(7));
             m.insert("active".to_string(), Value::Bool(true));
-            m.insert("ratio".to_string(), Value::Float(3.14));
+            m.insert("ratio".to_string(), Value::Float(1.23));
             m.insert(
                 "items".to_string(),
                 Value::Array(vec![Value::Integer(1), Value::Integer(2)]),
@@ -2474,7 +2495,7 @@ layout {
             Some("Button")
         );
         // template key should not leak through as a property
-        assert!(nav.config.properties.get("template").is_none());
+        assert!(!nav.config.properties.contains_key("template"));
 
         // page_btn should be a panel with visible=true
         let page = &root.children[1];

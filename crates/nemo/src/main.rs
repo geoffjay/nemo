@@ -49,7 +49,6 @@ struct Workspace {
 /// Subset of args needed after initial parse.
 #[derive(Clone)]
 struct WorkspaceArgs {
-    app_config_dirs: Vec<PathBuf>,
     extension_dirs: Vec<PathBuf>,
 }
 
@@ -67,37 +66,15 @@ impl Workspace {
         recent.add(app_config_path.clone());
         recent.save();
 
-        // Create runtime and load config
-        match runtime::NemoRuntime::new(&app_config_path) {
+        match create_runtime(&app_config_path, &self.ws_args.extension_dirs) {
             Ok(rt) => {
-                for dir in &self.ws_args.app_config_dirs {
-                    let _ = rt.add_config_dir(dir);
-                }
-                for dir in &self.ws_args.extension_dirs {
-                    let _ = rt.add_extension_dir(dir);
-                }
-
-                if let Err(e) = rt.load_config() {
-                    tracing::error!("Failed to load config: {}", e);
-                    return;
-                }
-                if let Err(e) = rt.initialize() {
-                    tracing::error!("Failed to initialize runtime: {}", e);
-                    return;
-                }
-
-                #[allow(clippy::arc_with_non_send_sync)]
-                let rt = Arc::new(rt);
-
-                // Apply theme from config
                 apply_theme_from_runtime(&rt, cx);
-
                 let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                 self.state = WorkspaceState::Application(app_entity);
                 cx.notify();
             }
             Err(e) => {
-                tracing::error!("Failed to create runtime: {}", e);
+                tracing::error!("Failed to load project: {}", e);
             }
         }
     }
@@ -157,6 +134,25 @@ impl Render for Workspace {
     }
 }
 
+/// Creates a NemoRuntime, applies extension dirs, loads config, and initializes.
+/// Returns the runtime wrapped in Arc on success.
+fn create_runtime(
+    config_path: &std::path::Path,
+    extension_dirs: &[PathBuf],
+) -> Result<Arc<runtime::NemoRuntime>> {
+    let rt = runtime::NemoRuntime::new(config_path)?;
+
+    for dir in extension_dirs {
+        let _ = rt.add_extension_dir(dir);
+    }
+
+    rt.load_config()?;
+    rt.initialize()?;
+
+    #[allow(clippy::arc_with_non_send_sync)]
+    Ok(Arc::new(rt))
+}
+
 /// Apply theme settings from a loaded runtime.
 fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gpui::App) {
     if let Some(theme_name) = runtime
@@ -210,9 +206,6 @@ fn main() -> Result<()> {
         if args.headless || args.validate_only {
             let rt = runtime::NemoRuntime::new(app_config)?;
 
-            for dir in &args.app_config_dirs {
-                rt.add_config_dir(dir)?;
-            }
             for dir in &args.extension_dirs {
                 rt.add_extension_dir(dir)?;
             }
@@ -242,7 +235,6 @@ fn main() -> Result<()> {
 
     let app_config_path = args.app_config.clone();
     let ws_args = WorkspaceArgs {
-        app_config_dirs: args.app_config_dirs.clone(),
         extension_dirs: args.extension_dirs.clone(),
     };
 
@@ -275,46 +267,26 @@ fn main() -> Result<()> {
 
             let ws = cx.new(|cx| {
                 let state = if let Some(config_path) = app_config_path {
-                    // Direct load: create runtime immediately
                     info!("Loading project from: {:?}", config_path);
 
                     let mut recent = config::recent::RecentProjects::load();
                     recent.add(config_path.clone());
                     recent.save();
 
-                    match runtime::NemoRuntime::new(&config_path) {
+                    match create_runtime(&config_path, &ws_args.extension_dirs) {
                         Ok(rt) => {
-                            for dir in &ws_args.app_config_dirs {
-                                let _ = rt.add_config_dir(dir);
-                            }
-                            for dir in &ws_args.extension_dirs {
-                                let _ = rt.add_extension_dir(dir);
-                            }
-
-                            let config_ok = rt.load_config().is_ok();
-                            let init_ok = config_ok && rt.initialize().is_ok();
-
-                            if init_ok {
-                                #[allow(clippy::arc_with_non_send_sync)]
-                                let rt = Arc::new(rt);
-                                apply_theme_from_runtime(&rt, cx);
-                                let app_entity =
-                                    cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
-                                WorkspaceState::Application(app_entity)
-                            } else {
-                                tracing::error!("Failed to load/initialize project");
-                                let loader = Workspace::create_loader(&nemo_config, window, cx);
-                                WorkspaceState::ProjectLoader(loader)
-                            }
+                            apply_theme_from_runtime(&rt, cx);
+                            let app_entity =
+                                cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                            WorkspaceState::Application(app_entity)
                         }
                         Err(e) => {
-                            tracing::error!("Failed to create runtime: {}", e);
+                            tracing::error!("Failed to load project: {}", e);
                             let loader = Workspace::create_loader(&nemo_config, window, cx);
                             WorkspaceState::ProjectLoader(loader)
                         }
                     }
                 } else {
-                    // No app config: show project loader
                     let loader = Workspace::create_loader(&nemo_config, window, cx);
                     WorkspaceState::ProjectLoader(loader)
                 };

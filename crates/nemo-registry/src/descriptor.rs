@@ -462,3 +462,222 @@ pub enum ActionError {
     #[error("Action creation failed: {0}")]
     CreationFailed(String),
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use nemo_config::{ConfigSchema, PropertySchema};
+
+    // ── ComponentDescriptor ───────────────────────────────────────────
+
+    #[test]
+    fn test_component_descriptor_new() {
+        let desc = ComponentDescriptor::new("button", ComponentCategory::Input);
+        assert_eq!(desc.name, "button");
+        assert_eq!(desc.category, ComponentCategory::Input);
+        assert_eq!(desc.version, Version::new(0, 1, 0));
+        assert_eq!(desc.source, DescriptorSource::BuiltIn);
+        assert!(desc.tags.is_empty());
+        assert!(desc.factory.is_none());
+    }
+
+    #[test]
+    fn test_component_descriptor_builder() {
+        let desc = ComponentDescriptor::new("custom", ComponentCategory::Custom)
+            .version(Version::new(1, 2, 3))
+            .source(DescriptorSource::Plugin {
+                plugin_id: "my-plugin".into(),
+            })
+            .tag("interactive")
+            .tag("clickable");
+
+        assert_eq!(desc.version, Version::new(1, 2, 3));
+        assert_eq!(
+            desc.source,
+            DescriptorSource::Plugin {
+                plugin_id: "my-plugin".into()
+            }
+        );
+        assert_eq!(desc.tags, vec!["interactive", "clickable"]);
+    }
+
+    #[test]
+    fn test_component_metadata_default() {
+        let meta = ComponentMetadata::default();
+        assert_eq!(meta.display_name, "");
+        assert_eq!(meta.description, "");
+        assert!(meta.icon.is_none());
+        assert!(meta.bindable_properties.is_empty());
+        assert!(meta.events.is_empty());
+        assert!(meta.slots.is_empty());
+        assert!(meta.docs_url.is_none());
+        assert!(meta.examples.is_empty());
+    }
+
+    #[test]
+    fn test_component_descriptor_with_schema() {
+        let mut desc = ComponentDescriptor::new("label", ComponentCategory::Display);
+        desc.schema = ConfigSchema::new("label")
+            .property("text", PropertySchema::string())
+            .require("text");
+        // Schema was set — just verify no panic and name matches
+        assert_eq!(desc.name, "label");
+    }
+
+    #[test]
+    fn test_component_descriptor_with_metadata() {
+        let mut desc = ComponentDescriptor::new("btn", ComponentCategory::Input);
+        desc.metadata = ComponentMetadata {
+            display_name: "Button".into(),
+            description: "A clickable button".into(),
+            icon: Some("click".into()),
+            ..Default::default()
+        };
+        assert_eq!(desc.metadata.display_name, "Button");
+        assert_eq!(desc.metadata.icon, Some("click".into()));
+    }
+
+    // ── DataSourceDescriptor ──────────────────────────────────────────
+
+    #[test]
+    fn test_data_source_descriptor_new() {
+        let desc = DataSourceDescriptor::new("http");
+        assert_eq!(desc.name, "http");
+        assert_eq!(desc.version, Version::new(0, 1, 0));
+        assert_eq!(desc.source, DescriptorSource::BuiltIn);
+        assert!(desc.factory.is_none());
+    }
+
+    #[test]
+    fn test_data_source_metadata_flags() {
+        let mut desc = DataSourceDescriptor::new("websocket");
+        desc.metadata = DataSourceMetadata {
+            display_name: "WebSocket".into(),
+            supports_polling: false,
+            supports_streaming: true,
+            supports_manual_refresh: true,
+            ..Default::default()
+        };
+        assert!(!desc.metadata.supports_polling);
+        assert!(desc.metadata.supports_streaming);
+        assert!(desc.metadata.supports_manual_refresh);
+    }
+
+    #[test]
+    fn test_data_source_metadata_default() {
+        let meta = DataSourceMetadata::default();
+        assert!(!meta.supports_polling);
+        assert!(!meta.supports_streaming);
+        assert!(!meta.supports_manual_refresh);
+    }
+
+    // ── TransformDescriptor ───────────────────────────────────────────
+
+    #[test]
+    fn test_transform_descriptor_new() {
+        let desc = TransformDescriptor::new("filter");
+        assert_eq!(desc.name, "filter");
+        assert_eq!(desc.version, Version::new(0, 1, 0));
+    }
+
+    #[test]
+    fn test_transform_metadata_flags() {
+        let mut desc = TransformDescriptor::new("sort");
+        desc.metadata = TransformMetadata {
+            display_name: "Sort".into(),
+            preserves_order: false,
+            may_filter: false,
+            stateful: false,
+            ..Default::default()
+        };
+        assert!(!desc.metadata.preserves_order);
+        assert!(!desc.metadata.may_filter);
+        assert!(!desc.metadata.stateful);
+    }
+
+    #[test]
+    fn test_transform_metadata_stateful() {
+        let mut desc = TransformDescriptor::new("aggregate");
+        desc.metadata = TransformMetadata {
+            stateful: true,
+            may_filter: true,
+            ..Default::default()
+        };
+        assert!(desc.metadata.stateful);
+        assert!(desc.metadata.may_filter);
+    }
+
+    // ── ActionDescriptor ──────────────────────────────────────────────
+
+    #[test]
+    fn test_action_descriptor_new() {
+        let desc = ActionDescriptor::new("navigate");
+        assert_eq!(desc.name, "navigate");
+        assert_eq!(desc.version, Version::new(0, 1, 0));
+    }
+
+    #[test]
+    fn test_action_metadata_flags() {
+        let mut desc = ActionDescriptor::new("http_request");
+        desc.metadata = ActionMetadata {
+            display_name: "HTTP Request".into(),
+            async_execution: true,
+            may_fail: true,
+            idempotent: false,
+            ..Default::default()
+        };
+        assert!(desc.metadata.async_execution);
+        assert!(desc.metadata.may_fail);
+        assert!(!desc.metadata.idempotent);
+    }
+
+    #[test]
+    fn test_action_metadata_default() {
+        let meta = ActionMetadata::default();
+        assert!(!meta.async_execution);
+        assert!(!meta.may_fail);
+        assert!(!meta.idempotent);
+    }
+
+    // ── DescriptorSource ──────────────────────────────────────────────
+
+    #[test]
+    fn test_descriptor_source_variants() {
+        assert_eq!(DescriptorSource::BuiltIn, DescriptorSource::BuiltIn);
+
+        let plugin = DescriptorSource::Plugin {
+            plugin_id: "x".into(),
+        };
+        let script = DescriptorSource::Script {
+            script_id: "y".into(),
+        };
+        assert_ne!(plugin, script);
+        assert_ne!(plugin, DescriptorSource::BuiltIn);
+    }
+
+    // ── ComponentCategory ─────────────────────────────────────────────
+
+    #[test]
+    fn test_component_categories() {
+        // Verify all categories exist and are distinct
+        let categories = [
+            ComponentCategory::Layout,
+            ComponentCategory::Display,
+            ComponentCategory::Input,
+            ComponentCategory::Data,
+            ComponentCategory::Feedback,
+            ComponentCategory::Navigation,
+            ComponentCategory::Charts,
+            ComponentCategory::Custom,
+        ];
+        for (i, a) in categories.iter().enumerate() {
+            for (j, b) in categories.iter().enumerate() {
+                if i == j {
+                    assert_eq!(a, b);
+                } else {
+                    assert_ne!(a, b);
+                }
+            }
+        }
+    }
+}

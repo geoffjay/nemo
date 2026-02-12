@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_accordion_init_from_items() {
         // Simulate the logic from App::get_or_create_accordion_state
-        let items = vec![
+        let items = [
             Value::Object({
                 let mut m = indexmap::IndexMap::new();
                 m.insert("title".to_string(), Value::String("First".into()));

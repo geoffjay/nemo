@@ -53,7 +53,7 @@ pub struct Tree {
 impl Tree {
     pub fn new(source: BuiltComponent) -> Self {
         Self {
-            source: source,
+            source,
             tree_state: None,
         }
     }
