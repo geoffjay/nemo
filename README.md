@@ -75,7 +75,7 @@ nemo --app-config examples/data-binding/app.hcl
 
 ## Documentation
 
-Full documentation is available at [geoffjay.github.io/nemo](https://geoffjay.github.io/nemo) or locally via `mkdocs serve`.
+Full documentation is available at [geoffjay.github.io/nemo](https://geoffjay.github.io/nemo) or locally via `zensical serve`.
 
 ## License
 

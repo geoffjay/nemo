@@ -67,5 +67,6 @@ my-app/
 - [Getting Started](public/getting-started.md) -- Install Nemo and build your first application
 - [CLI Reference](public/cli.md) -- Command-line options and usage
 - [Configuration](public/configuration.md) -- Complete HCL configuration reference
+- [Plugins](public/plugins.md) -- Extending Nemo with native plugins
 - [Architecture](public/architecture.md) -- System design and internal diagrams
 - [Development](public/develop.md) -- Extending Nemo with scripts and plugins

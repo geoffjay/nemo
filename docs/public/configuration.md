@@ -4,12 +4,13 @@ Nemo applications are defined in HCL (HashiCorp Configuration Language) files. T
 
 ## File Structure
 
-A Nemo configuration file contains up to five top-level blocks:
+A Nemo configuration file contains up to six top-level blocks:
 
 ```hcl
 variable "name" { ... }   # Variable definitions (0 or more)
 app { ... }                # Application and window settings
 scripts { ... }            # Script loading configuration
+templates { ... }          # Reusable component templates
 data { ... }               # Data source and sink definitions
 layout { ... }             # UI component tree
 ```
@@ -138,6 +139,104 @@ scripts {
 | `path` | string | Directory containing `.rhai` script files |
 
 All `.rhai` files in the directory are loaded at startup. Scripts are identified by their filename without the extension (e.g., `handlers.rhai` becomes script ID `"handlers"`).
+
+---
+
+## `templates` Block
+
+Define reusable component templates that can be referenced by components in the layout. Templates reduce duplication when many components share the same base configuration.
+
+### Defining Templates
+
+```hcl
+templates {
+  template "nav_item" {
+    type         = "button"
+    variant      = "ghost"
+    size         = "sm"
+    on_click     = "on_nav"
+  }
+
+  template "content_page" {
+    type    = "panel"
+    visible = false
+
+    component "inner" {
+      type      = "stack"
+      direction = "vertical"
+      spacing   = 12
+      padding   = 32
+      slot      = true
+    }
+  }
+}
+```
+
+Each `template` block defines a named set of component properties. Templates can include nested `component` children and all standard component properties.
+
+### Using Templates
+
+Reference a template from any component in the layout with the `template` property:
+
+```hcl
+layout {
+  type = "stack"
+
+  component "nav_home" {
+    template = "nav_item"
+    label    = "Home"
+  }
+
+  component "nav_settings" {
+    template = "nav_item"
+    label    = "Settings"
+  }
+}
+```
+
+The component inherits all properties from the template. Properties set on the instance override the template's defaults (e.g., `label` above overrides anything the template set).
+
+### Slots
+
+Templates can designate a child component as a **slot** by setting `slot = true`. When an instance provides children, they are injected into the slot rather than appended at the top level:
+
+```hcl
+templates {
+  template "card" {
+    type    = "panel"
+    padding = 16
+
+    component "body" {
+      type = "stack"
+      direction = "vertical"
+      slot = true
+    }
+  }
+}
+
+layout {
+  type = "stack"
+
+  component "user_card" {
+    template = "card"
+
+    component "title" {
+      type = "label"
+      text = "User Profile"
+    }
+  }
+}
+```
+
+Here, the `title` label is injected inside the `body` stack, not directly under the `panel`.
+
+### Template Features
+
+- **Property override:** Instance properties take precedence over template defaults
+- **Child scoping:** Template-originated child IDs are automatically prefixed with the instance ID to prevent collisions
+- **Recursive templates:** A template can reference another template
+- **Circular reference detection:** Nemo detects and reports circular template chains
+- **Handler preservation:** Event handlers (e.g., `on_click`) from templates are preserved through expansion
 
 ---
 
@@ -678,26 +777,439 @@ component "view_tabs" {
 }
 ```
 
-### `table`
+### `accordion`
 
-Tabular data display.
+Collapsible content sections. Each item has a title and expandable content.
 
 ```hcl
-component "data_table" {
-  type    = "table"
-  columns = ["Name", "Value"]
+component "faq" {
+  type = "accordion"
+  items = [
+    { title = "Question 1", content = "Answer 1", open = true },
+    { title = "Question 2", content = "Answer 2" },
+    { title = "Question 3", content = "Answer 3" }
+  ]
+  multiple = true
+  bordered = false
 }
 ```
 
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `items` | array | `[]` | Array of objects with `title`, `content`, and optional `open` (bool) |
+| `multiple` | bool | `false` | Allow multiple items open simultaneously |
+| `bordered` | bool | `true` | Show borders between items |
+
+### `alert`
+
+Displays an important status message with a variant-colored indicator.
+
+```hcl
+component "error_alert" {
+  type    = "alert"
+  title   = "Error"
+  message = "Something went wrong."
+  variant = "error"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `title` | string | | Alert heading |
+| `message` | string | `""` | Alert body text |
+| `variant` | string | `"info"` | Visual style: `"info"`, `"success"`, `"warning"`, `"error"` |
+
+### `avatar`
+
+Displays user initials derived from a name.
+
+```hcl
+component "user_avatar" {
+  type = "avatar"
+  name = "Alice Johnson"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | string | | Full name (initials are generated automatically) |
+
+### `badge`
+
+Overlays a count or dot indicator on a child element.
+
+```hcl
+component "notification_badge" {
+  type  = "badge"
+  count = 5
+
+  component "btn" {
+    type  = "button"
+    label = "Inbox"
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `count` | int | | Numeric count to display |
+| `dot` | bool | `false` | Show a dot indicator instead of a count |
+
+Badge wraps its child component and renders the indicator in the top-right corner.
+
+### `collapsible`
+
+A single expandable/collapsible section with a clickable title bar.
+
+```hcl
+component "details" {
+  type  = "collapsible"
+  title = "Show Details"
+  open  = false
+
+  component "content" {
+    type    = "text"
+    content = "Hidden content revealed when expanded."
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `title` | string | `""` | Clickable header text |
+| `open` | bool | `false` | Initial expanded state |
+
+### `dropdown_button`
+
+A button that opens a dropdown menu with selectable items.
+
+```hcl
+component "actions" {
+  type    = "dropdown_button"
+  label   = "Actions"
+  variant = "primary"
+  items   = ["Copy", "Paste", "Cut"]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label` | string | `"Action"` | Button text |
+| `variant` | string | `"secondary"` | Button variant: `"primary"`, `"secondary"`, `"danger"`, etc. |
+| `items` | array | `[]` | List of menu item strings |
+
+### `radio`
+
+A group of mutually exclusive options.
+
+```hcl
+component "size_picker" {
+  type      = "radio"
+  options   = ["Small", "Medium", "Large"]
+  value     = "Medium"
+  direction = "horizontal"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `options` | array | `[]` | List of option strings |
+| `value` | string | | Initially selected option |
+| `direction` | string | `"vertical"` | Layout: `"vertical"` or `"horizontal"` |
+
+### `slider`
+
+A draggable range input for numeric values.
+
+```hcl
+component "volume" {
+  type  = "slider"
+  min   = 0
+  max   = 100
+  step  = 1
+  value = 50
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `min` | float | `0.0` | Minimum value |
+| `max` | float | `100.0` | Maximum value |
+| `step` | float | `1.0` | Step increment |
+| `value` | float | `0.0` | Initial value |
+
+### `spinner`
+
+An animated loading indicator.
+
+```hcl
+component "loading" {
+  type = "spinner"
+  size = "lg"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `size` | string | `"md"` | Size: `"xs"`, `"sm"`, `"md"`, `"lg"` |
+
+### `switch`
+
+A toggle control with a sliding visual style.
+
+```hcl
+component "dark_mode" {
+  type    = "switch"
+  label   = "Dark Mode"
+  checked = true
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label` | string | `""` | Switch label text |
+| `checked` | bool | `false` | Initial state |
+| `disabled` | bool | `false` | Disable interaction |
+
+### `tag`
+
+A small colored label for categorization.
+
+```hcl
+component "status_tag" {
+  type    = "tag"
+  label   = "Active"
+  variant = "success"
+  outline = true
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label` | string | `"Tag"` | Tag text |
+| `variant` | string | `"secondary"` | Color: `"primary"`, `"secondary"`, `"danger"`, `"success"`, `"warning"`, `"info"` |
+| `outline` | bool | `false` | Use outline style instead of filled |
+
+### `toggle`
+
+A button that toggles between on/off states, optionally with an icon.
+
+```hcl
+component "favorite" {
+  type    = "toggle"
+  label   = "Favorite"
+  icon    = "star"
+  checked = false
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label` | string | `""` | Toggle button text |
+| `icon` | string | | Optional icon name |
+| `checked` | bool | `false` | Initial state |
+| `disabled` | bool | `false` | Disable interaction |
+
+### `table`
+
+Tabular data display with columns, sorting, and striped rows.
+
+```hcl
+component "users" {
+  type   = "table"
+  stripe = true
+  columns = [
+    { key = "name",  label = "Name",  width = 150 },
+    { key = "email", label = "Email", width = 220 },
+    { key = "role",  label = "Role",  width = 120 }
+  ]
+  data = [
+    { name = "Alice", email = "alice@example.com", role = "Admin" },
+    { name = "Bob",   email = "bob@example.com",   role = "Editor" }
+  ]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `columns` | array | `[]` | Array of column objects with `key`, `label`, and optional `width` (int) |
+| `data` | array | `[]` | Array of row objects keyed by column `key` values |
+| `stripe` | bool | `false` | Alternate row background colors |
+| `height` | int | `300` | Container height in pixels (required for scrollable content) |
+
+!!! note
+    Table requires a parent with definite height. If you don't set `height`, the default is 300px. Headers will always be visible, but rows may not render without sufficient height.
+
 ### `tree`
 
-Hierarchical tree view.
+Hierarchical tree view with expand/collapse and keyboard navigation.
 
 ```hcl
 component "file_tree" {
   type = "tree"
+  items = [
+    {
+      id       = "src"
+      label    = "src"
+      expanded = true
+      children = [
+        { id = "src/main.rs", label = "main.rs" },
+        { id = "src/lib.rs",  label = "lib.rs" }
+      ]
+    },
+    { id = "Cargo.toml", label = "Cargo.toml" }
+  ]
 }
 ```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `items` | array | `[]` | Array of tree item objects (see below) |
+| `height` | int | `300` | Container height in pixels |
+
+**Tree item object:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Yes | Unique item identifier |
+| `label` | string | No | Display text (defaults to `id`) |
+| `expanded` | bool | No | Initial expanded state |
+| `disabled` | bool | No | Disable the item |
+| `children` | array | No | Nested tree items |
+
+### Charts
+
+Nemo includes five chart types for data visualization. All charts read data from a `data` array property and map fields via axis properties.
+
+#### `line_chart`
+
+```hcl
+component "revenue" {
+  type    = "line_chart"
+  x_field = "month"
+  y_field = "revenue"
+  dot     = true
+  height  = 300
+  data = [
+    { month = "Jan", revenue = 186 },
+    { month = "Feb", revenue = 305 },
+    { month = "Mar", revenue = 237 }
+  ]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field name for x-axis labels |
+| `y_field` | string | (required) | Field name for y-axis values |
+| `dot` | bool | `false` | Show data point dots |
+| `linear` | bool | `false` | Use linear interpolation (vs. smooth curves) |
+| `height` | int | `300` | Chart height in pixels |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `bar_chart`
+
+```hcl
+component "visitors" {
+  type       = "bar_chart"
+  x_field    = "month"
+  y_field    = "visitors"
+  show_label = true
+  height     = 300
+  data = [
+    { month = "Jan", visitors = 275 },
+    { month = "Feb", visitors = 200 }
+  ]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field name for x-axis labels |
+| `y_field` | string | (required) | Field name for bar values |
+| `show_label` | bool | `false` | Show value labels on bars |
+| `height` | int | `300` | Chart height in pixels |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `area_chart`
+
+Supports multiple series via `y_fields`.
+
+```hcl
+component "traffic" {
+  type     = "area_chart"
+  x_field  = "month"
+  y_fields = ["desktop", "mobile"]
+  height   = 300
+  data = [
+    { month = "Jan", desktop = 186, mobile = 80 },
+    { month = "Feb", desktop = 305, mobile = 200 }
+  ]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field name for x-axis labels |
+| `y_fields` | array | (required) | List of field names for each series |
+| `fill_opacity` | float | | Opacity of the filled area (0.0 - 1.0) |
+| `height` | int | `300` | Chart height in pixels |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `pie_chart`
+
+Set `inner_radius` to create a donut chart.
+
+```hcl
+component "browsers" {
+  type        = "pie_chart"
+  value_field = "amount"
+  height      = 300
+  data = [
+    { label = "Chrome",  amount = 275 },
+    { label = "Safari",  amount = 200 },
+    { label = "Firefox", amount = 187 }
+  ]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `value_field` | string | (required) | Field name for slice values |
+| `outer_radius` | float | | Outer radius in pixels |
+| `inner_radius` | float | | Inner radius (set > 0 for donut chart) |
+| `height` | int | `300` | Chart height in pixels |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `candlestick_chart`
+
+Financial OHLC (Open-High-Low-Close) chart.
+
+```hcl
+component "stocks" {
+  type        = "candlestick_chart"
+  x_field     = "date"
+  open_field  = "open"
+  high_field  = "high"
+  low_field   = "low"
+  close_field = "close"
+  height      = 300
+  data = [
+    { date = "Mon", open = 100.0, high = 110.0, low = 95.0,  close = 108.0 },
+    { date = "Tue", open = 108.0, high = 115.0, low = 102.0, close = 104.0 }
+  ]
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field for x-axis labels |
+| `open_field` | string | (required) | Field for open values |
+| `high_field` | string | (required) | Field for high values |
+| `low_field` | string | (required) | Field for low values |
+| `close_field` | string | (required) | Field for close values |
+| `height` | int | `300` | Chart height in pixels |
+| `data` | array | `[]` | Array of OHLC data objects |
 
 ---
 

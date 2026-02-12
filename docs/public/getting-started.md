@@ -117,14 +117,16 @@ You should see a window with a title, a panel, a button, and a label. Clicking t
 
 ### Configuration (HCL)
 
-Nemo applications are defined in [HCL](https://github.com/hashicorp/hcl) files. The configuration contains four top-level blocks:
+Nemo applications are defined in [HCL](https://github.com/hashicorp/hcl) files. The configuration contains up to six top-level blocks:
 
 | Block | Purpose |
 |-------|---------|
+| `variable` | Reusable variables with type and default value |
 | `app` | Window settings, theme selection |
 | `scripts` | Path to RHAI script files |
-| `layout` | UI component tree |
+| `templates` | Reusable component templates to reduce duplication |
 | `data` | Data source and sink definitions |
+| `layout` | UI component tree |
 
 ### Components
 
@@ -143,10 +145,11 @@ Available component types:
 
 | Category | Types |
 |----------|-------|
-| Layout | `stack`, `panel` |
-| Display | `label`, `text`, `icon`, `image`, `progress` |
-| Input | `button`, `input`, `checkbox`, `select` |
+| Layout | `stack`, `panel`, `collapsible`, `accordion` |
+| Display | `label`, `text`, `icon`, `image`, `progress`, `spinner`, `avatar`, `badge`, `tag`, `alert` |
+| Input | `button`, `input`, `checkbox`, `select`, `radio`, `slider`, `switch`, `toggle`, `dropdown_button` |
 | Data | `list`, `table`, `tree` |
+| Charts | `line_chart`, `bar_chart`, `area_chart`, `pie_chart`, `candlestick_chart` |
 | Overlay | `modal`, `tooltip`, `tabs`, `notification` |
 
 ### Data Sources
@@ -250,4 +253,5 @@ nemo --app-config examples/calculator/app.hcl
 
 - [CLI Reference](cli.md) -- All command-line options
 - [Configuration Reference](configuration.md) -- Every block, attribute, and component type
+- [Plugins](plugins.md) -- Extending Nemo with native plugins
 - [Development Guide](develop.md) -- Writing scripts and building plugins
