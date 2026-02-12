@@ -11,7 +11,10 @@ members = [
     "crates/nemo-events",
     "crates/nemo-plugin-api",
     "crates/nemo-macros",
+    "crates/nemo-wasm",
+    "crates/nemo-wasm-guest",
     "examples/data-binding/plugins/mock-data",
+    "examples/data-binding/plugins/mock-data-wasm",
 ]
 
 [workspace.package]
@@ -51,6 +54,11 @@ rhai = "1.19"
 # Plugin loading
 libloading = "0.8"
 
+# WASM
+wasmtime = { version = "29", features = ["component-model"] }
+wasmtime-wasi = "29"
+wit-bindgen = "0.36"
+
 # Networking
 reqwest = { version = "0.12", features = ["json"] }
 tokio-tungstenite = "0.24"
@@ -82,3 +90,4 @@ nemo-integration = { path = "crates/nemo-integration" }
 nemo-events = { path = "crates/nemo-events" }
 nemo-plugin-api = { path = "crates/nemo-plugin-api" }
 nemo-macros = { path = "crates/nemo-macros" }
+nemo-wasm = { path = "crates/nemo-wasm" }

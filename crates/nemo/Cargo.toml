@@ -13,7 +13,7 @@ nemo-config = { workspace = true }
 nemo-registry = { workspace = true }
 nemo-layout = { workspace = true }
 nemo-data = { workspace = true }
-nemo-extension = { workspace = true }
+nemo-extension = { workspace = true, features = ["wasm"] }
 nemo-integration = { workspace = true }
 nemo-events = { workspace = true }
 nemo-plugin-api = { workspace = true }

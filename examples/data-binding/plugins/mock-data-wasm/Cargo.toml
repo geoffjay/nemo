@@ -1,0 +1,11 @@
+[package]
+name = "mock-data-wasm-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+nemo-wasm-guest = { path = "../../../../crates/nemo-wasm-guest" }
+wit-bindgen = { workspace = true }

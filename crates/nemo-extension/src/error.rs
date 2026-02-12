@@ -44,6 +44,11 @@ pub enum ExtensionError {
     /// RHAI error.
     #[error("RHAI error: {0}")]
     Rhai(String),
+
+    /// WASM plugin error.
+    #[cfg(feature = "wasm")]
+    #[error("WASM error: {0}")]
+    Wasm(#[from] nemo_wasm::WasmError),
 }
 
 impl From<Box<rhai::EvalAltResult>> for ExtensionError {

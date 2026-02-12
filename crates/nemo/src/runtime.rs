@@ -111,6 +111,7 @@ impl NemoRuntime {
             .expect("extension_manager lock poisoned");
         ext.add_script_path(dir.join("scripts"));
         ext.add_plugin_path(dir.join("plugins"));
+        ext.add_wasm_path(dir.join("wasm-plugins"));
         Ok(())
     }
 
@@ -167,6 +168,11 @@ impl NemoRuntime {
                     nemo_extension::ExtensionType::Plugin => {
                         if let Err(e) = ext.load_plugin(&manifest.path) {
                             tracing::warn!("Failed to load plugin {:?}: {}", manifest.path, e);
+                        }
+                    }
+                    nemo_extension::ExtensionType::WasmPlugin => {
+                        if let Err(e) = ext.load_wasm_plugin(&manifest.path) {
+                            tracing::warn!("Failed to load WASM plugin {:?}: {}", manifest.path, e);
                         }
                     }
                 }
@@ -289,6 +295,11 @@ impl NemoRuntime {
                 .expect("extension_manager lock poisoned");
             ext.register_context(context);
         }
+
+        // Note: WASM plugin ticking is driven by `tick_wasm_plugins()` which is
+        // called from `apply_pending_data_updates()` on the main/UI thread.
+        // ExtensionManager is not Send/Sync (due to RhaiEngine), so we cannot
+        // spawn a background thread for this.
 
         Ok(())
     }
@@ -560,6 +571,12 @@ impl NemoRuntime {
     /// Checks for pending data updates and propagates them through bindings.
     /// Returns true if any updates were applied (indicating the UI needs re-render).
     pub fn apply_pending_data_updates(&self) -> bool {
+        // Tick WASM plugins (driven from the UI thread since ExtensionManager is !Send).
+        // Each plugin tracks its own interval internally so calling this frequently is fine.
+        if let Ok(mut ext) = self.extension_manager.try_write() {
+            ext.tick_wasm_plugins();
+        }
+
         // Check and clear the dirty flag
         if !self.data_dirty.swap(false, Ordering::AcqRel) {
             return false;

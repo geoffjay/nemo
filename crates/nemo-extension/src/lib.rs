@@ -29,6 +29,9 @@ pub struct ExtensionManager {
     pub rhai_engine: RhaiEngine,
     /// Plugin host for native plugins.
     pub plugin_host: PluginHost,
+    /// WASM plugin host.
+    #[cfg(feature = "wasm")]
+    pub wasm_host: nemo_wasm::WasmHost,
     /// Extension loader.
     loader: ExtensionLoader,
 }
@@ -40,6 +43,8 @@ impl ExtensionManager {
             registry: ExtensionRegistry::new(),
             rhai_engine: RhaiEngine::new(RhaiConfig::default()),
             plugin_host: PluginHost::new(),
+            #[cfg(feature = "wasm")]
+            wasm_host: nemo_wasm::WasmHost::new().expect("Failed to create WasmHost"),
             loader: ExtensionLoader::new(),
         }
     }
@@ -50,6 +55,8 @@ impl ExtensionManager {
             registry: ExtensionRegistry::new(),
             rhai_engine: RhaiEngine::new(rhai_config),
             plugin_host: PluginHost::new(),
+            #[cfg(feature = "wasm")]
+            wasm_host: nemo_wasm::WasmHost::new().expect("Failed to create WasmHost"),
             loader: ExtensionLoader::new(),
         }
     }
@@ -62,6 +69,12 @@ impl ExtensionManager {
     /// Adds a plugin search path.
     pub fn add_plugin_path(&mut self, path: impl Into<std::path::PathBuf>) {
         self.loader.add_plugin_path(path);
+    }
+
+    /// Adds a WASM plugin search path.
+    #[cfg(feature = "wasm")]
+    pub fn add_wasm_path(&mut self, path: impl Into<std::path::PathBuf>) {
+        self.loader.add_wasm_path(path);
     }
 
     /// Discovers all extensions in configured paths.
@@ -141,8 +154,39 @@ impl ExtensionManager {
         self.registry.list_plugins()
     }
 
+    /// Loads a WASM plugin by path.
+    #[cfg(feature = "wasm")]
+    pub fn load_wasm_plugin(&mut self, path: &std::path::Path) -> Result<String, ExtensionError> {
+        let id = self.wasm_host.load(path)?;
+        self.registry
+            .register_wasm_plugin(id.clone(), path.to_path_buf());
+        Ok(id)
+    }
+
+    /// Unloads a WASM plugin.
+    #[cfg(feature = "wasm")]
+    pub fn unload_wasm_plugin(&mut self, id: &str) -> Result<(), ExtensionError> {
+        self.wasm_host.unload(id)?;
+        self.registry.unregister_wasm_plugin(id);
+        Ok(())
+    }
+
+    /// Lists all loaded WASM plugins.
+    #[cfg(feature = "wasm")]
+    pub fn list_wasm_plugins(&self) -> Vec<String> {
+        self.registry.list_wasm_plugins()
+    }
+
+    /// Ticks all WASM plugins that have an elapsed interval.
+    #[cfg(feature = "wasm")]
+    pub fn tick_wasm_plugins(&mut self) {
+        self.wasm_host.tick_all();
+    }
+
     /// Registers the extension context API with the RHAI engine.
     pub fn register_context(&mut self, context: Arc<dyn PluginContext>) {
+        #[cfg(feature = "wasm")]
+        self.wasm_host.set_context(Arc::clone(&context));
         self.rhai_engine.register_context(context);
     }
 }

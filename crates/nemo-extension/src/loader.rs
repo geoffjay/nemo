@@ -11,6 +11,9 @@ pub enum ExtensionType {
     Script,
     /// Native plugin extension.
     Plugin,
+    /// WASM component plugin.
+    #[cfg(feature = "wasm")]
+    WasmPlugin,
 }
 
 /// Extension manifest describing an extension.
@@ -62,6 +65,21 @@ impl ExtensionManifest {
             dependencies: Vec::new(),
         }
     }
+
+    /// Creates a new WASM plugin manifest.
+    #[cfg(feature = "wasm")]
+    pub fn wasm_plugin(id: impl Into<String>, name: impl Into<String>, path: PathBuf) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            version: "0.1.0".to_string(),
+            description: None,
+            extension_type: ExtensionType::WasmPlugin,
+            path,
+            entry_point: None,
+            dependencies: Vec::new(),
+        }
+    }
 }
 
 /// Discovers and loads extensions from configured paths.
@@ -70,6 +88,9 @@ pub struct ExtensionLoader {
     script_paths: Vec<PathBuf>,
     /// Plugin search paths.
     plugin_paths: Vec<PathBuf>,
+    /// WASM plugin search paths.
+    #[cfg(feature = "wasm")]
+    wasm_paths: Vec<PathBuf>,
 }
 
 impl ExtensionLoader {
@@ -78,6 +99,8 @@ impl ExtensionLoader {
         Self {
             script_paths: Vec::new(),
             plugin_paths: Vec::new(),
+            #[cfg(feature = "wasm")]
+            wasm_paths: Vec::new(),
         }
     }
 
@@ -89,6 +112,12 @@ impl ExtensionLoader {
     /// Adds a plugin search path.
     pub fn add_plugin_path(&mut self, path: impl Into<PathBuf>) {
         self.plugin_paths.push(path.into());
+    }
+
+    /// Adds a WASM plugin search path.
+    #[cfg(feature = "wasm")]
+    pub fn add_wasm_path(&mut self, path: impl Into<PathBuf>) {
+        self.wasm_paths.push(path.into());
     }
 
     /// Discovers all extensions in configured paths.
@@ -106,6 +135,14 @@ impl ExtensionLoader {
         for plugin_path in &self.plugin_paths {
             if plugin_path.is_dir() {
                 manifests.extend(self.discover_plugins(plugin_path)?);
+            }
+        }
+
+        // Discover WASM plugins
+        #[cfg(feature = "wasm")]
+        for wasm_path in &self.wasm_paths {
+            if wasm_path.is_dir() {
+                manifests.extend(self.discover_wasm_plugins(wasm_path)?);
             }
         }
 
@@ -187,6 +224,42 @@ impl ExtensionLoader {
                     .collect::<String>();
 
                 manifests.push(ExtensionManifest::plugin(&id, name, path));
+            }
+        }
+
+        Ok(manifests)
+    }
+
+    /// Discovers WASM plugins in a directory.
+    #[cfg(feature = "wasm")]
+    fn discover_wasm_plugins(&self, dir: &Path) -> Result<Vec<ExtensionManifest>, ExtensionError> {
+        let mut manifests = Vec::new();
+
+        for entry in std::fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+
+            if path.extension().is_some_and(|ext| ext == "wasm") {
+                let id = path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "unnamed".to_string());
+
+                let name = id
+                    .chars()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        if i == 0 {
+                            c.to_uppercase().next().unwrap_or(c)
+                        } else if c == '_' || c == '-' {
+                            ' '
+                        } else {
+                            c
+                        }
+                    })
+                    .collect::<String>();
+
+                manifests.push(ExtensionManifest::wasm_plugin(&id, name, path));
             }
         }
 

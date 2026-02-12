@@ -4,12 +4,17 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[features]
+default = []
+wasm = ["nemo-wasm"]
+
 [dependencies]
 nemo-config = { workspace = true }
 nemo-registry = { workspace = true }
 nemo-data = { workspace = true }
 nemo-events = { workspace = true }
 nemo-plugin-api = { workspace = true }
+nemo-wasm = { workspace = true, optional = true }
 rhai = { workspace = true }
 libloading = { workspace = true }
 serde = { workspace = true }

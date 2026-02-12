@@ -1,0 +1,53 @@
+package nemo:plugin@0.1.0;
+
+interface types {
+    enum log-level {
+        debug,
+        info,
+        warn,
+        error,
+    }
+
+    /// Plugin values use a flat representation since WIT does not support
+    /// recursive types. Complex nested values (arrays, objects) are encoded
+    /// as JSON strings via the `json-val` variant.
+    variant plugin-value {
+        null,
+        bool-val(bool),
+        integer-val(s64),
+        float-val(f64),
+        string-val(string),
+        /// JSON-encoded string for arrays, objects, or other complex values.
+        json-val(string),
+    }
+
+    record plugin-manifest {
+        id: string,
+        name: string,
+        version: string,
+        description: string,
+        author: option<string>,
+    }
+}
+
+interface host-api {
+    use types.{log-level, plugin-value};
+
+    get-data: func(path: string) -> option<plugin-value>;
+    set-data: func(path: string, value: plugin-value) -> result<_, string>;
+    emit-event: func(event-type: string, payload: plugin-value);
+    get-config: func(path: string) -> option<plugin-value>;
+    log: func(level: log-level, message: string);
+    get-component-property: func(id: string, prop: string) -> option<plugin-value>;
+    set-component-property: func(id: string, prop: string, value: plugin-value) -> result<_, string>;
+}
+
+world nemo-plugin {
+    use types.{plugin-manifest};
+
+    import host-api;
+
+    export get-manifest: func() -> plugin-manifest;
+    export init: func();
+    export tick: func() -> u64;
+}

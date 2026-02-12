@@ -31,6 +31,9 @@ pub struct ExtensionRegistry {
     scripts: HashMap<String, ScriptEntry>,
     /// Loaded plugins by ID.
     plugins: HashMap<String, PluginEntry>,
+    /// Loaded WASM plugins by ID.
+    #[cfg(feature = "wasm")]
+    wasm_plugins: HashMap<String, PluginEntry>,
 }
 
 impl ExtensionRegistry {
@@ -39,6 +42,8 @@ impl ExtensionRegistry {
         Self {
             scripts: HashMap::new(),
             plugins: HashMap::new(),
+            #[cfg(feature = "wasm")]
+            wasm_plugins: HashMap::new(),
         }
     }
 
@@ -122,9 +127,52 @@ impl ExtensionRegistry {
         }
     }
 
+    /// Registers a WASM plugin.
+    #[cfg(feature = "wasm")]
+    pub fn register_wasm_plugin(&mut self, id: String, path: PathBuf) {
+        let entry = PluginEntry {
+            id: id.clone(),
+            path,
+            enabled: true,
+        };
+        self.wasm_plugins.insert(id, entry);
+    }
+
+    /// Unregisters a WASM plugin.
+    #[cfg(feature = "wasm")]
+    pub fn unregister_wasm_plugin(&mut self, id: &str) -> Option<PluginEntry> {
+        self.wasm_plugins.remove(id)
+    }
+
+    /// Gets a WASM plugin entry.
+    #[cfg(feature = "wasm")]
+    pub fn get_wasm_plugin(&self, id: &str) -> Option<&PluginEntry> {
+        self.wasm_plugins.get(id)
+    }
+
+    /// Lists all WASM plugin IDs.
+    #[cfg(feature = "wasm")]
+    pub fn list_wasm_plugins(&self) -> Vec<String> {
+        self.wasm_plugins.keys().cloned().collect()
+    }
+
+    /// Enables or disables a WASM plugin.
+    #[cfg(feature = "wasm")]
+    pub fn set_wasm_plugin_enabled(&mut self, id: &str, enabled: bool) -> bool {
+        if let Some(entry) = self.wasm_plugins.get_mut(id) {
+            entry.enabled = enabled;
+            true
+        } else {
+            false
+        }
+    }
+
     /// Returns total count of extensions (scripts + plugins).
     pub fn total_count(&self) -> usize {
-        self.scripts.len() + self.plugins.len()
+        let base = self.scripts.len() + self.plugins.len();
+        #[cfg(feature = "wasm")]
+        let base = base + self.wasm_plugins.len();
+        base
     }
 
     /// Returns count of scripts.
@@ -141,6 +189,8 @@ impl ExtensionRegistry {
     pub fn clear(&mut self) {
         self.scripts.clear();
         self.plugins.clear();
+        #[cfg(feature = "wasm")]
+        self.wasm_plugins.clear();
     }
 }
 
