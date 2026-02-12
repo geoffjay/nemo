@@ -2,21 +2,24 @@
 
 use gpui::*;
 use gpui_component::input::InputState;
+use gpui_component::slider::SliderState;
 use gpui_component::table::TableState;
 use gpui_component::tree::TreeState;
 use gpui_component::v_flex;
 use gpui_component::ActiveTheme;
 use nemo_config::Value;
-use std::sync::Arc;
+use std::collections::HashSet;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::table::NemoTableDelegate;
 use crate::components::tree::values_to_tree_items;
 use crate::components::{
-    AreaChart, BarChart, Button, CandlestickChart, Checkbox, Icon, Image, Label, LineChart, List,
-    Modal, Notification, Panel, PieChart, Progress, Select, Stack, Table, Tabs, Text, Tooltip,
-    Tree,
+    Accordion, Alert, AreaChart, Avatar, Badge, BarChart, Button, CandlestickChart, Checkbox,
+    Collapsible, DropdownButton, Icon, Image, Label, LineChart, List, Modal, Notification,
+    Panel, PieChart, Progress, Radio, Select, Slider, Spinner, Stack, Switch, Table, Tabs, Tag,
+    Text, Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
 use crate::workspace::HeaderBar;
@@ -162,6 +165,122 @@ impl App {
                 last_items: current_items,
             },
         );
+        state
+    }
+
+    /// Gets or creates a SliderState entity for the given component.
+    fn get_or_create_slider_state(
+        &mut self,
+        component: &BuiltComponent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<SliderState> {
+        if let Some(ComponentState::Slider(state)) = self.component_states.get(&component.id) {
+            return state.clone();
+        }
+
+        let props = &component.properties;
+        let min = props
+            .get("min")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32;
+        let max = props
+            .get("max")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(100.0) as f32;
+        let step = props
+            .get("step")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(1.0) as f32;
+        let value = props
+            .get("value")
+            .and_then(|v| v.as_f64())
+            .unwrap_or(0.0) as f32;
+
+        let state = cx.new(|_cx| {
+            SliderState::new()
+                .min(min)
+                .max(max)
+                .step(step)
+                .default_value(value)
+        });
+        self.component_states
+            .insert(component.id.clone(), ComponentState::Slider(state.clone()));
+        state
+    }
+
+    /// Gets or creates shared accordion open-indices state for the given component.
+    fn get_or_create_accordion_state(
+        &mut self,
+        component: &BuiltComponent,
+    ) -> Arc<Mutex<HashSet<usize>>> {
+        if let Some(ComponentState::Accordion(state)) = self.component_states.get(&component.id) {
+            return Arc::clone(state);
+        }
+
+        // Initialize from HCL config: items with open = true
+        let mut initial = HashSet::new();
+        if let Some(Value::Array(items)) = component.properties.get("items") {
+            for (ix, item_val) in items.iter().enumerate() {
+                if let Some(obj) = item_val.as_object() {
+                    if obj.get("open").and_then(|v| v.as_bool()).unwrap_or(false) {
+                        initial.insert(ix);
+                    }
+                }
+            }
+        }
+
+        let state = Arc::new(Mutex::new(initial));
+        self.component_states
+            .insert(component.id.clone(), ComponentState::Accordion(Arc::clone(&state)));
+        state
+    }
+
+    /// Gets or creates shared bool state for the given component (collapsible, switch, toggle).
+    fn get_or_create_bool_state(
+        &mut self,
+        id: &str,
+        initial: bool,
+    ) -> Arc<Mutex<bool>> {
+        if let Some(ComponentState::BoolState(state)) = self.component_states.get(id) {
+            return Arc::clone(state);
+        }
+
+        let state = Arc::new(Mutex::new(initial));
+        self.component_states
+            .insert(id.to_string(), ComponentState::BoolState(Arc::clone(&state)));
+        state
+    }
+
+    /// Gets or creates shared selected value state for a select component.
+    fn get_or_create_selected_value(
+        &mut self,
+        id: &str,
+        initial: String,
+    ) -> Arc<Mutex<String>> {
+        if let Some(ComponentState::SelectedValue(state)) = self.component_states.get(id) {
+            return Arc::clone(state);
+        }
+
+        let state = Arc::new(Mutex::new(initial));
+        self.component_states
+            .insert(id.to_string(), ComponentState::SelectedValue(Arc::clone(&state)));
+        state
+    }
+
+    /// Gets or creates shared selected index state for a radio component.
+    fn get_or_create_selected_index(
+        &mut self,
+        id: &str,
+        initial: Option<usize>,
+    ) -> Arc<Mutex<Option<usize>>> {
+        if let Some(ComponentState::SelectedIndex(state)) = self.component_states.get(id) {
+            return Arc::clone(state);
+        }
+
+        let state = Arc::new(Mutex::new(initial));
+        self.component_states
+            .insert(id.to_string(), ComponentState::SelectedIndex(Arc::clone(&state)));
         state
     }
 
@@ -317,10 +436,16 @@ impl App {
                     .entity_id(entity_id)
                     .into_any_element()
             }
-            "select" => Select::new(component.clone())
-                .runtime(Arc::clone(&self.runtime))
-                .entity_id(entity_id)
-                .into_any_element(),
+            "select" => {
+                let initial = component.properties.get("value")
+                    .and_then(|v| v.as_str()).unwrap_or("").to_string();
+                let sel_state = self.get_or_create_selected_value(&component.id, initial);
+                Select::new(component.clone())
+                    .selected_value(sel_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
             "progress" => Progress::new(component.clone()).into_any_element(),
             "image" => Image::new(component.clone()).into_any_element(),
             "notification" => Notification::new(component.clone()).into_any_element(),
@@ -362,6 +487,76 @@ impl App {
             "area_chart" => AreaChart::new(component.clone()).into_any_element(),
             "pie_chart" => PieChart::new(component.clone()).into_any_element(),
             "candlestick_chart" => CandlestickChart::new(component.clone()).into_any_element(),
+            "accordion" => {
+                let acc_state = self.get_or_create_accordion_state(component);
+                Accordion::new(component.clone())
+                    .open_indices(acc_state)
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "alert" => Alert::new(component.clone()).into_any_element(),
+            "avatar" => Avatar::new(component.clone()).into_any_element(),
+            "badge" => {
+                let children = self.render_children(component, entity_id, window, cx);
+                Badge::new(component.clone())
+                    .children(children)
+                    .into_any_element()
+            }
+            "collapsible" => {
+                let children = self.render_children(component, entity_id, window, cx);
+                let initial_open = component.properties.get("open")
+                    .and_then(|v| v.as_bool()).unwrap_or(false);
+                let coll_state = self.get_or_create_bool_state(&component.id, initial_open);
+                Collapsible::new(component.clone())
+                    .open_state(coll_state)
+                    .children(children)
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "dropdown_button" => DropdownButton::new(component.clone()).into_any_element(),
+            "radio" => {
+                let options: Vec<String> = component.properties.get("options")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                    .unwrap_or_default();
+                let initial_val = component.properties.get("value")
+                    .and_then(|v| v.as_str());
+                let initial_ix = initial_val.and_then(|val| options.iter().position(|o| o == val));
+                let radio_state = self.get_or_create_selected_index(&component.id, initial_ix);
+                Radio::new(component.clone())
+                    .selected_index(radio_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "slider" => {
+                let slider_state = self.get_or_create_slider_state(component, window, cx);
+                Slider::new(component.clone())
+                    .slider_state(slider_state)
+                    .into_any_element()
+            }
+            "spinner" => Spinner::new(component.clone()).into_any_element(),
+            "switch" => {
+                let initial = component.properties.get("checked")
+                    .and_then(|v| v.as_bool()).unwrap_or(false);
+                let sw_state = self.get_or_create_bool_state(&component.id, initial);
+                Switch::new(component.clone())
+                    .checked_state(sw_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "tag" => Tag::new(component.clone()).into_any_element(),
+            "toggle" => {
+                let initial = component.properties.get("checked")
+                    .and_then(|v| v.as_bool()).unwrap_or(false);
+                let tog_state = self.get_or_create_bool_state(&component.id, initial);
+                Toggle::new(component.clone())
+                    .checked_state(tog_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
             _ => {
                 let children = self.render_children(component, entity_id, window, cx);
                 div()

@@ -17,7 +17,20 @@ let ALL_PAGES = [
     "page_table",
     "page_tree",
     "page_image",
-    "page_charts"
+    "page_charts",
+    "page_accordion",
+    "page_alert",
+    "page_avatar",
+    "page_badge",
+    "page_collapsible",
+    "page_dropdown_button",
+    "page_spinner",
+    "page_tag",
+    "page_tooltip",
+    "page_radio",
+    "page_slider",
+    "page_switch",
+    "page_toggle"
 ];
 
 // Navigation handler: hides all pages, shows the one matching the clicked button
@@ -39,6 +52,19 @@ fn on_nav(component_id, event_data) {
     set_component_property("page_tree", "visible", false);
     set_component_property("page_image", "visible", false);
     set_component_property("page_charts", "visible", false);
+    set_component_property("page_accordion", "visible", false);
+    set_component_property("page_alert", "visible", false);
+    set_component_property("page_avatar", "visible", false);
+    set_component_property("page_badge", "visible", false);
+    set_component_property("page_collapsible", "visible", false);
+    set_component_property("page_dropdown_button", "visible", false);
+    set_component_property("page_spinner", "visible", false);
+    set_component_property("page_tag", "visible", false);
+    set_component_property("page_tooltip", "visible", false);
+    set_component_property("page_radio", "visible", false);
+    set_component_property("page_slider", "visible", false);
+    set_component_property("page_switch", "visible", false);
+    set_component_property("page_toggle", "visible", false);
 
     // Derive page ID from nav button ID: "nav_button" -> "page_button"
     let page_id = replace(component_id, "nav_", "page_");

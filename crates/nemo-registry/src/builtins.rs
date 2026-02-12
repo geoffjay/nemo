@@ -12,6 +12,9 @@ pub fn register_builtin_components(registry: &ComponentRegistry) {
     // Layout components
     register_layout_components(registry);
 
+    // Basic components
+    register_basic_components(registry);
+
     // Input components
     register_input_components(registry);
 
@@ -91,6 +94,109 @@ fn register_layout_components(registry: &ComponentRegistry) {
     let _ = registry.register_component(tabs);
 }
 
+fn register_basic_components(registry: &ComponentRegistry) {
+    // Accordion
+    let mut accordion = ComponentDescriptor::new("accordion", ComponentCategory::Display);
+    accordion.metadata = ComponentMetadata {
+        display_name: "Accordion".to_string(),
+        description: "A collapsible accordion with multiple items".to_string(),
+        ..Default::default()
+    };
+    accordion.schema = ConfigSchema::new("accordion")
+        .property("items", PropertySchema::any())
+        .property("multiple", PropertySchema::boolean().with_default(false))
+        .property("bordered", PropertySchema::boolean().with_default(true));
+    let _ = registry.register_component(accordion);
+
+    // Alert
+    let mut alert = ComponentDescriptor::new("alert", ComponentCategory::Display);
+    alert.metadata = ComponentMetadata {
+        display_name: "Alert".to_string(),
+        description: "A status alert message".to_string(),
+        ..Default::default()
+    };
+    alert.schema = ConfigSchema::new("alert")
+        .property("message", PropertySchema::string())
+        .property("title", PropertySchema::string())
+        .property(
+            "variant",
+            PropertySchema::string().with_default("info"),
+        )
+        .require("message");
+    let _ = registry.register_component(alert);
+
+    // Avatar
+    let mut avatar = ComponentDescriptor::new("avatar", ComponentCategory::Display);
+    avatar.metadata = ComponentMetadata {
+        display_name: "Avatar".to_string(),
+        description: "A user avatar showing initials".to_string(),
+        ..Default::default()
+    };
+    avatar.schema = ConfigSchema::new("avatar")
+        .property("name", PropertySchema::string());
+    let _ = registry.register_component(avatar);
+
+    // Badge
+    let mut badge = ComponentDescriptor::new("badge", ComponentCategory::Display);
+    badge.metadata = ComponentMetadata {
+        display_name: "Badge".to_string(),
+        description: "A badge indicator with count or dot".to_string(),
+        ..Default::default()
+    };
+    badge.schema = ConfigSchema::new("badge")
+        .property("count", PropertySchema::integer())
+        .property("dot", PropertySchema::boolean().with_default(false));
+    let _ = registry.register_component(badge);
+
+    // Collapsible
+    let mut collapsible = ComponentDescriptor::new("collapsible", ComponentCategory::Display);
+    collapsible.metadata = ComponentMetadata {
+        display_name: "Collapsible".to_string(),
+        description: "A collapsible content section".to_string(),
+        ..Default::default()
+    };
+    collapsible.schema = ConfigSchema::new("collapsible")
+        .property("title", PropertySchema::string().with_default("Details"))
+        .property("open", PropertySchema::boolean().with_default(false));
+    let _ = registry.register_component(collapsible);
+
+    // Dropdown Button
+    let mut dropdown_button = ComponentDescriptor::new("dropdown_button", ComponentCategory::Display);
+    dropdown_button.metadata = ComponentMetadata {
+        display_name: "Dropdown Button".to_string(),
+        description: "A button with a dropdown menu indicator".to_string(),
+        ..Default::default()
+    };
+    dropdown_button.schema = ConfigSchema::new("dropdown_button")
+        .property("label", PropertySchema::string().with_default("Action"))
+        .property("variant", PropertySchema::string());
+    let _ = registry.register_component(dropdown_button);
+
+    // Spinner
+    let mut spinner = ComponentDescriptor::new("spinner", ComponentCategory::Display);
+    spinner.metadata = ComponentMetadata {
+        display_name: "Spinner".to_string(),
+        description: "A loading spinner indicator".to_string(),
+        ..Default::default()
+    };
+    spinner.schema = ConfigSchema::new("spinner")
+        .property("size", PropertySchema::string().with_default("md"));
+    let _ = registry.register_component(spinner);
+
+    // Tag
+    let mut tag = ComponentDescriptor::new("tag", ComponentCategory::Display);
+    tag.metadata = ComponentMetadata {
+        display_name: "Tag".to_string(),
+        description: "A small label tag".to_string(),
+        ..Default::default()
+    };
+    tag.schema = ConfigSchema::new("tag")
+        .property("label", PropertySchema::string().with_default("Tag"))
+        .property("variant", PropertySchema::string().with_default("secondary"))
+        .property("outline", PropertySchema::boolean().with_default(false));
+    let _ = registry.register_component(tag);
+}
+
 fn register_input_components(registry: &ComponentRegistry) {
     // Button
     let mut button = ComponentDescriptor::new("button", ComponentCategory::Input);
@@ -150,6 +256,60 @@ fn register_input_components(registry: &ComponentRegistry) {
         .property("options", PropertySchema::array(PropertySchema::string()))
         .property("value", PropertySchema::string());
     let _ = registry.register_component(select);
+
+    // Radio
+    let mut radio = ComponentDescriptor::new("radio", ComponentCategory::Input);
+    radio.metadata = ComponentMetadata {
+        display_name: "Radio".to_string(),
+        description: "A radio button group".to_string(),
+        ..Default::default()
+    };
+    radio.schema = ConfigSchema::new("radio")
+        .property("options", PropertySchema::array(PropertySchema::string()))
+        .property("value", PropertySchema::string())
+        .property("direction", PropertySchema::string().with_default("vertical"));
+    let _ = registry.register_component(radio);
+
+    // Slider
+    let mut slider = ComponentDescriptor::new("slider", ComponentCategory::Input);
+    slider.metadata = ComponentMetadata {
+        display_name: "Slider".to_string(),
+        description: "A range slider input".to_string(),
+        ..Default::default()
+    };
+    slider.schema = ConfigSchema::new("slider")
+        .property("min", PropertySchema::float().with_default(0.0))
+        .property("max", PropertySchema::float().with_default(100.0))
+        .property("step", PropertySchema::float().with_default(1.0))
+        .property("value", PropertySchema::float().with_default(0.0));
+    let _ = registry.register_component(slider);
+
+    // Switch
+    let mut switch = ComponentDescriptor::new("switch", ComponentCategory::Input);
+    switch.metadata = ComponentMetadata {
+        display_name: "Switch".to_string(),
+        description: "A toggle switch".to_string(),
+        ..Default::default()
+    };
+    switch.schema = ConfigSchema::new("switch")
+        .property("checked", PropertySchema::boolean().with_default(false))
+        .property("label", PropertySchema::string())
+        .property("disabled", PropertySchema::boolean().with_default(false));
+    let _ = registry.register_component(switch);
+
+    // Toggle
+    let mut toggle = ComponentDescriptor::new("toggle", ComponentCategory::Input);
+    toggle.metadata = ComponentMetadata {
+        display_name: "Toggle".to_string(),
+        description: "A toggle button".to_string(),
+        ..Default::default()
+    };
+    toggle.schema = ConfigSchema::new("toggle")
+        .property("checked", PropertySchema::boolean().with_default(false))
+        .property("label", PropertySchema::string())
+        .property("icon", PropertySchema::string())
+        .property("disabled", PropertySchema::boolean().with_default(false));
+    let _ = registry.register_component(toggle);
 }
 
 fn register_display_components(registry: &ComponentRegistry) {
@@ -640,6 +800,22 @@ mod tests {
         assert!(registry.has_component("button"));
         assert!(registry.has_component("label"));
         assert!(registry.has_component("table"));
+
+        // Verify basic components
+        assert!(registry.has_component("accordion"));
+        assert!(registry.has_component("alert"));
+        assert!(registry.has_component("avatar"));
+        assert!(registry.has_component("badge"));
+        assert!(registry.has_component("collapsible"));
+        assert!(registry.has_component("dropdown_button"));
+        assert!(registry.has_component("spinner"));
+        assert!(registry.has_component("tag"));
+
+        // Verify input components
+        assert!(registry.has_component("radio"));
+        assert!(registry.has_component("slider"));
+        assert!(registry.has_component("switch"));
+        assert!(registry.has_component("toggle"));
 
         // Verify chart components
         assert!(registry.has_component("line_chart"));

@@ -1,20 +1,45 @@
 use gpui::*;
-use nemo_macros::NemoComponent;
+use gpui_component::tooltip::Tooltip as GpuiTooltip;
+use nemo_layout::BuiltComponent;
 
-#[derive(IntoElement, NemoComponent)]
+#[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Tooltip {
-    #[property(default = "")]
-    content: String,
-    #[children]
+    source: BuiltComponent,
     children: Vec<AnyElement>,
+}
+
+impl Tooltip {
+    pub fn new(source: BuiltComponent) -> Self {
+        Self {
+            source,
+            children: Vec::new(),
+        }
+    }
+
+    pub fn children(mut self, children: Vec<AnyElement>) -> Self {
+        self.children = children;
+        self
+    }
 }
 
 impl RenderOnce for Tooltip {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        // Render children directly; full tooltip hover behavior requires
-        // gpui tooltip infrastructure which needs an entity context.
-        // This is a simple wrapper that renders children with a title attribute.
-        div().children(self.children)
+        let content = self
+            .source
+            .properties
+            .get("content")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let id = ElementId::Name(SharedString::from(self.source.id.clone()));
+
+        div()
+            .id(id)
+            .children(self.children)
+            .tooltip(move |window, cx| {
+                GpuiTooltip::new(SharedString::from(content.clone())).build(window, cx)
+            })
     }
 }

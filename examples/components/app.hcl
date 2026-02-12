@@ -43,6 +43,7 @@ layout {
         direction = "vertical"
         spacing = 4
         padding = 16
+        scroll = true
 
         component "sidebar_title" {
           type = "label"
@@ -141,6 +142,114 @@ layout {
           on_click = "on_nav"
         }
 
+        component "nav_accordion" {
+          type = "button"
+          label = "Accordion"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_alert" {
+          type = "button"
+          label = "Alert"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_avatar" {
+          type = "button"
+          label = "Avatar"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_badge" {
+          type = "button"
+          label = "Badge"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_collapsible" {
+          type = "button"
+          label = "Collapsible"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_dropdown_button" {
+          type = "button"
+          label = "Dropdown Button"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_spinner" {
+          type = "button"
+          label = "Spinner"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_tag" {
+          type = "button"
+          label = "Tag"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_tooltip" {
+          type = "button"
+          label = "Tooltip"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
         # ── Form ───────────────────────────────────────────────
         component "cat_form" {
           type = "label"
@@ -163,6 +272,54 @@ layout {
         component "nav_select" {
           type = "button"
           label = "Select"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_radio" {
+          type = "button"
+          label = "Radio"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_slider" {
+          type = "button"
+          label = "Slider"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_switch" {
+          type = "button"
+          label = "Switch"
+          variant = "ghost"
+          size = "sm"
+          text_color = "theme.muted_foreground"
+          full_width = true
+          align = "left"
+          padding_left = 2
+          on_click = "on_nav"
+        }
+
+        component "nav_toggle" {
+          type = "button"
+          label = "Toggle"
           variant = "ghost"
           size = "sm"
           text_color = "theme.muted_foreground"
@@ -1378,6 +1535,822 @@ layout {
               { date = "Thu", open = 111.0, high = 120.0, low = 108.0, close = 118.0 },
               { date = "Fri", open = 118.0, high = 122.0, low = 110.0, close = 112.0 }
             ]
+          }
+        }
+      }
+
+      # ── Accordion page ────────────────────────────────────
+      component "page_accordion" {
+        type = "panel"
+        visible = false
+
+        component "page_accordion_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "accordion_title" {
+            type = "label"
+            text = "Accordion"
+            size = "lg"
+          }
+
+          component "accordion_desc" {
+            type = "text"
+            content = "Accordions show collapsible content sections. Supports multiple open items and bordered styles."
+          }
+
+          component "accordion_section_basic" {
+            type = "label"
+            text = "Basic Accordion"
+            size = "sm"
+          }
+
+          component "accordion_demo" {
+            type = "accordion"
+            items = [
+              { title = "What is Nemo?", content = "Nemo is a GPUI desktop application framework configured with HCL.", open = true },
+              { title = "How do I get started?", content = "Create an app.hcl file and define your layout with components." },
+              { title = "Can I use custom themes?", content = "Yes, Nemo supports theme configuration via the app.theme block." }
+            ]
+          }
+
+          component "accordion_section_multi" {
+            type = "label"
+            text = "Multiple Open (no border)"
+            size = "sm"
+          }
+
+          component "accordion_multi" {
+            type = "accordion"
+            multiple = true
+            bordered = false
+            items = [
+              { title = "Section A", content = "Content for section A.", open = true },
+              { title = "Section B", content = "Content for section B.", open = true },
+              { title = "Section C", content = "Content for section C." }
+            ]
+          }
+        }
+      }
+
+      # ── Alert page ────────────────────────────────────────
+      component "page_alert" {
+        type = "panel"
+        visible = false
+
+        component "page_alert_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "alert_title" {
+            type = "label"
+            text = "Alert"
+            size = "lg"
+          }
+
+          component "alert_desc" {
+            type = "text"
+            content = "Alerts display important messages. Variants: info, success, warning, error."
+          }
+
+          component "alert_section_variants" {
+            type = "label"
+            text = "Variants"
+            size = "sm"
+          }
+
+          component "alert_info" {
+            type = "alert"
+            title = "Information"
+            message = "This is an informational alert message."
+            variant = "info"
+          }
+
+          component "alert_success" {
+            type = "alert"
+            title = "Success"
+            message = "The operation completed successfully."
+            variant = "success"
+          }
+
+          component "alert_warning" {
+            type = "alert"
+            title = "Warning"
+            message = "Please review the changes before continuing."
+            variant = "warning"
+          }
+
+          component "alert_error" {
+            type = "alert"
+            title = "Error"
+            message = "Something went wrong. Please try again."
+            variant = "error"
+          }
+        }
+      }
+
+      # ── Avatar page ───────────────────────────────────────
+      component "page_avatar" {
+        type = "panel"
+        visible = false
+
+        component "page_avatar_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "avatar_title" {
+            type = "label"
+            text = "Avatar"
+            size = "lg"
+          }
+
+          component "avatar_desc" {
+            type = "text"
+            content = "Avatars display user initials. Provide a name to generate initials automatically."
+          }
+
+          component "avatar_section_examples" {
+            type = "label"
+            text = "Examples"
+            size = "sm"
+          }
+
+          component "avatar_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 12
+
+            component "avatar_alice" {
+              type = "avatar"
+              name = "Alice Johnson"
+            }
+
+            component "avatar_bob" {
+              type = "avatar"
+              name = "Bob Smith"
+            }
+
+            component "avatar_carol" {
+              type = "avatar"
+              name = "Carol White"
+            }
+
+            component "avatar_dave" {
+              type = "avatar"
+              name = "Dave Brown"
+            }
+          }
+        }
+      }
+
+      # ── Badge page ────────────────────────────────────────
+      component "page_badge" {
+        type = "panel"
+        visible = false
+
+        component "page_badge_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "badge_title" {
+            type = "label"
+            text = "Badge"
+            size = "lg"
+          }
+
+          component "badge_desc" {
+            type = "text"
+            content = "Badges show notification counts or dot indicators on child elements."
+          }
+
+          component "badge_section_count" {
+            type = "label"
+            text = "Count Badge"
+            size = "sm"
+          }
+
+          component "badge_count_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 16
+
+            component "badge_count_demo" {
+              type = "badge"
+              count = 5
+
+              component "badge_count_btn" {
+                type = "button"
+                label = "Notifications"
+                variant = "secondary"
+              }
+            }
+
+            component "badge_count_large" {
+              type = "badge"
+              count = 99
+
+              component "badge_count_large_btn" {
+                type = "button"
+                label = "Messages"
+                variant = "secondary"
+              }
+            }
+          }
+
+          component "badge_section_dot" {
+            type = "label"
+            text = "Dot Badge"
+            size = "sm"
+          }
+
+          component "badge_dot_demo" {
+            type = "badge"
+            dot = true
+
+            component "badge_dot_btn" {
+              type = "button"
+              label = "Updates"
+              variant = "secondary"
+            }
+          }
+        }
+      }
+
+      # ── Collapsible page ──────────────────────────────────
+      component "page_collapsible" {
+        type = "panel"
+        visible = false
+
+        component "page_collapsible_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "collapsible_title" {
+            type = "label"
+            text = "Collapsible"
+            size = "lg"
+          }
+
+          component "collapsible_desc" {
+            type = "text"
+            content = "Collapsible sections expand and collapse to reveal child content."
+          }
+
+          component "collapsible_section_examples" {
+            type = "label"
+            text = "Examples"
+            size = "sm"
+          }
+
+          component "collapsible_open" {
+            type = "collapsible"
+            title = "Click to collapse"
+            open = true
+
+            component "collapsible_open_content" {
+              type = "text"
+              content = "This content is visible by default because open = true."
+            }
+          }
+
+          component "collapsible_closed" {
+            type = "collapsible"
+            title = "Click to expand"
+            open = false
+
+            component "collapsible_closed_content" {
+              type = "text"
+              content = "This content is hidden by default and will show when expanded."
+            }
+          }
+        }
+      }
+
+      # ── Dropdown Button page ──────────────────────────────
+      component "page_dropdown_button" {
+        type = "panel"
+        visible = false
+
+        component "page_dropdown_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "dropdown_title" {
+            type = "label"
+            text = "Dropdown Button"
+            size = "lg"
+          }
+
+          component "dropdown_desc" {
+            type = "text"
+            content = "Dropdown buttons combine a button with a dropdown menu indicator."
+          }
+
+          component "dropdown_section_variants" {
+            type = "label"
+            text = "Variants"
+            size = "sm"
+          }
+
+          component "dropdown_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 8
+
+            component "dropdown_default" {
+              type = "dropdown_button"
+              label = "Actions"
+              items = ["Copy", "Paste", "Cut"]
+            }
+
+            component "dropdown_primary" {
+              type = "dropdown_button"
+              label = "Save"
+              variant = "primary"
+              items = ["Save as Draft", "Save and Publish", "Save as Template"]
+            }
+
+            component "dropdown_danger" {
+              type = "dropdown_button"
+              label = "Delete"
+              variant = "danger"
+              items = ["Move to Trash", "Delete Permanently"]
+            }
+          }
+        }
+      }
+
+      # ── Spinner page ──────────────────────────────────────
+      component "page_spinner" {
+        type = "panel"
+        visible = false
+
+        component "page_spinner_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "spinner_title" {
+            type = "label"
+            text = "Spinner"
+            size = "lg"
+          }
+
+          component "spinner_desc" {
+            type = "text"
+            content = "Spinners indicate loading state. Available sizes: xs, sm, md (default), lg."
+          }
+
+          component "spinner_section_sizes" {
+            type = "label"
+            text = "Sizes"
+            size = "sm"
+          }
+
+          component "spinner_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 24
+
+            component "spinner_xs" {
+              type = "spinner"
+              size = "xs"
+            }
+
+            component "spinner_sm" {
+              type = "spinner"
+              size = "sm"
+            }
+
+            component "spinner_md" {
+              type = "spinner"
+            }
+
+            component "spinner_lg" {
+              type = "spinner"
+              size = "lg"
+            }
+          }
+        }
+      }
+
+      # ── Tag page ──────────────────────────────────────────
+      component "page_tag" {
+        type = "panel"
+        visible = false
+
+        component "page_tag_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "tag_title" {
+            type = "label"
+            text = "Tag"
+            size = "lg"
+          }
+
+          component "tag_desc" {
+            type = "text"
+            content = "Tags are small labels for categorization. Variants: primary, secondary, danger, success, warning, info."
+          }
+
+          component "tag_section_filled" {
+            type = "label"
+            text = "Filled Tags"
+            size = "sm"
+          }
+
+          component "tag_filled_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 8
+
+            component "tag_primary" {
+              type = "tag"
+              label = "Primary"
+              variant = "primary"
+            }
+
+            component "tag_secondary" {
+              type = "tag"
+              label = "Secondary"
+              variant = "secondary"
+            }
+
+            component "tag_danger" {
+              type = "tag"
+              label = "Danger"
+              variant = "danger"
+            }
+
+            component "tag_success" {
+              type = "tag"
+              label = "Success"
+              variant = "success"
+            }
+
+            component "tag_warning" {
+              type = "tag"
+              label = "Warning"
+              variant = "warning"
+            }
+
+            component "tag_info" {
+              type = "tag"
+              label = "Info"
+              variant = "info"
+            }
+          }
+
+          component "tag_section_outline" {
+            type = "label"
+            text = "Outline Tags"
+            size = "sm"
+          }
+
+          component "tag_outline_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 8
+
+            component "tag_outline_primary" {
+              type = "tag"
+              label = "Primary"
+              variant = "primary"
+              outline = true
+            }
+
+            component "tag_outline_danger" {
+              type = "tag"
+              label = "Danger"
+              variant = "danger"
+              outline = true
+            }
+
+            component "tag_outline_success" {
+              type = "tag"
+              label = "Success"
+              variant = "success"
+              outline = true
+            }
+          }
+        }
+      }
+
+      # ── Tooltip page ──────────────────────────────────────
+      component "page_tooltip" {
+        type = "panel"
+        visible = false
+
+        component "page_tooltip_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "tooltip_title" {
+            type = "label"
+            text = "Tooltip"
+            size = "lg"
+          }
+
+          component "tooltip_desc" {
+            type = "text"
+            content = "Tooltips show additional information on hover."
+          }
+
+          component "tooltip_section_examples" {
+            type = "label"
+            text = "Hover the buttons below"
+            size = "sm"
+          }
+
+          component "tooltip_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 8
+
+            component "tooltip_demo1" {
+              type = "tooltip"
+              content = "This is a helpful tooltip"
+
+              component "tooltip_btn1" {
+                type = "button"
+                label = "Hover me"
+                variant = "primary"
+              }
+            }
+
+            component "tooltip_demo2" {
+              type = "tooltip"
+              content = "Another tooltip with more info"
+
+              component "tooltip_btn2" {
+                type = "button"
+                label = "More info"
+                variant = "secondary"
+              }
+            }
+          }
+        }
+      }
+
+      # ── Radio page ────────────────────────────────────────
+      component "page_radio" {
+        type = "panel"
+        visible = false
+
+        component "page_radio_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "radio_title" {
+            type = "label"
+            text = "Radio"
+            size = "lg"
+          }
+
+          component "radio_desc" {
+            type = "text"
+            content = "Radio groups allow selecting one option from a set. Support vertical and horizontal layouts."
+          }
+
+          component "radio_section_vertical" {
+            type = "label"
+            text = "Vertical (default)"
+            size = "sm"
+          }
+
+          component "radio_vertical" {
+            type = "radio"
+            options = ["Option A", "Option B", "Option C"]
+            value = "Option A"
+          }
+
+          component "radio_section_horizontal" {
+            type = "label"
+            text = "Horizontal"
+            size = "sm"
+          }
+
+          component "radio_horizontal" {
+            type = "radio"
+            options = ["Small", "Medium", "Large"]
+            value = "Medium"
+            direction = "horizontal"
+          }
+        }
+      }
+
+      # ── Slider page ───────────────────────────────────────
+      component "page_slider" {
+        type = "panel"
+        visible = false
+
+        component "page_slider_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "slider_title" {
+            type = "label"
+            text = "Slider"
+            size = "lg"
+          }
+
+          component "slider_desc" {
+            type = "text"
+            content = "Sliders allow selecting a numeric value within a range. Supports min, max, step, and default value."
+          }
+
+          component "slider_section_basic" {
+            type = "label"
+            text = "Basic Slider (0-100)"
+            size = "sm"
+          }
+
+          component "slider_basic" {
+            type = "slider"
+            min = 0
+            max = 100
+            step = 1
+            value = 50
+          }
+
+          component "slider_section_fine" {
+            type = "label"
+            text = "Fine Step (0-1, step 0.1)"
+            size = "sm"
+          }
+
+          component "slider_fine" {
+            type = "slider"
+            min = 0.0
+            max = 1.0
+            step = 0.1
+            value = 0.5
+          }
+        }
+      }
+
+      # ── Switch page ───────────────────────────────────────
+      component "page_switch" {
+        type = "panel"
+        visible = false
+
+        component "page_switch_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "switch_title" {
+            type = "label"
+            text = "Switch"
+            size = "lg"
+          }
+
+          component "switch_desc" {
+            type = "text"
+            content = "Switches toggle boolean state, similar to checkboxes but with a sliding visual style."
+          }
+
+          component "switch_section_states" {
+            type = "label"
+            text = "States"
+            size = "sm"
+          }
+
+          component "switch_off" {
+            type = "switch"
+            label = "Off by default"
+            checked = false
+          }
+
+          component "switch_on" {
+            type = "switch"
+            label = "On by default"
+            checked = true
+          }
+
+          component "switch_disabled" {
+            type = "switch"
+            label = "Disabled switch"
+            checked = false
+            disabled = true
+          }
+
+          component "switch_disabled_on" {
+            type = "switch"
+            label = "Disabled (on)"
+            checked = true
+            disabled = true
+          }
+        }
+      }
+
+      # ── Toggle page ───────────────────────────────────────
+      component "page_toggle" {
+        type = "panel"
+        visible = false
+
+        component "page_toggle_inner" {
+          type = "stack"
+          direction = "vertical"
+          spacing = 12
+          padding = 32
+
+          component "toggle_title" {
+            type = "label"
+            text = "Toggle"
+            size = "lg"
+          }
+
+          component "toggle_desc" {
+            type = "text"
+            content = "Toggle buttons switch between on/off states. Support labels and icons."
+          }
+
+          component "toggle_section_basic" {
+            type = "label"
+            text = "Basic Toggles"
+            size = "sm"
+          }
+
+          component "toggle_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 8
+
+            component "toggle_off" {
+              type = "toggle"
+              label = "Off"
+              checked = false
+            }
+
+            component "toggle_on" {
+              type = "toggle"
+              label = "On"
+              checked = true
+            }
+
+            component "toggle_disabled" {
+              type = "toggle"
+              label = "Disabled"
+              checked = false
+              disabled = true
+            }
+          }
+
+          component "toggle_section_icons" {
+            type = "label"
+            text = "With Icons"
+            size = "sm"
+          }
+
+          component "toggle_icon_row" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 8
+
+            component "toggle_star" {
+              type = "toggle"
+              label = "Star"
+              icon = "star"
+              checked = false
+            }
+
+            component "toggle_heart" {
+              type = "toggle"
+              label = "Heart"
+              icon = "heart"
+              checked = true
+            }
+
+            component "toggle_bell" {
+              type = "toggle"
+              label = "Bell"
+              icon = "bell"
+              checked = false
+            }
           }
         }
       }

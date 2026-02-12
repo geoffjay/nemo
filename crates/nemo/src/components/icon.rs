@@ -8,7 +8,7 @@ pub struct Icon {
     name: String,
 }
 
-fn map_icon_name(name: &str) -> IconName {
+pub(crate) fn map_icon_name(name: &str) -> IconName {
     match name {
         "arrow-down" => IconName::ArrowDown,
         "arrow-left" => IconName::ArrowLeft,
