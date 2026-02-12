@@ -40,10 +40,18 @@ impl RenderOnce for Stack {
             .gap(gap);
         base = if is_horizontal {
             let b = base.flex_row();
-            if scroll { b.overflow_x_scroll() } else { b }
+            if scroll {
+                b.overflow_x_scroll()
+            } else {
+                b
+            }
         } else {
             let b = base.flex_col();
-            if scroll { b.overflow_y_scroll() } else { b }
+            if scroll {
+                b.overflow_y_scroll()
+            } else {
+                b
+            }
         };
 
         if let Some(p) = self.padding {

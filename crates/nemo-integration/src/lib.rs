@@ -291,8 +291,10 @@ mod tests {
     #[tokio::test]
     async fn test_register_multiple_http_clients() {
         let gw = IntegrationGateway::new();
-        gw.register_http("api1", HttpClient::with_base_url("https://a.com")).await;
-        gw.register_http("api2", HttpClient::with_base_url("https://b.com")).await;
+        gw.register_http("api1", HttpClient::with_base_url("https://a.com"))
+            .await;
+        gw.register_http("api2", HttpClient::with_base_url("https://b.com"))
+            .await;
 
         let clients = gw.list_http_clients().await;
         assert_eq!(clients.len(), 2);
@@ -305,8 +307,10 @@ mod tests {
     #[tokio::test]
     async fn test_overwrite_http_client() {
         let gw = IntegrationGateway::new();
-        gw.register_http("api", HttpClient::with_base_url("https://old.com")).await;
-        gw.register_http("api", HttpClient::with_base_url("https://new.com")).await;
+        gw.register_http("api", HttpClient::with_base_url("https://old.com"))
+            .await;
+        gw.register_http("api", HttpClient::with_base_url("https://new.com"))
+            .await;
 
         let clients = gw.list_http_clients().await;
         assert_eq!(clients.len(), 1);

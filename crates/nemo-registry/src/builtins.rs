@@ -39,17 +39,26 @@ pub fn register_builtin_components(registry: &ComponentRegistry) {
 
 fn register_layout_components(registry: &ComponentRegistry) {
     reg(
-        registry, "dock", ComponentCategory::Layout,
-        "Dock Area", "A dockable layout container with panels",
+        registry,
+        "dock",
+        ComponentCategory::Layout,
+        "Dock Area",
+        "A dockable layout container with panels",
         ConfigSchema::new("dock")
             .property("position", PropertySchema::string().with_default("center")),
     );
 
     reg(
-        registry, "stack", ComponentCategory::Layout,
-        "Stack", "Vertical or horizontal stack layout",
+        registry,
+        "stack",
+        ComponentCategory::Layout,
+        "Stack",
+        "Vertical or horizontal stack layout",
         ConfigSchema::new("stack")
-            .property("direction", PropertySchema::string().with_default("vertical"))
+            .property(
+                "direction",
+                PropertySchema::string().with_default("vertical"),
+            )
             .property("spacing", PropertySchema::integer().with_default(0i64))
             .property("width", PropertySchema::integer())
             .property("height", PropertySchema::integer())
@@ -62,8 +71,11 @@ fn register_layout_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "panel", ComponentCategory::Layout,
-        "Panel", "A generic container panel",
+        registry,
+        "panel",
+        ComponentCategory::Layout,
+        "Panel",
+        "A generic container panel",
         ConfigSchema::new("panel")
             .property("title", PropertySchema::string())
             .property("width", PropertySchema::integer())
@@ -76,16 +88,22 @@ fn register_layout_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "tabs", ComponentCategory::Layout,
-        "Tabs", "Tabbed container",
+        registry,
+        "tabs",
+        ComponentCategory::Layout,
+        "Tabs",
+        "Tabbed container",
         ConfigSchema::new("tabs"),
     );
 }
 
 fn register_basic_components(registry: &ComponentRegistry) {
     reg(
-        registry, "accordion", ComponentCategory::Display,
-        "Accordion", "A collapsible accordion with multiple items",
+        registry,
+        "accordion",
+        ComponentCategory::Display,
+        "Accordion",
+        "A collapsible accordion with multiple items",
         ConfigSchema::new("accordion")
             .property("items", PropertySchema::any())
             .property("multiple", PropertySchema::boolean().with_default(false))
@@ -93,8 +111,11 @@ fn register_basic_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "alert", ComponentCategory::Display,
-        "Alert", "A status alert message",
+        registry,
+        "alert",
+        ComponentCategory::Display,
+        "Alert",
+        "A status alert message",
         ConfigSchema::new("alert")
             .property("message", PropertySchema::string())
             .property("title", PropertySchema::string())
@@ -103,49 +124,68 @@ fn register_basic_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "avatar", ComponentCategory::Display,
-        "Avatar", "A user avatar showing initials",
-        ConfigSchema::new("avatar")
-            .property("name", PropertySchema::string()),
+        registry,
+        "avatar",
+        ComponentCategory::Display,
+        "Avatar",
+        "A user avatar showing initials",
+        ConfigSchema::new("avatar").property("name", PropertySchema::string()),
     );
 
     reg(
-        registry, "badge", ComponentCategory::Display,
-        "Badge", "A badge indicator with count or dot",
+        registry,
+        "badge",
+        ComponentCategory::Display,
+        "Badge",
+        "A badge indicator with count or dot",
         ConfigSchema::new("badge")
             .property("count", PropertySchema::integer())
             .property("dot", PropertySchema::boolean().with_default(false)),
     );
 
     reg(
-        registry, "collapsible", ComponentCategory::Display,
-        "Collapsible", "A collapsible content section",
+        registry,
+        "collapsible",
+        ComponentCategory::Display,
+        "Collapsible",
+        "A collapsible content section",
         ConfigSchema::new("collapsible")
             .property("title", PropertySchema::string().with_default("Details"))
             .property("open", PropertySchema::boolean().with_default(false)),
     );
 
     reg(
-        registry, "dropdown_button", ComponentCategory::Display,
-        "Dropdown Button", "A button with a dropdown menu indicator",
+        registry,
+        "dropdown_button",
+        ComponentCategory::Display,
+        "Dropdown Button",
+        "A button with a dropdown menu indicator",
         ConfigSchema::new("dropdown_button")
             .property("label", PropertySchema::string().with_default("Action"))
             .property("variant", PropertySchema::string()),
     );
 
     reg(
-        registry, "spinner", ComponentCategory::Display,
-        "Spinner", "A loading spinner indicator",
-        ConfigSchema::new("spinner")
-            .property("size", PropertySchema::string().with_default("md")),
+        registry,
+        "spinner",
+        ComponentCategory::Display,
+        "Spinner",
+        "A loading spinner indicator",
+        ConfigSchema::new("spinner").property("size", PropertySchema::string().with_default("md")),
     );
 
     reg(
-        registry, "tag", ComponentCategory::Display,
-        "Tag", "A small label tag",
+        registry,
+        "tag",
+        ComponentCategory::Display,
+        "Tag",
+        "A small label tag",
         ConfigSchema::new("tag")
             .property("label", PropertySchema::string().with_default("Tag"))
-            .property("variant", PropertySchema::string().with_default("secondary"))
+            .property(
+                "variant",
+                PropertySchema::string().with_default("secondary"),
+            )
             .property("outline", PropertySchema::boolean().with_default(false)),
     );
 }
@@ -174,8 +214,11 @@ fn register_input_components(registry: &ComponentRegistry) {
     let _ = registry.register_component(button);
 
     reg(
-        registry, "input", ComponentCategory::Input,
-        "Text Input", "A text input field",
+        registry,
+        "input",
+        ComponentCategory::Input,
+        "Text Input",
+        "A text input field",
         ConfigSchema::new("input")
             .property("placeholder", PropertySchema::string())
             .property("value", PropertySchema::string())
@@ -183,33 +226,48 @@ fn register_input_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "checkbox", ComponentCategory::Input,
-        "Checkbox", "A checkbox input",
+        registry,
+        "checkbox",
+        ComponentCategory::Input,
+        "Checkbox",
+        "A checkbox input",
         ConfigSchema::new("checkbox")
             .property("label", PropertySchema::string())
             .property("checked", PropertySchema::boolean().with_default(false)),
     );
 
     reg(
-        registry, "select", ComponentCategory::Input,
-        "Select", "A dropdown select input",
+        registry,
+        "select",
+        ComponentCategory::Input,
+        "Select",
+        "A dropdown select input",
         ConfigSchema::new("select")
             .property("options", PropertySchema::array(PropertySchema::string()))
             .property("value", PropertySchema::string()),
     );
 
     reg(
-        registry, "radio", ComponentCategory::Input,
-        "Radio", "A radio button group",
+        registry,
+        "radio",
+        ComponentCategory::Input,
+        "Radio",
+        "A radio button group",
         ConfigSchema::new("radio")
             .property("options", PropertySchema::array(PropertySchema::string()))
             .property("value", PropertySchema::string())
-            .property("direction", PropertySchema::string().with_default("vertical")),
+            .property(
+                "direction",
+                PropertySchema::string().with_default("vertical"),
+            ),
     );
 
     reg(
-        registry, "slider", ComponentCategory::Input,
-        "Slider", "A range slider input",
+        registry,
+        "slider",
+        ComponentCategory::Input,
+        "Slider",
+        "A range slider input",
         ConfigSchema::new("slider")
             .property("min", PropertySchema::float().with_default(0.0))
             .property("max", PropertySchema::float().with_default(100.0))
@@ -218,8 +276,11 @@ fn register_input_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "switch", ComponentCategory::Input,
-        "Switch", "A toggle switch",
+        registry,
+        "switch",
+        ComponentCategory::Input,
+        "Switch",
+        "A toggle switch",
         ConfigSchema::new("switch")
             .property("checked", PropertySchema::boolean().with_default(false))
             .property("label", PropertySchema::string())
@@ -227,8 +288,11 @@ fn register_input_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "toggle", ComponentCategory::Input,
-        "Toggle", "A toggle button",
+        registry,
+        "toggle",
+        ComponentCategory::Input,
+        "Toggle",
+        "A toggle button",
         ConfigSchema::new("toggle")
             .property("checked", PropertySchema::boolean().with_default(false))
             .property("label", PropertySchema::string())
@@ -239,8 +303,11 @@ fn register_input_components(registry: &ComponentRegistry) {
 
 fn register_display_components(registry: &ComponentRegistry) {
     reg(
-        registry, "label", ComponentCategory::Display,
-        "Label", "A text label",
+        registry,
+        "label",
+        ComponentCategory::Display,
+        "Label",
+        "A text label",
         ConfigSchema::new("label")
             .property("text", PropertySchema::string())
             .property("size", PropertySchema::string().with_default("md"))
@@ -248,8 +315,11 @@ fn register_display_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "icon", ComponentCategory::Display,
-        "Icon", "An icon display",
+        registry,
+        "icon",
+        ComponentCategory::Display,
+        "Icon",
+        "An icon display",
         ConfigSchema::new("icon")
             .property("name", PropertySchema::string())
             .property("size", PropertySchema::integer().with_default(16i64))
@@ -257,24 +327,33 @@ fn register_display_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "image", ComponentCategory::Display,
-        "Image", "An image display",
+        registry,
+        "image",
+        ComponentCategory::Display,
+        "Image",
+        "An image display",
         ConfigSchema::new("image")
             .property("src", PropertySchema::string())
             .property("alt", PropertySchema::string()),
     );
 
     reg(
-        registry, "text", ComponentCategory::Display,
-        "Text", "A text content block",
+        registry,
+        "text",
+        ComponentCategory::Display,
+        "Text",
+        "A text content block",
         ConfigSchema::new("text")
             .property("content", PropertySchema::string())
             .require("content"),
     );
 
     reg(
-        registry, "progress", ComponentCategory::Display,
-        "Progress", "A progress indicator",
+        registry,
+        "progress",
+        ComponentCategory::Display,
+        "Progress",
+        "A progress indicator",
         ConfigSchema::new("progress")
             .property("value", PropertySchema::float())
             .property("max", PropertySchema::float().with_default(100.0)),
@@ -283,47 +362,63 @@ fn register_display_components(registry: &ComponentRegistry) {
 
 fn register_data_components(registry: &ComponentRegistry) {
     reg(
-        registry, "table", ComponentCategory::Data,
-        "Table", "A data table",
+        registry,
+        "table",
+        ComponentCategory::Data,
+        "Table",
+        "A data table",
         ConfigSchema::new("table")
             .property("data", PropertySchema::any())
-            .property("columns", PropertySchema::array(PropertySchema::object(
-                ConfigSchema::new("column")
-                    .property("key", PropertySchema::string())
-                    .property("label", PropertySchema::string())
-                    .property("width", PropertySchema::integer()),
-            )))
+            .property(
+                "columns",
+                PropertySchema::array(PropertySchema::object(
+                    ConfigSchema::new("column")
+                        .property("key", PropertySchema::string())
+                        .property("label", PropertySchema::string())
+                        .property("width", PropertySchema::integer()),
+                )),
+            )
             .property("stripe", PropertySchema::boolean().with_default(false))
             .property("bordered", PropertySchema::boolean().with_default(true)),
     );
 
     reg(
-        registry, "list", ComponentCategory::Data,
-        "List", "A data list",
-        ConfigSchema::new("list")
-            .property("items", PropertySchema::array(PropertySchema::any())),
+        registry,
+        "list",
+        ComponentCategory::Data,
+        "List",
+        "A data list",
+        ConfigSchema::new("list").property("items", PropertySchema::array(PropertySchema::any())),
     );
 
     reg(
-        registry, "tree", ComponentCategory::Data,
-        "Tree", "A tree view",
-        ConfigSchema::new("tree")
-            .property("items", PropertySchema::array(PropertySchema::any())),
+        registry,
+        "tree",
+        ComponentCategory::Data,
+        "Tree",
+        "A tree view",
+        ConfigSchema::new("tree").property("items", PropertySchema::array(PropertySchema::any())),
     );
 }
 
 fn register_feedback_components(registry: &ComponentRegistry) {
     reg(
-        registry, "modal", ComponentCategory::Feedback,
-        "Modal", "A modal dialog",
+        registry,
+        "modal",
+        ComponentCategory::Feedback,
+        "Modal",
+        "A modal dialog",
         ConfigSchema::new("modal")
             .property("title", PropertySchema::string())
             .property("open", PropertySchema::boolean().with_default(false)),
     );
 
     reg(
-        registry, "notification", ComponentCategory::Feedback,
-        "Notification", "A notification toast",
+        registry,
+        "notification",
+        ComponentCategory::Feedback,
+        "Notification",
+        "A notification toast",
         ConfigSchema::new("notification")
             .property("message", PropertySchema::string())
             .property("kind", PropertySchema::string().with_default("info"))
@@ -331,8 +426,11 @@ fn register_feedback_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "tooltip", ComponentCategory::Feedback,
-        "Tooltip", "A tooltip popup",
+        registry,
+        "tooltip",
+        ComponentCategory::Feedback,
+        "Tooltip",
+        "A tooltip popup",
         ConfigSchema::new("tooltip")
             .property("content", PropertySchema::string())
             .require("content"),
@@ -341,8 +439,11 @@ fn register_feedback_components(registry: &ComponentRegistry) {
 
 fn register_chart_components(registry: &ComponentRegistry) {
     reg(
-        registry, "line_chart", ComponentCategory::Charts,
-        "Line Chart", "A line chart visualization",
+        registry,
+        "line_chart",
+        ComponentCategory::Charts,
+        "Line Chart",
+        "A line chart visualization",
         ConfigSchema::new("line_chart")
             .property("x_field", PropertySchema::string())
             .property("y_field", PropertySchema::string())
@@ -355,8 +456,11 @@ fn register_chart_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "bar_chart", ComponentCategory::Charts,
-        "Bar Chart", "A bar chart visualization",
+        registry,
+        "bar_chart",
+        ComponentCategory::Charts,
+        "Bar Chart",
+        "A bar chart visualization",
         ConfigSchema::new("bar_chart")
             .property("x_field", PropertySchema::string())
             .property("y_field", PropertySchema::string())
@@ -368,8 +472,11 @@ fn register_chart_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "area_chart", ComponentCategory::Charts,
-        "Area Chart", "A stacked area chart visualization",
+        registry,
+        "area_chart",
+        ComponentCategory::Charts,
+        "Area Chart",
+        "A stacked area chart visualization",
         ConfigSchema::new("area_chart")
             .property("x_field", PropertySchema::string())
             .property("y_fields", PropertySchema::array(PropertySchema::string()))
@@ -381,8 +488,11 @@ fn register_chart_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "pie_chart", ComponentCategory::Charts,
-        "Pie Chart", "A pie or donut chart visualization",
+        registry,
+        "pie_chart",
+        ComponentCategory::Charts,
+        "Pie Chart",
+        "A pie or donut chart visualization",
         ConfigSchema::new("pie_chart")
             .property("value_field", PropertySchema::string())
             .property("data", PropertySchema::any())
@@ -392,8 +502,11 @@ fn register_chart_components(registry: &ComponentRegistry) {
     );
 
     reg(
-        registry, "candlestick_chart", ComponentCategory::Charts,
-        "Candlestick Chart", "An OHLC candlestick chart for financial data",
+        registry,
+        "candlestick_chart",
+        ComponentCategory::Charts,
+        "Candlestick Chart",
+        "An OHLC candlestick chart for financial data",
         ConfigSchema::new("candlestick_chart")
             .property("x_field", PropertySchema::string())
             .property("open_field", PropertySchema::string())
@@ -416,7 +529,8 @@ pub fn register_builtin_data_sources(registry: &ComponentRegistry) {
     http.metadata = DataSourceMetadata {
         display_name: "HTTP".into(),
         description: "Fetch data from HTTP endpoints".into(),
-        supports_polling: true, supports_manual_refresh: true,
+        supports_polling: true,
+        supports_manual_refresh: true,
         ..Default::default()
     };
     http.schema = ConfigSchema::new("http")
@@ -430,7 +544,8 @@ pub fn register_builtin_data_sources(registry: &ComponentRegistry) {
     ws.metadata = DataSourceMetadata {
         display_name: "WebSocket".into(),
         description: "Stream data from WebSocket connections".into(),
-        supports_streaming: true, supports_manual_refresh: true,
+        supports_streaming: true,
+        supports_manual_refresh: true,
         ..Default::default()
     };
     ws.schema = ConfigSchema::new("websocket")
@@ -442,7 +557,8 @@ pub fn register_builtin_data_sources(registry: &ComponentRegistry) {
     timer.metadata = DataSourceMetadata {
         display_name: "Timer".into(),
         description: "Generate events at intervals".into(),
-        supports_polling: true, supports_manual_refresh: true,
+        supports_polling: true,
+        supports_manual_refresh: true,
         ..Default::default()
     };
     timer.schema = ConfigSchema::new("timer")
@@ -454,7 +570,8 @@ pub fn register_builtin_data_sources(registry: &ComponentRegistry) {
     file.metadata = DataSourceMetadata {
         display_name: "File".into(),
         description: "Read data from files".into(),
-        supports_polling: true, supports_manual_refresh: true,
+        supports_polling: true,
+        supports_manual_refresh: true,
         ..Default::default()
     };
     file.schema = ConfigSchema::new("file")
@@ -467,26 +584,79 @@ pub fn register_builtin_data_sources(registry: &ComponentRegistry) {
 /// Registers all built-in transforms.
 pub fn register_builtin_transforms(registry: &ComponentRegistry) {
     let transforms: &[(&str, &str, &str, TransformMetadata, ConfigSchema)] = &[
-        ("map", "Map", "Transform each item", TransformMetadata {
-            display_name: "Map".into(), description: "Transform each item".into(),
-            preserves_order: true, ..Default::default()
-        }, ConfigSchema::new("map").property("expression", PropertySchema::string()).require("expression")),
-        ("filter", "Filter", "Filter items by condition", TransformMetadata {
-            display_name: "Filter".into(), description: "Filter items by condition".into(),
-            preserves_order: true, may_filter: true, ..Default::default()
-        }, ConfigSchema::new("filter").property("condition", PropertySchema::string()).require("condition")),
-        ("select", "Select", "Select specific fields", TransformMetadata {
-            display_name: "Select".into(), description: "Select specific fields".into(),
-            preserves_order: true, ..Default::default()
-        }, ConfigSchema::new("select").property("fields", PropertySchema::array(PropertySchema::string())).require("fields")),
-        ("sort", "Sort", "Sort items", TransformMetadata {
-            display_name: "Sort".into(), description: "Sort items".into(),
-            ..Default::default()
-        }, ConfigSchema::new("sort").property("by", PropertySchema::string()).property("direction", PropertySchema::string().with_default("asc")).require("by")),
-        ("aggregate", "Aggregate", "Aggregate items", TransformMetadata {
-            display_name: "Aggregate".into(), description: "Aggregate items".into(),
-            may_filter: true, stateful: true, ..Default::default()
-        }, ConfigSchema::new("aggregate").property("group_by", PropertySchema::string()).property("operation", PropertySchema::string()).require("operation")),
+        (
+            "map",
+            "Map",
+            "Transform each item",
+            TransformMetadata {
+                display_name: "Map".into(),
+                description: "Transform each item".into(),
+                preserves_order: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("map")
+                .property("expression", PropertySchema::string())
+                .require("expression"),
+        ),
+        (
+            "filter",
+            "Filter",
+            "Filter items by condition",
+            TransformMetadata {
+                display_name: "Filter".into(),
+                description: "Filter items by condition".into(),
+                preserves_order: true,
+                may_filter: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("filter")
+                .property("condition", PropertySchema::string())
+                .require("condition"),
+        ),
+        (
+            "select",
+            "Select",
+            "Select specific fields",
+            TransformMetadata {
+                display_name: "Select".into(),
+                description: "Select specific fields".into(),
+                preserves_order: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("select")
+                .property("fields", PropertySchema::array(PropertySchema::string()))
+                .require("fields"),
+        ),
+        (
+            "sort",
+            "Sort",
+            "Sort items",
+            TransformMetadata {
+                display_name: "Sort".into(),
+                description: "Sort items".into(),
+                ..Default::default()
+            },
+            ConfigSchema::new("sort")
+                .property("by", PropertySchema::string())
+                .property("direction", PropertySchema::string().with_default("asc"))
+                .require("by"),
+        ),
+        (
+            "aggregate",
+            "Aggregate",
+            "Aggregate items",
+            TransformMetadata {
+                display_name: "Aggregate".into(),
+                description: "Aggregate items".into(),
+                may_filter: true,
+                stateful: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("aggregate")
+                .property("group_by", PropertySchema::string())
+                .property("operation", PropertySchema::string())
+                .require("operation"),
+        ),
     ];
 
     for (name, _display, _desc, metadata, schema) in transforms {
@@ -500,26 +670,71 @@ pub fn register_builtin_transforms(registry: &ComponentRegistry) {
 /// Registers all built-in actions.
 pub fn register_builtin_actions(registry: &ComponentRegistry) {
     let actions: &[(&str, ActionMetadata, ConfigSchema)] = &[
-        ("notification", ActionMetadata {
-            display_name: "Show Notification".into(), description: "Display a notification to the user".into(),
-            idempotent: true, ..Default::default()
-        }, ConfigSchema::new("notification").property("message", PropertySchema::string()).property("type", PropertySchema::string().with_default("info")).require("message")),
-        ("navigate", ActionMetadata {
-            display_name: "Navigate".into(), description: "Navigate to a different view".into(),
-            idempotent: true, ..Default::default()
-        }, ConfigSchema::new("navigate").property("target", PropertySchema::string()).require("target")),
-        ("refresh", ActionMetadata {
-            display_name: "Refresh".into(), description: "Refresh data or UI".into(),
-            async_execution: true, idempotent: true, ..Default::default()
-        }, ConfigSchema::new("refresh").property("target", PropertySchema::string())),
-        ("http_request", ActionMetadata {
-            display_name: "HTTP Request".into(), description: "Make an HTTP request".into(),
-            async_execution: true, may_fail: true, ..Default::default()
-        }, ConfigSchema::new("http_request").property("url", PropertySchema::string()).property("method", PropertySchema::string().with_default("POST")).property("body", PropertySchema::any()).require("url")),
-        ("set_data", ActionMetadata {
-            display_name: "Set Data".into(), description: "Set a data value".into(),
-            idempotent: true, ..Default::default()
-        }, ConfigSchema::new("set_data").property("target", PropertySchema::string()).property("value", PropertySchema::any()).require("target").require("value")),
+        (
+            "notification",
+            ActionMetadata {
+                display_name: "Show Notification".into(),
+                description: "Display a notification to the user".into(),
+                idempotent: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("notification")
+                .property("message", PropertySchema::string())
+                .property("type", PropertySchema::string().with_default("info"))
+                .require("message"),
+        ),
+        (
+            "navigate",
+            ActionMetadata {
+                display_name: "Navigate".into(),
+                description: "Navigate to a different view".into(),
+                idempotent: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("navigate")
+                .property("target", PropertySchema::string())
+                .require("target"),
+        ),
+        (
+            "refresh",
+            ActionMetadata {
+                display_name: "Refresh".into(),
+                description: "Refresh data or UI".into(),
+                async_execution: true,
+                idempotent: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("refresh").property("target", PropertySchema::string()),
+        ),
+        (
+            "http_request",
+            ActionMetadata {
+                display_name: "HTTP Request".into(),
+                description: "Make an HTTP request".into(),
+                async_execution: true,
+                may_fail: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("http_request")
+                .property("url", PropertySchema::string())
+                .property("method", PropertySchema::string().with_default("POST"))
+                .property("body", PropertySchema::any())
+                .require("url"),
+        ),
+        (
+            "set_data",
+            ActionMetadata {
+                display_name: "Set Data".into(),
+                description: "Set a data value".into(),
+                idempotent: true,
+                ..Default::default()
+            },
+            ConfigSchema::new("set_data")
+                .property("target", PropertySchema::string())
+                .property("value", PropertySchema::any())
+                .require("target")
+                .require("value"),
+        ),
     ];
 
     for (name, metadata, schema) in actions {

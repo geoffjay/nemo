@@ -22,11 +22,7 @@ use nemo_config::Value;
 /// Creates a DataSource from a type name and HCL configuration.
 ///
 /// Returns `None` for unknown source types or missing required fields.
-pub fn create_source(
-    name: &str,
-    source_type: &str,
-    config: &Value,
-) -> Option<Box<dyn DataSource>> {
+pub fn create_source(name: &str, source_type: &str, config: &Value) -> Option<Box<dyn DataSource>> {
     match source_type {
         "timer" => {
             let interval_secs = config

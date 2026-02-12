@@ -607,7 +607,9 @@ mod tests {
         assert_eq!(engine.eval::<String>(r#"trim("  hi  ")"#).unwrap(), "hi");
         assert_eq!(engine.eval::<String>(r#"to_upper("abc")"#).unwrap(), "ABC");
         assert_eq!(engine.eval::<String>(r#"to_lower("ABC")"#).unwrap(), "abc");
-        assert!(engine.eval::<bool>(r#"starts_with("hello", "he")"#).unwrap());
+        assert!(engine
+            .eval::<bool>(r#"starts_with("hello", "he")"#)
+            .unwrap());
         assert!(engine.eval::<bool>(r#"ends_with("hello", "lo")"#).unwrap());
     }
 

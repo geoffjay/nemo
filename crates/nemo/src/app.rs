@@ -354,7 +354,9 @@ impl App {
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
-                let sel_state = self.component_states.get_or_create_selected_value(&component.id, initial);
+                let sel_state = self
+                    .component_states
+                    .get_or_create_selected_value(&component.id, initial);
                 Select::new(component.clone())
                     .selected_value(sel_state)
                     .runtime(Arc::clone(&self.runtime))
@@ -425,7 +427,9 @@ impl App {
                     .get("open")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
-                let coll_state = self.component_states.get_or_create_bool_state(&component.id, initial_open);
+                let coll_state = self
+                    .component_states
+                    .get_or_create_bool_state(&component.id, initial_open);
                 Collapsible::new(component.clone())
                     .open_state(coll_state)
                     .children(children)
@@ -446,7 +450,9 @@ impl App {
                     .unwrap_or_default();
                 let initial_val = component.properties.get("value").and_then(|v| v.as_str());
                 let initial_ix = initial_val.and_then(|val| options.iter().position(|o| o == val));
-                let radio_state = self.component_states.get_or_create_selected_index(&component.id, initial_ix);
+                let radio_state = self
+                    .component_states
+                    .get_or_create_selected_index(&component.id, initial_ix);
                 Radio::new(component.clone())
                     .selected_index(radio_state)
                     .runtime(Arc::clone(&self.runtime))
@@ -466,7 +472,9 @@ impl App {
                     .get("checked")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
-                let sw_state = self.component_states.get_or_create_bool_state(&component.id, initial);
+                let sw_state = self
+                    .component_states
+                    .get_or_create_bool_state(&component.id, initial);
                 Switch::new(component.clone())
                     .checked_state(sw_state)
                     .runtime(Arc::clone(&self.runtime))
@@ -480,7 +488,9 @@ impl App {
                     .get("checked")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
-                let tog_state = self.component_states.get_or_create_bool_state(&component.id, initial);
+                let tog_state = self
+                    .component_states
+                    .get_or_create_bool_state(&component.id, initial);
                 Toggle::new(component.clone())
                     .checked_state(tog_state)
                     .runtime(Arc::clone(&self.runtime))

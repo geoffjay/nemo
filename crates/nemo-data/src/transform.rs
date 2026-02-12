@@ -559,15 +559,14 @@ mod tests {
             Value::Object(m)
         };
 
-        let input = Value::Array(vec![
-            mk("Charlie", 80),
-            mk("Alice", 30),
-            mk("Bob", 90),
-        ]);
+        let input = Value::Array(vec![mk("Charlie", 80), mk("Alice", 30), mk("Bob", 90)]);
 
         // Filter status == "active" (keeps all), then sort by score ascending
         let mut pipeline = Pipeline::new();
-        pipeline.add(Box::new(FilterTransform::equals("status", Value::String("active".into()))));
+        pipeline.add(Box::new(FilterTransform::equals(
+            "status",
+            Value::String("active".into()),
+        )));
         pipeline.add(Box::new(SortTransform::asc("score")));
         let ctx = TransformContext::default();
         let result = pipeline.execute(input, &ctx).unwrap();
@@ -591,7 +590,10 @@ mod tests {
 
         let input = Value::Array(vec![mk("active"), mk("inactive"), mk("active")]);
         let mut pipeline = Pipeline::new();
-        pipeline.add(Box::new(FilterTransform::equals("status", Value::String("active".into()))));
+        pipeline.add(Box::new(FilterTransform::equals(
+            "status",
+            Value::String("active".into()),
+        )));
         let ctx = TransformContext::default();
         let result = pipeline.execute(input, &ctx).unwrap();
 

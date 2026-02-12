@@ -66,8 +66,10 @@ impl ComponentStates {
             return Arc::clone(state);
         }
         let state = Arc::new(Mutex::new(initial));
-        self.0
-            .insert(id.to_string(), ComponentState::BoolState(Arc::clone(&state)));
+        self.0.insert(
+            id.to_string(),
+            ComponentState::BoolState(Arc::clone(&state)),
+        );
         state
     }
 
@@ -81,8 +83,10 @@ impl ComponentStates {
             return Arc::clone(state);
         }
         let state = Arc::new(Mutex::new(initial));
-        self.0
-            .insert(id.to_string(), ComponentState::SelectedValue(Arc::clone(&state)));
+        self.0.insert(
+            id.to_string(),
+            ComponentState::SelectedValue(Arc::clone(&state)),
+        );
         state
     }
 
@@ -96,8 +100,10 @@ impl ComponentStates {
             return Arc::clone(state);
         }
         let state = Arc::new(Mutex::new(initial));
-        self.0
-            .insert(id.to_string(), ComponentState::SelectedIndex(Arc::clone(&state)));
+        self.0.insert(
+            id.to_string(),
+            ComponentState::SelectedIndex(Arc::clone(&state)),
+        );
         state
     }
 
@@ -123,8 +129,10 @@ impl ComponentStates {
         }
 
         let state = Arc::new(Mutex::new(initial));
-        self.0
-            .insert(id.to_string(), ComponentState::Accordion(Arc::clone(&state)));
+        self.0.insert(
+            id.to_string(),
+            ComponentState::Accordion(Arc::clone(&state)),
+        );
         state
     }
 }
