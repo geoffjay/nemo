@@ -242,4 +242,87 @@ mod tests {
         gateway.create_from_config("api", config).await.unwrap();
         assert!(gateway.http("api").await.is_some());
     }
+
+    // ── Lookup miss returns None ──────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_http_lookup_miss() {
+        let gw = IntegrationGateway::new();
+        assert!(gw.http("nonexistent").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_mqtt_lookup_miss() {
+        let gw = IntegrationGateway::new();
+        assert!(gw.mqtt("nonexistent").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_redis_lookup_miss() {
+        let gw = IntegrationGateway::new();
+        assert!(gw.redis("nonexistent").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_nats_lookup_miss() {
+        let gw = IntegrationGateway::new();
+        assert!(gw.nats("nonexistent").await.is_none());
+    }
+
+    #[tokio::test]
+    async fn test_websocket_lookup_miss() {
+        let gw = IntegrationGateway::new();
+        assert!(gw.websocket("nonexistent").await.is_none());
+    }
+
+    // ── List clients empty ────────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_list_all_empty() {
+        let gw = IntegrationGateway::new();
+        assert!(gw.list_http_clients().await.is_empty());
+        assert!(gw.list_mqtt_clients().await.is_empty());
+        assert!(gw.list_redis_clients().await.is_empty());
+        assert!(gw.list_nats_clients().await.is_empty());
+    }
+
+    // ── Multiple registrations ────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_register_multiple_http_clients() {
+        let gw = IntegrationGateway::new();
+        gw.register_http("api1", HttpClient::with_base_url("https://a.com")).await;
+        gw.register_http("api2", HttpClient::with_base_url("https://b.com")).await;
+
+        let clients = gw.list_http_clients().await;
+        assert_eq!(clients.len(), 2);
+        assert!(gw.http("api1").await.is_some());
+        assert!(gw.http("api2").await.is_some());
+    }
+
+    // ── Overwrite registration ────────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_overwrite_http_client() {
+        let gw = IntegrationGateway::new();
+        gw.register_http("api", HttpClient::with_base_url("https://old.com")).await;
+        gw.register_http("api", HttpClient::with_base_url("https://new.com")).await;
+
+        let clients = gw.list_http_clients().await;
+        assert_eq!(clients.len(), 1);
+    }
+
+    // ── create_from_config variants ───────────────────────────────────
+
+    #[tokio::test]
+    async fn test_create_websocket_from_config() {
+        let gw = IntegrationGateway::new();
+        let config = EndpointConfig {
+            endpoint_type: EndpointType::WebSocket,
+            url: "ws://localhost:8080".to_string(),
+            options: HashMap::new(),
+        };
+        gw.create_from_config("ws1", config).await.unwrap();
+        assert!(gw.websocket("ws1").await.is_some());
+    }
 }

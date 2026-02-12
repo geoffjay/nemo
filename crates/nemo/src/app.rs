@@ -8,8 +8,8 @@ use gpui_component::tree::TreeState;
 use gpui_component::v_flex;
 use gpui_component::ActiveTheme;
 use nemo_config::Value;
-use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::table::NemoTableDelegate;
@@ -197,81 +197,6 @@ impl App {
         state
     }
 
-    /// Gets or creates shared accordion open-indices state for the given component.
-    fn get_or_create_accordion_state(
-        &mut self,
-        component: &BuiltComponent,
-    ) -> Arc<Mutex<HashSet<usize>>> {
-        if let Some(ComponentState::Accordion(state)) = self.component_states.get(&component.id) {
-            return Arc::clone(state);
-        }
-
-        // Initialize from HCL config: items with open = true
-        let mut initial = HashSet::new();
-        if let Some(Value::Array(items)) = component.properties.get("items") {
-            for (ix, item_val) in items.iter().enumerate() {
-                if let Some(obj) = item_val.as_object() {
-                    if obj.get("open").and_then(|v| v.as_bool()).unwrap_or(false) {
-                        initial.insert(ix);
-                    }
-                }
-            }
-        }
-
-        let state = Arc::new(Mutex::new(initial));
-        self.component_states.insert(
-            component.id.clone(),
-            ComponentState::Accordion(Arc::clone(&state)),
-        );
-        state
-    }
-
-    /// Gets or creates shared bool state for the given component (collapsible, switch, toggle).
-    fn get_or_create_bool_state(&mut self, id: &str, initial: bool) -> Arc<Mutex<bool>> {
-        if let Some(ComponentState::BoolState(state)) = self.component_states.get(id) {
-            return Arc::clone(state);
-        }
-
-        let state = Arc::new(Mutex::new(initial));
-        self.component_states.insert(
-            id.to_string(),
-            ComponentState::BoolState(Arc::clone(&state)),
-        );
-        state
-    }
-
-    /// Gets or creates shared selected value state for a select component.
-    fn get_or_create_selected_value(&mut self, id: &str, initial: String) -> Arc<Mutex<String>> {
-        if let Some(ComponentState::SelectedValue(state)) = self.component_states.get(id) {
-            return Arc::clone(state);
-        }
-
-        let state = Arc::new(Mutex::new(initial));
-        self.component_states.insert(
-            id.to_string(),
-            ComponentState::SelectedValue(Arc::clone(&state)),
-        );
-        state
-    }
-
-    /// Gets or creates shared selected index state for a radio component.
-    fn get_or_create_selected_index(
-        &mut self,
-        id: &str,
-        initial: Option<usize>,
-    ) -> Arc<Mutex<Option<usize>>> {
-        if let Some(ComponentState::SelectedIndex(state)) = self.component_states.get(id) {
-            return Arc::clone(state);
-        }
-
-        let state = Arc::new(Mutex::new(initial));
-        self.component_states.insert(
-            id.to_string(),
-            ComponentState::SelectedIndex(Arc::clone(&state)),
-        );
-        state
-    }
-
     /// Renders the layout from the layout manager.
     fn render_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let entity_id = cx.entity_id();
@@ -429,7 +354,7 @@ impl App {
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
-                let sel_state = self.get_or_create_selected_value(&component.id, initial);
+                let sel_state = self.component_states.get_or_create_selected_value(&component.id, initial);
                 Select::new(component.clone())
                     .selected_value(sel_state)
                     .runtime(Arc::clone(&self.runtime))
@@ -476,7 +401,10 @@ impl App {
             "pie_chart" => PieChart::new(component.clone()).into_any_element(),
             "candlestick_chart" => CandlestickChart::new(component.clone()).into_any_element(),
             "accordion" => {
-                let acc_state = self.get_or_create_accordion_state(component);
+                let acc_state = self.component_states.get_or_create_accordion_state(
+                    &component.id,
+                    component.properties.get("items"),
+                );
                 Accordion::new(component.clone())
                     .open_indices(acc_state)
                     .entity_id(entity_id)
@@ -497,7 +425,7 @@ impl App {
                     .get("open")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
-                let coll_state = self.get_or_create_bool_state(&component.id, initial_open);
+                let coll_state = self.component_states.get_or_create_bool_state(&component.id, initial_open);
                 Collapsible::new(component.clone())
                     .open_state(coll_state)
                     .children(children)
@@ -518,7 +446,7 @@ impl App {
                     .unwrap_or_default();
                 let initial_val = component.properties.get("value").and_then(|v| v.as_str());
                 let initial_ix = initial_val.and_then(|val| options.iter().position(|o| o == val));
-                let radio_state = self.get_or_create_selected_index(&component.id, initial_ix);
+                let radio_state = self.component_states.get_or_create_selected_index(&component.id, initial_ix);
                 Radio::new(component.clone())
                     .selected_index(radio_state)
                     .runtime(Arc::clone(&self.runtime))
@@ -538,7 +466,7 @@ impl App {
                     .get("checked")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
-                let sw_state = self.get_or_create_bool_state(&component.id, initial);
+                let sw_state = self.component_states.get_or_create_bool_state(&component.id, initial);
                 Switch::new(component.clone())
                     .checked_state(sw_state)
                     .runtime(Arc::clone(&self.runtime))
@@ -552,7 +480,7 @@ impl App {
                     .get("checked")
                     .and_then(|v| v.as_bool())
                     .unwrap_or(false);
-                let tog_state = self.get_or_create_bool_state(&component.id, initial);
+                let tog_state = self.component_states.get_or_create_bool_state(&component.id, initial);
                 Toggle::new(component.clone())
                     .checked_state(tog_state)
                     .runtime(Arc::clone(&self.runtime))

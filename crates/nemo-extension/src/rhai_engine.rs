@@ -523,4 +523,137 @@ mod tests {
         let result: Result<i64, _> = engine.call("nonexistent", "func", ());
         assert!(matches!(result, Err(ExtensionError::NotFound { .. })));
     }
+
+    // ── Script lifecycle ──────────────────────────────────────────────
+
+    #[test]
+    fn test_reload_script() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        engine.load_script("s", "fn val() { 1 }").unwrap();
+        assert_eq!(engine.call::<i64>("s", "val", ()).unwrap(), 1);
+
+        engine.reload_script("s", "fn val() { 2 }").unwrap();
+        assert_eq!(engine.call::<i64>("s", "val", ()).unwrap(), 2);
+    }
+
+    #[test]
+    fn test_reload_nonexistent_errors() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        assert!(engine.reload_script("missing", "fn x() {}").is_err());
+    }
+
+    #[test]
+    fn test_unload_script() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        engine.load_script("s", "fn x() { 1 }").unwrap();
+        assert_eq!(engine.list_scripts().len(), 1);
+
+        engine.unload_script("s").unwrap();
+        assert!(engine.list_scripts().is_empty());
+    }
+
+    #[test]
+    fn test_unload_nonexistent_errors() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        assert!(engine.unload_script("missing").is_err());
+    }
+
+    #[test]
+    fn test_list_scripts() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        engine.load_script("a", "fn x() {}").unwrap();
+        engine.load_script("b", "fn y() {}").unwrap();
+
+        let mut ids = engine.list_scripts();
+        ids.sort();
+        assert_eq!(ids, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn test_compile_error() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        let result = engine.load_script("bad", "fn broken( {");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_run_script() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        engine.load_script("s", "let x = 42;").unwrap();
+        let result = engine.run("s");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_run_nonexistent_errors() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        assert!(engine.run("missing").is_err());
+    }
+
+    // ── Built-in functions ────────────────────────────────────────────
+
+    #[test]
+    fn test_math_functions() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        assert_eq!(engine.eval::<i64>("min(3, 7)").unwrap(), 3);
+        assert_eq!(engine.eval::<i64>("max(3, 7)").unwrap(), 7);
+        assert_eq!(engine.eval::<i64>("clamp(10, 0, 5)").unwrap(), 5);
+        assert_eq!(engine.eval::<i64>("abs(-5)").unwrap(), 5);
+    }
+
+    #[test]
+    fn test_string_functions() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        assert_eq!(engine.eval::<String>(r#"trim("  hi  ")"#).unwrap(), "hi");
+        assert_eq!(engine.eval::<String>(r#"to_upper("abc")"#).unwrap(), "ABC");
+        assert_eq!(engine.eval::<String>(r#"to_lower("ABC")"#).unwrap(), "abc");
+        assert!(engine.eval::<bool>(r#"starts_with("hello", "he")"#).unwrap());
+        assert!(engine.eval::<bool>(r#"ends_with("hello", "lo")"#).unwrap());
+    }
+
+    #[test]
+    fn test_type_conversions() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        assert_eq!(engine.eval::<i64>(r#"parse_int("42")"#).unwrap(), 42);
+        assert!((engine.eval::<f64>(r#"parse_float("1.5")"#).unwrap() - 1.5).abs() < f64::EPSILON);
+        assert_eq!(engine.eval::<i64>("to_int(3.7)").unwrap(), 3);
+    }
+
+    // ── Eval with scope ───────────────────────────────────────────────
+
+    #[test]
+    fn test_eval_with_scope() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let mut scope = rhai::Scope::new();
+        scope.push("x", 10_i64);
+        let result: i64 = engine.eval_with_scope(&mut scope, "x + 5").unwrap();
+        assert_eq!(result, 15);
+    }
+
+    // ── Config access ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_config_defaults() {
+        let config = RhaiConfig::default();
+        assert_eq!(config.max_operations, 100_000);
+        assert_eq!(config.max_call_stack_depth, 64);
+        assert!(!config.features.file_io);
+        assert!(!config.features.network);
+    }
+
+    // ── Custom function registration ──────────────────────────────────
+
+    #[test]
+    fn test_register_custom_fn() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        engine.register_fn_0("get_magic", || 42_i64);
+        assert_eq!(engine.eval::<i64>("get_magic()").unwrap(), 42);
+    }
+
+    #[test]
+    fn test_register_custom_fn_with_args() {
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        engine.register_fn_2("add_custom", |a: i64, b: i64| a + b);
+        assert_eq!(engine.eval::<i64>("add_custom(3, 4)").unwrap(), 7);
+    }
 }

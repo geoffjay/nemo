@@ -519,4 +519,154 @@ mod tests {
             panic!("Expected array");
         }
     }
+
+    // ── Pipeline tests ────────────────────────────────────────────────
+
+    #[test]
+    fn test_pipeline_empty_passthrough() {
+        let pipeline = Pipeline::new();
+        let ctx = TransformContext::default();
+        let input = Value::Integer(42);
+        assert_eq!(pipeline.execute(input.clone(), &ctx).unwrap(), input);
+    }
+
+    #[test]
+    fn test_pipeline_single_stage_select() {
+        let mut pipeline = Pipeline::new();
+        pipeline.add(Box::new(SelectTransform::new(vec!["name".into()])));
+        let ctx = TransformContext::default();
+
+        let mut item = indexmap::IndexMap::new();
+        item.insert("name".to_string(), Value::String("test".into()));
+        item.insert("age".to_string(), Value::Integer(25));
+
+        let result = pipeline.execute(Value::Object(item), &ctx).unwrap();
+        if let Value::Object(obj) = result {
+            assert_eq!(obj.len(), 1);
+            assert!(obj.contains_key("name"));
+        } else {
+            panic!("Expected object");
+        }
+    }
+
+    #[test]
+    fn test_pipeline_multi_stage_filter_then_sort() {
+        let mk = |name: &str, score: i64| {
+            let mut m = indexmap::IndexMap::new();
+            m.insert("name".to_string(), Value::String(name.into()));
+            m.insert("status".to_string(), Value::String("active".into()));
+            m.insert("score".to_string(), Value::Integer(score));
+            Value::Object(m)
+        };
+
+        let input = Value::Array(vec![
+            mk("Charlie", 80),
+            mk("Alice", 30),
+            mk("Bob", 90),
+        ]);
+
+        // Filter status == "active" (keeps all), then sort by score ascending
+        let mut pipeline = Pipeline::new();
+        pipeline.add(Box::new(FilterTransform::equals("status", Value::String("active".into()))));
+        pipeline.add(Box::new(SortTransform::asc("score")));
+        let ctx = TransformContext::default();
+        let result = pipeline.execute(input, &ctx).unwrap();
+
+        if let Value::Array(items) = result {
+            assert_eq!(items.len(), 3);
+            assert_eq!(items[0].get("name").and_then(|v| v.as_str()), Some("Alice"));
+            assert_eq!(items[2].get("name").and_then(|v| v.as_str()), Some("Bob"));
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_pipeline_filter_reduces_items() {
+        let mk = |status: &str| {
+            let mut m = indexmap::IndexMap::new();
+            m.insert("status".to_string(), Value::String(status.into()));
+            Value::Object(m)
+        };
+
+        let input = Value::Array(vec![mk("active"), mk("inactive"), mk("active")]);
+        let mut pipeline = Pipeline::new();
+        pipeline.add(Box::new(FilterTransform::equals("status", Value::String("active".into()))));
+        let ctx = TransformContext::default();
+        let result = pipeline.execute(input, &ctx).unwrap();
+
+        if let Value::Array(items) = result {
+            assert_eq!(items.len(), 2);
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_skip_transform() {
+        let skip = SkipTransform::new(2);
+        let ctx = TransformContext::default();
+        let input = Value::Array(vec![
+            Value::Integer(1),
+            Value::Integer(2),
+            Value::Integer(3),
+            Value::Integer(4),
+        ]);
+        let result = skip.transform(input, &ctx).unwrap();
+        if let Value::Array(items) = result {
+            assert_eq!(items, vec![Value::Integer(3), Value::Integer(4)]);
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_take_transform() {
+        let take = TakeTransform::new(2);
+        let ctx = TransformContext::default();
+        let input = Value::Array(vec![
+            Value::Integer(1),
+            Value::Integer(2),
+            Value::Integer(3),
+        ]);
+        let result = take.transform(input, &ctx).unwrap();
+        if let Value::Array(items) = result {
+            assert_eq!(items, vec![Value::Integer(1), Value::Integer(2)]);
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_sort_descending() {
+        let sort = SortTransform::desc("val");
+        let ctx = TransformContext::default();
+
+        let mk = |v: i64| {
+            let mut m = indexmap::IndexMap::new();
+            m.insert("val".to_string(), Value::Integer(v));
+            Value::Object(m)
+        };
+
+        let input = Value::Array(vec![mk(1), mk(3), mk(2)]);
+        let result = sort.transform(input, &ctx).unwrap();
+        if let Value::Array(items) = result {
+            assert_eq!(items[0].get("val"), Some(&Value::Integer(3)));
+            assert_eq!(items[2].get("val"), Some(&Value::Integer(1)));
+        } else {
+            panic!("Expected array");
+        }
+    }
+
+    #[test]
+    fn test_pipeline_length() {
+        let mut pipeline = Pipeline::new();
+        assert!(pipeline.is_empty());
+        assert_eq!(pipeline.len(), 0);
+
+        pipeline.add(Box::new(SkipTransform::new(1)));
+        pipeline.add(Box::new(TakeTransform::new(5)));
+        assert_eq!(pipeline.len(), 2);
+        assert!(!pipeline.is_empty());
+    }
 }

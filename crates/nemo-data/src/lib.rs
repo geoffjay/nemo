@@ -31,9 +31,9 @@ pub use source::{
     UpdateType,
 };
 pub use sources::{
-    FileFormat, FileSource, FileSourceConfig, HttpSource, HttpSourceConfig, MqttSource,
-    MqttSourceConfig, NatsSource, NatsSourceConfig, RedisSource, RedisSourceConfig, TimerSource,
-    TimerSourceConfig, WebSocketSource, WebSocketSourceConfig,
+    create_source, FileFormat, FileSource, FileSourceConfig, HttpSource, HttpSourceConfig,
+    MqttSource, MqttSourceConfig, NatsSource, NatsSourceConfig, RedisSource, RedisSourceConfig,
+    TimerSource, TimerSourceConfig, WebSocketSource, WebSocketSourceConfig,
 };
 pub use transform::{
     FilterTransform, MapTransform, Pipeline, SelectTransform, SkipTransform, SortTransform,

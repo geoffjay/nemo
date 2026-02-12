@@ -451,7 +451,7 @@ impl NemoRuntime {
                     source_name, source_type
                 );
 
-                match create_data_source(source_name, source_type, source_config) {
+                match nemo_data::create_source(source_name, source_type, source_config) {
                     Some(source) => {
                         self.data_engine.register_source(source).await;
                         info!("Registered data source '{}'", source_name);
@@ -726,162 +726,6 @@ impl NemoRuntime {
             }
             Ok(())
         })
-    }
-}
-
-/// Creates a DataSource from HCL configuration.
-fn create_data_source(
-    name: &str,
-    source_type: &str,
-    config: &Value,
-) -> Option<Box<dyn nemo_data::DataSource>> {
-    match source_type {
-        "timer" => {
-            let interval_secs = config
-                .get("interval")
-                .and_then(|v| v.as_i64().or_else(|| v.as_f64().map(|f| f as i64)))
-                .unwrap_or(1);
-            let immediate = config
-                .get("immediate")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(true);
-
-            let timer_config = nemo_data::TimerSourceConfig {
-                id: name.to_string(),
-                interval: std::time::Duration::from_secs(interval_secs as u64),
-                immediate,
-                payload: config.get("payload").cloned(),
-            };
-            Some(Box::new(nemo_data::TimerSource::new(timer_config)))
-        }
-        "http" => {
-            let url = config.get("url").and_then(|v| v.as_str())?.to_string();
-            let interval = config
-                .get("interval")
-                .and_then(|v| v.as_i64())
-                .map(|secs| std::time::Duration::from_secs(secs as u64));
-
-            let http_config = nemo_data::HttpSourceConfig {
-                id: name.to_string(),
-                url,
-                interval,
-                ..Default::default()
-            };
-            Some(Box::new(nemo_data::HttpSource::new(http_config)))
-        }
-        "websocket" => {
-            let url = config.get("url").and_then(|v| v.as_str())?.to_string();
-            let ws_config = nemo_data::WebSocketSourceConfig {
-                id: name.to_string(),
-                url,
-                ..Default::default()
-            };
-            Some(Box::new(nemo_data::WebSocketSource::new(ws_config)))
-        }
-        "mqtt" => {
-            let host = config
-                .get("host")
-                .and_then(|v| v.as_str())
-                .unwrap_or("localhost")
-                .to_string();
-            let port = config.get("port").and_then(|v| v.as_i64()).unwrap_or(1883) as u16;
-            let topics: Vec<String> = config
-                .get("topics")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect()
-                })
-                .unwrap_or_default();
-            let qos = config.get("qos").and_then(|v| v.as_i64()).unwrap_or(0) as u8;
-            let client_id = config
-                .get("client_id")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-
-            let mqtt_config = nemo_data::MqttSourceConfig {
-                id: name.to_string(),
-                host,
-                port,
-                topics,
-                qos,
-                client_id,
-            };
-            Some(Box::new(nemo_data::MqttSource::new(mqtt_config)))
-        }
-        "redis" => {
-            let url = config
-                .get("url")
-                .and_then(|v| v.as_str())
-                .unwrap_or("redis://127.0.0.1:6379")
-                .to_string();
-            let channels: Vec<String> = config
-                .get("channels")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            let redis_config = nemo_data::RedisSourceConfig {
-                id: name.to_string(),
-                url,
-                channels,
-            };
-            Some(Box::new(nemo_data::RedisSource::new(redis_config)))
-        }
-        "nats" => {
-            let url = config
-                .get("url")
-                .and_then(|v| v.as_str())
-                .unwrap_or("nats://127.0.0.1:4222")
-                .to_string();
-            let subjects: Vec<String> = config
-                .get("subjects")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                        .collect()
-                })
-                .unwrap_or_default();
-
-            let nats_config = nemo_data::NatsSourceConfig {
-                id: name.to_string(),
-                url,
-                subjects,
-            };
-            Some(Box::new(nemo_data::NatsSource::new(nats_config)))
-        }
-        "file" => {
-            let path = config.get("path").and_then(|v| v.as_str())?.to_string();
-            let watch = config
-                .get("watch")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            let format_str = config
-                .get("format")
-                .and_then(|v| v.as_str())
-                .unwrap_or("raw");
-            let format = match format_str {
-                "json" => nemo_data::FileFormat::Json,
-                "lines" => nemo_data::FileFormat::Lines,
-                _ => nemo_data::FileFormat::Raw,
-            };
-
-            let file_config = nemo_data::FileSourceConfig {
-                id: name.to_string(),
-                path: std::path::PathBuf::from(path),
-                format,
-                watch,
-                ..Default::default()
-            };
-            Some(Box::new(nemo_data::FileSource::new(file_config)))
-        }
-        _ => None,
     }
 }
 
@@ -1834,7 +1678,7 @@ mod runtime_tests {
             ("interval", Value::Integer(5)),
             ("immediate", Value::Bool(false)),
         ]);
-        let source = create_data_source("test_timer", "timer", &config);
+        let source = nemo_data::create_source("test_timer", "timer", &config);
         assert!(source.is_some());
         assert_eq!(source.unwrap().id(), "test_timer");
     }
@@ -1843,7 +1687,7 @@ mod runtime_tests {
     fn test_create_data_source_timer_defaults() {
         // Timer with no interval/immediate should use defaults
         let config = obj(vec![("type", s("timer"))]);
-        let source = create_data_source("t", "timer", &config);
+        let source = nemo_data::create_source("t", "timer", &config);
         assert!(source.is_some());
     }
 
@@ -1854,7 +1698,7 @@ mod runtime_tests {
             ("url", s("https://example.com/api")),
             ("interval", Value::Integer(30)),
         ]);
-        let source = create_data_source("api", "http", &config);
+        let source = nemo_data::create_source("api", "http", &config);
         assert!(source.is_some());
         assert_eq!(source.unwrap().id(), "api");
     }
@@ -1862,7 +1706,7 @@ mod runtime_tests {
     #[test]
     fn test_create_data_source_http_missing_url() {
         let config = obj(vec![("type", s("http"))]);
-        let source = create_data_source("api", "http", &config);
+        let source = nemo_data::create_source("api", "http", &config);
         assert!(
             source.is_none(),
             "HTTP source without URL should return None"
@@ -1875,14 +1719,14 @@ mod runtime_tests {
             ("type", s("websocket")),
             ("url", s("ws://localhost:8080")),
         ]);
-        let source = create_data_source("ws", "websocket", &config);
+        let source = nemo_data::create_source("ws", "websocket", &config);
         assert!(source.is_some());
     }
 
     #[test]
     fn test_create_data_source_websocket_missing_url() {
         let config = obj(vec![("type", s("websocket"))]);
-        assert!(create_data_source("ws", "websocket", &config).is_none());
+        assert!(nemo_data::create_source("ws", "websocket", &config).is_none());
     }
 
     #[test]
@@ -1893,14 +1737,14 @@ mod runtime_tests {
             ("port", Value::Integer(1883)),
             ("topics", Value::Array(vec![s("sensor/+")])),
         ]);
-        let source = create_data_source("mqtt", "mqtt", &config);
+        let source = nemo_data::create_source("mqtt", "mqtt", &config);
         assert!(source.is_some());
     }
 
     #[test]
     fn test_create_data_source_mqtt_defaults() {
         let config = obj(vec![("type", s("mqtt"))]);
-        let source = create_data_source("mqtt", "mqtt", &config);
+        let source = nemo_data::create_source("mqtt", "mqtt", &config);
         assert!(source.is_some(), "MQTT should use default host/port");
     }
 
@@ -1911,7 +1755,7 @@ mod runtime_tests {
             ("url", s("redis://127.0.0.1:6379")),
             ("channels", Value::Array(vec![s("events")])),
         ]);
-        assert!(create_data_source("r", "redis", &config).is_some());
+        assert!(nemo_data::create_source("r", "redis", &config).is_some());
     }
 
     #[test]
@@ -1921,7 +1765,7 @@ mod runtime_tests {
             ("url", s("nats://127.0.0.1:4222")),
             ("subjects", Value::Array(vec![s("updates.>")])),
         ]);
-        assert!(create_data_source("n", "nats", &config).is_some());
+        assert!(nemo_data::create_source("n", "nats", &config).is_some());
     }
 
     #[test]
@@ -1932,19 +1776,19 @@ mod runtime_tests {
             ("format", s("json")),
             ("watch", Value::Bool(true)),
         ]);
-        assert!(create_data_source("f", "file", &config).is_some());
+        assert!(nemo_data::create_source("f", "file", &config).is_some());
     }
 
     #[test]
     fn test_create_data_source_file_missing_path() {
         let config = obj(vec![("type", s("file"))]);
-        assert!(create_data_source("f", "file", &config).is_none());
+        assert!(nemo_data::create_source("f", "file", &config).is_none());
     }
 
     #[test]
     fn test_create_data_source_unknown_type() {
         let config = obj(vec![("type", s("unknown"))]);
-        assert!(create_data_source("x", "unknown", &config).is_none());
+        assert!(nemo_data::create_source("x", "unknown", &config).is_none());
     }
 
     // ── parse_layout_config ───────────────────────────────────────────

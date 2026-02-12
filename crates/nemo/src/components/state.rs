@@ -31,7 +31,103 @@ pub enum ComponentState {
     SelectedIndex(Arc<Mutex<Option<usize>>>),
 }
 
-pub type ComponentStates = HashMap<String, ComponentState>;
+pub struct ComponentStates(HashMap<String, ComponentState>);
+
+impl ComponentStates {
+    pub fn new() -> Self {
+        Self(HashMap::new())
+    }
+
+    pub fn get(&self, id: &str) -> Option<&ComponentState> {
+        self.0.get(id)
+    }
+
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut ComponentState> {
+        self.0.get_mut(id)
+    }
+
+    pub fn insert(&mut self, id: String, state: ComponentState) {
+        self.0.insert(id, state);
+    }
+
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[cfg(test)]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// Gets or creates shared boolean state (collapsible, switch, toggle).
+    pub fn get_or_create_bool_state(&mut self, id: &str, initial: bool) -> Arc<Mutex<bool>> {
+        if let Some(ComponentState::BoolState(state)) = self.0.get(id) {
+            return Arc::clone(state);
+        }
+        let state = Arc::new(Mutex::new(initial));
+        self.0
+            .insert(id.to_string(), ComponentState::BoolState(Arc::clone(&state)));
+        state
+    }
+
+    /// Gets or creates shared selected value state for a select component.
+    pub fn get_or_create_selected_value(
+        &mut self,
+        id: &str,
+        initial: String,
+    ) -> Arc<Mutex<String>> {
+        if let Some(ComponentState::SelectedValue(state)) = self.0.get(id) {
+            return Arc::clone(state);
+        }
+        let state = Arc::new(Mutex::new(initial));
+        self.0
+            .insert(id.to_string(), ComponentState::SelectedValue(Arc::clone(&state)));
+        state
+    }
+
+    /// Gets or creates shared selected index state for a radio component.
+    pub fn get_or_create_selected_index(
+        &mut self,
+        id: &str,
+        initial: Option<usize>,
+    ) -> Arc<Mutex<Option<usize>>> {
+        if let Some(ComponentState::SelectedIndex(state)) = self.0.get(id) {
+            return Arc::clone(state);
+        }
+        let state = Arc::new(Mutex::new(initial));
+        self.0
+            .insert(id.to_string(), ComponentState::SelectedIndex(Arc::clone(&state)));
+        state
+    }
+
+    /// Gets or creates shared accordion open-indices state.
+    pub fn get_or_create_accordion_state(
+        &mut self,
+        id: &str,
+        items: Option<&Value>,
+    ) -> Arc<Mutex<HashSet<usize>>> {
+        if let Some(ComponentState::Accordion(state)) = self.0.get(id) {
+            return Arc::clone(state);
+        }
+
+        let mut initial = HashSet::new();
+        if let Some(Value::Array(items)) = items {
+            for (ix, item_val) in items.iter().enumerate() {
+                if let Some(obj) = item_val.as_object() {
+                    if obj.get("open").and_then(|v| v.as_bool()).unwrap_or(false) {
+                        initial.insert(ix);
+                    }
+                }
+            }
+        }
+
+        let state = Arc::new(Mutex::new(initial));
+        self.0
+            .insert(id.to_string(), ComponentState::Accordion(Arc::clone(&state)));
+        state
+    }
+}
 
 #[cfg(test)]
 mod tests {
