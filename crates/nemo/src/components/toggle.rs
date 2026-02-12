@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::ActiveTheme;
+use gpui_component::{ActiveTheme, Sizable};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
