@@ -139,6 +139,9 @@ pub trait PluginRegistrar {
     /// Registers an action.
     fn register_action(&mut self, name: &str, schema: ActionSchema);
 
+    /// Registers a UI template that can be referenced in HCL layout configs.
+    fn register_template(&mut self, name: &str, template: PluginValue);
+
     /// Gets the plugin context for API access.
     fn context(&self) -> &dyn PluginContext;
 

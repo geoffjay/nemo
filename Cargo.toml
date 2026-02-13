@@ -15,6 +15,7 @@ members = [
     "crates/nemo-wasm-guest",
     "examples/data-binding/plugins/mock-data",
     "examples/data-binding/plugins/mock-data-wasm",
+    "plugin/pid-control",
 ]
 
 [workspace.package]

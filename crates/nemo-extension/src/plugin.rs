@@ -2,9 +2,13 @@
 
 use crate::error::ExtensionError;
 use libloading::{Library, Symbol};
-use nemo_plugin_api::PluginManifest;
+use nemo_plugin_api::{
+    ActionSchema, ComponentSchema, DataSourceSchema, PluginContext, PluginManifest, PluginRegistrar,
+    PluginValue, TransformSchema,
+};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 
 /// A loaded native plugin.
 pub struct LoadedPlugin {
@@ -114,6 +118,109 @@ impl PluginHost {
     /// Checks if a plugin is loaded.
     pub fn is_loaded(&self, id: &str) -> bool {
         self.plugins.contains_key(id)
+    }
+}
+
+/// Results collected from initializing a plugin via its entry point.
+#[derive(Debug, Default)]
+pub struct PluginInitResult {
+    /// Templates registered by the plugin (name → PluginValue tree).
+    pub templates: Vec<(String, PluginValue)>,
+    /// Components registered by the plugin.
+    pub components: Vec<(String, ComponentSchema)>,
+    /// Data sources registered by the plugin.
+    pub data_sources: Vec<(String, DataSourceSchema)>,
+    /// Transforms registered by the plugin.
+    pub transforms: Vec<(String, TransformSchema)>,
+    /// Actions registered by the plugin.
+    pub actions: Vec<(String, ActionSchema)>,
+}
+
+/// Concrete implementation of `PluginRegistrar` used during plugin initialization.
+struct PluginRegistrarImpl {
+    context: Arc<dyn PluginContext>,
+    result: PluginInitResult,
+}
+
+impl PluginRegistrarImpl {
+    fn new(context: Arc<dyn PluginContext>) -> Self {
+        Self {
+            context,
+            result: PluginInitResult::default(),
+        }
+    }
+}
+
+impl PluginRegistrar for PluginRegistrarImpl {
+    fn register_component(&mut self, name: &str, schema: ComponentSchema) {
+        self.result.components.push((name.to_string(), schema));
+    }
+
+    fn register_data_source(&mut self, name: &str, schema: DataSourceSchema) {
+        self.result.data_sources.push((name.to_string(), schema));
+    }
+
+    fn register_transform(&mut self, name: &str, schema: TransformSchema) {
+        self.result.transforms.push((name.to_string(), schema));
+    }
+
+    fn register_action(&mut self, name: &str, schema: ActionSchema) {
+        self.result.actions.push((name.to_string(), schema));
+    }
+
+    fn register_template(&mut self, name: &str, template: PluginValue) {
+        self.result.templates.push((name.to_string(), template));
+    }
+
+    fn context(&self) -> &dyn PluginContext {
+        self.context.as_ref()
+    }
+
+    fn context_arc(&self) -> Arc<dyn PluginContext> {
+        Arc::clone(&self.context)
+    }
+}
+
+impl PluginHost {
+    /// Initializes a single loaded plugin by calling its `nemo_plugin_entry` symbol.
+    pub fn init_plugin(
+        &self,
+        id: &str,
+        context: Arc<dyn PluginContext>,
+    ) -> Result<PluginInitResult, ExtensionError> {
+        let plugin = self.plugins.get(id).ok_or_else(|| ExtensionError::NotFound {
+            id: id.to_string(),
+        })?;
+
+        // Safety: we trust the plugin follows the expected ABI (same as load()).
+        unsafe {
+            let entry_fn: Symbol<nemo_plugin_api::PluginEntryFn> = plugin
+                .library
+                .get(b"nemo_plugin_entry")
+                .map_err(|e| ExtensionError::PluginInitError {
+                    plugin_id: id.to_string(),
+                    reason: format!("Missing nemo_plugin_entry symbol: {}", e),
+                })?;
+
+            let mut registrar = PluginRegistrarImpl::new(context);
+            entry_fn(&mut registrar);
+
+            Ok(registrar.result)
+        }
+    }
+
+    /// Initializes all loaded plugins. Returns a vec of (plugin_id, result).
+    pub fn init_all_plugins(
+        &self,
+        context: Arc<dyn PluginContext>,
+    ) -> Vec<(String, Result<PluginInitResult, ExtensionError>)> {
+        let ids: Vec<String> = self.plugins.keys().cloned().collect();
+        ids.into_iter()
+            .map(|id| {
+                let result = self.init_plugin(&id, Arc::clone(&context));
+                (id, result)
+            })
+            .collect()
     }
 }
 

@@ -279,7 +279,7 @@ impl NemoRuntime {
         }
 
         // Register the runtime context with the extension manager for API access
-        let context = Arc::new(RuntimeContext::new(
+        let context: Arc<dyn PluginContext> = Arc::new(RuntimeContext::new(
             Arc::clone(&self.config),
             Arc::clone(&self.layout_manager),
             Arc::clone(&self.event_bus),
@@ -293,7 +293,12 @@ impl NemoRuntime {
                 .extension_manager
                 .write()
                 .expect("extension_manager lock poisoned");
-            ext.register_context(context);
+            ext.register_context(Arc::clone(&context));
+
+            // Initialize native plugins now that the context is available.
+            // This must happen before apply_layout_from_config() so that
+            // plugin-registered templates are available for layout expansion.
+            ext.init_plugins(context);
         }
 
         // Note: WASM plugin ticking is driven by `tick_wasm_plugins()` which is
@@ -391,9 +396,21 @@ impl NemoRuntime {
 
     /// Parses and applies the layout configuration.
     pub fn apply_layout_from_config(&self) -> Result<()> {
+        // Collect plugin-registered templates and convert PluginValue → nemo_config::Value
+        let extra_templates: TemplateMap = {
+            let ext = self
+                .extension_manager
+                .read()
+                .expect("extension_manager lock poisoned");
+            ext.plugin_templates()
+                .iter()
+                .map(|(name, pv)| (name.clone(), plugin_value_to_config_value(pv.clone())))
+                .collect()
+        };
+
         let layout_config = {
             let config = self.config.read().expect("config lock poisoned");
-            parse_layout_config(&config)
+            parse_layout_config(&config, &extra_templates)
         };
 
         if let Some(layout_config) = layout_config {
@@ -1114,9 +1131,18 @@ fn expand_children(
 // ── Layout parsing ───────────────────────────────────────────────────────
 
 /// Parses layout configuration from a Value.
-fn parse_layout_config(config: &Value) -> Option<LayoutConfig> {
+///
+/// `extra_templates` are templates registered by native plugins, merged
+/// with any templates defined in the HCL config. Plugin templates are
+/// added first so HCL-defined templates can override them.
+fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<LayoutConfig> {
     let layout = config.get("layout")?;
-    let templates = extract_templates(config);
+    let mut templates = extract_templates(config);
+
+    // Merge plugin-registered templates (HCL templates take precedence)
+    for (name, value) in extra_templates {
+        templates.entry(name.clone()).or_insert_with(|| value.clone());
+    }
 
     let expanded_layout = if templates.is_empty() {
         layout.clone()
@@ -1825,7 +1851,7 @@ mod runtime_tests {
                 ),
             ]),
         )]);
-        let layout = parse_layout_config(&config).unwrap();
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
         assert_eq!(layout.root.children.len(), 1);
         assert_eq!(layout.root.children[0].component_type, "button");
     }
@@ -1833,14 +1859,14 @@ mod runtime_tests {
     #[test]
     fn test_parse_layout_config_dock() {
         let config = obj(vec![("layout", obj(vec![("type", s("dock"))]))]);
-        let layout = parse_layout_config(&config).unwrap();
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
         assert_eq!(layout.root.component_type, "dock");
     }
 
     #[test]
     fn test_parse_layout_config_missing() {
         let config = obj(vec![("app", obj(vec![]))]);
-        assert!(parse_layout_config(&config).is_none());
+        assert!(parse_layout_config(&config, &TemplateMap::new()).is_none());
     }
 
     #[test]
@@ -1858,7 +1884,7 @@ mod runtime_tests {
                 ),
             ]),
         )]);
-        let layout = parse_layout_config(&config).unwrap();
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
         let btn = &layout.root.children[0];
         assert_eq!(
             btn.handlers.get("click").map(|s| s.as_str()),
@@ -1884,7 +1910,7 @@ mod runtime_tests {
                 ),
             ]),
         )]);
-        let layout = parse_layout_config(&config).unwrap();
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
         let lbl = &layout.root.children[0];
         assert_eq!(lbl.config.bindings.len(), 1);
         assert_eq!(lbl.config.bindings[0].source, "data.sensors.temperature");
@@ -2238,7 +2264,7 @@ layout {
 "#;
 
         let config = loader.load_string(hcl, "test").expect("HCL parse failed");
-        let layout_config = parse_layout_config(&config).expect("Layout parse failed");
+        let layout_config = parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
         let root = &layout_config.root;
 
         // page_a's inner child should be "page_a_inner"
@@ -2279,7 +2305,7 @@ layout {
 "#;
 
         let config = loader.load_string(hcl, "test").expect("HCL parse failed");
-        let layout_config = parse_layout_config(&config).expect("Layout parse failed");
+        let layout_config = parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
 
         let nav = &layout_config.root.children[0];
         assert_eq!(
@@ -2336,7 +2362,7 @@ layout {
 "#;
 
         let config = loader.load_string(hcl, "test").expect("HCL parse failed");
-        let layout_config = parse_layout_config(&config).expect("Layout parse failed");
+        let layout_config = parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
 
         // nav_btn should be a ghost button with label
         let root = &layout_config.root;

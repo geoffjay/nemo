@@ -14,11 +14,12 @@ pub mod rhai_engine;
 
 pub use error::ExtensionError;
 pub use loader::{ExtensionLoader, ExtensionManifest, ExtensionType};
-pub use plugin::{LoadedPlugin, PluginHost};
+pub use plugin::{LoadedPlugin, PluginHost, PluginInitResult};
 pub use registry::ExtensionRegistry;
 pub use rhai_engine::{RhaiConfig, RhaiEngine, RhaiFeatures};
 
-use nemo_plugin_api::PluginContext;
+use nemo_plugin_api::{PluginContext, PluginValue};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// The extension manager coordinates all extension operations.
@@ -34,6 +35,8 @@ pub struct ExtensionManager {
     pub wasm_host: nemo_wasm::WasmHost,
     /// Extension loader.
     loader: ExtensionLoader,
+    /// Templates registered by native plugins (name → PluginValue tree).
+    plugin_templates: HashMap<String, PluginValue>,
 }
 
 impl ExtensionManager {
@@ -46,6 +49,7 @@ impl ExtensionManager {
             #[cfg(feature = "wasm")]
             wasm_host: nemo_wasm::WasmHost::new().expect("Failed to create WasmHost"),
             loader: ExtensionLoader::new(),
+            plugin_templates: HashMap::new(),
         }
     }
 
@@ -58,6 +62,7 @@ impl ExtensionManager {
             #[cfg(feature = "wasm")]
             wasm_host: nemo_wasm::WasmHost::new().expect("Failed to create WasmHost"),
             loader: ExtensionLoader::new(),
+            plugin_templates: HashMap::new(),
         }
     }
 
@@ -181,6 +186,34 @@ impl ExtensionManager {
     #[cfg(feature = "wasm")]
     pub fn tick_wasm_plugins(&mut self) {
         self.wasm_host.tick_all();
+    }
+
+    /// Initializes all loaded native plugins by calling their entry points.
+    ///
+    /// Must be called after `register_context()` so the `PluginContext` is available.
+    /// Collects templates registered by plugins for later use in layout expansion.
+    pub fn init_plugins(&mut self, context: Arc<dyn PluginContext>) {
+        let results = self.plugin_host.init_all_plugins(context);
+
+        for (id, result) in results {
+            match result {
+                Ok(init_result) => {
+                    for (name, template) in init_result.templates {
+                        tracing::info!("Plugin '{}' registered template '{}'", id, name);
+                        self.plugin_templates.insert(name, template);
+                    }
+                    tracing::info!("Plugin '{}' initialized successfully", id);
+                }
+                Err(e) => {
+                    tracing::warn!("Failed to initialize plugin '{}': {}", id, e);
+                }
+            }
+        }
+    }
+
+    /// Returns templates registered by native plugins.
+    pub fn plugin_templates(&self) -> &HashMap<String, PluginValue> {
+        &self.plugin_templates
     }
 
     /// Registers the extension context API with the RHAI engine.
