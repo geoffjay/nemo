@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_round_trip_float() {
-        let original = PluginValue::Float(3.14);
+        let original = PluginValue::Float(3.125);
         let wit = to_wit(&original);
         let back = from_wit(&wit);
         assert_eq!(back, original);
