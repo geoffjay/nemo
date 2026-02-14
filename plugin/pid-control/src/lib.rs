@@ -9,22 +9,13 @@ use std::sync::Mutex;
 fn build_template() -> PluginValue {
     let mut root = HashMap::new();
     root.insert("type".to_string(), PluginValue::String("panel".to_string()));
-    root.insert(
-        "padding".to_string(),
-        PluginValue::Integer(16),
-    );
-    root.insert(
-        "border".to_string(),
-        PluginValue::Integer(2),
-    );
+    root.insert("padding".to_string(), PluginValue::Integer(16));
+    root.insert("border".to_string(), PluginValue::Integer(2));
     root.insert(
         "border_color".to_string(),
         PluginValue::String("theme.border".to_string()),
     );
-    root.insert(
-        "shadow".to_string(),
-        PluginValue::String("md".to_string()),
-    );
+    root.insert("shadow".to_string(), PluginValue::String("md".to_string()));
 
     // Build child components
     let mut children = HashMap::new();
@@ -56,10 +47,7 @@ fn build_template() -> PluginValue {
         "placeholder".to_string(),
         PluginValue::String("Kp".to_string()),
     );
-    kp_input.insert(
-        "value".to_string(),
-        PluginValue::String("1.0".to_string()),
-    );
+    kp_input.insert("value".to_string(), PluginValue::String("1.0".to_string()));
     kp_input.insert(
         "on_change".to_string(),
         PluginValue::String("on_gain_change".to_string()),
@@ -73,10 +61,7 @@ fn build_template() -> PluginValue {
         "placeholder".to_string(),
         PluginValue::String("Ki".to_string()),
     );
-    ki_input.insert(
-        "value".to_string(),
-        PluginValue::String("0.0".to_string()),
-    );
+    ki_input.insert("value".to_string(), PluginValue::String("0.0".to_string()));
     ki_input.insert(
         "on_change".to_string(),
         PluginValue::String("on_gain_change".to_string()),
@@ -90,10 +75,7 @@ fn build_template() -> PluginValue {
         "placeholder".to_string(),
         PluginValue::String("Kd".to_string()),
     );
-    kd_input.insert(
-        "value".to_string(),
-        PluginValue::String("0.0".to_string()),
-    );
+    kd_input.insert("value".to_string(), PluginValue::String("0.0".to_string()));
     kd_input.insert(
         "on_change".to_string(),
         PluginValue::String("on_gain_change".to_string()),
@@ -107,10 +89,7 @@ fn build_template() -> PluginValue {
         "placeholder".to_string(),
         PluginValue::String("Setpoint".to_string()),
     );
-    sp_input.insert(
-        "value".to_string(),
-        PluginValue::String("0.0".to_string()),
-    );
+    sp_input.insert("value".to_string(), PluginValue::String("0.0".to_string()));
     sp_input.insert(
         "on_change".to_string(),
         PluginValue::String("on_setpoint_change".to_string()),
@@ -126,9 +105,12 @@ fn build_template() -> PluginValue {
     );
     output_label.insert(
         "bind_text".to_string(),
-        PluginValue::String("data.pid.output_display".to_string()),
+        PluginValue::String("data.${ns}.output_display".to_string()),
     );
-    inner_children.insert("output_label".to_string(), PluginValue::Object(output_label));
+    inner_children.insert(
+        "output_label".to_string(),
+        PluginValue::Object(output_label),
+    );
 
     // Enable switch
     let mut enable_switch = HashMap::new();
@@ -150,10 +132,7 @@ fn build_template() -> PluginValue {
         PluginValue::Object(enable_switch),
     );
 
-    inner_stack.insert(
-        "component".to_string(),
-        PluginValue::Object(inner_children),
-    );
+    inner_stack.insert("component".to_string(), PluginValue::Object(inner_children));
     children.insert("controls".to_string(), PluginValue::Object(inner_stack));
 
     root.insert("component".to_string(), PluginValue::Object(children));

@@ -49,9 +49,20 @@ layout {
       direction = "horizontal"
       spacing   = 16
 
-      // Left: PID control panel (uses plugin template)
-      component "pid_panel" {
+      // Left: Motor 1 PID control panel
+      component "motor1_pid" {
         template = "pid_control"
+        vars {
+          ns = "pid.motor1"
+        }
+      }
+
+      // Center: Motor 2 PID control panel
+      component "motor2_pid" {
+        template = "pid_control"
+        vars {
+          ns = "pid.motor2"
+        }
       }
 
       // Right: Output display panel
@@ -72,28 +83,16 @@ layout {
           direction = "vertical"
           spacing   = 8
 
-          component "pv_display" {
-            type     = "label"
-            text     = "PV: 0.0"
-            bind_text = "data.pid.pv_display"
+          component "motor1_output" {
+            type      = "label"
+            text      = "Motor 1: 0.0"
+            bind_text = "data.pid.motor1.output_display"
           }
 
-          component "error_display" {
-            type     = "label"
-            text     = "Error: 0.0"
-            bind_text = "data.pid.error_display"
-          }
-
-          component "output_display" {
-            type     = "label"
-            text     = "Output: 0.0"
-            bind_text = "data.pid.output_display"
-          }
-
-          component "setpoint_display" {
-            type     = "label"
-            text     = "Setpoint: 0.0"
-            bind_text = "data.pid.sp_display"
+          component "motor2_output" {
+            type      = "label"
+            text      = "Motor 2: 0.0"
+            bind_text = "data.pid.motor2.output_display"
           }
         }
       }

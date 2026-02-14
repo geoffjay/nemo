@@ -813,7 +813,7 @@ fn deep_merge_values(base: &Value, overlay: &Value) -> Value {
     let mut result = base_obj.clone();
 
     for (key, overlay_val) in overlay_obj {
-        if key == "template" {
+        if key == "template" || key == "vars" {
             continue; // consumed during expansion
         }
         match key.as_str() {
@@ -916,6 +916,102 @@ fn strip_keys(value: &Value, keys: &[&str]) -> Value {
     }
 }
 
+/// Extracts the `vars` block from a component instance as a `HashMap<String, String>`.
+/// Returns an empty map if no `vars` key is present. Errors if vars contains non-string values.
+fn extract_vars(instance: &Value) -> Result<HashMap<String, String>, String> {
+    let obj = match instance.as_object() {
+        Some(o) => o,
+        None => return Ok(HashMap::new()),
+    };
+
+    let vars_val = match obj.get("vars") {
+        Some(v) => v,
+        None => return Ok(HashMap::new()),
+    };
+
+    let vars_obj = vars_val
+        .as_object()
+        .ok_or("'vars' block must be an object")?;
+
+    let mut vars = HashMap::new();
+    for (key, val) in vars_obj {
+        match val.as_str() {
+            Some(s) => {
+                vars.insert(key.clone(), s.to_string());
+            }
+            None => {
+                return Err(format!(
+                    "Variable '{}' must be a string, got: {:?}",
+                    key, val
+                ));
+            }
+        }
+    }
+
+    Ok(vars)
+}
+
+/// Recursively walks a `Value` tree and replaces `${var_name}` patterns in strings
+/// with values from the vars map. Errors on undefined variables.
+fn interpolate_variables(
+    value: &Value,
+    vars: &HashMap<String, String>,
+    template_name: &str,
+) -> Result<Value, String> {
+    match value {
+        Value::String(s) => {
+            let mut result = s.clone();
+            // Find all ${...} patterns
+            let mut start = 0;
+            while let Some(begin) = result[start..].find("${") {
+                let begin = start + begin;
+                let after_open = begin + 2;
+                match result[after_open..].find('}') {
+                    Some(end) => {
+                        let var_name = &result[after_open..after_open + end];
+                        match vars.get(var_name) {
+                            Some(replacement) => {
+                                let pattern = format!("${{{}}}", var_name);
+                                result = result.replacen(&pattern, replacement, 1);
+                                // Continue from after the replacement
+                                start = begin + replacement.len();
+                            }
+                            None => {
+                                let available: Vec<&str> =
+                                    vars.keys().map(|k| k.as_str()).collect();
+                                return Err(format!(
+                                    "Undefined variable '{}' in template '{}'. Available vars: {:?}",
+                                    var_name, template_name, available
+                                ));
+                            }
+                        }
+                    }
+                    None => break, // Unclosed ${, leave as-is
+                }
+            }
+            Ok(Value::String(result))
+        }
+        Value::Object(obj) => {
+            let mut result = indexmap::IndexMap::new();
+            for (key, val) in obj {
+                result.insert(
+                    key.clone(),
+                    interpolate_variables(val, vars, template_name)?,
+                );
+            }
+            Ok(Value::Object(result))
+        }
+        Value::Array(arr) => {
+            let mut result = Vec::new();
+            for val in arr {
+                result.push(interpolate_variables(val, vars, template_name)?);
+            }
+            Ok(Value::Array(result))
+        }
+        _ => Ok(value.clone()),
+    }
+}
+
 /// Wraps a value in an object with a single "component" key.
 fn obj_with_component(children: &Value) -> Value {
     let mut map = indexmap::IndexMap::new();
@@ -1006,7 +1102,10 @@ fn expand_template(
         .ok_or_else(|| format!("Unknown template: '{}'", template_name))?
         .clone();
 
-    // Collect template child IDs so we can prefix them later for uniqueness
+    // Collect all template-originated component IDs (including nested descendants)
+    // so we can prefix them for uniqueness without touching instance-injected IDs.
+    let mut template_owned_ids = std::collections::HashSet::new();
+    collect_all_component_ids(&template_def, &mut template_owned_ids);
     let template_child_ids: Vec<String> = template_def
         .get("component")
         .and_then(|c| c.as_object())
@@ -1018,12 +1117,20 @@ fn expand_template(
     let expanded_template = expand_template(&template_def, templates, expansion_stack, None)?;
     expansion_stack.pop();
 
+    // Interpolate template variables from instance vars block
+    let vars = extract_vars(instance)?;
+    let interpolated = if vars.is_empty() {
+        expanded_template
+    } else {
+        interpolate_variables(&expanded_template, &vars, &template_name)?
+    };
+
     // Extract instance children before merging
     let instance_children = obj.get("component").cloned();
 
     // Merge instance properties (without children) onto the template first
     let instance_without_children = strip_keys(instance, &["component"]);
-    let merged = deep_merge_values(&expanded_template, &instance_without_children);
+    let merged = deep_merge_values(&interpolated, &instance_without_children);
 
     // Handle children: if template has a slot, inject instance children there.
     // Otherwise, merge children as siblings via deep_merge.
@@ -1041,13 +1148,13 @@ fn expand_template(
     };
 
     // Strip consumed keys
-    let stripped = strip_keys(&with_slots, &["template", "slot"]);
+    let stripped = strip_keys(&with_slots, &["template", "slot", "vars"]);
 
     // Prefix template-originated child IDs with the instance ID for uniqueness.
     // This prevents ID collisions when the same template is used by multiple
     // instances (e.g., all content pages having a child named "inner").
     let scoped = if let Some(parent_id) = instance_id {
-        scope_template_children(&stripped, parent_id, &template_child_ids)
+        scope_template_children(&stripped, parent_id, &template_child_ids, &template_owned_ids)
     } else {
         stripped
     };
@@ -1058,8 +1165,15 @@ fn expand_template(
 
 /// Renames template-originated child IDs by prefixing them with the parent
 /// instance ID. Only children whose original ID is in `template_child_ids`
-/// are renamed; instance children keep their original IDs.
-fn scope_template_children(value: &Value, parent_id: &str, template_child_ids: &[String]) -> Value {
+/// are renamed at the top level; instance children keep their original IDs.
+/// Within template-originated subtrees, only IDs in `template_owned_ids` are
+/// recursively scoped, so instance-injected children (e.g. via slots) are untouched.
+fn scope_template_children(
+    value: &Value,
+    parent_id: &str,
+    template_child_ids: &[String],
+    template_owned_ids: &std::collections::HashSet<String>,
+) -> Value {
     if template_child_ids.is_empty() {
         return value.clone();
     }
@@ -1078,7 +1192,54 @@ fn scope_template_children(value: &Value, parent_id: &str, template_child_ids: &
     for (id, child) in components {
         if template_child_ids.contains(id) {
             let new_id = format!("{}_{}", parent_id, id);
-            new_components.insert(new_id, child.clone());
+            let scoped_child = scope_owned_descendants(child, parent_id, template_owned_ids);
+            new_components.insert(new_id, scoped_child);
+        } else {
+            new_components.insert(id.clone(), child.clone());
+        }
+    }
+
+    let mut result = obj.clone();
+    result.insert("component".to_string(), Value::Object(new_components));
+    Value::Object(result)
+}
+
+/// Recursively collects all component IDs from a value tree.
+fn collect_all_component_ids(value: &Value, ids: &mut std::collections::HashSet<String>) {
+    if let Some(obj) = value.as_object() {
+        if let Some(components) = obj.get("component").and_then(|c| c.as_object()) {
+            for (id, child) in components {
+                ids.insert(id.clone());
+                collect_all_component_ids(child, ids);
+            }
+        }
+    }
+}
+
+/// Recursively prefixes nested component IDs with `parent_id`, but only
+/// those IDs that are in `owned_ids` (template-originated). Instance-injected
+/// children (e.g. via slot) are left unchanged.
+fn scope_owned_descendants(
+    value: &Value,
+    parent_id: &str,
+    owned_ids: &std::collections::HashSet<String>,
+) -> Value {
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => return value.clone(),
+    };
+
+    let components = match obj.get("component").and_then(|c| c.as_object()) {
+        Some(c) => c,
+        None => return value.clone(),
+    };
+
+    let mut new_components = indexmap::IndexMap::new();
+    for (id, child) in components {
+        if owned_ids.contains(id) {
+            let new_id = format!("{}_{}", parent_id, id);
+            let scoped_child = scope_owned_descendants(child, parent_id, owned_ids);
+            new_components.insert(new_id, scoped_child);
         } else {
             new_components.insert(id.clone(), child.clone());
         }
@@ -1141,7 +1302,9 @@ fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<
 
     // Merge plugin-registered templates (HCL templates take precedence)
     for (name, value) in extra_templates {
-        templates.entry(name.clone()).or_insert_with(|| value.clone());
+        templates
+            .entry(name.clone())
+            .or_insert_with(|| value.clone());
     }
 
     let expanded_layout = if templates.is_empty() {
@@ -2264,7 +2427,8 @@ layout {
 "#;
 
         let config = loader.load_string(hcl, "test").expect("HCL parse failed");
-        let layout_config = parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
+        let layout_config =
+            parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
         let root = &layout_config.root;
 
         // page_a's inner child should be "page_a_inner"
@@ -2305,7 +2469,8 @@ layout {
 "#;
 
         let config = loader.load_string(hcl, "test").expect("HCL parse failed");
-        let layout_config = parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
+        let layout_config =
+            parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
 
         let nav = &layout_config.root.children[0];
         assert_eq!(
@@ -2362,7 +2527,8 @@ layout {
 "#;
 
         let config = loader.load_string(hcl, "test").expect("HCL parse failed");
-        let layout_config = parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
+        let layout_config =
+            parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
 
         // nav_btn should be a ghost button with label
         let root = &layout_config.root;
@@ -2406,5 +2572,219 @@ layout {
             title.config.properties.get("text").and_then(|v| v.as_str()),
             Some("Button Page")
         );
+    }
+}
+
+#[cfg(test)]
+mod template_vars_tests {
+    use super::*;
+    use indexmap::IndexMap;
+
+    fn obj(pairs: Vec<(&str, Value)>) -> Value {
+        let mut map = IndexMap::new();
+        for (k, v) in pairs {
+            map.insert(k.to_string(), v);
+        }
+        Value::Object(map)
+    }
+
+    fn s(val: &str) -> Value {
+        Value::String(val.to_string())
+    }
+
+    #[test]
+    fn test_basic_interpolation() {
+        let template = obj(vec![
+            ("type", s("label")),
+            ("text", s("Status: ${ns}")),
+            ("bind_text", s("data.${ns}.output")),
+        ]);
+        let instance = obj(vec![
+            ("template", s("t")),
+            ("vars", obj(vec![("ns", s("pid.motor1"))])),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+
+        assert_eq!(
+            result.get("text").and_then(|v| v.as_str()),
+            Some("Status: pid.motor1")
+        );
+        assert_eq!(
+            result.get("bind_text").and_then(|v| v.as_str()),
+            Some("data.pid.motor1.output")
+        );
+    }
+
+    #[test]
+    fn test_multiple_instances_different_vars() {
+        let template = obj(vec![
+            ("type", s("label")),
+            ("bind_text", s("data.${ns}.output")),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let instance1 = obj(vec![
+            ("template", s("t")),
+            ("vars", obj(vec![("ns", s("pid.motor1"))])),
+        ]);
+        let instance2 = obj(vec![
+            ("template", s("t")),
+            ("vars", obj(vec![("ns", s("pid.motor2"))])),
+        ]);
+
+        let mut stack = Vec::new();
+        let result1 = expand_template(&instance1, &templates, &mut stack, None).unwrap();
+        let result2 = expand_template(&instance2, &templates, &mut stack, None).unwrap();
+
+        assert_eq!(
+            result1.get("bind_text").and_then(|v| v.as_str()),
+            Some("data.pid.motor1.output")
+        );
+        assert_eq!(
+            result2.get("bind_text").and_then(|v| v.as_str()),
+            Some("data.pid.motor2.output")
+        );
+    }
+
+    #[test]
+    fn test_undefined_variable_error() {
+        let template = obj(vec![("type", s("label")), ("text", s("${undefined_var}"))]);
+        let instance = obj(vec![
+            ("template", s("t")),
+            ("vars", obj(vec![("ns", s("foo"))])),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let mut stack = Vec::new();
+        let err = expand_template(&instance, &templates, &mut stack, None).unwrap_err();
+        assert!(err.contains("Undefined variable 'undefined_var'"));
+        assert!(err.contains("ns"));
+    }
+
+    #[test]
+    fn test_no_vars_passthrough() {
+        // Without a vars block, ${...} patterns should pass through unchanged
+        let template = obj(vec![("type", s("label")), ("text", s("${ns}.output"))]);
+        let instance = obj(vec![("template", s("t"))]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+
+        assert_eq!(
+            result.get("text").and_then(|v| v.as_str()),
+            Some("${ns}.output")
+        );
+    }
+
+    #[test]
+    fn test_instance_override_wins() {
+        let template = obj(vec![("type", s("label")), ("text", s("${ns} default"))]);
+        let instance = obj(vec![
+            ("template", s("t")),
+            ("vars", obj(vec![("ns", s("pid"))])),
+            ("text", s("override")),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+
+        // Instance property should override interpolated template value
+        assert_eq!(
+            result.get("text").and_then(|v| v.as_str()),
+            Some("override")
+        );
+    }
+
+    #[test]
+    fn test_nested_template_own_vars() {
+        // Inner template has its own vars; outer template's vars should not leak in
+        let inner_template = obj(vec![("type", s("label")), ("text", s("inner: ${x}"))]);
+        let outer_template = obj(vec![
+            ("type", s("panel")),
+            ("title", s("outer: ${y}")),
+            (
+                "component",
+                obj(vec![(
+                    "child",
+                    obj(vec![
+                        ("template", s("inner")),
+                        ("vars", obj(vec![("x", s("hello"))])),
+                    ]),
+                )]),
+            ),
+        ]);
+        let instance = obj(vec![
+            ("template", s("outer")),
+            ("vars", obj(vec![("y", s("world"))])),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("inner".to_string(), inner_template);
+        templates.insert("outer".to_string(), outer_template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+
+        assert_eq!(
+            result.get("title").and_then(|v| v.as_str()),
+            Some("outer: world")
+        );
+
+        let child = result
+            .get("component")
+            .and_then(|c| c.get("child"))
+            .unwrap();
+        assert_eq!(
+            child.get("text").and_then(|v| v.as_str()),
+            Some("inner: hello")
+        );
+    }
+
+    #[test]
+    fn test_non_string_var_error() {
+        let template = obj(vec![("type", s("label"))]);
+        let instance = obj(vec![
+            ("template", s("t")),
+            ("vars", obj(vec![("x", Value::Integer(42))])),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let mut stack = Vec::new();
+        let err = expand_template(&instance, &templates, &mut stack, None).unwrap_err();
+        assert!(err.contains("must be a string"));
+    }
+
+    #[test]
+    fn test_vars_key_stripped_from_output() {
+        let template = obj(vec![("type", s("label"))]);
+        let instance = obj(vec![
+            ("template", s("t")),
+            ("vars", obj(vec![("ns", s("pid"))])),
+        ]);
+
+        let mut templates = TemplateMap::new();
+        templates.insert("t".to_string(), template);
+
+        let mut stack = Vec::new();
+        let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
+        assert!(result.get("vars").is_none());
+        assert!(result.get("template").is_none());
     }
 }

@@ -3,8 +3,8 @@
 use crate::error::ExtensionError;
 use libloading::{Library, Symbol};
 use nemo_plugin_api::{
-    ActionSchema, ComponentSchema, DataSourceSchema, PluginContext, PluginManifest, PluginRegistrar,
-    PluginValue, TransformSchema,
+    ActionSchema, ComponentSchema, DataSourceSchema, PluginContext, PluginManifest,
+    PluginRegistrar, PluginValue, TransformSchema,
 };
 use std::collections::HashMap;
 use std::path::Path;
@@ -188,9 +188,10 @@ impl PluginHost {
         id: &str,
         context: Arc<dyn PluginContext>,
     ) -> Result<PluginInitResult, ExtensionError> {
-        let plugin = self.plugins.get(id).ok_or_else(|| ExtensionError::NotFound {
-            id: id.to_string(),
-        })?;
+        let plugin = self
+            .plugins
+            .get(id)
+            .ok_or_else(|| ExtensionError::NotFound { id: id.to_string() })?;
 
         // Safety: we trust the plugin follows the expected ABI (same as load()).
         unsafe {
