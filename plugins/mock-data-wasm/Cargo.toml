@@ -7,5 +7,5 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-nemo-wasm-guest = { path = "../../../../crates/nemo-wasm-guest" }
+nemo-wasm-guest = { path = "../../crates/nemo-wasm-guest" }
 wit-bindgen = { workspace = true }

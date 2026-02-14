@@ -7,5 +7,5 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-nemo-plugin-api = { path = "../../../../crates/nemo-plugin-api" }
+nemo-plugin-api = { path = "../../crates/nemo-plugin-api" }
 semver = { workspace = true }

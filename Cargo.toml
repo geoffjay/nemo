@@ -13,9 +13,9 @@ members = [
     "crates/nemo-macros",
     "crates/nemo-wasm",
     "crates/nemo-wasm-guest",
-    "examples/data-binding/plugins/mock-data",
-    "examples/data-binding/plugins/mock-data-wasm",
-    "plugin/pid-control",
+    "plugins/mock-data",
+    "plugins/mock-data-wasm",
+    "plugins/pid-control",
 ]
 
 [workspace.package]
