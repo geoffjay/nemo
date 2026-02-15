@@ -9,4 +9,5 @@ crate-type = ["cdylib"]
 [dependencies]
 indexmap = { workspace = true }
 nemo-plugin-api = { path = "../../crates/nemo-plugin-api" }
+nemo-plugin = { path = "../../crates/nemo-plugin" }
 semver = { workspace = true }

@@ -4501,6 +4501,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "nemo-plugin"
+version = "0.2.0"
+dependencies = [
+ "indexmap",
+ "nemo-plugin-api",
+]
+
+[[package]]
 name = "nemo-plugin-api"
 version = "0.2.0"
 dependencies = [
@@ -5237,6 +5245,7 @@ name = "pid-control-plugin"
 version = "0.1.0"
 dependencies = [
  "indexmap",
+ "nemo-plugin",
  "nemo-plugin-api",
  "semver",
 ]

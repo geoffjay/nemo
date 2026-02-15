@@ -1,187 +1,81 @@
 mod pid;
 
-use indexmap::IndexMap;
-use nemo_plugin_api::*;
+use nemo_plugin::prelude::*;
 use pid::PidController;
 use std::sync::Mutex;
 
-/// Helper to build a PluginValue::Object from a list of key-value pairs.
-fn pv_obj(pairs: &[(&str, PluginValue)]) -> PluginValue {
-    let mut map = IndexMap::new();
-    for (k, v) in pairs {
-        map.insert(k.to_string(), v.clone());
-    }
-    PluginValue::Object(map)
-}
-
-fn pv_str(s: &str) -> PluginValue {
-    PluginValue::String(s.to_string())
-}
-
-fn pv_int(i: i64) -> PluginValue {
-    PluginValue::Integer(i)
-}
-
-/// Inserts an attribute into a PluginValue::Object, returning the modified value.
-fn with_attr(value: PluginValue, key: &str, attr: PluginValue) -> PluginValue {
-    if let PluginValue::Object(mut map) = value {
-        map.insert(key.to_string(), attr);
-        PluginValue::Object(map)
-    } else {
-        value
-    }
-}
-
-/// Builds a horizontal row with a label and an input side by side.
-/// Extra attributes can be passed for the label and input components.
-fn input_row(
-    label: &str,
-    value: &str,
-    on_change: &str,
-    label_attrs: &[(&str, PluginValue)],
-    input_attrs: &[(&str, PluginValue)],
-) -> (PluginValue, PluginValue) {
-    let mut label_pairs = vec![("type", pv_str("label")), ("text", pv_str(label))];
-    for (k, v) in label_attrs {
-        label_pairs.push((k, v.clone()));
-    }
-
-    let mut input_pairs = vec![
-        ("type", pv_str("input")),
-        ("value", pv_str(value)),
-        ("on_change", pv_str(on_change)),
-    ];
-    for (k, v) in input_attrs {
-        input_pairs.push((k, v.clone()));
-    }
-
-    (pv_obj(&label_pairs), pv_obj(&input_pairs))
-}
-
-/// Builds the PID control panel UI template as a PluginValue tree.
+/// Builds the PID control panel UI template using the builder API.
 fn build_template() -> PluginValue {
-    let label_attrs = vec![("width", pv_int(120))];
-
-    // Each gain/setpoint gets a horizontal row: label + input
-    let (kp_label, kp_input) = input_row("Kp", "1.0", "on_gain_change", &label_attrs.clone(), &[]);
-    let (ki_label, ki_input) = input_row("Ki", "0.0", "on_gain_change", &label_attrs.clone(), &[]);
-    let (kd_label, kd_input) = input_row("Kd", "0.0", "on_gain_change", &label_attrs.clone(), &[]);
-    let (sp_label, sp_input) = input_row(
-        "Setpoint",
-        "0.0",
-        "on_setpoint_change",
-        &label_attrs.clone(),
-        &[],
-    );
-
-    let mut rows = IndexMap::new();
-
-    // Kp row
-    let mut kp_children = IndexMap::new();
-    kp_children.insert("kp_label".to_string(), kp_label);
-    kp_children.insert("kp_input".to_string(), kp_input);
-    rows.insert(
-        "kp_row".to_string(),
-        pv_obj(&[
-            ("type", pv_str("stack")),
-            ("direction", pv_str("horizontal")),
-            ("spacing", PluginValue::Integer(8)),
-            ("component", PluginValue::Object(kp_children)),
-        ]),
-    );
-
-    // Ki row
-    let mut ki_children = IndexMap::new();
-    ki_children.insert("ki_label".to_string(), ki_label);
-    ki_children.insert("ki_input".to_string(), ki_input);
-    rows.insert(
-        "ki_row".to_string(),
-        pv_obj(&[
-            ("type", pv_str("stack")),
-            ("direction", pv_str("horizontal")),
-            ("spacing", PluginValue::Integer(8)),
-            ("component", PluginValue::Object(ki_children)),
-        ]),
-    );
-
-    // Kd row
-    let mut kd_children = IndexMap::new();
-    kd_children.insert("kd_label".to_string(), kd_label);
-    kd_children.insert("kd_input".to_string(), kd_input);
-    rows.insert(
-        "kd_row".to_string(),
-        pv_obj(&[
-            ("type", pv_str("stack")),
-            ("direction", pv_str("horizontal")),
-            ("spacing", PluginValue::Integer(8)),
-            ("component", PluginValue::Object(kd_children)),
-        ]),
-    );
-
-    // Setpoint row
-    let mut sp_children = IndexMap::new();
-    sp_children.insert("setpoint_label".to_string(), sp_label);
-    sp_children.insert("setpoint_input".to_string(), sp_input);
-    rows.insert(
-        "setpoint_row".to_string(),
-        pv_obj(&[
-            ("type", pv_str("stack")),
-            ("direction", pv_str("horizontal")),
-            ("spacing", PluginValue::Integer(8)),
-            ("component", PluginValue::Object(sp_children)),
-        ]),
-    );
-
-    // Output display
-    rows.insert(
-        "output_label".to_string(),
-        pv_obj(&[
-            ("type", pv_str("label")),
-            ("text", pv_str("Output: 0.0")),
-            ("bind_text", pv_str("data.${ns}.output_display")),
-        ]),
-    );
-
-    // Enable switch
-    rows.insert(
-        "enable_switch".to_string(),
-        pv_obj(&[
-            ("type", pv_str("switch")),
-            ("label", pv_str("Enable")),
-            ("checked", PluginValue::Bool(false)),
-            ("on_click", pv_str("on_enable_toggle")),
-        ]),
-    );
-
-    // Controls vertical stack containing all rows
-    let controls = pv_obj(&[
-        ("type", pv_str("stack")),
-        ("direction", pv_str("vertical")),
-        ("spacing", PluginValue::Integer(8)),
-        ("component", PluginValue::Object(rows)),
-    ]);
-
-    // Title
-    let title = pv_obj(&[
-        ("type", pv_str("label")),
-        ("text", pv_str("PID Controller")),
-        ("size", pv_str("xl")),
-    ]);
-
-    // Root panel
-    let mut children = IndexMap::new();
-    children.insert("title".to_string(), title);
-    children.insert("controls".to_string(), controls);
-
-    pv_obj(&[
-        ("type", pv_str("panel")),
-        ("padding", PluginValue::Integer(16)),
-        ("border", PluginValue::Integer(2)),
-        ("border_color", pv_str("theme.border")),
-        ("shadow", pv_str("md")),
-        ("width", pv_int(300)),
-        ("component", PluginValue::Object(children)),
-    ])
+    Panel::new()
+        .padding(16)
+        .border(2)
+        .border_color("theme.border")
+        .shadow("md")
+        .width(300)
+        .child("title", Label::new("PID Controller").size("xl"))
+        .child(
+            "controls",
+            Stack::vertical()
+                .spacing(8)
+                // Kp row
+                .child(
+                    "kp_row",
+                    Stack::horizontal()
+                        .spacing(8)
+                        .child("kp_label", Label::new("Kp").width(120))
+                        .child(
+                            "kp_input",
+                            Input::new().value("1.0").on_change("on_gain_change"),
+                        ),
+                )
+                // Ki row
+                .child(
+                    "ki_row",
+                    Stack::horizontal()
+                        .spacing(8)
+                        .child("ki_label", Label::new("Ki").width(120))
+                        .child(
+                            "ki_input",
+                            Input::new().value("0.0").on_change("on_gain_change"),
+                        ),
+                )
+                // Kd row
+                .child(
+                    "kd_row",
+                    Stack::horizontal()
+                        .spacing(8)
+                        .child("kd_label", Label::new("Kd").width(120))
+                        .child(
+                            "kd_input",
+                            Input::new().value("0.0").on_change("on_gain_change"),
+                        ),
+                )
+                // Setpoint row
+                .child(
+                    "setpoint_row",
+                    Stack::horizontal()
+                        .spacing(8)
+                        .child("setpoint_label", Label::new("Setpoint").width(120))
+                        .child(
+                            "setpoint_input",
+                            Input::new().value("0.0").on_change("on_setpoint_change"),
+                        ),
+                )
+                // Output display
+                .child(
+                    "output_label",
+                    Label::new("Output: 0.0").bind_text("data.${ns}.output_display"),
+                )
+                // Enable switch
+                .child(
+                    "enable_switch",
+                    Switch::new()
+                        .label("Enable")
+                        .checked(false)
+                        .on_click("on_enable_toggle"),
+                ),
+        )
+        .build()
 }
 
 fn init(registrar: &mut dyn PluginRegistrar) {

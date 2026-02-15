@@ -10,6 +10,7 @@ members = [
     "crates/nemo-integration",
     "crates/nemo-events",
     "crates/nemo-plugin-api",
+    "crates/nemo-plugin",
     "crates/nemo-macros",
     "crates/nemo-wasm",
     "crates/nemo-wasm-guest",
@@ -90,5 +91,6 @@ nemo-extension = { path = "crates/nemo-extension" }
 nemo-integration = { path = "crates/nemo-integration" }
 nemo-events = { path = "crates/nemo-events" }
 nemo-plugin-api = { path = "crates/nemo-plugin-api" }
+nemo-plugin = { path = "crates/nemo-plugin" }
 nemo-macros = { path = "crates/nemo-macros" }
 nemo-wasm = { path = "crates/nemo-wasm" }
