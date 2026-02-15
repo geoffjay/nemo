@@ -78,6 +78,18 @@ layout {
           size = "md"
         }
 
+        # ── Reference ─────────────────────────────────────────
+        component "cat_reference" {
+          type = "label"
+          text = "Reference"
+          size = "sm"
+        }
+
+        component "nav_styling" {
+          template = "nav_item"
+          label    = "Styling"
+        }
+
         # ── Basic ──────────────────────────────────────────────
         component "cat_basic" {
           type = "label"
@@ -1944,6 +1956,426 @@ layout {
             label = "Bell"
             icon = "bell"
             checked = false
+          }
+        }
+      }
+
+      # ── Styling page ────────────────────────────────────────
+      component "page_styling" {
+        template = "content_page"
+
+        component "styling_title" {
+          type = "label"
+          text = "Styling"
+          size = "lg"
+        }
+
+        component "styling_desc" {
+          type = "text"
+          content = "All components support shared styling attributes via apply_layout_styles: padding, margin, border, shadow, and rounded. These wrap any component in a styled container."
+        }
+
+        # ── Padding ──────────────────────────────────────────
+        component "styling_padding_title" {
+          type = "label"
+          text = "Padding"
+          size = "sm"
+        }
+
+        component "styling_padding_tabs" {
+          type = "tabs"
+          tabs = ["Preview", "HCL"]
+
+          component "styling_padding_preview" {
+            type = "stack"
+            direction = "vertical"
+            spacing = 8
+
+            component "styling_pad_uniform" {
+              type = "label"
+              text = "padding = 16"
+              padding = 16
+              border = 1
+              border_color = "theme.border"
+            }
+
+            component "styling_pad_xy_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 8
+
+              component "styling_pad_x" {
+                type = "label"
+                text = "padding_x = 24"
+                padding_x = 24
+                border = 1
+                border_color = "theme.border"
+              }
+
+              component "styling_pad_y" {
+                type = "label"
+                text = "padding_y = 24"
+                padding_y = 24
+                border = 1
+                border_color = "theme.border"
+              }
+            }
+
+            component "styling_pad_dir_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 8
+
+              component "styling_pad_left" {
+                type = "label"
+                text = "padding_left = 32"
+                padding_left = 32
+                border = 1
+                border_color = "theme.border"
+              }
+
+              component "styling_pad_top" {
+                type = "label"
+                text = "padding_top = 32"
+                padding_top = 32
+                border = 1
+                border_color = "theme.border"
+              }
+            }
+          }
+
+          component "styling_padding_hcl" {
+            type = "panel"
+
+            component "styling_padding_code" {
+              type = "text"
+              content = "# Uniform padding on all sides\npadding = 16\n\n# Axis padding (horizontal / vertical)\npadding_x = 24\npadding_y = 24\n\n# Directional padding\npadding_left   = 32\npadding_right  = 32\npadding_top    = 32\npadding_bottom = 32"
+            }
+          }
+        }
+
+        # ── Margin ───────────────────────────────────────────
+        component "styling_margin_title" {
+          type = "label"
+          text = "Margin"
+          size = "sm"
+        }
+
+        component "styling_margin_tabs" {
+          type = "tabs"
+          tabs = ["Preview", "HCL"]
+
+          component "styling_margin_preview" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 0
+            border = 1
+            border_color = "theme.border"
+
+            component "styling_margin_box1" {
+              type = "label"
+              text = "margin = 4"
+              margin = 4
+              border = 1
+              border_color = "theme.accent"
+              padding = 8
+            }
+
+            component "styling_margin_box2" {
+              type = "label"
+              text = "margin = 12"
+              margin = 12
+              border = 1
+              border_color = "theme.accent"
+              padding = 8
+            }
+
+            component "styling_margin_box3" {
+              type = "label"
+              text = "margin = 24"
+              margin = 24
+              border = 1
+              border_color = "theme.accent"
+              padding = 8
+            }
+          }
+
+          component "styling_margin_hcl" {
+            type = "panel"
+
+            component "styling_margin_code" {
+              type = "text"
+              content = "# Uniform margin around the component\nmargin = 4\nmargin = 12\nmargin = 24"
+            }
+          }
+        }
+
+        # ── Border ───────────────────────────────────────────
+        component "styling_border_title" {
+          type = "label"
+          text = "Border"
+          size = "sm"
+        }
+
+        component "styling_border_tabs" {
+          type = "tabs"
+          tabs = ["Preview", "HCL"]
+
+          component "styling_border_preview" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 12
+
+            component "styling_border_1" {
+              type = "label"
+              text = "border = 1"
+              border = 1
+              border_color = "theme.border"
+              padding = 12
+            }
+
+            component "styling_border_2" {
+              type = "label"
+              text = "border = 2"
+              border = 2
+              border_color = "theme.border"
+              padding = 12
+            }
+
+            component "styling_border_accent" {
+              type = "label"
+              text = "border_color = theme.accent"
+              border = 2
+              border_color = "theme.accent"
+              padding = 12
+            }
+
+            component "styling_border_danger" {
+              type = "label"
+              text = "border_color = theme.danger"
+              border = 2
+              border_color = "theme.danger"
+              padding = 12
+            }
+          }
+
+          component "styling_border_hcl" {
+            type = "panel"
+
+            component "styling_border_code" {
+              type = "text"
+              content = "# Border width in pixels\nborder = 1\nborder = 2\n\n# Border color (theme references or hex)\nborder_color = \"theme.border\"\nborder_color = \"theme.accent\"\nborder_color = \"theme.danger\"\nborder_color = \"#FF6600\""
+            }
+          }
+        }
+
+        # ── Shadow ───────────────────────────────────────────
+        component "styling_shadow_title" {
+          type = "label"
+          text = "Shadow"
+          size = "sm"
+        }
+
+        component "styling_shadow_tabs" {
+          type = "tabs"
+          tabs = ["Preview", "HCL"]
+
+          component "styling_shadow_preview" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 20
+
+            component "styling_shadow_sm" {
+              type = "label"
+              text = "sm"
+              shadow = "sm"
+              padding = 16
+              rounded = "md"
+            }
+
+            component "styling_shadow_md" {
+              type = "label"
+              text = "md"
+              shadow = "md"
+              padding = 16
+              rounded = "md"
+            }
+
+            component "styling_shadow_lg" {
+              type = "label"
+              text = "lg"
+              shadow = "lg"
+              padding = 16
+              rounded = "md"
+            }
+
+            component "styling_shadow_xl" {
+              type = "label"
+              text = "xl"
+              shadow = "xl"
+              padding = 16
+              rounded = "md"
+            }
+
+            component "styling_shadow_2xl" {
+              type = "label"
+              text = "2xl"
+              shadow = "2xl"
+              padding = 16
+              rounded = "md"
+            }
+          }
+
+          component "styling_shadow_hcl" {
+            type = "panel"
+
+            component "styling_shadow_code" {
+              type = "text"
+              content = "# Shadow sizes: sm, md, lg, xl, 2xl\nshadow = \"sm\"\nshadow = \"md\"\nshadow = \"lg\"\nshadow = \"xl\"\nshadow = \"2xl\""
+            }
+          }
+        }
+
+        # ── Rounded ──────────────────────────────────────────
+        component "styling_rounded_title" {
+          type = "label"
+          text = "Rounded"
+          size = "sm"
+        }
+
+        component "styling_rounded_tabs" {
+          type = "tabs"
+          tabs = ["Preview", "HCL"]
+
+          component "styling_rounded_preview" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 12
+
+            component "styling_rounded_sm" {
+              type = "label"
+              text = "sm"
+              rounded = "sm"
+              border = 2
+              border_color = "theme.border"
+              padding = 16
+            }
+
+            component "styling_rounded_md" {
+              type = "label"
+              text = "md"
+              rounded = "md"
+              border = 2
+              border_color = "theme.border"
+              padding = 16
+            }
+
+            component "styling_rounded_lg" {
+              type = "label"
+              text = "lg"
+              rounded = "lg"
+              border = 2
+              border_color = "theme.border"
+              padding = 16
+            }
+
+            component "styling_rounded_xl" {
+              type = "label"
+              text = "xl"
+              rounded = "xl"
+              border = 2
+              border_color = "theme.border"
+              padding = 16
+            }
+
+            component "styling_rounded_full" {
+              type = "label"
+              text = "full"
+              rounded = "full"
+              border = 2
+              border_color = "theme.border"
+              padding = 16
+            }
+          }
+
+          component "styling_rounded_hcl" {
+            type = "panel"
+
+            component "styling_rounded_code" {
+              type = "text"
+              content = "# Rounded sizes: sm, md, lg, xl, full\nrounded = \"sm\"\nrounded = \"md\"\nrounded = \"lg\"\nrounded = \"xl\"\nrounded = \"full\""
+            }
+          }
+        }
+
+        # ── Combined ─────────────────────────────────────────
+        component "styling_combined_title" {
+          type = "label"
+          text = "Combined"
+          size = "sm"
+        }
+
+        component "styling_combined_tabs" {
+          type = "tabs"
+          tabs = ["Preview", "HCL"]
+
+          component "styling_combined_preview" {
+            type = "stack"
+            direction = "horizontal"
+            spacing = 16
+
+            component "styling_card1" {
+              type = "stack"
+              direction = "vertical"
+              spacing = 8
+              padding = 24
+              border = 1
+              border_color = "theme.border"
+              shadow = "md"
+              rounded = "lg"
+
+              component "styling_card1_title" {
+                type = "label"
+                text = "Styled Card"
+                size = "md"
+              }
+
+              component "styling_card1_body" {
+                type = "text"
+                content = "This card combines border, shadow, rounded, and padding to create a polished container."
+              }
+            }
+
+            component "styling_card2" {
+              type = "stack"
+              direction = "vertical"
+              spacing = 8
+              padding = 24
+              border = 2
+              border_color = "theme.accent"
+              shadow = "lg"
+              rounded = "xl"
+
+              component "styling_card2_title" {
+                type = "label"
+                text = "Accent Card"
+                size = "md"
+              }
+
+              component "styling_card2_body" {
+                type = "text"
+                content = "An accent-bordered card with a larger shadow and rounder corners."
+              }
+            }
+          }
+
+          component "styling_combined_hcl" {
+            type = "panel"
+
+            component "styling_combined_code" {
+              type = "text"
+              content = "component \"styled_card\" {\n  type         = \"stack\"\n  direction    = \"vertical\"\n  spacing      = 8\n  padding      = 24\n  border       = 1\n  border_color = \"theme.border\"\n  shadow       = \"md\"\n  rounded      = \"lg\"\n\n  component \"title\" {\n    type = \"label\"\n    text = \"Styled Card\"\n  }\n\n  component \"body\" {\n    type    = \"text\"\n    content = \"Card content here.\"\n  }\n}"
+            }
           }
         }
       }

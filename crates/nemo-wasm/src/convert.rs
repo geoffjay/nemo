@@ -46,7 +46,6 @@ pub fn log_level_from_wit(level: WitLogLevel) -> LogLevel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
 
     #[test]
     fn test_round_trip_null() {

@@ -436,8 +436,19 @@ impl App {
             "notification" => Notification::new(component.clone()).into_any_element(),
             "tabs" => {
                 let children = self.render_children(component, components, entity_id, window, cx);
+                let initial = component
+                    .properties
+                    .get("active_tab")
+                    .and_then(|v| v.as_i64())
+                    .map(|i| Some(i as usize))
+                    .unwrap_or(Some(0));
+                let tab_state = self
+                    .component_states
+                    .get_or_create_selected_index(&component.id, initial);
                 Tabs::new(component.clone())
+                    .selected_index(tab_state)
                     .children(children)
+                    .entity_id(entity_id)
                     .into_any_element()
             }
             "modal" => {
