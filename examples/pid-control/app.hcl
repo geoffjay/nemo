@@ -12,7 +12,7 @@ app {
   }
 
   theme {
-    name = "nord"
+    name = "kanagawa"
     mode = "dark"
   }
 }
@@ -42,6 +42,7 @@ layout {
     component "title" {
       type = "label"
       text = "PID Control Demo"
+      size = "xl"
     }
 
     component "main_content" {

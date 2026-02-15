@@ -18,24 +18,61 @@ fn pv_str(s: &str) -> PluginValue {
     PluginValue::String(s.to_string())
 }
 
+fn pv_int(i: i64) -> PluginValue {
+    PluginValue::Integer(i)
+}
+
+/// Inserts an attribute into a PluginValue::Object, returning the modified value.
+fn with_attr(value: PluginValue, key: &str, attr: PluginValue) -> PluginValue {
+    if let PluginValue::Object(mut map) = value {
+        map.insert(key.to_string(), attr);
+        PluginValue::Object(map)
+    } else {
+        value
+    }
+}
+
 /// Builds a horizontal row with a label and an input side by side.
-fn input_row(label: &str, value: &str, on_change: &str) -> (PluginValue, PluginValue) {
-    let label_component = pv_obj(&[("type", pv_str("label")), ("text", pv_str(label))]);
-    let input_component = pv_obj(&[
+/// Extra attributes can be passed for the label and input components.
+fn input_row(
+    label: &str,
+    value: &str,
+    on_change: &str,
+    label_attrs: &[(&str, PluginValue)],
+    input_attrs: &[(&str, PluginValue)],
+) -> (PluginValue, PluginValue) {
+    let mut label_pairs = vec![("type", pv_str("label")), ("text", pv_str(label))];
+    for (k, v) in label_attrs {
+        label_pairs.push((k, v.clone()));
+    }
+
+    let mut input_pairs = vec![
         ("type", pv_str("input")),
         ("value", pv_str(value)),
         ("on_change", pv_str(on_change)),
-    ]);
-    (label_component, input_component)
+    ];
+    for (k, v) in input_attrs {
+        input_pairs.push((k, v.clone()));
+    }
+
+    (pv_obj(&label_pairs), pv_obj(&input_pairs))
 }
 
 /// Builds the PID control panel UI template as a PluginValue tree.
 fn build_template() -> PluginValue {
+    let label_attrs = vec![("width", pv_int(120))];
+
     // Each gain/setpoint gets a horizontal row: label + input
-    let (kp_label, kp_input) = input_row("Kp", "1.0", "on_gain_change");
-    let (ki_label, ki_input) = input_row("Ki", "0.0", "on_gain_change");
-    let (kd_label, kd_input) = input_row("Kd", "0.0", "on_gain_change");
-    let (sp_label, sp_input) = input_row("Setpoint", "0.0", "on_setpoint_change");
+    let (kp_label, kp_input) = input_row("Kp", "1.0", "on_gain_change", &label_attrs.clone(), &[]);
+    let (ki_label, ki_input) = input_row("Ki", "0.0", "on_gain_change", &label_attrs.clone(), &[]);
+    let (kd_label, kd_input) = input_row("Kd", "0.0", "on_gain_change", &label_attrs.clone(), &[]);
+    let (sp_label, sp_input) = input_row(
+        "Setpoint",
+        "0.0",
+        "on_setpoint_change",
+        &label_attrs.clone(),
+        &[],
+    );
 
     let mut rows = IndexMap::new();
 
@@ -125,7 +162,11 @@ fn build_template() -> PluginValue {
     ]);
 
     // Title
-    let title = pv_obj(&[("type", pv_str("label")), ("text", pv_str("PID Controller"))]);
+    let title = pv_obj(&[
+        ("type", pv_str("label")),
+        ("text", pv_str("PID Controller")),
+        ("size", pv_str("xl")),
+    ]);
 
     // Root panel
     let mut children = IndexMap::new();
@@ -138,6 +179,7 @@ fn build_template() -> PluginValue {
         ("border", PluginValue::Integer(2)),
         ("border_color", pv_str("theme.border")),
         ("shadow", pv_str("md")),
+        ("width", pv_int(300)),
         ("component", PluginValue::Object(children)),
     ])
 }

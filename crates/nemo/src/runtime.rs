@@ -1154,7 +1154,12 @@ fn expand_template(
     // This prevents ID collisions when the same template is used by multiple
     // instances (e.g., all content pages having a child named "inner").
     let scoped = if let Some(parent_id) = instance_id {
-        scope_template_children(&stripped, parent_id, &template_child_ids, &template_owned_ids)
+        scope_template_children(
+            &stripped,
+            parent_id,
+            &template_child_ids,
+            &template_owned_ids,
+        )
     } else {
         stripped
     };
