@@ -463,7 +463,7 @@ fn dynamic_to_plugin_value(value: Dynamic) -> PluginValue {
         PluginValue::Array(arr.into_iter().map(dynamic_to_plugin_value).collect())
     } else if value.is_map() {
         let map: rhai::Map = value.cast();
-        let obj: std::collections::HashMap<String, PluginValue> = map
+        let obj: indexmap::IndexMap<String, PluginValue> = map
             .into_iter()
             .map(|(k, v)| (k.to_string(), dynamic_to_plugin_value(v)))
             .collect();

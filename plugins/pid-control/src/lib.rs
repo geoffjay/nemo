@@ -1,143 +1,145 @@
 mod pid;
 
+use indexmap::IndexMap;
 use nemo_plugin_api::*;
 use pid::PidController;
-use std::collections::HashMap;
 use std::sync::Mutex;
+
+/// Helper to build a PluginValue::Object from a list of key-value pairs.
+fn pv_obj(pairs: &[(&str, PluginValue)]) -> PluginValue {
+    let mut map = IndexMap::new();
+    for (k, v) in pairs {
+        map.insert(k.to_string(), v.clone());
+    }
+    PluginValue::Object(map)
+}
+
+fn pv_str(s: &str) -> PluginValue {
+    PluginValue::String(s.to_string())
+}
+
+/// Builds a horizontal row with a label and an input side by side.
+fn input_row(label: &str, value: &str, on_change: &str) -> (PluginValue, PluginValue) {
+    let label_component = pv_obj(&[("type", pv_str("label")), ("text", pv_str(label))]);
+    let input_component = pv_obj(&[
+        ("type", pv_str("input")),
+        ("value", pv_str(value)),
+        ("on_change", pv_str(on_change)),
+    ]);
+    (label_component, input_component)
+}
 
 /// Builds the PID control panel UI template as a PluginValue tree.
 fn build_template() -> PluginValue {
-    let mut root = HashMap::new();
-    root.insert("type".to_string(), PluginValue::String("panel".to_string()));
-    root.insert("padding".to_string(), PluginValue::Integer(16));
-    root.insert("border".to_string(), PluginValue::Integer(2));
-    root.insert(
-        "border_color".to_string(),
-        PluginValue::String("theme.border".to_string()),
-    );
-    root.insert("shadow".to_string(), PluginValue::String("md".to_string()));
+    // Each gain/setpoint gets a horizontal row: label + input
+    let (kp_label, kp_input) = input_row("Kp", "1.0", "on_gain_change");
+    let (ki_label, ki_input) = input_row("Ki", "0.0", "on_gain_change");
+    let (kd_label, kd_input) = input_row("Kd", "0.0", "on_gain_change");
+    let (sp_label, sp_input) = input_row("Setpoint", "0.0", "on_setpoint_change");
 
-    // Build child components
-    let mut children = HashMap::new();
+    let mut rows = IndexMap::new();
 
-    // Title
-    let mut title = HashMap::new();
-    title.insert("type".to_string(), PluginValue::String("label".to_string()));
-    title.insert(
-        "text".to_string(),
-        PluginValue::String("PID Controller".to_string()),
+    // Kp row
+    let mut kp_children = IndexMap::new();
+    kp_children.insert("kp_label".to_string(), kp_label);
+    kp_children.insert("kp_input".to_string(), kp_input);
+    rows.insert(
+        "kp_row".to_string(),
+        pv_obj(&[
+            ("type", pv_str("stack")),
+            ("direction", pv_str("horizontal")),
+            ("spacing", PluginValue::Integer(8)),
+            ("component", PluginValue::Object(kp_children)),
+        ]),
     );
-    children.insert("title".to_string(), PluginValue::Object(title));
 
-    // Inner stack for vertical layout
-    let mut inner_stack = HashMap::new();
-    inner_stack.insert("type".to_string(), PluginValue::String("stack".to_string()));
-    inner_stack.insert(
-        "direction".to_string(),
-        PluginValue::String("vertical".to_string()),
+    // Ki row
+    let mut ki_children = IndexMap::new();
+    ki_children.insert("ki_label".to_string(), ki_label);
+    ki_children.insert("ki_input".to_string(), ki_input);
+    rows.insert(
+        "ki_row".to_string(),
+        pv_obj(&[
+            ("type", pv_str("stack")),
+            ("direction", pv_str("horizontal")),
+            ("spacing", PluginValue::Integer(8)),
+            ("component", PluginValue::Object(ki_children)),
+        ]),
     );
-    inner_stack.insert("spacing".to_string(), PluginValue::Integer(8));
 
-    let mut inner_children = HashMap::new();
+    // Kd row
+    let mut kd_children = IndexMap::new();
+    kd_children.insert("kd_label".to_string(), kd_label);
+    kd_children.insert("kd_input".to_string(), kd_input);
+    rows.insert(
+        "kd_row".to_string(),
+        pv_obj(&[
+            ("type", pv_str("stack")),
+            ("direction", pv_str("horizontal")),
+            ("spacing", PluginValue::Integer(8)),
+            ("component", PluginValue::Object(kd_children)),
+        ]),
+    );
 
-    // Kp input
-    let mut kp_input = HashMap::new();
-    kp_input.insert("type".to_string(), PluginValue::String("input".to_string()));
-    kp_input.insert(
-        "placeholder".to_string(),
-        PluginValue::String("Kp".to_string()),
+    // Setpoint row
+    let mut sp_children = IndexMap::new();
+    sp_children.insert("setpoint_label".to_string(), sp_label);
+    sp_children.insert("setpoint_input".to_string(), sp_input);
+    rows.insert(
+        "setpoint_row".to_string(),
+        pv_obj(&[
+            ("type", pv_str("stack")),
+            ("direction", pv_str("horizontal")),
+            ("spacing", PluginValue::Integer(8)),
+            ("component", PluginValue::Object(sp_children)),
+        ]),
     );
-    kp_input.insert("value".to_string(), PluginValue::String("1.0".to_string()));
-    kp_input.insert(
-        "on_change".to_string(),
-        PluginValue::String("on_gain_change".to_string()),
-    );
-    inner_children.insert("kp_input".to_string(), PluginValue::Object(kp_input));
-
-    // Ki input
-    let mut ki_input = HashMap::new();
-    ki_input.insert("type".to_string(), PluginValue::String("input".to_string()));
-    ki_input.insert(
-        "placeholder".to_string(),
-        PluginValue::String("Ki".to_string()),
-    );
-    ki_input.insert("value".to_string(), PluginValue::String("0.0".to_string()));
-    ki_input.insert(
-        "on_change".to_string(),
-        PluginValue::String("on_gain_change".to_string()),
-    );
-    inner_children.insert("ki_input".to_string(), PluginValue::Object(ki_input));
-
-    // Kd input
-    let mut kd_input = HashMap::new();
-    kd_input.insert("type".to_string(), PluginValue::String("input".to_string()));
-    kd_input.insert(
-        "placeholder".to_string(),
-        PluginValue::String("Kd".to_string()),
-    );
-    kd_input.insert("value".to_string(), PluginValue::String("0.0".to_string()));
-    kd_input.insert(
-        "on_change".to_string(),
-        PluginValue::String("on_gain_change".to_string()),
-    );
-    inner_children.insert("kd_input".to_string(), PluginValue::Object(kd_input));
-
-    // Setpoint input
-    let mut sp_input = HashMap::new();
-    sp_input.insert("type".to_string(), PluginValue::String("input".to_string()));
-    sp_input.insert(
-        "placeholder".to_string(),
-        PluginValue::String("Setpoint".to_string()),
-    );
-    sp_input.insert("value".to_string(), PluginValue::String("0.0".to_string()));
-    sp_input.insert(
-        "on_change".to_string(),
-        PluginValue::String("on_setpoint_change".to_string()),
-    );
-    inner_children.insert("setpoint_input".to_string(), PluginValue::Object(sp_input));
 
     // Output display
-    let mut output_label = HashMap::new();
-    output_label.insert("type".to_string(), PluginValue::String("label".to_string()));
-    output_label.insert(
-        "text".to_string(),
-        PluginValue::String("Output: 0.0".to_string()),
-    );
-    output_label.insert(
-        "bind_text".to_string(),
-        PluginValue::String("data.${ns}.output_display".to_string()),
-    );
-    inner_children.insert(
+    rows.insert(
         "output_label".to_string(),
-        PluginValue::Object(output_label),
+        pv_obj(&[
+            ("type", pv_str("label")),
+            ("text", pv_str("Output: 0.0")),
+            ("bind_text", pv_str("data.${ns}.output_display")),
+        ]),
     );
 
     // Enable switch
-    let mut enable_switch = HashMap::new();
-    enable_switch.insert(
-        "type".to_string(),
-        PluginValue::String("switch".to_string()),
-    );
-    enable_switch.insert(
-        "label".to_string(),
-        PluginValue::String("Enable".to_string()),
-    );
-    enable_switch.insert("checked".to_string(), PluginValue::Bool(false));
-    enable_switch.insert(
-        "on_click".to_string(),
-        PluginValue::String("on_enable_toggle".to_string()),
-    );
-    inner_children.insert(
+    rows.insert(
         "enable_switch".to_string(),
-        PluginValue::Object(enable_switch),
+        pv_obj(&[
+            ("type", pv_str("switch")),
+            ("label", pv_str("Enable")),
+            ("checked", PluginValue::Bool(false)),
+            ("on_click", pv_str("on_enable_toggle")),
+        ]),
     );
 
-    inner_stack.insert("component".to_string(), PluginValue::Object(inner_children));
-    children.insert("controls".to_string(), PluginValue::Object(inner_stack));
+    // Controls vertical stack containing all rows
+    let controls = pv_obj(&[
+        ("type", pv_str("stack")),
+        ("direction", pv_str("vertical")),
+        ("spacing", PluginValue::Integer(8)),
+        ("component", PluginValue::Object(rows)),
+    ]);
 
-    root.insert("component".to_string(), PluginValue::Object(children));
+    // Title
+    let title = pv_obj(&[("type", pv_str("label")), ("text", pv_str("PID Controller"))]);
 
-    PluginValue::Object(root)
+    // Root panel
+    let mut children = IndexMap::new();
+    children.insert("title".to_string(), title);
+    children.insert("controls".to_string(), controls);
+
+    pv_obj(&[
+        ("type", pv_str("panel")),
+        ("padding", PluginValue::Integer(16)),
+        ("border", PluginValue::Integer(2)),
+        ("border_color", pv_str("theme.border")),
+        ("shadow", pv_str("md")),
+        ("component", PluginValue::Object(children)),
+    ])
 }
 
 fn init(registrar: &mut dyn PluginRegistrar) {

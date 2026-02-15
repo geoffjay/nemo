@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+indexmap = { workspace = true }
 nemo-plugin-api = { workspace = true }
 wasmtime = { workspace = true }
 wasmtime-wasi = { workspace = true }

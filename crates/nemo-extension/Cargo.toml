@@ -9,6 +9,7 @@ default = []
 wasm = ["nemo-wasm"]
 
 [dependencies]
+indexmap = { workspace = true }
 nemo-config = { workspace = true }
 nemo-registry = { workspace = true }
 nemo-data = { workspace = true }

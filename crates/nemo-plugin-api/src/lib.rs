@@ -3,6 +3,7 @@
 //! This crate defines the stable API boundary between the Nemo host and native plugins.
 //! Plugins link against this crate to register their capabilities.
 
+use indexmap::IndexMap;
 use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -45,8 +46,8 @@ pub enum PluginValue {
     String(String),
     /// Array of values.
     Array(Vec<PluginValue>),
-    /// Object (map) of values.
-    Object(HashMap<String, PluginValue>),
+    /// Object (map) of values, preserving insertion order.
+    Object(IndexMap<String, PluginValue>),
 }
 
 /// Plugin manifest describing capabilities.
@@ -418,7 +419,7 @@ mod tests {
 
     #[test]
     fn test_plugin_value() {
-        let value = PluginValue::Object(HashMap::from([
+        let value = PluginValue::Object(IndexMap::from([
             ("name".to_string(), PluginValue::String("test".to_string())),
             ("count".to_string(), PluginValue::Integer(42)),
         ]));

@@ -2281,7 +2281,7 @@ mod runtime_tests {
     #[test]
     fn test_plugin_value_to_json() {
         let pv = PluginValue::Object({
-            let mut m = HashMap::new();
+            let mut m = indexmap::IndexMap::new();
             m.insert("key".to_string(), PluginValue::String("val".to_string()));
             m.insert("num".to_string(), PluginValue::Integer(99));
             m

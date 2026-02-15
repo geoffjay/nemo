@@ -102,7 +102,7 @@ mod tests {
 
     #[test]
     fn test_round_trip_object() {
-        let mut map = HashMap::new();
+        let mut map = indexmap::IndexMap::new();
         map.insert("key".to_string(), PluginValue::Bool(false));
         let original = PluginValue::Object(map);
         let wit = to_wit(&original);
