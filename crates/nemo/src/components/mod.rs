@@ -134,6 +134,33 @@ pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
     }
 }
 
+/// Applies a border with optional color to a div element.
+pub(crate) fn apply_border(base: Div, width: Option<i64>, color: Option<&str>, cx: &App) -> Div {
+    match width {
+        Some(w) => {
+            let resolved = color
+                .and_then(|c| resolve_color(c, cx))
+                .unwrap_or(cx.theme().colors.border);
+            base.border(px(w as f32)).border_color(resolved)
+        }
+        None => base,
+    }
+}
+
+/// Applies a rounded corner preset to a div element.
+///
+/// Supported sizes: "sm", "md", "lg", "xl", "full"
+pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>) -> Div {
+    match rounded {
+        Some("sm") => base.rounded_sm(),
+        Some("md") => base.rounded_md(),
+        Some("lg") => base.rounded_lg(),
+        Some("xl") => base.rounded_xl(),
+        Some("full") => base.rounded(px(9999.)),
+        _ => base,
+    }
+}
+
 pub use accordion::Accordion;
 pub use alert::Alert;
 pub use area_chart::AreaChart;

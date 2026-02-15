@@ -15,10 +15,10 @@ use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::table::NemoTableDelegate;
 use crate::components::tree::values_to_tree_items;
 use crate::components::{
-    Accordion, Alert, AreaChart, Avatar, Badge, BarChart, Button, CandlestickChart, Checkbox,
-    Collapsible, DropdownButton, Icon, Image, Label, LineChart, List, Modal, Notification, Panel,
-    PieChart, Progress, Radio, Select, Slider, Spinner, Stack, Switch, Table, Tabs, Tag, Text,
-    Toggle, Tooltip, Tree,
+    apply_border, apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge,
+    BarChart, Button, CandlestickChart, Checkbox, Collapsible, DropdownButton, Icon, Image, Label,
+    LineChart, List, Modal, Notification, Panel, PieChart, Progress, Radio, Select, Slider,
+    Spinner, Stack, Switch, Table, Tabs, Tag, Text, Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
 use crate::workspace::HeaderBar;
@@ -262,9 +262,15 @@ impl App {
             .collect()
     }
 
-    /// Wraps an element in a styled div if layout properties are present.
-    fn apply_sizing(element: AnyElement, component: &BuiltComponent) -> AnyElement {
+    /// Wraps an element in a styled div if layout/decoration properties are present.
+    fn apply_layout_styles(
+        element: AnyElement,
+        component: &BuiltComponent,
+        cx: &gpui::App,
+    ) -> AnyElement {
         let props = &component.properties;
+
+        // Sizing
         let width = props.get("width").and_then(|v| v.as_i64());
         let height = props.get("height").and_then(|v| v.as_i64());
         let min_width = props.get("min_width").and_then(|v| v.as_i64());
@@ -274,17 +280,50 @@ impl App {
             .and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64)));
         let margin = props.get("margin").and_then(|v| v.as_i64());
 
-        if width.is_none()
-            && height.is_none()
-            && min_width.is_none()
-            && min_height.is_none()
+        // Padding
+        let padding = props.get("padding").and_then(|v| v.as_i64());
+        let padding_x = props.get("padding_x").and_then(|v| v.as_i64());
+        let padding_y = props.get("padding_y").and_then(|v| v.as_i64());
+        let padding_left = props.get("padding_left").and_then(|v| v.as_i64());
+        let padding_right = props.get("padding_right").and_then(|v| v.as_i64());
+        let padding_top = props.get("padding_top").and_then(|v| v.as_i64());
+        let padding_bottom = props.get("padding_bottom").and_then(|v| v.as_i64());
+
+        // Decoration
+        let border = props.get("border").and_then(|v| v.as_i64());
+        let border_color = props.get("border_color").and_then(|v| v.as_str());
+        let shadow = props.get("shadow").and_then(|v| v.as_str());
+        let rounded = props.get("rounded").and_then(|v| v.as_str());
+
+        // Early return if nothing to apply
+        if [
+            width,
+            height,
+            min_width,
+            min_height,
+            margin,
+            padding,
+            padding_x,
+            padding_y,
+            padding_left,
+            padding_right,
+            padding_top,
+            padding_bottom,
+            border,
+        ]
+        .iter()
+        .all(|v| v.is_none())
             && flex.is_none()
-            && margin.is_none()
+            && shadow.is_none()
+            && rounded.is_none()
+            && border_color.is_none()
         {
             return element;
         }
 
         let mut wrapper = div().flex().flex_col();
+
+        // Sizing
         if let Some(w) = width {
             wrapper = wrapper.w(px(w as f32));
         }
@@ -303,6 +342,35 @@ impl App {
         if let Some(m) = margin {
             wrapper = wrapper.m(px(m as f32));
         }
+
+        // Padding
+        if let Some(p) = padding {
+            wrapper = wrapper.p(px(p as f32));
+        }
+        if let Some(px_val) = padding_x {
+            wrapper = wrapper.px(px(px_val as f32));
+        }
+        if let Some(py_val) = padding_y {
+            wrapper = wrapper.py(px(py_val as f32));
+        }
+        if let Some(pl) = padding_left {
+            wrapper = wrapper.pl(px(pl as f32));
+        }
+        if let Some(pr) = padding_right {
+            wrapper = wrapper.pr(px(pr as f32));
+        }
+        if let Some(pt) = padding_top {
+            wrapper = wrapper.pt(px(pt as f32));
+        }
+        if let Some(pb) = padding_bottom {
+            wrapper = wrapper.pb(px(pb as f32));
+        }
+
+        // Decoration
+        wrapper = apply_border(wrapper, border, border_color, cx);
+        wrapper = apply_shadow(wrapper, shadow);
+        wrapper = apply_rounded(wrapper, rounded);
+
         wrapper.child(element).into_any_element()
     }
 
@@ -506,7 +574,7 @@ impl App {
                     .into_any_element()
             }
         };
-        Self::apply_sizing(element, component)
+        Self::apply_layout_styles(element, component, cx)
     }
 }
 
