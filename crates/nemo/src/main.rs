@@ -29,8 +29,12 @@ mod workspace;
 
 use args::Args;
 use config::NemoConfig;
+use gpui_component::notification::{Notification as Toast, NotificationType};
+use gpui_component::WindowExt as _;
 use window::get_window_options;
 use workspace::{ProjectLoaderView, ProjectSelected};
+
+actions!(nemo, [ReloadConfig]);
 
 /// The root workspace entity that manages the application state.
 /// It starts in either ProjectLoader mode (no app config) or Application mode.
@@ -44,6 +48,8 @@ struct Workspace {
     state: WorkspaceState,
     nemo_config: NemoConfig,
     ws_args: WorkspaceArgs,
+    current_config_path: Option<PathBuf>,
+    focus_handle: FocusHandle,
 }
 
 /// Subset of args needed after initial parse.
@@ -71,6 +77,7 @@ impl Workspace {
                 apply_theme_from_runtime(&rt, cx);
                 let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                 self.state = WorkspaceState::Application(app_entity);
+                self.current_config_path = Some(app_config_path);
                 cx.notify();
             }
             Err(e) => {
@@ -85,6 +92,37 @@ impl Workspace {
             app.update(cx, |a, cx| {
                 a.shutdown(cx);
             });
+        }
+    }
+
+    fn reload_config(&mut self, _: &ReloadConfig, window: &mut Window, cx: &mut Context<Self>) {
+        tracing::debug!("ReloadConfig action dispatched");
+
+        let Some(config_path) = self.current_config_path.clone() else {
+            tracing::warn!("ReloadConfig: no config path stored, nothing to reload");
+            return;
+        };
+
+        tracing::info!("Reloading configuration from: {:?}", config_path);
+
+        match create_runtime(&config_path, &self.ws_args.extension_dirs) {
+            Ok(rt) => {
+                self.shutdown(cx);
+                apply_theme_from_runtime(&rt, cx);
+                let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                self.state = WorkspaceState::Application(app_entity);
+                window.push_notification("Configuration reloaded", cx);
+                cx.notify();
+            }
+            Err(e) => {
+                tracing::error!("Reload failed: {}", e);
+                window.push_notification(
+                    Toast::new()
+                        .message(format!("Reload failed: {}", e))
+                        .with_type(NotificationType::Error),
+                    cx,
+                );
+            }
         }
     }
 
@@ -121,6 +159,8 @@ impl Render for Workspace {
             .size_full()
             .bg(bg_color)
             .text_color(text_color)
+            .track_focus(&self.focus_handle)
+            .on_action(cx.listener(Self::reload_config))
             .child(content);
 
         if let Some(dialog_layer) = Root::render_dialog_layer(window, cx) {
@@ -240,6 +280,7 @@ fn main() -> Result<()> {
 
     gpui_app.run(move |cx| {
         gpui_component::init(cx);
+        cx.bind_keys([KeyBinding::new("ctrl-shift-r", ReloadConfig, None)]);
 
         // Store workspace entity for window close handler
         let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
@@ -266,7 +307,7 @@ fn main() -> Result<()> {
             let app_config_path = app_config_path.clone();
 
             let ws = cx.new(|cx| {
-                let state = if let Some(config_path) = app_config_path {
+                let (state, current_config_path) = if let Some(config_path) = app_config_path {
                     info!("Loading project from: {:?}", config_path);
 
                     let mut recent = config::recent::RecentProjects::load();
@@ -278,23 +319,28 @@ fn main() -> Result<()> {
                             apply_theme_from_runtime(&rt, cx);
                             let app_entity =
                                 cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
-                            WorkspaceState::Application(app_entity)
+                            (WorkspaceState::Application(app_entity), Some(config_path))
                         }
                         Err(e) => {
                             tracing::error!("Failed to load project: {}", e);
                             let loader = Workspace::create_loader(&nemo_config, window, cx);
-                            WorkspaceState::ProjectLoader(loader)
+                            (WorkspaceState::ProjectLoader(loader), None)
                         }
                     }
                 } else {
                     let loader = Workspace::create_loader(&nemo_config, window, cx);
-                    WorkspaceState::ProjectLoader(loader)
+                    (WorkspaceState::ProjectLoader(loader), None)
                 };
+
+                let focus_handle = cx.focus_handle();
+                focus_handle.focus(window);
 
                 Workspace {
                     state,
                     nemo_config,
                     ws_args,
+                    current_config_path,
+                    focus_handle,
                 }
             });
 
