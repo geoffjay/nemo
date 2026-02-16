@@ -14,11 +14,14 @@ use std::sync::Arc;
 use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::table::NemoTableDelegate;
 use crate::components::tree::values_to_tree_items;
+use gpui_component::input::TabSize;
+
 use crate::components::{
     apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge, BarChart, Button,
-    CandlestickChart, Checkbox, Collapsible, DropdownButton, Icon, Image, Label, LineChart, List,
-    Modal, Notification, Panel, PieChart, Progress, Radio, Select, SidenavBar, Slider, Spinner,
-    Stack, Switch, Table, Tabs, Tag, Text, Toggle, Tooltip, Tree,
+    CandlestickChart, Checkbox, CodeEditor, Collapsible, DropdownButton, Icon, Image, Label,
+    LineChart, List, Modal, Notification, Panel, PieChart, Progress, Radio, Select, SidenavBar,
+    Slider, Spinner, Stack, Switch, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip,
+    Tree,
 };
 use crate::runtime::NemoRuntime;
 use crate::workspace::HeaderBar;
@@ -197,6 +200,160 @@ impl App {
         state
     }
 
+    /// Gets or creates an InputState entity configured for a Textarea component.
+    fn get_or_create_textarea_state(
+        &mut self,
+        component: &BuiltComponent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<InputState> {
+        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+            return state.clone();
+        }
+
+        let props = &component.properties;
+        let placeholder = props
+            .get("placeholder")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let default_value = props
+            .get("default_value")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let rows = props.get("rows").and_then(|v| v.as_i64());
+        let auto_grow_min = props.get("auto_grow_min").and_then(|v| v.as_i64());
+        let auto_grow_max = props.get("auto_grow_max").and_then(|v| v.as_i64());
+
+        let state = cx.new(|cx| {
+            let mut s = InputState::new(window, cx).placeholder(placeholder);
+
+            // Configure mode: auto_grow takes priority, then rows, then default multi_line
+            if let (Some(min), Some(max)) = (auto_grow_min, auto_grow_max) {
+                s = s.auto_grow(min as usize, max as usize);
+            } else {
+                s = s.multi_line(true);
+                s = s.rows(rows.unwrap_or(4) as usize);
+            }
+
+            if let Some(val) = default_value {
+                s = s.default_value(val);
+            }
+            s
+        });
+
+        self.component_states
+            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+        state
+    }
+
+    /// Gets or creates an InputState entity configured for a CodeEditor component.
+    fn get_or_create_code_editor_state(
+        &mut self,
+        component: &BuiltComponent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<InputState> {
+        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+            return state.clone();
+        }
+
+        let props = &component.properties;
+        let language = props
+            .get("language")
+            .and_then(|v| v.as_str())
+            .unwrap_or("plain")
+            .to_string();
+        let line_number = props
+            .get("line_number")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let searchable = props
+            .get("searchable")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let default_value = props
+            .get("default_value")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let multi_line = props
+            .get("multi_line")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let tab_size_val = props.get("tab_size").and_then(|v| v.as_i64()).unwrap_or(4) as usize;
+        let hard_tabs = props
+            .get("hard_tabs")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let rows = props.get("rows").and_then(|v| v.as_i64());
+
+        let state = cx.new(|cx| {
+            let mut s = InputState::new(window, cx)
+                .code_editor(language)
+                .line_number(line_number)
+                .searchable(searchable)
+                .tab_size(TabSize {
+                    tab_size: tab_size_val,
+                    hard_tabs,
+                });
+
+            if !multi_line {
+                s = s.multi_line(false);
+            }
+
+            s = s.rows(rows.unwrap_or(4) as usize);
+
+            if let Some(val) = default_value {
+                s = s.default_value(val);
+            }
+            s
+        });
+
+        self.component_states
+            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+        state
+    }
+
+    /// Gets or creates an InputState entity configured for a TextEditor component.
+    fn get_or_create_text_editor_state(
+        &mut self,
+        component: &BuiltComponent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<InputState> {
+        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+            return state.clone();
+        }
+
+        let props = &component.properties;
+        let placeholder = props
+            .get("placeholder")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let default_value = props
+            .get("default_value")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let rows = props.get("rows").and_then(|v| v.as_i64());
+
+        let state = cx.new(|cx| {
+            let mut s = InputState::new(window, cx)
+                .multi_line(true)
+                .placeholder(placeholder)
+                .rows(rows.unwrap_or(4) as usize);
+
+            if let Some(val) = default_value {
+                s = s.default_value(val);
+            }
+            s
+        });
+
+        self.component_states
+            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+        state
+    }
+
     /// Renders the layout from the layout manager.
     fn render_layout(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let entity_id = cx.entity_id();
@@ -363,7 +520,7 @@ impl App {
             wrapper = wrapper.w(px(w as f32));
         }
         if let Some(h) = height {
-            wrapper = wrapper.h(px(h as f32));
+            wrapper = wrapper.h(px(h as f32)).flex_shrink_0();
         }
         if let Some(mw) = min_width {
             wrapper = wrapper.min_w(px(mw as f32));
@@ -502,6 +659,30 @@ impl App {
             "input" => {
                 let input_state = self.get_or_create_input_state(&component.id, window, cx);
                 crate::components::Input::new(component.clone())
+                    .input_state(input_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "textarea" => {
+                let input_state = self.get_or_create_textarea_state(component, window, cx);
+                Textarea::new(component.clone())
+                    .input_state(input_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "code_editor" => {
+                let input_state = self.get_or_create_code_editor_state(component, window, cx);
+                CodeEditor::new(component.clone())
+                    .input_state(input_state)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "text_editor" => {
+                let input_state = self.get_or_create_text_editor_state(component, window, cx);
+                TextEditor::new(component.clone())
                     .input_state(input_state)
                     .runtime(Arc::clone(&self.runtime))
                     .entity_id(entity_id)

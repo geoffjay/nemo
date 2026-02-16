@@ -228,6 +228,52 @@ fn register_input_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "textarea",
+        ComponentCategory::Input,
+        "Textarea",
+        "A multi-line text input area",
+        ConfigSchema::new("textarea")
+            .property("placeholder", PropertySchema::string())
+            .property("default_value", PropertySchema::string())
+            .property("rows", PropertySchema::integer())
+            .property("auto_grow_min", PropertySchema::integer())
+            .property("auto_grow_max", PropertySchema::integer())
+            .property("disabled", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
+        "code_editor",
+        ComponentCategory::Input,
+        "Code Editor",
+        "A code editor with syntax highlighting and line numbers",
+        ConfigSchema::new("code_editor")
+            .property("language", PropertySchema::string().with_default("plain"))
+            .property("line_number", PropertySchema::boolean().with_default(true))
+            .property("searchable", PropertySchema::boolean().with_default(true))
+            .property("default_value", PropertySchema::string())
+            .property("multi_line", PropertySchema::boolean().with_default(true))
+            .property("tab_size", PropertySchema::integer().with_default(4i64))
+            .property("hard_tabs", PropertySchema::boolean().with_default(false))
+            .property("disabled", PropertySchema::boolean().with_default(false))
+            .property("rows", PropertySchema::integer()),
+    );
+
+    reg(
+        registry,
+        "text_editor",
+        ComponentCategory::Input,
+        "Text Editor",
+        "A rich text editor with formatting toolbar",
+        ConfigSchema::new("text_editor")
+            .property("placeholder", PropertySchema::string())
+            .property("default_value", PropertySchema::string())
+            .property("rows", PropertySchema::integer())
+            .property("disabled", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
         "checkbox",
         ComponentCategory::Input,
         "Checkbox",
@@ -808,6 +854,9 @@ mod tests {
         assert!(registry.has_component("area_chart"));
         assert!(registry.has_component("pie_chart"));
         assert!(registry.has_component("candlestick_chart"));
+        assert!(registry.has_component("textarea"));
+        assert!(registry.has_component("code_editor"));
+        assert!(registry.has_component("text_editor"));
         assert!(registry.has_component("sidenav_bar"));
         assert!(registry.has_component("sidenav_bar_item"));
 

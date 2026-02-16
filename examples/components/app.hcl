@@ -33,6 +33,7 @@ templates {
     size         = "sm"
     text_color   = "theme.muted_foreground"
     full_width   = true
+    min_height   = 24
     align        = "left"
     padding_left = 2
     on_click     = "on_nav"
@@ -68,7 +69,7 @@ layout {
       component "sidebar_inner" {
         type = "stack"
         direction = "vertical"
-        spacing = 4
+        spacing = 8
         padding = 16
         scroll = true
         border_right = 1
@@ -77,7 +78,7 @@ layout {
         component "sidebar_title" {
           type = "label"
           text = "Components"
-          size = "md"
+          size = "lg"
         }
 
         # ── Reference ─────────────────────────────────────────
@@ -189,6 +190,21 @@ layout {
         component "nav_input" {
           template = "nav_item"
           label    = "Input"
+        }
+
+        component "nav_textarea" {
+          template = "nav_item"
+          label    = "Textarea"
+        }
+
+        component "nav_code_editor" {
+          template = "nav_item"
+          label    = "Code Editor"
+        }
+
+        component "nav_text_editor" {
+          template = "nav_item"
+          label    = "Text Editor"
         }
 
         component "nav_select" {
@@ -666,6 +682,186 @@ layout {
           type = "input"
           placeholder = "Cannot edit"
           disabled = true
+        }
+      }
+
+      # ── Textarea page ──────────────────────────────────────
+      component "page_textarea" {
+        template = "content_page"
+
+        component "textarea_title" {
+          type = "label"
+          text = "Textarea"
+          size = "lg"
+        }
+
+        component "textarea_desc" {
+          type = "text"
+          content = "Textarea is a multi-line text input. Supports configurable rows, placeholder text, auto-grow, and default values."
+        }
+
+        component "textarea_section_basic" {
+          type = "label"
+          text = "Basic Textarea"
+          size = "sm"
+        }
+
+        component "textarea_basic" {
+          type = "textarea"
+          placeholder = "Enter your message..."
+          rows = 4
+        }
+
+        component "textarea_section_autogrow" {
+          type = "label"
+          text = "Auto-grow (1-6 rows)"
+          size = "sm"
+        }
+
+        component "textarea_autogrow" {
+          type = "textarea"
+          placeholder = "Start typing and the textarea will grow..."
+          auto_grow_min = 1
+          auto_grow_max = 6
+        }
+
+        component "textarea_section_default" {
+          type = "label"
+          text = "With Default Value"
+          size = "sm"
+        }
+
+        component "textarea_default" {
+          type = "textarea"
+          rows = 3
+          default_value = "This textarea has a default value.\nIt supports multiple lines of text."
+        }
+
+        component "textarea_section_disabled" {
+          type = "label"
+          text = "Disabled"
+          size = "sm"
+        }
+
+        component "textarea_disabled" {
+          type = "textarea"
+          placeholder = "Cannot edit"
+          rows = 3
+          disabled = true
+        }
+      }
+
+      # ── Code Editor page ─────────────────────────────────
+      component "page_code_editor" {
+        template = "content_page"
+
+        component "code_editor_title" {
+          type = "label"
+          text = "Code Editor"
+          size = "lg"
+        }
+
+        component "code_editor_desc" {
+          type = "text"
+          content = "Code Editor provides syntax-highlighted code editing with line numbers, search, and configurable indentation."
+        }
+
+        component "code_editor_section_rust" {
+          type = "label"
+          text = "Rust"
+          size = "sm"
+        }
+
+        component "code_editor_rust" {
+          type = "code_editor"
+          language = "rust"
+          line_number = true
+          searchable = true
+          tab_size = 4
+          default_value = "fn main() {\n    println!(\"Hello, world!\");\n}\n\nstruct App {\n    name: String,\n    version: u32,\n}"
+        }
+
+        component "code_editor_section_js" {
+          type = "label"
+          text = "JavaScript"
+          size = "sm"
+        }
+
+        component "code_editor_js" {
+          type = "code_editor"
+          language = "javascript"
+          line_number = true
+          tab_size = 2
+          default_value = "function greet(name) {\n  return 'Hello, ' + name + '!';\n}\n\nconst result = greet('World');\nconsole.log(result);"
+        }
+
+        component "code_editor_section_noline" {
+          type = "label"
+          text = "No Line Numbers"
+          size = "sm"
+        }
+
+        component "code_editor_noline" {
+          type = "code_editor"
+          language = "python"
+          line_number = false
+          searchable = false
+          tab_size = 4
+          default_value = "def hello():\n    print(\"Hello from Python!\")\n\nhello()"
+        }
+
+        component "code_editor_section_tabs" {
+          type = "label"
+          text = "Hard Tabs"
+          size = "sm"
+        }
+
+        component "code_editor_hard_tabs" {
+          type = "code_editor"
+          language = "go"
+          line_number = true
+          hard_tabs = true
+          default_value = "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"Hello, Go!\")\n}"
+        }
+      }
+
+      # ── Text Editor page ─────────────────────────────────
+      component "page_text_editor" {
+        template = "content_page"
+
+        component "text_editor_title" {
+          type = "label"
+          text = "Text Editor"
+          size = "lg"
+        }
+
+        component "text_editor_desc" {
+          type = "text"
+          content = "Text Editor is a rich-text editing area with a toolbar for basic formatting: Bold, Italic, and Underline. Uses markdown-style markers."
+        }
+
+        component "text_editor_section_basic" {
+          type = "label"
+          text = "Basic Text Editor"
+          size = "sm"
+        }
+
+        component "text_editor_basic" {
+          type = "text_editor"
+          placeholder = "Start writing..."
+          rows = 6
+        }
+
+        component "text_editor_section_default" {
+          type = "label"
+          text = "With Default Value"
+          size = "sm"
+        }
+
+        component "text_editor_default" {
+          type = "text_editor"
+          rows = 8
+          default_value = "# Welcome to the Text Editor\n\nUse the toolbar above to insert **bold**, _italic_, or __underline__ markers.\n\nThis is a simple rich-text editing experience."
         }
       }
 
@@ -2078,8 +2274,11 @@ layout {
             type = "panel"
 
             component "styling_padding_code" {
-              type = "text"
-              content = "# Uniform padding on all sides\npadding = 16\n\n# Axis padding (horizontal / vertical)\npadding_x = 24\npadding_y = 24\n\n# Directional padding\npadding_left   = 32\npadding_right  = 32\npadding_top    = 32\npadding_bottom = 32"
+              type = "code_editor"
+              language = "hcl"
+              line_number = false
+              searchable = false
+              default_value = "# Uniform padding on all sides\npadding = 16\n\n# Axis padding (horizontal / vertical)\npadding_x = 24\npadding_y = 24\n\n# Directional padding\npadding_left   = 32\npadding_right  = 32\npadding_top    = 32\npadding_bottom = 32"
             }
           }
         }
@@ -2210,8 +2409,11 @@ layout {
             type = "panel"
 
             component "styling_margin_code" {
-              type = "text"
-              content = "# Uniform margin on all sides\nmargin = 12\n\n# Axis margin (horizontal / vertical)\nmargin_x = 20\nmargin_y = 20\n\n# Directional margin\nmargin_left   = 24\nmargin_right  = 24\nmargin_top    = 16\nmargin_bottom = 16"
+              type = "code_editor"
+              language = "hcl"
+              line_number = false
+              searchable = false
+              default_value = "# Uniform margin on all sides\nmargin = 12\n\n# Axis margin (horizontal / vertical)\nmargin_x = 20\nmargin_y = 20\n\n# Directional margin\nmargin_left   = 24\nmargin_right  = 24\nmargin_top    = 16\nmargin_bottom = 16"
             }
           }
         }
@@ -2335,8 +2537,11 @@ layout {
             type = "panel"
 
             component "styling_border_code" {
-              type = "text"
-              content = "# Uniform border on all sides\nborder = 1\nborder = 2\n\n# Axis border (horizontal / vertical)\nborder_x = 2\nborder_y = 2\n\n# Directional border\nborder_left   = 3\nborder_right  = 3\nborder_top    = 3\nborder_bottom = 3\n\n# Border color (theme references or hex)\nborder_color = \"theme.border\"\nborder_color = \"theme.primary\"\nborder_color = \"#FF6600\""
+              type = "code_editor"
+              language = "hcl"
+              line_number = false
+              searchable = false
+              default_value = "# Uniform border on all sides\nborder = 1\nborder = 2\n\n# Axis border (horizontal / vertical)\nborder_x = 2\nborder_y = 2\n\n# Directional border\nborder_left   = 3\nborder_right  = 3\nborder_top    = 3\nborder_bottom = 3\n\n# Border color (theme references or hex)\nborder_color = \"theme.border\"\nborder_color = \"theme.primary\"\nborder_color = \"#FF6600\""
             }
           }
         }
@@ -2402,8 +2607,11 @@ layout {
             type = "panel"
 
             component "styling_shadow_code" {
-              type = "text"
-              content = "# Shadow sizes: sm, md, lg, xl, 2xl\nshadow = \"sm\"\nshadow = \"md\"\nshadow = \"lg\"\nshadow = \"xl\"\nshadow = \"2xl\""
+              type = "code_editor"
+              language = "hcl"
+              line_number = false
+              searchable = false
+              default_value = "# Shadow sizes: sm, md, lg, xl, 2xl\nshadow = \"sm\"\nshadow = \"md\"\nshadow = \"lg\"\nshadow = \"xl\"\nshadow = \"2xl\""
             }
           }
         }
@@ -2474,8 +2682,11 @@ layout {
             type = "panel"
 
             component "styling_rounded_code" {
-              type = "text"
-              content = "# Rounded sizes: sm, md, lg, xl, full\nrounded = \"sm\"\nrounded = \"md\"\nrounded = \"lg\"\nrounded = \"xl\"\nrounded = \"full\""
+              type = "code_editor"
+              language = "hcl"
+              line_number = false
+              searchable = false
+              default_value = "# Rounded sizes: sm, md, lg, xl, full\nrounded = \"sm\"\nrounded = \"md\"\nrounded = \"lg\"\nrounded = \"xl\"\nrounded = \"full\""
             }
           }
         }
@@ -2545,8 +2756,11 @@ layout {
             type = "panel"
 
             component "styling_combined_code" {
-              type = "text"
-              content = "component \"styled_card\" {\n  type         = \"stack\"\n  direction    = \"vertical\"\n  spacing      = 8\n  padding      = 24\n  border       = 1\n  border_color = \"theme.border\"\n  shadow       = \"md\"\n  rounded      = \"lg\"\n\n  component \"title\" {\n    type = \"label\"\n    text = \"Styled Card\"\n  }\n\n  component \"body\" {\n    type    = \"text\"\n    content = \"Card content here.\"\n  }\n}"
+              type = "code_editor"
+              language = "hcl"
+              line_number = false
+              searchable = false
+              default_value = "component \"styled_card\" {\n  type         = \"stack\"\n  direction    = \"vertical\"\n  spacing      = 8\n  padding      = 24\n  border       = 1\n  border_color = \"theme.border\"\n  shadow       = \"md\"\n  rounded      = \"lg\"\n\n  component \"title\" {\n    type = \"label\"\n    text = \"Styled Card\"\n  }\n\n  component \"body\" {\n    type    = \"text\"\n    content = \"Card content here.\"\n  }\n}"
             }
           }
         }
@@ -2756,8 +2970,11 @@ layout {
             type = "panel"
 
             component "sidenav_hcl_text" {
-              type    = "text"
-              content = "component \"my_sidenav\" {\n  type      = \"sidenav_bar\"\n  collapsed = false\n\n  component \"item_home\" {\n    type  = \"sidenav_bar_item\"\n    icon  = \"globe\"\n    label = \"Home\"\n  }\n\n  component \"item_inbox\" {\n    type  = \"sidenav_bar_item\"\n    icon  = \"inbox\"\n    label = \"Inbox\"\n  }\n}"
+              type = "code_editor"
+              language = "hcl"
+              line_number = false
+              searchable = false
+              default_value = "component \"my_sidenav\" {\n  type      = \"sidenav_bar\"\n  collapsed = false\n\n  component \"item_home\" {\n    type  = \"sidenav_bar_item\"\n    icon  = \"globe\"\n    label = \"Home\"\n  }\n\n  component \"item_inbox\" {\n    type  = \"sidenav_bar_item\"\n    icon  = \"inbox\"\n    label = \"Inbox\"\n  }\n}"
             }
           }
         }

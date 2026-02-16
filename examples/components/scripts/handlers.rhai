@@ -7,6 +7,9 @@ let ALL_PAGES = [
     "page_icon",
     "page_checkbox",
     "page_input",
+    "page_textarea",
+    "page_code_editor",
+    "page_text_editor",
     "page_select",
     "page_progress",
     "page_notification",
@@ -43,6 +46,9 @@ fn on_nav(component_id, event_data) {
     set_component_property("page_icon", "visible", false);
     set_component_property("page_checkbox", "visible", false);
     set_component_property("page_input", "visible", false);
+    set_component_property("page_textarea", "visible", false);
+    set_component_property("page_code_editor", "visible", false);
+    set_component_property("page_text_editor", "visible", false);
     set_component_property("page_select", "visible", false);
     set_component_property("page_progress", "visible", false);
     set_component_property("page_notification", "visible", false);
