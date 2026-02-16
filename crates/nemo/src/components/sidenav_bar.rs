@@ -96,24 +96,11 @@ impl RenderOnce for SidenavBar {
             .collect();
 
         // Non-sidenav_bar_item children (e.g. buttons) are passed through as-is
-        container = container.child(
-            div()
-                .flex()
-                .flex_col()
-                .flex_1()
-                .gap_1()
-                .children(items),
-        );
+        container = container.child(div().flex().flex_col().flex_1().gap_1().children(items));
 
         // Append any non-item children (like a toggle button) at the bottom
         if !self.children.is_empty() {
-            container = container.child(
-                div()
-                    .flex()
-                    .flex_col()
-                    .gap_1()
-                    .children(self.children),
-            );
+            container = container.child(div().flex().flex_col().gap_1().children(self.children));
         }
 
         container.into_any_element()
@@ -176,22 +163,14 @@ impl RenderOnce for SidenavBarItem {
         if self.collapsed {
             // Icon only, centered
             row = row.justify_center();
-            row = row.child(
-                gpui_component::Icon::new(icon_name)
-                    .with_size(gpui_component::Size::Small),
-            );
+            row = row
+                .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
         } else {
             // Icon + label
             row = row.gap_3();
-            row = row.child(
-                gpui_component::Icon::new(icon_name)
-                    .with_size(gpui_component::Size::Small),
-            );
-            row = row.child(
-                div()
-                    .text_sm()
-                    .child(self.label),
-            );
+            row = row
+                .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
+            row = row.child(div().text_sm().child(self.label));
         }
 
         row
