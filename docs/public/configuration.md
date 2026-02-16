@@ -478,7 +478,52 @@ These properties are available on all components:
 | `height` | int | Fixed height in pixels |
 | `min_width` | int | Minimum width in pixels |
 | `min_height` | int | Minimum height in pixels |
-| `margin` | int | Outer spacing in pixels |
+
+#### Margin
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `margin` | int | Outer spacing on all sides in pixels |
+| `margin_x` | int | Outer spacing on left and right |
+| `margin_y` | int | Outer spacing on top and bottom |
+| `margin_left` | int | Outer spacing on left side |
+| `margin_right` | int | Outer spacing on right side |
+| `margin_top` | int | Outer spacing on top |
+| `margin_bottom` | int | Outer spacing on bottom |
+
+#### Padding
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `padding` | int | Inner spacing on all sides in pixels |
+| `padding_x` | int | Inner spacing on left and right |
+| `padding_y` | int | Inner spacing on top and bottom |
+| `padding_left` | int | Inner spacing on left side |
+| `padding_right` | int | Inner spacing on right side |
+| `padding_top` | int | Inner spacing on top |
+| `padding_bottom` | int | Inner spacing on bottom |
+
+#### Border
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `border` | int | Border width on all sides in pixels |
+| `border_x` | int | Border width on left and right |
+| `border_y` | int | Border width on top and bottom |
+| `border_left` | int | Border width on left side |
+| `border_right` | int | Border width on right side |
+| `border_top` | int | Border width on top |
+| `border_bottom` | int | Border width on bottom |
+| `border_color` | string | Border color (theme reference or hex). Default: `theme.border` |
+
+#### Decoration
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `shadow` | string | Shadow preset: `"sm"`, `"md"`, `"lg"`, `"xl"`, `"2xl"` |
+| `rounded` | string | Corner rounding: `"sm"`, `"md"`, `"lg"`, `"xl"`, `"full"` |
+
+Directional properties override their generic counterpart. For example, `margin_left = 8` takes effect alongside `margin = 16` for the left side only, with the other three sides using `16`.
 
 ### `stack`
 
@@ -1009,6 +1054,64 @@ component "favorite" {
 | `icon` | string | | Optional icon name |
 | `checked` | bool | `false` | Initial state |
 | `disabled` | bool | `false` | Disable interaction |
+
+### `sidenav_bar`
+
+A vertical navigation sidebar with collapsible icon+label items. When collapsed, only icons are shown. When expanded, icons and labels are shown side by side. Has a 1px border on left and right by default.
+
+```hcl
+component "sidebar" {
+  type      = "sidenav_bar"
+  collapsed = false
+  width     = 200
+
+  component "nav_home" {
+    type  = "sidenav_bar_item"
+    icon  = "globe"
+    label = "Home"
+  }
+
+  component "nav_inbox" {
+    type  = "sidenav_bar_item"
+    icon  = "inbox"
+    label = "Inbox"
+  }
+
+  component "nav_settings" {
+    type  = "sidenav_bar_item"
+    icon  = "settings"
+    label = "Settings"
+  }
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `collapsed` | bool | `false` | When `true`, show icons only (narrow bar). When `false`, show icons and labels. |
+| `width` | int | `200` | Width of the sidebar in pixels when expanded. Collapsed width is fixed at 48px. |
+
+The `collapsed` property can be toggled from RHAI scripts using `set_component_property()` to dynamically expand or collapse the sidebar.
+
+Non-`sidenav_bar_item` children (such as buttons) are rendered at the bottom of the sidebar, useful for placing a collapse/expand toggle button.
+
+### `sidenav_bar_item`
+
+A navigation item for use inside a `sidenav_bar`. Displays an icon and a label. When the parent `sidenav_bar` is collapsed, only the icon is shown.
+
+```hcl
+component "nav_home" {
+  type  = "sidenav_bar_item"
+  icon  = "globe"
+  label = "Home"
+}
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `icon` | string | `"info"` | Icon name (see [icon names](#icon)) |
+| `label` | string | `""` | Display text shown when the parent sidenav is expanded |
+
+Items use the `theme.sidebar_foreground` text color and `theme.list_hover` background on hover.
 
 ### `table`
 

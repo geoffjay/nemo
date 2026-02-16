@@ -414,7 +414,10 @@ The Nemo codebase is organized as a Cargo workspace:
 | `nemo-events` | Event bus (typed pub/sub) |
 | `nemo-extension` | RHAI engine, plugin host |
 | `nemo-integration` | HTTP, WebSocket, MQTT, Redis, NATS clients |
-| `nemo-plugin-api` | Stable plugin author interface |
+| `nemo-plugin-api` | Stable native plugin author interface |
+| `nemo-plugin` | Native plugin host-side loading logic |
+| `nemo-wasm` | WASM plugin host (Wasmtime-based, loads `.wasm` components) |
+| `nemo-wasm-guest` | WASM plugin guest SDK (re-exports `wit-bindgen`) |
 | `nemo-macros` | `#[derive(NemoComponent)]` proc macro |
 
 ### Building from Source

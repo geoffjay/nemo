@@ -6,4 +6,5 @@ Welcome to the Nemo documentation. Use the navigation to find what you need.
 - [CLI Reference](cli.md) -- Command-line options
 - [Configuration](configuration.md) -- Complete HCL reference
 - [Architecture](architecture.md) -- System design diagrams
-- [Development](develop.md) -- Scripts, plugins, and contributing
+- [Plugins](plugins.md) -- Native and WASM plugin development
+- [Development](develop.md) -- Scripts, custom components, and contributing

@@ -1,10 +1,10 @@
 # Plugins
 
-Nemo's plugin system lets you extend the framework with custom data sources, components, transforms, and actions written in Rust and compiled as native dynamic libraries. Plugins are loaded at startup and integrate seamlessly with the rest of the application.
+Nemo supports two plugin architectures: **native plugins** compiled as dynamic libraries, and **WASM plugins** compiled as WebAssembly Component Model binaries. Both share the same runtime API surface for reading/writing data, emitting events, and controlling components. Native plugins have full OS access and can spawn threads; WASM plugins run in a sandboxed single-threaded environment with a tick-based execution model.
 
-## Why Plugins?
+## Native Plugins
 
-RHAI scripts are great for event handlers and lightweight logic, but they run in a sandbox with no access to the network, filesystem, or native libraries. Plugins fill the gap when you need to:
+Native plugins are compiled as dynamic libraries and loaded into the Nemo process. They are the right choice when you need to:
 
 - **Provide custom data sources** that produce live data for UI bindings (e.g., hardware sensors, proprietary APIs, database queries)
 - **Run background processing** on a separate thread (e.g., polling an internal service, generating computed values)
@@ -13,35 +13,35 @@ RHAI scripts are great for event handlers and lightweight logic, but they run in
 
 Plugins run as native code inside the Nemo process, so they have full access to the Rust ecosystem while still interacting with Nemo through a structured API.
 
-## How Plugins Work
+### How Native Plugins Work
 
 ```
-┌──────────────────────────────────────────────────┐
-│                  Nemo Application                 │
-│                                                   │
-│  ┌─────────────┐    ┌───────────────────────────┐ │
-│  │ Plugin Host  │───▶│ ExtensionLoader            │ │
-│  │              │    │  • Scans plugin directories │ │
-│  │  • load()    │    │  • Discovers .dylib/.so     │ │
-│  │  • unload()  │    └───────────────────────────┘ │
-│  └──────┬──────┘                                   │
-│         │ dlopen                                   │
-│         ▼                                          │
-│  ┌──────────────┐    ┌───────────────────────────┐ │
-│  │ Your Plugin   │───▶│ PluginRegistrar            │ │
-│  │  (.dylib/.so) │    │  • register_component()    │ │
-│  │               │    │  • register_data_source()  │ │
-│  │  nemo_plugin_ │    │  • register_transform()    │ │
-│  │  manifest()   │    │  • register_action()       │ │
-│  │               │    └───────────────────────────┘ │
-│  │  nemo_plugin_ │    ┌───────────────────────────┐ │
+┌───────────────────────────────────────────────────────┐
+│                    Nemo Application                   │
+│                                                       │
+│  ┌──────────────┐    ┌─────────────────────────────┐  │
+│  │ Plugin Host  │───▶│ ExtensionLoader             │  │
+│  │              │    │  • Scans plugin directories │  │
+│  │  • load()    │    │  • Discovers .dylib/.so     │  │
+│  │  • unload()  │    └─────────────────────────────┘  │
+│  └──────┬───────┘                                     │
+│         │ dlopen                                      │
+│         ▼                                             │
+│  ┌───────────────┐    ┌────────────────────────────┐  │
+│  │ Your Plugin   │───▶│ PluginRegistrar            │  │
+│  │  (.dylib/.so) │    │  • register_component()    │  │
+│  │               │    │  • register_data_source()  │  │
+│  │  nemo_plugin_ │    │  • register_transform()    │  │
+│  │  manifest()   │    │  • register_action()       │  │
+│  │               │    └────────────────────────────┘  │
+│  │  nemo_plugin_ │    ┌─────────────────────────────┐ │
 │  │  entry()      │───▶│ PluginContext               │ │
-│  └──────────────┘    │  • get_data() / set_data()  │ │
-│                      │  • emit_event()             │ │
-│                      │  • get/set_component_prop() │ │
-│                      │  • log()                    │ │
-│                      └───────────────────────────┘ │
-└──────────────────────────────────────────────────┘
+│  └───────────────┘    │  • get_data() / set_data()  │ │
+│                       │  • emit_event()             │ │
+│                       │  • get/set_component_prop() │ │
+│                       │  • log()                    │ │
+│                       └─────────────────────────────┘ │
+└───────────────────────────────────────────────────────┘
 ```
 
 At startup, Nemo scans directories passed via `--extension-dirs` for native libraries (`.dylib` on macOS, `.so` on Linux, `.dll` on Windows). For each library found, it:
@@ -50,11 +50,11 @@ At startup, Nemo scans directories passed via `--extension-dirs` for native libr
 2. Calls `nemo_plugin_entry()` with a `PluginRegistrar` to let the plugin register its features
 3. Stores the loaded plugin for the application's lifetime
 
-## Building a Plugin: Step by Step
+### Building a Native Plugin: Step by Step
 
 This walkthrough creates a plugin that provides simulated sensor data. This is based on the `mock-data` plugin in `examples/data-binding/plugins/`.
 
-### 1. Create the Crate
+#### 1. Create the Crate
 
 ```bash
 mkdir -p my-app/plugins/my-sensor
@@ -62,7 +62,7 @@ cd my-app/plugins/my-sensor
 cargo init --lib
 ```
 
-### 2. Configure `Cargo.toml`
+#### 2. Configure `Cargo.toml`
 
 The key requirement is `crate-type = ["cdylib"]`, which tells Cargo to produce a dynamic library instead of a Rust library.
 
@@ -82,7 +82,7 @@ semver = "1"
 
 If your project is inside the Nemo workspace, use a relative path to `nemo-plugin-api`. Otherwise, you can publish it or use a git dependency.
 
-### 3. Write the Plugin
+#### 3. Write the Plugin
 
 Edit `src/lib.rs`:
 
@@ -134,7 +134,7 @@ declare_plugin!(
 );
 ```
 
-### 4. Build the Plugin
+#### 4. Build the Plugin
 
 ```bash
 cargo build -p my-sensor-plugin
@@ -142,7 +142,7 @@ cargo build -p my-sensor-plugin
 
 This produces `target/debug/libmy_sensor_plugin.dylib` (macOS) or `target/debug/libmy_sensor_plugin.so` (Linux).
 
-### 5. Load the Plugin
+#### 5. Load the Plugin
 
 Pass the plugin directory to Nemo:
 
@@ -152,7 +152,7 @@ nemo --app-config app.hcl --extension-dirs ./target/debug
 
 Nemo discovers and loads the library, calls the manifest and entry functions, and the plugin begins publishing data.
 
-### 6. Bind Plugin Data to UI
+#### 6. Bind Plugin Data to UI
 
 In your `app.hcl`, bind components to the data paths the plugin sets:
 
@@ -184,9 +184,9 @@ The `bind_text` shorthand creates a one-way binding from the plugin's data path 
 
 ---
 
-## Plugin API Reference
+### Plugin API Reference
 
-### `declare_plugin!` Macro
+#### `declare_plugin!` Macro
 
 The entry point for every plugin. It generates the two `extern "C"` functions that Nemo looks for when loading a library:
 
@@ -204,7 +204,7 @@ This generates:
 - `nemo_plugin_manifest() -> PluginManifest` — Returns the plugin's identity
 - `nemo_plugin_entry(&mut dyn PluginRegistrar)` — Called to initialize the plugin
 
-### `PluginManifest`
+#### `PluginManifest`
 
 Describes the plugin's identity and capabilities.
 
@@ -222,7 +222,7 @@ Describes the plugin's identity and capabilities.
 - `.with_description(text)` — Set the description
 - `.with_capability(cap)` — Add a capability
 
-### `Capability`
+#### `Capability`
 
 What a plugin provides:
 
@@ -234,7 +234,7 @@ What a plugin provides:
 | `Capability::Action(name)` | Provides a custom action |
 | `Capability::EventHandler(name)` | Provides an event handler |
 
-### `PluginRegistrar` Trait
+#### `PluginRegistrar` Trait
 
 Passed to the init function. Used to register plugin features and access the runtime context.
 
@@ -247,7 +247,7 @@ Passed to the init function. Used to register plugin features and access the run
 | `context()` | Get a `&dyn PluginContext` reference |
 | `context_arc()` | Get an `Arc<dyn PluginContext>` for use in threads |
 
-### `PluginContext` Trait
+#### `PluginContext` Trait
 
 The runtime API available to plugins. The `context_arc()` method returns an `Arc<dyn PluginContext>` that is `Send + Sync`, safe to move into background threads.
 
@@ -261,7 +261,7 @@ The runtime API available to plugins. The `context_arc()` method returns an `Arc
 | `get_component_property(id, prop)` | Read a component property |
 | `set_component_property(id, prop, val)` | Update a component property |
 
-### `PluginValue`
+#### `PluginValue`
 
 FFI-safe value type used for all data exchange between plugins and Nemo:
 
@@ -277,7 +277,7 @@ enum PluginValue {
 }
 ```
 
-### `LogLevel`
+#### `LogLevel`
 
 | Level | Description |
 |-------|-------------|
@@ -288,7 +288,7 @@ enum PluginValue {
 
 ---
 
-## Plugin Permissions
+### Plugin Permissions
 
 Plugins can declare the permissions they need via `PluginPermissions`:
 
@@ -306,10 +306,267 @@ By default, all permissions are `false` / empty. Set them on the manifest if you
 
 ---
 
-## Tips
+### Tips
 
 - **Data path conventions:** Use a dotted prefix matching your plugin ID (e.g., `sensor.temperature`) to avoid collisions with other plugins or built-in data sources.
 - **Thread safety:** `PluginContext` is `Send + Sync`. Use `context_arc()` to get an `Arc` you can move into `std::thread::spawn`.
 - **Error handling:** `set_data()` returns `Result<(), PluginError>`. In background threads, log errors rather than panicking.
 - **Hot reload:** Plugins are loaded once at startup. To reload, restart the application.
 - **Platform libraries:** The compiled library extension varies by platform: `.dylib` (macOS), `.so` (Linux), `.dll` (Windows). Nemo detects the correct extension automatically and strips the `lib` prefix on Unix.
+
+---
+
+## WASM Plugins
+
+WASM plugins use the [WebAssembly Component Model](https://component-model.bytecodealliance.org/) to run plugin code in a sandboxed environment. They share the same runtime API as native plugins (data access, event emission, component control) but execute inside a Wasmtime sandbox with no direct OS access.
+
+WASM plugins are the right choice when you need:
+
+- **Sandboxed execution** — plugins cannot access the filesystem, network, or spawn threads
+- **Language flexibility** — any language that compiles to WASM components can be used (Rust examples below)
+- **Safe distribution** — WASM binaries are portable and can be loaded without trust concerns
+
+### How WASM Plugins Work
+
+WASM plugins communicate with Nemo through a WIT (WebAssembly Interface Type) contract. The plugin exports three functions and imports a host API:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Nemo Application                      │
+│                                                          │
+│  ┌──────────────┐    ┌────────────────────────────────┐  │
+│  │  WasmHost    │    │ Wasmtime Engine                │  │
+│  │              │───▶│  • Component Model enabled     │  │
+│  │  • load()    │    │  • WASI support                │  │
+│  │  • unload()  │    └────────────────────────────────┘  │
+│  │  • tick_all()│                                        │
+│  └──────┬───────┘                                        │
+│         │ instantiate                                    │
+│         ▼                                                │
+│  ┌───────────────┐    ┌────────────────────────────────┐ │
+│  │ WASM Plugin   │───▶│ Exported functions             │ │
+│  │  (.wasm)      │    │  • get_manifest() -> manifest  │ │
+│  │               │    │  • init()                      │ │
+│  │               │    │  • tick() -> u64 (ms interval) │ │
+│  └───────────────┘    └────────────────────────────────┘ │
+│         │                                                │
+│         │ imports                                        │
+│         ▼                                                │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │ Host API (same surface as native PluginContext)    │  │
+│  │  • get_data() / set_data()                        │  │
+│  │  • emit_event()                                   │  │
+│  │  • get/set_component_property()                   │  │
+│  │  • log()                                          │  │
+│  └────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
+```
+
+Unlike native plugins which spawn background threads, WASM plugins use a **tick-based model**:
+
+1. Nemo calls `init()` once after loading the plugin
+2. Nemo calls `tick()` periodically; the return value is the number of milliseconds until the next tick
+3. Each `tick()` call can read/write data, emit events, and update component properties via the host API
+
+### The WIT Interface
+
+The plugin contract is defined in a WIT file (`nemo-plugin.wit`):
+
+```wit
+package nemo:plugin@0.1.0;
+
+interface types {
+    enum log-level { debug, info, warn, error }
+
+    variant plugin-value {
+        null,
+        bool-val(bool),
+        integer-val(s64),
+        float-val(f64),
+        string-val(string),
+        json-val(string),       // JSON-encoded arrays/objects
+    }
+
+    record plugin-manifest {
+        id: string,
+        name: string,
+        version: string,
+        description: string,
+        author: option<string>,
+    }
+}
+
+interface host-api {
+    use types.{log-level, plugin-value};
+
+    get-data: func(path: string) -> option<plugin-value>;
+    set-data: func(path: string, value: plugin-value) -> result<_, string>;
+    emit-event: func(event-type: string, payload: plugin-value);
+    get-config: func(path: string) -> option<plugin-value>;
+    log: func(level: log-level, message: string);
+    get-component-property: func(id: string, prop: string) -> option<plugin-value>;
+    set-component-property: func(id: string, prop: string, value: plugin-value) -> result<_, string>;
+}
+
+world nemo-plugin {
+    use types.{plugin-manifest};
+    import host-api;
+
+    export get-manifest: func() -> plugin-manifest;
+    export init: func();
+    export tick: func() -> u64;
+}
+```
+
+The `plugin-value` variant uses `json-val` for complex types (arrays and objects) since WIT does not support recursive types. The host automatically handles JSON serialization/deserialization.
+
+### Building a WASM Plugin: Step by Step
+
+#### 1. Prerequisites
+
+Install the WASM Component Model target:
+
+```bash
+rustup target add wasm32-wasip2
+```
+
+#### 2. Create the Crate
+
+```bash
+mkdir -p my-app/plugins/my-wasm-plugin
+cd my-app/plugins/my-wasm-plugin
+cargo init --lib
+```
+
+#### 3. Configure `Cargo.toml`
+
+```toml
+[package]
+name = "my-wasm-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+nemo-wasm-guest = { path = "../../crates/nemo-wasm-guest" }
+wit-bindgen = "0.41"
+```
+
+The `nemo-wasm-guest` crate re-exports `wit-bindgen` and provides the WIT file path.
+
+#### 4. Write the Plugin
+
+Edit `src/lib.rs`:
+
+```rust
+wit_bindgen::generate!({
+    path: "../../crates/nemo-wasm/wit/nemo-plugin.wit",
+    world: "nemo-plugin",
+});
+
+use nemo::plugin::host_api;
+use nemo::plugin::types::{LogLevel, PluginValue};
+
+struct MyPlugin;
+
+static mut COUNTER: i64 = 0;
+
+impl Guest for MyPlugin {
+    fn get_manifest() -> PluginManifest {
+        PluginManifest {
+            id: "my-wasm-plugin".into(),
+            name: "My WASM Plugin".into(),
+            version: "0.1.0".into(),
+            description: "A WASM plugin example".into(),
+            author: None,
+        }
+    }
+
+    fn init() {
+        let _ = host_api::set_data("myplugin.value", &PluginValue::FloatVal(0.0));
+        host_api::log(LogLevel::Info, "WASM plugin initialized");
+    }
+
+    fn tick() -> u64 {
+        // Safety: WASM is single-threaded, no concurrent access.
+        let counter = unsafe {
+            COUNTER += 1;
+            COUNTER
+        };
+
+        let value = (counter as f64 * 0.1).sin();
+        let _ = host_api::set_data("myplugin.value", &PluginValue::FloatVal(value));
+
+        // Return milliseconds until next tick
+        2000
+    }
+}
+
+export!(MyPlugin);
+```
+
+Key differences from native plugins:
+
+- Use `wit_bindgen::generate!` to import the WIT bindings
+- Implement the `Guest` trait instead of using `declare_plugin!`
+- Use `export!(MyPlugin)` to register the implementation
+- Host API functions are called as free functions (`host_api::set_data(...)`) rather than through a context object
+- `static mut` is safe because WASM execution is single-threaded
+- `tick()` returns the interval in milliseconds until it should be called again
+
+#### 5. Build the Plugin
+
+```bash
+cargo build -p my-wasm-plugin --target wasm32-wasip2
+```
+
+This produces `target/wasm32-wasip2/debug/my_wasm_plugin.wasm`.
+
+#### 6. Load the Plugin
+
+Pass the directory containing the `.wasm` file to Nemo:
+
+```bash
+nemo --app-config app.hcl --extension-dirs ./target/wasm32-wasip2/debug
+```
+
+Nemo discovers `.wasm` files alongside native libraries and loads them via Wasmtime.
+
+### WASM Plugin Value Types
+
+The `PluginValue` variant maps to Nemo's internal value type:
+
+| WIT Variant | Rust Usage | Description |
+|-------------|-----------|-------------|
+| `null` | `PluginValue::Null` | Null value |
+| `bool-val(bool)` | `PluginValue::BoolVal(true)` | Boolean |
+| `integer-val(s64)` | `PluginValue::IntegerVal(42)` | 64-bit signed integer |
+| `float-val(f64)` | `PluginValue::FloatVal(3.14)` | 64-bit float |
+| `string-val(string)` | `PluginValue::StringVal("hello".into())` | String |
+| `json-val(string)` | `PluginValue::JsonVal(json_string)` | JSON-encoded arrays or objects |
+
+For complex values like arrays or objects, encode them as JSON strings using the `json-val` variant. The host automatically converts between JSON and Nemo's internal `Value` type.
+
+### Tips
+
+- **Tick interval:** Return `0` from `tick()` to disable further ticking. Return a positive value for the delay in milliseconds.
+- **No threads:** WASM plugins cannot spawn threads. Use the tick model for periodic work.
+- **Shared API:** The host API (`get_data`, `set_data`, `emit_event`, `log`, `get/set_component_property`) is identical to the native plugin API.
+- **Debugging:** Use `host_api::log(LogLevel::Debug, "message")` for diagnostics. Logs appear in the Nemo console output.
+- **Data paths:** Follow the same dotted-prefix convention as native plugins (e.g., `myplugin.temperature`).
+
+---
+
+## Choosing Between Native and WASM Plugins
+
+| | Native Plugins | WASM Plugins |
+|---|---|---|
+| **Execution** | In-process, full OS access | Sandboxed via Wasmtime |
+| **Threading** | Can spawn background threads | Single-threaded, tick-based |
+| **Performance** | Native speed | Near-native (WASM overhead) |
+| **Safety** | Full trust required | Sandboxed, safe to distribute |
+| **Portability** | Platform-specific binary | Single `.wasm` binary runs anywhere |
+| **Dependencies** | Full Rust ecosystem | WASM-compatible crates only |
+| **API** | `PluginContext` trait object | WIT-generated free functions |
