@@ -134,19 +134,6 @@ pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
     }
 }
 
-/// Applies a border with optional color to a div element.
-pub(crate) fn apply_border(base: Div, width: Option<i64>, color: Option<&str>, cx: &App) -> Div {
-    match width {
-        Some(w) => {
-            let resolved = color
-                .and_then(|c| resolve_color(c, cx))
-                .unwrap_or(cx.theme().colors.border);
-            base.border(px(w as f32)).border_color(resolved)
-        }
-        None => base,
-    }
-}
-
 /// Applies a rounded corner preset to a div element.
 ///
 /// Supported sizes: "sm", "md", "lg", "xl", "full"

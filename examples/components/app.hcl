@@ -2034,10 +2034,26 @@ layout {
                 border_color = "theme.border"
               }
 
+              component "styling_pad_right" {
+                type = "label"
+                text = "padding_right = 32"
+                padding_right = 32
+                border = 1
+                border_color = "theme.border"
+              }
+
               component "styling_pad_top" {
                 type = "label"
                 text = "padding_top = 32"
                 padding_top = 32
+                border = 1
+                border_color = "theme.border"
+              }
+
+              component "styling_pad_bottom" {
+                type = "label"
+                text = "padding_bottom = 32"
+                padding_bottom = 32
                 border = 1
                 border_color = "theme.border"
               }
@@ -2067,36 +2083,112 @@ layout {
 
           component "styling_margin_preview" {
             type = "stack"
-            direction = "horizontal"
-            spacing = 0
-            border = 1
-            border_color = "theme.border"
+            direction = "vertical"
+            spacing = 12
 
-            component "styling_margin_box1" {
-              type = "label"
-              text = "margin = 4"
-              margin = 4
+            component "styling_margin_uniform_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 0
               border = 1
-              border_color = "theme.accent"
-              padding = 8
+              border_color = "theme.border"
+
+              component "styling_margin_box1" {
+                type = "label"
+                text = "margin = 4"
+                margin = 4
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
+
+              component "styling_margin_box2" {
+                type = "label"
+                text = "margin = 12"
+                margin = 12
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
+
+              component "styling_margin_box3" {
+                type = "label"
+                text = "margin = 24"
+                margin = 24
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
             }
 
-            component "styling_margin_box2" {
-              type = "label"
-              text = "margin = 12"
-              margin = 12
+            component "styling_margin_axis_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 0
               border = 1
-              border_color = "theme.accent"
-              padding = 8
+              border_color = "theme.border"
+
+              component "styling_margin_x" {
+                type = "label"
+                text = "margin_x = 20"
+                margin_x = 20
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
+
+              component "styling_margin_y" {
+                type = "label"
+                text = "margin_y = 20"
+                margin_y = 20
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
             }
 
-            component "styling_margin_box3" {
-              type = "label"
-              text = "margin = 24"
-              margin = 24
+            component "styling_margin_dir_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 0
               border = 1
-              border_color = "theme.accent"
-              padding = 8
+              border_color = "theme.border"
+
+              component "styling_margin_left" {
+                type = "label"
+                text = "margin_left = 24"
+                margin_left = 24
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
+
+              component "styling_margin_right" {
+                type = "label"
+                text = "margin_right = 24"
+                margin_right = 24
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
+
+              component "styling_margin_top" {
+                type = "label"
+                text = "margin_top = 16"
+                margin_top = 16
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
+
+              component "styling_margin_bottom" {
+                type = "label"
+                text = "margin_bottom = 16"
+                margin_bottom = 16
+                border = 1
+                border_color = "theme.accent"
+                padding = 8
+              }
             }
           }
 
@@ -2105,7 +2197,7 @@ layout {
 
             component "styling_margin_code" {
               type = "text"
-              content = "# Uniform margin around the component\nmargin = 4\nmargin = 12\nmargin = 24"
+              content = "# Uniform margin on all sides\nmargin = 12\n\n# Axis margin (horizontal / vertical)\nmargin_x = 20\nmargin_y = 20\n\n# Directional margin\nmargin_left   = 24\nmargin_right  = 24\nmargin_top    = 16\nmargin_bottom = 16"
             }
           }
         }
@@ -2123,39 +2215,105 @@ layout {
 
           component "styling_border_preview" {
             type = "stack"
-            direction = "horizontal"
+            direction = "vertical"
             spacing = 12
 
-            component "styling_border_1" {
-              type = "label"
-              text = "border = 1"
-              border = 1
-              border_color = "theme.border"
-              padding = 12
+            component "styling_border_uniform_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 12
+
+              component "styling_border_1" {
+                type = "label"
+                text = "border = 1"
+                border = 1
+                border_color = "theme.border"
+                padding = 12
+              }
+
+              component "styling_border_2" {
+                type = "label"
+                text = "border = 2"
+                border = 2
+                border_color = "theme.border"
+                padding = 12
+              }
+
+              component "styling_border_accent" {
+                type = "label"
+                text = "theme.accent"
+                border = 2
+                border_color = "theme.accent"
+                padding = 12
+              }
+
+              component "styling_border_danger" {
+                type = "label"
+                text = "theme.danger"
+                border = 2
+                border_color = "theme.danger"
+                padding = 12
+              }
             }
 
-            component "styling_border_2" {
-              type = "label"
-              text = "border = 2"
-              border = 2
-              border_color = "theme.border"
-              padding = 12
+            component "styling_border_axis_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 12
+
+              component "styling_border_x" {
+                type = "label"
+                text = "border_x = 2"
+                border_x = 2
+                border_color = "theme.accent"
+                padding = 12
+              }
+
+              component "styling_border_y" {
+                type = "label"
+                text = "border_y = 2"
+                border_y = 2
+                border_color = "theme.accent"
+                padding = 12
+              }
             }
 
-            component "styling_border_accent" {
-              type = "label"
-              text = "border_color = theme.accent"
-              border = 2
-              border_color = "theme.accent"
-              padding = 12
-            }
+            component "styling_border_dir_row" {
+              type = "stack"
+              direction = "horizontal"
+              spacing = 12
 
-            component "styling_border_danger" {
-              type = "label"
-              text = "border_color = theme.danger"
-              border = 2
-              border_color = "theme.danger"
-              padding = 12
+              component "styling_border_left" {
+                type = "label"
+                text = "border_left = 3"
+                border_left = 3
+                border_color = "theme.accent"
+                padding = 12
+              }
+
+              component "styling_border_right" {
+                type = "label"
+                text = "border_right = 3"
+                border_right = 3
+                border_color = "theme.accent"
+                padding = 12
+              }
+
+              component "styling_border_top" {
+                type = "label"
+                text = "border_top = 3"
+                border_top = 3
+                border_color = "theme.accent"
+                padding = 12
+              }
+
+              component "styling_border_bottom" {
+                type = "label"
+                text = "border_bottom = 3"
+                border_bottom = 3
+                border_color = "theme.accent"
+                padding = 12
+              }
             }
           }
 
@@ -2164,7 +2322,7 @@ layout {
 
             component "styling_border_code" {
               type = "text"
-              content = "# Border width in pixels\nborder = 1\nborder = 2\n\n# Border color (theme references or hex)\nborder_color = \"theme.border\"\nborder_color = \"theme.accent\"\nborder_color = \"theme.danger\"\nborder_color = \"#FF6600\""
+              content = "# Uniform border on all sides\nborder = 1\nborder = 2\n\n# Axis border (horizontal / vertical)\nborder_x = 2\nborder_y = 2\n\n# Directional border\nborder_left   = 3\nborder_right  = 3\nborder_top    = 3\nborder_bottom = 3\n\n# Border color (theme references or hex)\nborder_color = \"theme.border\"\nborder_color = \"theme.accent\"\nborder_color = \"#FF6600\""
             }
           }
         }
