@@ -2098,7 +2098,7 @@ layout {
                 text = "margin = 4"
                 margin = 4
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
 
@@ -2107,7 +2107,7 @@ layout {
                 text = "margin = 12"
                 margin = 12
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
 
@@ -2116,7 +2116,7 @@ layout {
                 text = "margin = 24"
                 margin = 24
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
             }
@@ -2133,7 +2133,7 @@ layout {
                 text = "margin_x = 20"
                 margin_x = 20
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
 
@@ -2142,7 +2142,7 @@ layout {
                 text = "margin_y = 20"
                 margin_y = 20
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
             }
@@ -2159,7 +2159,7 @@ layout {
                 text = "margin_left = 24"
                 margin_left = 24
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
 
@@ -2168,7 +2168,7 @@ layout {
                 text = "margin_right = 24"
                 margin_right = 24
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
 
@@ -2177,7 +2177,7 @@ layout {
                 text = "margin_top = 16"
                 margin_top = 16
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
 
@@ -2186,7 +2186,7 @@ layout {
                 text = "margin_bottom = 16"
                 margin_bottom = 16
                 border = 1
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 8
               }
             }
@@ -2239,11 +2239,11 @@ layout {
                 padding = 12
               }
 
-              component "styling_border_accent" {
+              component "styling_border_primary" {
                 type = "label"
-                text = "theme.accent"
+                text = "theme.primary"
                 border = 2
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 12
               }
 
@@ -2265,7 +2265,7 @@ layout {
                 type = "label"
                 text = "border_x = 2"
                 border_x = 2
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 12
               }
 
@@ -2273,7 +2273,7 @@ layout {
                 type = "label"
                 text = "border_y = 2"
                 border_y = 2
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 12
               }
             }
@@ -2287,7 +2287,7 @@ layout {
                 type = "label"
                 text = "border_left = 3"
                 border_left = 3
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 12
               }
 
@@ -2295,7 +2295,7 @@ layout {
                 type = "label"
                 text = "border_right = 3"
                 border_right = 3
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 12
               }
 
@@ -2303,7 +2303,7 @@ layout {
                 type = "label"
                 text = "border_top = 3"
                 border_top = 3
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 12
               }
 
@@ -2311,7 +2311,7 @@ layout {
                 type = "label"
                 text = "border_bottom = 3"
                 border_bottom = 3
-                border_color = "theme.accent"
+                border_color = "theme.primary"
                 padding = 12
               }
             }
@@ -2322,7 +2322,7 @@ layout {
 
             component "styling_border_code" {
               type = "text"
-              content = "# Uniform border on all sides\nborder = 1\nborder = 2\n\n# Axis border (horizontal / vertical)\nborder_x = 2\nborder_y = 2\n\n# Directional border\nborder_left   = 3\nborder_right  = 3\nborder_top    = 3\nborder_bottom = 3\n\n# Border color (theme references or hex)\nborder_color = \"theme.border\"\nborder_color = \"theme.accent\"\nborder_color = \"#FF6600\""
+              content = "# Uniform border on all sides\nborder = 1\nborder = 2\n\n# Axis border (horizontal / vertical)\nborder_x = 2\nborder_y = 2\n\n# Directional border\nborder_left   = 3\nborder_right  = 3\nborder_top    = 3\nborder_bottom = 3\n\n# Border color (theme references or hex)\nborder_color = \"theme.border\"\nborder_color = \"theme.primary\"\nborder_color = \"#FF6600\""
             }
           }
         }
@@ -2510,7 +2510,7 @@ layout {
               spacing = 8
               padding = 24
               border = 2
-              border_color = "theme.accent"
+              border_color = "theme.primary"
               shadow = "lg"
               rounded = "xl"
 
