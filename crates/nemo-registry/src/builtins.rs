@@ -34,6 +34,7 @@ pub fn register_builtin_components(registry: &ComponentRegistry) {
     register_display_components(registry);
     register_data_components(registry);
     register_feedback_components(registry);
+    register_navigation_components(registry);
     register_chart_components(registry);
 }
 
@@ -437,6 +438,30 @@ fn register_feedback_components(registry: &ComponentRegistry) {
     );
 }
 
+fn register_navigation_components(registry: &ComponentRegistry) {
+    reg(
+        registry,
+        "sidenav_bar",
+        ComponentCategory::Navigation,
+        "Sidenav Bar",
+        "A vertical navigation sidebar with collapsible icon+label items",
+        ConfigSchema::new("sidenav_bar")
+            .property("collapsed", PropertySchema::boolean().with_default(false))
+            .property("width", PropertySchema::integer().with_default(200i64)),
+    );
+
+    reg(
+        registry,
+        "sidenav_bar_item",
+        ComponentCategory::Navigation,
+        "Sidenav Bar Item",
+        "A navigation item with an icon and label for use inside a SidenavBar",
+        ConfigSchema::new("sidenav_bar_item")
+            .property("icon", PropertySchema::string().with_default("info"))
+            .property("label", PropertySchema::string()),
+    );
+}
+
 fn register_chart_components(registry: &ComponentRegistry) {
     reg(
         registry,
@@ -783,6 +808,8 @@ mod tests {
         assert!(registry.has_component("area_chart"));
         assert!(registry.has_component("pie_chart"));
         assert!(registry.has_component("candlestick_chart"));
+        assert!(registry.has_component("sidenav_bar"));
+        assert!(registry.has_component("sidenav_bar_item"));
 
         // Verify data sources
         assert!(registry.has_data_source("http"));

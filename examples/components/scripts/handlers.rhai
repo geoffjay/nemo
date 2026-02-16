@@ -31,7 +31,8 @@ let ALL_PAGES = [
     "page_slider",
     "page_switch",
     "page_toggle",
-    "page_styling"
+    "page_styling",
+    "page_sidenavbar"
 ];
 
 // Navigation handler: hides all pages, shows the one matching the clicked button
@@ -67,6 +68,7 @@ fn on_nav(component_id, event_data) {
     set_component_property("page_switch", "visible", false);
     set_component_property("page_toggle", "visible", false);
     set_component_property("page_styling", "visible", false);
+    set_component_property("page_sidenavbar", "visible", false);
 
     // Derive page ID from nav button ID: "nav_button" -> "page_button"
     let page_id = replace(component_id, "nav_", "page_");
@@ -80,5 +82,15 @@ fn on_toggle_modal(component_id, event_data) {
         set_component_property("demo_modal", "open", false);
     } else {
         set_component_property("demo_modal", "open", true);
+    }
+}
+
+// Sidenav toggle handler: toggles collapsed state of the center demo sidenav
+fn on_toggle_sidenav(component_id, event_data) {
+    let current = get_component_property("sidenav_center_expanded", "collapsed");
+    if current == true {
+        set_component_property("sidenav_center_expanded", "collapsed", false);
+    } else {
+        set_component_property("sidenav_center_expanded", "collapsed", true);
     }
 }

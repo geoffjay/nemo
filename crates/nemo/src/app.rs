@@ -15,10 +15,10 @@ use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::table::NemoTableDelegate;
 use crate::components::tree::values_to_tree_items;
 use crate::components::{
-    apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge,
-    BarChart, Button, CandlestickChart, Checkbox, Collapsible, DropdownButton, Icon, Image, Label,
-    LineChart, List, Modal, Notification, Panel, PieChart, Progress, Radio, Select, Slider,
-    Spinner, Stack, Switch, Table, Tabs, Tag, Text, Toggle, Tooltip, Tree,
+    apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge, BarChart, Button,
+    CandlestickChart, Checkbox, Collapsible, DropdownButton, Icon, Image, Label, LineChart, List,
+    Modal, Notification, Panel, PieChart, Progress, Radio, Select, SidenavBar, Slider, Spinner,
+    Stack, Switch, Table, Tabs, Tag, Text, Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
 use crate::workspace::HeaderBar;
@@ -635,6 +635,44 @@ impl App {
                 Slider::new(component.clone())
                     .slider_state(slider_state)
                     .into_any_element()
+            }
+            "sidenav_bar" => {
+                // Collect child BuiltComponents for sidenav_bar_item rendering
+                let child_components: Vec<BuiltComponent> = component
+                    .children
+                    .iter()
+                    .filter_map(|id| components.get(id))
+                    .filter(|c| c.component_type == "sidenav_bar_item")
+                    .cloned()
+                    .collect();
+                // Render non-item children (e.g. buttons) normally
+                let other_children: Vec<AnyElement> = component
+                    .children
+                    .iter()
+                    .filter_map(|id| components.get(id))
+                    .filter(|c| c.component_type != "sidenav_bar_item")
+                    .map(|c| self.render_component(c, components, entity_id, window, cx))
+                    .collect();
+                let initial = component
+                    .properties
+                    .get("collapsed")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let collapsed_state = self
+                    .component_states
+                    .get_or_create_bool_state(&component.id, initial);
+                // Sync property value from scripts into the shared state
+                *collapsed_state.lock().unwrap() = initial;
+                SidenavBar::new(component.clone())
+                    .collapsed_state(collapsed_state)
+                    .child_components(child_components)
+                    .children(other_children)
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "sidenav_bar_item" => {
+                // Items are rendered by their parent SidenavBar; standalone fallback
+                div().into_any_element()
             }
             "spinner" => Spinner::new(component.clone()).into_any_element(),
             "switch" => {

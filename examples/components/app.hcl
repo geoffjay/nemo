@@ -16,7 +16,7 @@ app {
   }
 
   theme {
-    name = "tokyo-night"
+    name = "kanagawa"
     mode = "dark"
   }
 }
@@ -71,6 +71,8 @@ layout {
         spacing = 4
         padding = 16
         scroll = true
+        border_right = 1
+        border_color = "theme.border"
 
         component "sidebar_title" {
           type = "label"
@@ -261,6 +263,18 @@ layout {
         component "nav_charts" {
           template = "nav_item"
           label    = "Charts"
+        }
+
+        # ── Navigation ────────────────────────────────────────────
+        component "cat_navigation" {
+          type = "label"
+          text = "Navigation"
+          size = "sm"
+        }
+
+        component "nav_sidenavbar" {
+          template = "nav_item"
+          label    = "Sidenav Bar"
         }
       }
     }
@@ -2533,6 +2547,217 @@ layout {
             component "styling_combined_code" {
               type = "text"
               content = "component \"styled_card\" {\n  type         = \"stack\"\n  direction    = \"vertical\"\n  spacing      = 8\n  padding      = 24\n  border       = 1\n  border_color = \"theme.border\"\n  shadow       = \"md\"\n  rounded      = \"lg\"\n\n  component \"title\" {\n    type = \"label\"\n    text = \"Styled Card\"\n  }\n\n  component \"body\" {\n    type    = \"text\"\n    content = \"Card content here.\"\n  }\n}"
+            }
+          }
+        }
+      }
+
+      # ── Sidenav Bar page ─────────────────────────────────────
+      component "page_sidenavbar" {
+        template = "content_page"
+
+        component "sidenav_title" {
+          type = "label"
+          text = "Sidenav Bar"
+          size = "xl"
+        }
+
+        component "sidenav_desc" {
+          type    = "text"
+          content = "A vertical navigation sidebar with icon and label items. Supports collapsed (icon-only) and expanded (icon + label) modes."
+        }
+
+        # Three sidenav bars side by side in a horizontal stack
+        component "sidenav_demos" {
+          type      = "stack"
+          direction = "horizontal"
+          spacing   = 24
+
+          # ── Left: collapsed (icons only) ──────────────────────
+          component "sidenav_demo_left_collapsed" {
+            type = "stack"
+            direction = "vertical"
+            spacing = 8
+
+            component "sidenav_demo_left_collapsed_label" {
+              type = "label"
+              text = "Collapsed (icons only)"
+              size = "sm"
+            }
+
+            component "sidenav_left_collapsed_wrap" {
+              type      = "stack"
+              direction = "horizontal"
+              spacing   = 0
+              width     = 240
+              height    = 300
+              border    = 1
+
+              component "sidenav_left_collapsed" {
+                type      = "sidenav_bar"
+                collapsed = true
+
+                component "snlc_item_home" {
+                  type  = "sidenav_bar_item"
+                  icon  = "globe"
+                  label = "Home"
+                }
+
+                component "snlc_item_inbox" {
+                  type  = "sidenav_bar_item"
+                  icon  = "inbox"
+                  label = "Inbox"
+                }
+
+                component "snlc_item_search" {
+                  type  = "sidenav_bar_item"
+                  icon  = "search"
+                  label = "Search"
+                }
+
+                component "snlc_item_settings" {
+                  type  = "sidenav_bar_item"
+                  icon  = "settings"
+                  label = "Settings"
+                }
+              }
+            }
+          }
+
+          # ── Center: expanded with toggle button ───────────────
+          component "sidenav_demo_center_expanded" {
+            type = "stack"
+            direction = "vertical"
+            spacing = 8
+
+            component "sidenav_demo_center_label" {
+              type = "label"
+              text = "Expanded (with toggle)"
+              size = "sm"
+            }
+
+            component "sidenav_center_expanded_wrap" {
+              type      = "stack"
+              direction = "horizontal"
+              spacing   = 0
+              width     = 240
+              height    = 300
+              border    = 1
+
+              component "sidenav_center_expanded" {
+                type      = "sidenav_bar"
+                collapsed = false
+
+                component "snce_item_home" {
+                  type  = "sidenav_bar_item"
+                  icon  = "globe"
+                  label = "Home"
+                }
+
+                component "snce_item_inbox" {
+                  type  = "sidenav_bar_item"
+                  icon  = "inbox"
+                  label = "Inbox"
+                }
+
+                component "snce_item_search" {
+                  type  = "sidenav_bar_item"
+                  icon  = "search"
+                  label = "Search"
+                }
+
+                component "snce_item_settings" {
+                  type  = "sidenav_bar_item"
+                  icon  = "settings"
+                  label = "Settings"
+                }
+
+                component "snce_toggle_btn" {
+                  type     = "button"
+                  label    = "Toggle"
+                  variant  = "ghost"
+                  size     = "sm"
+                  icon     = "menu"
+                  on_click = "on_toggle_sidenav"
+                }
+              }
+            }
+          }
+
+          # ── Right: collapsed (icons only) ─────────────────────
+          component "sidenav_demo_right_collapsed" {
+            type = "stack"
+            direction = "vertical"
+            spacing = 8
+
+            component "sidenav_demo_right_collapsed_label" {
+              type = "label"
+              text = "Collapsed (right side)"
+              size = "sm"
+            }
+
+            component "sidenav_right_collapsed_wrap" {
+              type   = "stack"
+              direction = "horizontal"
+              spacing = 0
+              width  = 240
+              height = 300
+              border = 1
+
+              # Spacer pushes sidenav to the right
+              component "snrc_spacer" {
+                type = "panel"
+                flex = 1
+              }
+
+              component "sidenav_right_collapsed" {
+                type      = "sidenav_bar"
+                collapsed = true
+
+                component "snrc_item_user" {
+                  type  = "sidenav_bar_item"
+                  icon  = "user"
+                  label = "Profile"
+                }
+
+                component "snrc_item_bell" {
+                  type  = "sidenav_bar_item"
+                  icon  = "bell"
+                  label = "Notifications"
+                }
+
+                component "snrc_item_star" {
+                  type  = "sidenav_bar_item"
+                  icon  = "star"
+                  label = "Favorites"
+                }
+
+                component "snrc_item_settings" {
+                  type  = "sidenav_bar_item"
+                  icon  = "settings"
+                  label = "Settings"
+                }
+              }
+            }
+          }
+        }
+
+        # HCL example
+        component "sidenav_hcl_tabs" {
+          type = "tabs"
+          tabs = ["Preview", "HCL"]
+
+          component "sidenav_preview_placeholder" {
+            type    = "text"
+            content = "See the sidenav bar demos above."
+          }
+
+          component "sidenav_hcl_code" {
+            type = "panel"
+
+            component "sidenav_hcl_text" {
+              type    = "text"
+              content = "component \"my_sidenav\" {\n  type      = \"sidenav_bar\"\n  collapsed = false\n\n  component \"item_home\" {\n    type  = \"sidenav_bar_item\"\n    icon  = \"globe\"\n    label = \"Home\"\n  }\n\n  component \"item_inbox\" {\n    type  = \"sidenav_bar_item\"\n    icon  = \"inbox\"\n    label = \"Inbox\"\n  }\n}"
             }
           }
         }
