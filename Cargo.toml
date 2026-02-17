@@ -20,7 +20,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/geoffjay/nemo"
@@ -90,7 +90,7 @@ nemo-data = { path = "crates/nemo-data" }
 nemo-extension = { path = "crates/nemo-extension" }
 nemo-integration = { path = "crates/nemo-integration" }
 nemo-events = { path = "crates/nemo-events" }
-nemo-plugin-api = { version = "0.4.0", path = "crates/nemo-plugin-api" }
-nemo-plugin = { version = "0.4.0", path = "crates/nemo-plugin" }
+nemo-plugin-api = { version = "0.5.0", path = "crates/nemo-plugin-api" }
+nemo-plugin = { version = "0.5.0", path = "crates/nemo-plugin" }
 nemo-macros = { path = "crates/nemo-macros" }
 nemo-wasm = { path = "crates/nemo-wasm" }

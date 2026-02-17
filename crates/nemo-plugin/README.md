@@ -16,7 +16,7 @@ Add this to your plugin's `Cargo.toml`:
 
 ```toml
 [dependencies]
-nemo-plugin = "0.4"
+nemo-plugin = "0.5"
 ```
 
 ## Quick Start
