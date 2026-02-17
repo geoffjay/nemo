@@ -61,6 +61,7 @@ struct Workspace {
     ws_args: WorkspaceArgs,
     current_config_path: Option<PathBuf>,
     pending_project_path: Option<PathBuf>,
+    pending_close_project: bool,
     focus_handle: FocusHandle,
 }
 
@@ -135,10 +136,27 @@ impl Workspace {
         }
     }
 
-    fn quit_app(&mut self, _: &QuitApp, _window: &mut Window, cx: &mut Context<Self>) {
-        tracing::info!("Quitting application");
-        self.shutdown(cx);
-        cx.quit();
+    fn quit_app(&mut self, _: &QuitApp, window: &mut Window, cx: &mut Context<Self>) {
+        let entity = cx.entity().downgrade();
+        window.open_dialog(cx, move |dialog, _window, _cx| {
+            let entity = entity.clone();
+            dialog
+                .title("Quit Application")
+                .child(Label::new(
+                    "Are you sure you want to quit? Any unsaved work will be lost.",
+                ))
+                .confirm()
+                .on_ok(move |_, _window, cx| {
+                    if let Some(ws) = entity.upgrade() {
+                        ws.update(cx, |ws, cx| {
+                            tracing::info!("Quitting application");
+                            ws.shutdown(cx);
+                            cx.quit();
+                        });
+                    }
+                    true
+                })
+        });
     }
 
     fn close_project(&mut self, _: &CloseProject, window: &mut Window, cx: &mut Context<Self>) {
@@ -146,13 +164,25 @@ impl Workspace {
             return;
         }
 
-        tracing::info!("Closing current project");
-        self.shutdown(cx);
-        let loader = Workspace::create_loader(&self.nemo_config, window, cx);
-        self.state = WorkspaceState::ProjectLoader(loader);
-        self.current_config_path = None;
-        window.push_notification("Project closed", cx);
-        cx.notify();
+        let entity = cx.entity().downgrade();
+        window.open_dialog(cx, move |dialog, _window, _cx| {
+            let entity = entity.clone();
+            dialog
+                .title("Close Project")
+                .child(Label::new(
+                    "Are you sure you want to close the current project?",
+                ))
+                .confirm()
+                .on_ok(move |_, _window, cx| {
+                    if let Some(ws) = entity.upgrade() {
+                        ws.update(cx, |ws, cx| {
+                            ws.pending_close_project = true;
+                            cx.notify();
+                        });
+                    }
+                    true
+                })
+        });
     }
 
     fn open_project(&mut self, _: &OpenProject, _window: &mut Window, cx: &mut Context<Self>) {
@@ -215,7 +245,7 @@ impl Workspace {
                         .child(shortcut_row("Close Project", "ctrl-w"))
                         .child(shortcut_row("Reload Configuration", "ctrl-shift-r"))
                         .child(shortcut_row("Toggle Light/Dark Theme", "ctrl-shift-t"))
-                        .child(shortcut_row("Keyboard Shortcuts", "f11"))
+                        .child(shortcut_row("Keyboard Shortcuts", "f10"))
                         .child(shortcut_row("Quit Application", "ctrl-q")),
                 )
         });
@@ -242,9 +272,18 @@ impl Workspace {
 
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
-        // Process pending project path from async file picker
+        // Process deferred actions that need Window access
         if let Some(path) = self.pending_project_path.take() {
             self.load_project(path, window, cx);
+        }
+        if self.pending_close_project {
+            self.pending_close_project = false;
+            tracing::info!("Closing current project");
+            self.shutdown(cx);
+            let loader = Workspace::create_loader(&self.nemo_config, window, cx);
+            self.state = WorkspaceState::ProjectLoader(loader);
+            self.current_config_path = None;
+            window.push_notification("Project closed", cx);
         }
 
         let bg_color = cx.theme().colors.background;
@@ -403,7 +442,7 @@ fn main() -> Result<()> {
             KeyBinding::new("ctrl-w", CloseProject, None),
             KeyBinding::new("ctrl-o", OpenProject, None),
             KeyBinding::new("ctrl-shift-t", ToggleTheme, None),
-            KeyBinding::new("f11", ShowKeyboardShortcuts, None),
+            KeyBinding::new("f10", ShowKeyboardShortcuts, None),
         ]);
 
         // Store workspace entity for window close handler
@@ -465,6 +504,7 @@ fn main() -> Result<()> {
                     ws_args,
                     current_config_path,
                     pending_project_path: None,
+                    pending_close_project: false,
                     focus_handle,
                 }
             });
