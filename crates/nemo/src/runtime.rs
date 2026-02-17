@@ -1738,12 +1738,12 @@ fn plugin_value_to_json(value: PluginValue) -> serde_json::Value {
 }
 
 #[cfg(test)]
-mod template_tests {
-    use super::*;
+mod test_helpers {
     use indexmap::IndexMap;
+    use nemo_config::Value;
 
-    /// Helper to build a Value::Object from key-value pairs.
-    fn obj(pairs: Vec<(&str, Value)>) -> Value {
+    /// Helper to build a `Value::Object` from key-value pairs.
+    pub fn obj(pairs: Vec<(&str, Value)>) -> Value {
         let mut map = IndexMap::new();
         for (k, v) in pairs {
             map.insert(k.to_string(), v);
@@ -1751,9 +1751,16 @@ mod template_tests {
         Value::Object(map)
     }
 
-    fn s(val: &str) -> Value {
+    /// Shorthand for `Value::String`.
+    pub fn s(val: &str) -> Value {
         Value::String(val.to_string())
     }
+}
+
+#[cfg(test)]
+mod template_tests {
+    use super::test_helpers::{obj, s};
+    use super::*;
 
     #[test]
     fn test_extract_templates_empty() {
@@ -1920,21 +1927,9 @@ mod template_tests {
 
 #[cfg(test)]
 mod runtime_tests {
+    use super::test_helpers::{obj, s};
     use super::*;
     use indexmap::IndexMap;
-
-    /// Helper to build a Value::Object from key-value pairs.
-    fn obj(pairs: Vec<(&str, Value)>) -> Value {
-        let mut map = IndexMap::new();
-        for (k, v) in pairs {
-            map.insert(k.to_string(), v);
-        }
-        Value::Object(map)
-    }
-
-    fn s(val: &str) -> Value {
-        Value::String(val.to_string())
-    }
 
     // ── get_nested_value ──────────────────────────────────────────────
 
@@ -2389,20 +2384,8 @@ mod runtime_tests {
 
 #[cfg(test)]
 mod template_tests_continued {
+    use super::test_helpers::{obj, s};
     use super::*;
-    use indexmap::IndexMap;
-
-    fn obj(pairs: Vec<(&str, Value)>) -> Value {
-        let mut map = IndexMap::new();
-        for (k, v) in pairs {
-            map.insert(k.to_string(), v);
-        }
-        Value::Object(map)
-    }
-
-    fn s(val: &str) -> Value {
-        Value::String(val.to_string())
-    }
 
     #[test]
     fn test_template_key_stripped() {
@@ -2672,20 +2655,8 @@ layout {
 
 #[cfg(test)]
 mod template_vars_tests {
+    use super::test_helpers::{obj, s};
     use super::*;
-    use indexmap::IndexMap;
-
-    fn obj(pairs: Vec<(&str, Value)>) -> Value {
-        let mut map = IndexMap::new();
-        for (k, v) in pairs {
-            map.insert(k.to_string(), v);
-        }
-        Value::Object(map)
-    }
-
-    fn s(val: &str) -> Value {
-        Value::String(val.to_string())
-    }
 
     #[test]
     fn test_basic_interpolation() {
@@ -2881,5 +2852,572 @@ mod template_vars_tests {
         let result = expand_template(&instance, &templates, &mut stack, None).unwrap();
         assert!(result.get("vars").is_none());
         assert!(result.get("template").is_none());
+    }
+}
+
+// ── Error path and edge case tests ───────────────────────────────────────
+//
+// These tests cover error conditions, malformed inputs, and edge cases
+// that are not exercised by the happy-path tests above.
+
+#[cfg(test)]
+mod error_path_tests {
+    use super::test_helpers::{obj, s};
+    use super::*;
+
+    // ── get_nested_value edge cases ──────────────────────────────────
+
+    #[test]
+    fn test_get_nested_value_empty_path() {
+        let config = obj(vec![("key", s("val"))]);
+        // Empty string splits to [""], so it looks for key ""
+        assert_eq!(get_nested_value(&config, ""), None);
+    }
+
+    #[test]
+    fn test_get_nested_value_consecutive_dots() {
+        let config = obj(vec![("a", obj(vec![("b", s("val"))]))]);
+        // "a..b" splits to ["a", "", "b"] — empty segment fails lookup
+        assert_eq!(get_nested_value(&config, "a..b"), None);
+    }
+
+    #[test]
+    fn test_get_nested_value_traverse_scalar() {
+        let config = obj(vec![("a", Value::Integer(42))]);
+        // Traversing through a scalar should return None
+        assert_eq!(get_nested_value(&config, "a.b"), None);
+    }
+
+    #[test]
+    fn test_get_nested_value_traverse_array() {
+        let config = obj(vec![(
+            "a",
+            Value::Array(vec![Value::Integer(1), Value::Integer(2)]),
+        )]);
+        // Arrays don't support .get(key) — should return None
+        assert_eq!(get_nested_value(&config, "a.0"), None);
+    }
+
+    #[test]
+    fn test_get_nested_value_traverse_null() {
+        let config = obj(vec![("a", Value::Null)]);
+        assert_eq!(get_nested_value(&config, "a.b"), None);
+    }
+
+    #[test]
+    fn test_get_nested_value_traverse_bool() {
+        let config = obj(vec![("flag", Value::Bool(true))]);
+        assert_eq!(get_nested_value(&config, "flag.sub"), None);
+    }
+
+    // ── extract_vars error paths ─────────────────────────────────────
+
+    #[test]
+    fn test_extract_vars_non_object_vars_block() {
+        let instance = obj(vec![("template", s("tmpl")), ("vars", s("not_an_object"))]);
+        let result = extract_vars(&instance);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must be an object"));
+    }
+
+    #[test]
+    fn test_extract_vars_array_vars_block() {
+        let instance = obj(vec![
+            ("template", s("tmpl")),
+            ("vars", Value::Array(vec![s("a"), s("b")])),
+        ]);
+        let result = extract_vars(&instance);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extract_vars_null_vars_block() {
+        let instance = obj(vec![("template", s("tmpl")), ("vars", Value::Null)]);
+        let result = extract_vars(&instance);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_extract_vars_non_string_var_value() {
+        let instance = obj(vec![
+            ("template", s("tmpl")),
+            ("vars", obj(vec![("count", Value::Integer(42))])),
+        ]);
+        let result = extract_vars(&instance);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must be a string"));
+    }
+
+    #[test]
+    fn test_extract_vars_non_object_instance() {
+        // When the instance itself is not an object, returns empty map
+        let result = extract_vars(&s("not_an_object"));
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_extract_vars_no_vars_key() {
+        let instance = obj(vec![("template", s("tmpl"))]);
+        let result = extract_vars(&instance);
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_empty());
+    }
+
+    // ── interpolate_variables error paths ─────────────────────────────
+
+    #[test]
+    fn test_interpolate_unclosed_pattern() {
+        let vars = HashMap::from([("ns".to_string(), "sensor1".to_string())]);
+        let input = s("hello ${unclosed");
+        let result = interpolate_variables(&input, &vars, "test").unwrap();
+        // Unclosed ${ should be left as-is
+        assert_eq!(result, s("hello ${unclosed"));
+    }
+
+    #[test]
+    fn test_interpolate_undefined_variable() {
+        let vars = HashMap::new();
+        let input = s("${missing}");
+        let result = interpolate_variables(&input, &vars, "my_template");
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(err.contains("Undefined variable 'missing'"));
+        assert!(err.contains("my_template"));
+    }
+
+    #[test]
+    fn test_interpolate_partial_second_var_undefined() {
+        let vars = HashMap::from([("a".to_string(), "val_a".to_string())]);
+        let input = s("${a} and ${b}");
+        let result = interpolate_variables(&input, &vars, "tmpl");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Undefined variable 'b'"));
+    }
+
+    #[test]
+    fn test_interpolate_multiple_vars_all_defined() {
+        let vars = HashMap::from([
+            ("x".to_string(), "1".to_string()),
+            ("y".to_string(), "2".to_string()),
+        ]);
+        let input = s("coords: ${x},${y}");
+        let result = interpolate_variables(&input, &vars, "tmpl").unwrap();
+        assert_eq!(result, s("coords: 1,2"));
+    }
+
+    #[test]
+    fn test_interpolate_in_array() {
+        let vars = HashMap::from([("ns".to_string(), "sensor1".to_string())]);
+        let input = Value::Array(vec![s("data.${ns}.temp"), s("data.${ns}.humidity")]);
+        let result = interpolate_variables(&input, &vars, "tmpl").unwrap();
+        let Value::Array(items) = result else {
+            panic!("Expected array, got {result:?}");
+        };
+        assert_eq!(items[0], s("data.sensor1.temp"));
+        assert_eq!(items[1], s("data.sensor1.humidity"));
+    }
+
+    #[test]
+    fn test_interpolate_undefined_in_array() {
+        let vars = HashMap::new();
+        let input = Value::Array(vec![s("${missing}")]);
+        let result = interpolate_variables(&input, &vars, "tmpl");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_interpolate_non_string_passthrough() {
+        let vars = HashMap::new();
+        // Non-string values should pass through without error
+        assert_eq!(
+            interpolate_variables(&Value::Integer(42), &vars, "t").unwrap(),
+            Value::Integer(42)
+        );
+        assert_eq!(
+            interpolate_variables(&Value::Bool(true), &vars, "t").unwrap(),
+            Value::Bool(true)
+        );
+        assert_eq!(
+            interpolate_variables(&Value::Null, &vars, "t").unwrap(),
+            Value::Null
+        );
+    }
+
+    // ── expand_template error paths ──────────────────────────────────
+
+    #[test]
+    fn test_expand_template_non_object_instance() {
+        let templates = TemplateMap::new();
+        let mut stack = Vec::new();
+        // Non-object instance returns the value unchanged
+        let result = expand_template(&s("not_an_object"), &templates, &mut stack, None).unwrap();
+        assert_eq!(result, s("not_an_object"));
+    }
+
+    #[test]
+    fn test_expand_template_null_instance() {
+        let templates = TemplateMap::new();
+        let mut stack = Vec::new();
+        let result = expand_template(&Value::Null, &templates, &mut stack, None).unwrap();
+        assert_eq!(result, Value::Null);
+    }
+
+    #[test]
+    fn test_expand_template_unknown_template_name() {
+        let templates = TemplateMap::new();
+        let mut stack = Vec::new();
+        let instance = obj(vec![("template", s("nonexistent"))]);
+        let result = expand_template(&instance, &templates, &mut stack, None);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .contains("Unknown template: 'nonexistent'"));
+    }
+
+    #[test]
+    fn test_expand_template_with_invalid_vars() {
+        let mut templates = TemplateMap::new();
+        templates.insert(
+            "tmpl".to_string(),
+            obj(vec![("type", s("label")), ("text", s("${ns}"))]),
+        );
+        let mut stack = Vec::new();
+        // vars block is not an object — should propagate error
+        let instance = obj(vec![("template", s("tmpl")), ("vars", s("not_an_object"))]);
+        let result = expand_template(&instance, &templates, &mut stack, None);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("must be an object"));
+    }
+
+    // ── parse_layout_config edge cases ───────────────────────────────
+
+    #[test]
+    fn test_parse_layout_config_unknown_type_defaults_to_stack() {
+        let config = obj(vec![("layout", obj(vec![("type", s("foobar"))]))]);
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
+        assert_eq!(layout.root.component_type, "stack");
+    }
+
+    #[test]
+    fn test_parse_layout_config_missing_type_defaults_to_stack() {
+        let config = obj(vec![("layout", obj(vec![]))]);
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
+        assert_eq!(layout.root.component_type, "stack");
+    }
+
+    #[test]
+    fn test_parse_layout_config_grid_type() {
+        let config = obj(vec![("layout", obj(vec![("type", s("grid"))]))]);
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
+        assert_eq!(layout.root.component_type, "grid");
+    }
+
+    #[test]
+    fn test_parse_layout_config_tiles_type() {
+        let config = obj(vec![("layout", obj(vec![("type", s("tiles"))]))]);
+        let layout = parse_layout_config(&config, &TemplateMap::new()).unwrap();
+        assert_eq!(layout.root.component_type, "tiles");
+    }
+
+    #[test]
+    fn test_parse_layout_config_no_layout_key() {
+        let config = obj(vec![("app", obj(vec![("title", s("Test"))]))]);
+        assert!(parse_layout_config(&config, &TemplateMap::new()).is_none());
+    }
+
+    #[test]
+    fn test_parse_layout_config_template_expansion_failure_fallback() {
+        // Create a config with a template reference that uses undefined vars
+        // so expansion fails, but parse_layout_config falls back to raw layout
+        let config = obj(vec![
+            (
+                "templates",
+                obj(vec![(
+                    "bad_tmpl",
+                    obj(vec![("type", s("label")), ("text", s("${undefined}"))]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![(
+                            "widget",
+                            obj(vec![
+                                ("template", s("bad_tmpl")),
+                                ("vars", obj(vec![])), // no vars defined
+                            ]),
+                        )]),
+                    ),
+                ]),
+            ),
+        ]);
+        // Should not panic — falls back to raw layout on expansion failure
+        let layout = parse_layout_config(&config, &TemplateMap::new());
+        assert!(layout.is_some());
+    }
+
+    // ── parse_component_from_value edge cases ────────────────────────
+
+    #[test]
+    fn test_parse_component_non_object_returns_none() {
+        assert!(parse_component_from_value(&Value::Null, None).is_none());
+        assert!(parse_component_from_value(&s("string"), None).is_none());
+        assert!(parse_component_from_value(&Value::Integer(1), None).is_none());
+    }
+
+    #[test]
+    fn test_parse_component_missing_type_defaults_to_panel() {
+        let val = obj(vec![("label", s("hello"))]);
+        let node = parse_component_from_value(&val, Some("test")).unwrap();
+        assert_eq!(node.component_type, "panel");
+    }
+
+    #[test]
+    fn test_parse_component_binding_missing_source_target() {
+        let binding = obj(vec![("mode", s("one_way"))]); // no source or target
+        let val = obj(vec![("type", s("label")), ("binding", binding)]);
+        let node = parse_component_from_value(&val, Some("lbl")).unwrap();
+        // Should have one binding with empty source and target (from unwrap_or_default)
+        assert_eq!(node.config.bindings.len(), 1);
+        assert_eq!(node.config.bindings[0].source, "");
+        assert_eq!(node.config.bindings[0].target, "");
+    }
+
+    #[test]
+    fn test_parse_component_with_array_children() {
+        let child1 = obj(vec![("type", s("button")), ("label", s("A"))]);
+        let child2 = obj(vec![("type", s("button")), ("label", s("B"))]);
+        let val = obj(vec![
+            ("type", s("panel")),
+            ("component", Value::Array(vec![child1, child2])),
+        ]);
+        let node = parse_component_from_value(&val, Some("parent")).unwrap();
+        assert_eq!(node.children.len(), 2);
+        assert_eq!(node.children[0].component_type, "button");
+        assert_eq!(node.children[1].component_type, "button");
+    }
+
+    // ── RuntimeContext error paths ────────────────────────────────────
+
+    #[test]
+    fn test_set_component_property_nonexistent_component() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        // Apply a layout with one component
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root").with_child(
+                LayoutNode::new("label")
+                    .with_id("lbl")
+                    .with_prop("text", s("Hi")),
+            );
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
+
+        // Setting property on a nonexistent component should return error
+        let result =
+            ctx.set_component_property("no_such_id", "text", PluginValue::String("test".into()));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_runtime_context_get_config_with_null_config() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(registry)));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
+        assert_eq!(ctx.get_config("any.path"), None);
+    }
+
+    // ── NemoRuntime with malformed config ────────────────────────────
+
+    #[test]
+    fn test_runtime_load_malformed_config() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("bad.hcl");
+        {
+            let mut f = std::fs::File::create(&config_path).unwrap();
+            writeln!(f, "this is {{{{ not valid }} hcl {{{{{{{{").unwrap();
+        }
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        let result = rt.load_config();
+        assert!(result.is_err(), "Malformed HCL should produce an error");
+    }
+
+    #[test]
+    fn test_runtime_load_empty_config_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("empty.hcl");
+        {
+            std::fs::File::create(&config_path).unwrap();
+        }
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        // Empty file should load without error
+        assert!(rt.load_config().is_ok());
+    }
+
+    // ── create_data_source edge cases ────────────────────────────────
+
+    #[test]
+    fn test_create_data_source_empty_type() {
+        let config = obj(vec![("type", s(""))]);
+        assert!(nemo_data::create_source("x", "", &config).is_none());
+    }
+
+    #[test]
+    fn test_create_data_source_type_case_sensitivity() {
+        // "HTTP" (uppercase) should not match "http"
+        let config = obj(vec![("type", s("HTTP")), ("url", s("https://example.com"))]);
+        assert!(nemo_data::create_source("api", "HTTP", &config).is_none());
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Strategy for generating leaf `Value` instances.
+    fn arb_leaf_value() -> impl Strategy<Value = Value> {
+        prop_oneof![
+            Just(Value::Null),
+            any::<bool>().prop_map(Value::Bool),
+            any::<i64>().prop_map(Value::Integer),
+            (-1e10f64..1e10f64).prop_map(Value::Float),
+            "[a-zA-Z0-9_]{0,15}".prop_map(Value::String),
+        ]
+    }
+
+    /// Strategy for nested `Value` (up to 2 levels deep).
+    fn arb_value() -> impl Strategy<Value = Value> {
+        arb_leaf_value().prop_recursive(2, 12, 3, |inner| {
+            prop_oneof![
+                prop::collection::vec(inner.clone(), 0..3).prop_map(Value::Array),
+                prop::collection::vec(("[a-z]{1,6}".prop_map(String::from), inner), 0..3).prop_map(
+                    |pairs| {
+                        Value::Object(
+                            pairs
+                                .into_iter()
+                                .collect::<indexmap::IndexMap<String, Value>>(),
+                        )
+                    }
+                ),
+            ]
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn value_to_plugin_value_roundtrip(val in arb_value()) {
+            let plugin = value_to_plugin_value(&val);
+            let back = plugin_value_to_config_value(plugin);
+            prop_assert_eq!(&val, &back);
+        }
+
+        #[test]
+        fn plugin_value_to_json_does_not_panic(val in arb_value()) {
+            let plugin = value_to_plugin_value(&val);
+            let _ = plugin_value_to_json(plugin);
+        }
+
+        #[test]
+        fn get_nested_value_single_key(key in "[a-z]{1,8}", val in arb_leaf_value()) {
+            let config = {
+                let mut m = indexmap::IndexMap::new();
+                m.insert(key.clone(), val.clone());
+                Value::Object(m)
+            };
+            prop_assert_eq!(get_nested_value(&config, &key), Some(&val));
+        }
+
+        #[test]
+        fn get_nested_value_two_level(
+            k1 in "[a-z]{1,5}",
+            k2 in "[a-z]{1,5}",
+            val in arb_leaf_value(),
+        ) {
+            let inner = {
+                let mut m = indexmap::IndexMap::new();
+                m.insert(k2.clone(), val.clone());
+                Value::Object(m)
+            };
+            let config = {
+                let mut m = indexmap::IndexMap::new();
+                m.insert(k1.clone(), inner);
+                Value::Object(m)
+            };
+            let path = format!("{}.{}", k1, k2);
+            prop_assert_eq!(get_nested_value(&config, &path), Some(&val));
+        }
+
+        #[test]
+        fn interpolate_no_vars_passthrough(s_val in "[a-zA-Z0-9 ]{0,20}") {
+            // Strings without ${} should pass through unchanged
+            if !s_val.contains("${") {
+                let vars = HashMap::new();
+                let input = Value::String(s_val.clone());
+                let result = interpolate_variables(&input, &vars, "test").unwrap();
+                prop_assert_eq!(result, Value::String(s_val));
+            }
+        }
+
+        #[test]
+        fn deep_merge_non_object_overlay_wins(val in arb_leaf_value()) {
+            // When overlay is not an object, overlay value is returned
+            let base = Value::String("base".to_string());
+            let merged = deep_merge_values(&base, &val);
+            prop_assert_eq!(&merged, &val);
+        }
+
+        #[test]
+        fn deep_merge_two_objects_contains_all_keys(
+            pairs1 in prop::collection::vec(("[a-e]{1}".prop_map(String::from), arb_leaf_value()), 1..3),
+            pairs2 in prop::collection::vec(("[f-j]{1}".prop_map(String::from), arb_leaf_value()), 1..3),
+        ) {
+            // When merging two objects with disjoint keys, all keys appear
+            let obj1 = Value::Object(pairs1.iter().cloned().collect());
+            let obj2 = Value::Object(pairs2.iter().cloned().collect());
+            let merged = deep_merge_values(&obj1, &obj2);
+            let Value::Object(m) = merged else {
+                panic!("Expected object");
+            };
+            for (k, _) in &pairs1 {
+                prop_assert!(m.contains_key(k), "Missing key {} from base", k);
+            }
+            // overlay keys (excluding template/vars) should be present
+            for (k, _) in &pairs2 {
+                if k != "template" && k != "vars" {
+                    prop_assert!(m.contains_key(k), "Missing key {} from overlay", k);
+                }
+            }
+        }
+
+        #[test]
+        fn extract_templates_from_no_templates_is_empty(val in arb_leaf_value()) {
+            // Any value without a "templates" key should produce empty map
+            let templates = extract_templates(&val);
+            prop_assert!(templates.is_empty());
+        }
     }
 }

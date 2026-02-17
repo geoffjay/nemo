@@ -462,11 +462,10 @@ mod tests {
         let input = Value::Array(vec![Value::Object(item1), Value::Object(item2)]);
         let result = filter.transform(input, &ctx).unwrap();
 
-        if let Value::Array(items) = result {
-            assert_eq!(items.len(), 1);
-        } else {
-            panic!("Expected array");
-        }
+        let Value::Array(items) = result else {
+            panic!("Expected Value::Array, got {result:?}");
+        };
+        assert_eq!(items.len(), 1);
     }
 
     #[test]
@@ -481,13 +480,12 @@ mod tests {
         let input = Value::Object(item);
         let result = select.transform(input, &ctx).unwrap();
 
-        if let Value::Object(obj) = result {
-            assert_eq!(obj.len(), 1);
-            assert!(obj.contains_key("name"));
-            assert!(!obj.contains_key("age"));
-        } else {
-            panic!("Expected object");
-        }
+        let Value::Object(obj) = result else {
+            panic!("Expected Value::Object, got {result:?}");
+        };
+        assert_eq!(obj.len(), 1);
+        assert!(obj.contains_key("name"));
+        assert!(!obj.contains_key("age"));
     }
 
     #[test]
@@ -511,13 +509,13 @@ mod tests {
         ]);
         let result = sort.transform(input, &ctx).unwrap();
 
-        if let Value::Array(items) = result {
-            if let Value::Object(first) = &items[0] {
-                assert_eq!(first.get("value"), Some(&Value::Integer(1)));
-            }
-        } else {
-            panic!("Expected array");
-        }
+        let Value::Array(items) = result else {
+            panic!("Expected Value::Array, got {result:?}");
+        };
+        let Value::Object(first) = &items[0] else {
+            panic!("Expected Value::Object for first item, got {:?}", items[0]);
+        };
+        assert_eq!(first.get("value"), Some(&Value::Integer(1)));
     }
 
     // ── Pipeline tests ────────────────────────────────────────────────
@@ -541,12 +539,11 @@ mod tests {
         item.insert("age".to_string(), Value::Integer(25));
 
         let result = pipeline.execute(Value::Object(item), &ctx).unwrap();
-        if let Value::Object(obj) = result {
-            assert_eq!(obj.len(), 1);
-            assert!(obj.contains_key("name"));
-        } else {
-            panic!("Expected object");
-        }
+        let Value::Object(obj) = result else {
+            panic!("Expected Value::Object, got {result:?}");
+        };
+        assert_eq!(obj.len(), 1);
+        assert!(obj.contains_key("name"));
     }
 
     #[test]
@@ -571,13 +568,12 @@ mod tests {
         let ctx = TransformContext::default();
         let result = pipeline.execute(input, &ctx).unwrap();
 
-        if let Value::Array(items) = result {
-            assert_eq!(items.len(), 3);
-            assert_eq!(items[0].get("name").and_then(|v| v.as_str()), Some("Alice"));
-            assert_eq!(items[2].get("name").and_then(|v| v.as_str()), Some("Bob"));
-        } else {
-            panic!("Expected array");
-        }
+        let Value::Array(items) = result else {
+            panic!("Expected Value::Array, got {result:?}");
+        };
+        assert_eq!(items.len(), 3);
+        assert_eq!(items[0].get("name").and_then(|v| v.as_str()), Some("Alice"));
+        assert_eq!(items[2].get("name").and_then(|v| v.as_str()), Some("Bob"));
     }
 
     #[test]
@@ -597,11 +593,10 @@ mod tests {
         let ctx = TransformContext::default();
         let result = pipeline.execute(input, &ctx).unwrap();
 
-        if let Value::Array(items) = result {
-            assert_eq!(items.len(), 2);
-        } else {
-            panic!("Expected array");
-        }
+        let Value::Array(items) = result else {
+            panic!("Expected Value::Array, got {result:?}");
+        };
+        assert_eq!(items.len(), 2);
     }
 
     #[test]
@@ -615,11 +610,10 @@ mod tests {
             Value::Integer(4),
         ]);
         let result = skip.transform(input, &ctx).unwrap();
-        if let Value::Array(items) = result {
-            assert_eq!(items, vec![Value::Integer(3), Value::Integer(4)]);
-        } else {
-            panic!("Expected array");
-        }
+        let Value::Array(items) = result else {
+            panic!("Expected Value::Array, got {result:?}");
+        };
+        assert_eq!(items, vec![Value::Integer(3), Value::Integer(4)]);
     }
 
     #[test]
@@ -632,11 +626,10 @@ mod tests {
             Value::Integer(3),
         ]);
         let result = take.transform(input, &ctx).unwrap();
-        if let Value::Array(items) = result {
-            assert_eq!(items, vec![Value::Integer(1), Value::Integer(2)]);
-        } else {
-            panic!("Expected array");
-        }
+        let Value::Array(items) = result else {
+            panic!("Expected Value::Array, got {result:?}");
+        };
+        assert_eq!(items, vec![Value::Integer(1), Value::Integer(2)]);
     }
 
     #[test]
@@ -652,12 +645,11 @@ mod tests {
 
         let input = Value::Array(vec![mk(1), mk(3), mk(2)]);
         let result = sort.transform(input, &ctx).unwrap();
-        if let Value::Array(items) = result {
-            assert_eq!(items[0].get("val"), Some(&Value::Integer(3)));
-            assert_eq!(items[2].get("val"), Some(&Value::Integer(1)));
-        } else {
-            panic!("Expected array");
-        }
+        let Value::Array(items) = result else {
+            panic!("Expected Value::Array, got {result:?}");
+        };
+        assert_eq!(items[0].get("val"), Some(&Value::Integer(3)));
+        assert_eq!(items[2].get("val"), Some(&Value::Integer(1)));
     }
 
     #[test]
@@ -670,5 +662,152 @@ mod tests {
         pipeline.add(Box::new(TakeTransform::new(5)));
         assert_eq!(pipeline.len(), 2);
         assert!(!pipeline.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Generate a vector of objects with a "value" integer field.
+    fn arb_int_objects(len: usize) -> impl Strategy<Value = Vec<Value>> {
+        prop::collection::vec(any::<i64>(), len..=len).prop_map(|nums| {
+            nums.into_iter()
+                .map(|n| {
+                    let mut m = indexmap::IndexMap::new();
+                    m.insert("value".to_string(), Value::Integer(n));
+                    Value::Object(m)
+                })
+                .collect()
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn skip_never_exceeds_input_length(
+            items in prop::collection::vec(any::<i64>().prop_map(Value::Integer), 0..20),
+            skip_count in 0usize..30,
+        ) {
+            let skip = SkipTransform::new(skip_count);
+            let ctx = TransformContext::default();
+            let input = Value::Array(items.clone());
+            let result = skip.transform(input, &ctx).unwrap();
+            let Value::Array(out) = result else {
+                panic!("Expected array");
+            };
+            let expected_len = items.len().saturating_sub(skip_count);
+            prop_assert_eq!(out.len(), expected_len);
+        }
+
+        #[test]
+        fn take_never_exceeds_input_length(
+            items in prop::collection::vec(any::<i64>().prop_map(Value::Integer), 0..20),
+            take_count in 0usize..30,
+        ) {
+            let take = TakeTransform::new(take_count);
+            let ctx = TransformContext::default();
+            let input = Value::Array(items.clone());
+            let result = take.transform(input, &ctx).unwrap();
+            let Value::Array(out) = result else {
+                panic!("Expected array");
+            };
+            let expected_len = items.len().min(take_count);
+            prop_assert_eq!(out.len(), expected_len);
+        }
+
+        #[test]
+        fn skip_then_take_length(
+            items in prop::collection::vec(any::<i64>().prop_map(Value::Integer), 0..20),
+            skip_n in 0usize..15,
+            take_n in 0usize..15,
+        ) {
+            let mut pipeline = Pipeline::new();
+            pipeline.add(Box::new(SkipTransform::new(skip_n)));
+            pipeline.add(Box::new(TakeTransform::new(take_n)));
+            let ctx = TransformContext::default();
+            let input = Value::Array(items.clone());
+            let result = pipeline.execute(input, &ctx).unwrap();
+            let Value::Array(out) = result else {
+                panic!("Expected array");
+            };
+            let after_skip = items.len().saturating_sub(skip_n);
+            let expected = after_skip.min(take_n);
+            prop_assert_eq!(out.len(), expected);
+        }
+
+        #[test]
+        fn sort_ascending_is_ordered(items in arb_int_objects(5)) {
+            let sort = SortTransform::asc("value");
+            let ctx = TransformContext::default();
+            let result = sort.transform(Value::Array(items), &ctx).unwrap();
+            let Value::Array(out) = result else {
+                panic!("Expected array");
+            };
+            for w in out.windows(2) {
+                let a = w[0].get("value").and_then(|v| v.as_i64()).unwrap();
+                let b = w[1].get("value").and_then(|v| v.as_i64()).unwrap();
+                prop_assert!(a <= b, "Expected {} <= {}", a, b);
+            }
+        }
+
+        #[test]
+        fn sort_descending_is_ordered(items in arb_int_objects(5)) {
+            let sort = SortTransform::desc("value");
+            let ctx = TransformContext::default();
+            let result = sort.transform(Value::Array(items), &ctx).unwrap();
+            let Value::Array(out) = result else {
+                panic!("Expected array");
+            };
+            for w in out.windows(2) {
+                let a = w[0].get("value").and_then(|v| v.as_i64()).unwrap();
+                let b = w[1].get("value").and_then(|v| v.as_i64()).unwrap();
+                prop_assert!(a >= b, "Expected {} >= {}", a, b);
+            }
+        }
+
+        #[test]
+        fn filter_never_increases_count(
+            items in prop::collection::vec(
+                prop::bool::ANY.prop_map(|b| {
+                    let mut m = indexmap::IndexMap::new();
+                    m.insert("active".to_string(), Value::Bool(b));
+                    Value::Object(m)
+                }),
+                0..20,
+            ),
+        ) {
+            let filter = FilterTransform::equals("active", Value::Bool(true));
+            let ctx = TransformContext::default();
+            let input_len = items.len();
+            let result = filter.transform(Value::Array(items), &ctx).unwrap();
+            let Value::Array(out) = result else {
+                panic!("Expected array");
+            };
+            prop_assert!(out.len() <= input_len);
+        }
+
+        #[test]
+        fn sort_preserves_length(items in arb_int_objects(8)) {
+            let sort = SortTransform::asc("value");
+            let ctx = TransformContext::default();
+            let input_len = items.len();
+            let result = sort.transform(Value::Array(items), &ctx).unwrap();
+            let Value::Array(out) = result else {
+                panic!("Expected array");
+            };
+            prop_assert_eq!(out.len(), input_len);
+        }
+
+        #[test]
+        fn empty_pipeline_is_identity(
+            items in prop::collection::vec(any::<i64>().prop_map(Value::Integer), 0..10),
+        ) {
+            let pipeline = Pipeline::new();
+            let ctx = TransformContext::default();
+            let input = Value::Array(items.clone());
+            let result = pipeline.execute(input, &ctx).unwrap();
+            prop_assert_eq!(result, Value::Array(items));
+        }
     }
 }

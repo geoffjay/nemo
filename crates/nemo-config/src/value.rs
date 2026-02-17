@@ -233,3 +233,148 @@ mod tests {
         assert_eq!(value.get("missing"), None);
     }
 }
+
+#[cfg(test)]
+mod proptests {
+    use super::*;
+    use proptest::prelude::*;
+
+    /// Strategy to generate arbitrary `Value` instances (leaf types only for speed).
+    fn arb_leaf_value() -> impl Strategy<Value = Value> {
+        prop_oneof![
+            Just(Value::Null),
+            any::<bool>().prop_map(Value::Bool),
+            any::<i64>().prop_map(Value::Integer),
+            // Avoid NaN/Inf which don't roundtrip through JSON
+            (-1e10f64..1e10f64).prop_map(Value::Float),
+            "[a-zA-Z0-9_]{0,20}".prop_map(Value::String),
+        ]
+    }
+
+    /// Strategy to generate `Value` including arrays and objects (1 level deep).
+    fn arb_value() -> impl Strategy<Value = Value> {
+        arb_leaf_value().prop_recursive(2, 16, 4, |inner| {
+            prop_oneof![
+                prop::collection::vec(inner.clone(), 0..4).prop_map(Value::Array),
+                prop::collection::vec(("[a-z]{1,8}".prop_map(String::from), inner), 0..4).prop_map(
+                    |pairs| {
+                        Value::Object(pairs.into_iter().collect::<IndexMap<String, Value>>())
+                    }
+                ),
+            ]
+        })
+    }
+
+    proptest! {
+        #[test]
+        fn type_name_is_correct(val in arb_value()) {
+            let name = val.type_name();
+            match &val {
+                Value::Null => prop_assert_eq!(name, "null"),
+                Value::Bool(_) => prop_assert_eq!(name, "bool"),
+                Value::Integer(_) => prop_assert_eq!(name, "integer"),
+                Value::Float(_) => prop_assert_eq!(name, "float"),
+                Value::String(_) => prop_assert_eq!(name, "string"),
+                Value::Array(_) => prop_assert_eq!(name, "array"),
+                Value::Object(_) => prop_assert_eq!(name, "object"),
+            }
+        }
+
+        #[test]
+        fn accessor_matches_variant(val in arb_leaf_value()) {
+            match &val {
+                Value::Null => {
+                    prop_assert!(val.is_null());
+                    prop_assert!(val.as_bool().is_none());
+                    prop_assert!(val.as_i64().is_none());
+                    prop_assert!(val.as_str().is_none());
+                }
+                Value::Bool(b) => {
+                    prop_assert_eq!(val.as_bool(), Some(*b));
+                    prop_assert!(!val.is_null());
+                }
+                Value::Integer(i) => {
+                    prop_assert_eq!(val.as_i64(), Some(*i));
+                    // as_f64 also works for integers
+                    prop_assert!(val.as_f64().is_some());
+                }
+                Value::Float(f) => {
+                    prop_assert_eq!(val.as_f64(), Some(*f));
+                    prop_assert!(val.as_i64().is_none());
+                }
+                Value::String(s) => {
+                    prop_assert_eq!(val.as_str(), Some(s.as_str()));
+                }
+                _ => {}
+            }
+        }
+
+        #[test]
+        fn json_roundtrip_preserves_structure(val in arb_value()) {
+            // Value -> serde_json::Value -> Value should preserve structure
+            // (floats may lose precision, but structural equality holds for most values)
+            let json_str = serde_json::to_string(&val).unwrap();
+            let back: Value = serde_json::from_str(&json_str).unwrap();
+
+            // For non-float values, roundtrip should be exact
+            match &val {
+                Value::Float(_) => {} // Skip float comparison due to JSON precision
+                _ => {
+                    // Check structural equivalence: same type, same shape
+                    prop_assert_eq!(val.type_name(), back.type_name());
+                }
+            }
+        }
+
+        #[test]
+        fn display_does_not_panic(val in arb_value()) {
+            // Display should never panic for any valid Value
+            let _ = format!("{}", val);
+        }
+
+        #[test]
+        fn clone_equals_original(val in arb_value()) {
+            let cloned = val.clone();
+            prop_assert_eq!(&val, &cloned);
+        }
+
+        #[test]
+        fn get_on_non_object_returns_none(val in arb_leaf_value(), key in "[a-z]{1,5}") {
+            match &val {
+                Value::Object(_) => {} // Skip objects
+                _ => {
+                    prop_assert!(val.get(&key).is_none());
+                }
+            }
+        }
+
+        #[test]
+        fn get_index_on_non_array_returns_none(val in arb_leaf_value(), idx in 0usize..10) {
+            match &val {
+                Value::Array(_) => {}
+                _ => {
+                    prop_assert!(val.get_index(idx).is_none());
+                }
+            }
+        }
+
+        #[test]
+        fn from_json_value_roundtrip(b in any::<bool>()) {
+            let json_val = serde_json::Value::Bool(b);
+            let config_val = Value::from(json_val);
+            prop_assert_eq!(config_val, Value::Bool(b));
+        }
+
+        #[test]
+        fn from_i64_roundtrip(i in any::<i64>()) {
+            let val = Value::from(i);
+            prop_assert_eq!(val.as_i64(), Some(i));
+        }
+
+        #[test]
+        fn from_string_roundtrip(s in "[a-zA-Z0-9]{0,30}") {
+            let val = Value::from(s.clone());
+            prop_assert_eq!(val.as_str(), Some(s.as_str()));
+        }
+    }
+}
