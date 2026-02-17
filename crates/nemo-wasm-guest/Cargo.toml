@@ -3,6 +3,13 @@ name = "nemo-wasm-guest"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "WASM guest SDK for Nemo plugins"
+readme = "README.md"
+keywords = ["nemo", "plugin", "wasm", "dashboard"]
+categories = ["gui", "wasm"]
+include = ["src/**/*", "wit/**/*", "Cargo.toml", "README.md", "build.rs"]
+links = "nemo-wasm-guest"
 
 [dependencies]
 wit-bindgen = { workspace = true }

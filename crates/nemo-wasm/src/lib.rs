@@ -20,7 +20,7 @@ use wasmtime::{Engine, Store};
 use wasmtime_wasi::WasiCtxBuilder;
 
 wasmtime::component::bindgen!({
-    path: "wit/nemo-plugin.wit",
+    path: "../nemo-wasm-guest/wit/nemo-plugin.wit",
     world: "nemo-plugin",
 });
 

@@ -16,7 +16,7 @@ Add this to your plugin's `Cargo.toml`:
 
 ```toml
 [dependencies]
-nemo-plugin = { path = "../../crates/nemo-plugin" }
+nemo-plugin = "0.4"
 ```
 
 ## Quick Start

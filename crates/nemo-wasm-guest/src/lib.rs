@@ -4,14 +4,14 @@
 //! documentation on how to write Nemo WASM plugins.
 //!
 //! Each plugin crate must invoke `wit_bindgen::generate!` pointing at the
-//! `nemo-plugin.wit` file (shipped in `crates/nemo-wasm/wit/`), implement
+//! `nemo-plugin.wit` file (shipped in this crate's `wit/` directory), implement
 //! the generated `Guest` trait, and call `export!(MyPlugin)`.
 //!
 //! # Example
 //!
 //! ```ignore
 //! wit_bindgen::generate!({
-//!     path: "path/to/crates/nemo-wasm/wit/nemo-plugin.wit",
+//!     path: "wit/nemo-plugin.wit",
 //!     world: "nemo-plugin",
 //! });
 //!

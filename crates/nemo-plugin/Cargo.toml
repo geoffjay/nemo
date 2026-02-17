@@ -3,6 +3,11 @@ name = "nemo-plugin"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Plugin development kit for Nemo with fluent UI builders"
+readme = "README.md"
+keywords = ["nemo", "plugin", "sdk", "dashboard"]
+categories = ["gui"]
 
 [dependencies]
 nemo-plugin-api = { workspace = true }

@@ -3,6 +3,11 @@ name = "nemo-plugin-api"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
+description = "Stable API interface for Nemo native plugins"
+readme = "README.md"
+keywords = ["nemo", "plugin", "api", "dashboard"]
+categories = ["gui"]
 
 [dependencies]
 indexmap = { workspace = true }

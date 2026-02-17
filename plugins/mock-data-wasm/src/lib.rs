@@ -1,5 +1,5 @@
 wit_bindgen::generate!({
-    path: "../../crates/nemo-wasm/wit/nemo-plugin.wit",
+    path: "../../crates/nemo-wasm-guest/wit/nemo-plugin.wit",
     world: "nemo-plugin",
 });
 
