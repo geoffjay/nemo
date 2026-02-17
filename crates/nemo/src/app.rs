@@ -17,10 +17,12 @@ use crate::components::tree::values_to_tree_items;
 use gpui_component::input::TabSize;
 
 use crate::components::{
-    apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge, BarChart, Button,
-    CandlestickChart, Checkbox, CodeEditor, Collapsible, DropdownButton, Icon, Image, Label,
-    LineChart, List, Modal, Notification, Panel, PieChart, Progress, Radio, Select, SidenavBar,
-    Slider, Spinner, Stack, Switch, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip,
+    apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge, BarChart, BubbleChart,
+    Button, CandlestickChart, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
+    Collapsible, ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Label,
+    LineChart, List, Modal, Notification, Panel, PieChart, Progress, PyramidChart, RadarChart,
+    Radio, ScatterChart, Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart,
+    StackedColumnChart, Switch, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip,
     Tree,
 };
 use crate::runtime::NemoRuntime;
@@ -754,6 +756,19 @@ impl App {
             "area_chart" => AreaChart::new(component.clone()).into_any_element(),
             "pie_chart" => PieChart::new(component.clone()).into_any_element(),
             "candlestick_chart" => CandlestickChart::new(component.clone()).into_any_element(),
+            "column_chart" => ColumnChart::new(component.clone()).into_any_element(),
+            "stacked_column_chart" => StackedColumnChart::new(component.clone()).into_any_element(),
+            "clustered_column_chart" => {
+                ClusteredColumnChart::new(component.clone()).into_any_element()
+            }
+            "stacked_bar_chart" => StackedBarChart::new(component.clone()).into_any_element(),
+            "clustered_bar_chart" => ClusteredBarChart::new(component.clone()).into_any_element(),
+            "scatter_chart" => ScatterChart::new(component.clone()).into_any_element(),
+            "bubble_chart" => BubbleChart::new(component.clone()).into_any_element(),
+            "heatmap_chart" => HeatmapChart::new(component.clone()).into_any_element(),
+            "radar_chart" => RadarChart::new(component.clone()).into_any_element(),
+            "pyramid_chart" => PyramidChart::new(component.clone()).into_any_element(),
+            "funnel_chart" => FunnelChart::new(component.clone()).into_any_element(),
             "accordion" => {
                 let acc_state = self.component_states.get_or_create_accordion_state(
                     &component.id,

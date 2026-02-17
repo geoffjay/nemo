@@ -592,6 +592,180 @@ fn register_chart_components(registry: &ComponentRegistry) {
             .require("low_field")
             .require("close_field"),
     );
+
+    reg(
+        registry,
+        "column_chart",
+        ComponentCategory::Charts,
+        "Column Chart",
+        "A vertical column chart (alias for bar chart)",
+        ConfigSchema::new("column_chart")
+            .property("x_field", PropertySchema::string())
+            .property("y_field", PropertySchema::string())
+            .property("data", PropertySchema::any())
+            .property("show_label", PropertySchema::boolean())
+            .property("tick_margin", PropertySchema::integer())
+            .require("x_field")
+            .require("y_field"),
+    );
+
+    reg(
+        registry,
+        "stacked_column_chart",
+        ComponentCategory::Charts,
+        "Stacked Column Chart",
+        "A stacked vertical column chart with multiple series",
+        ConfigSchema::new("stacked_column_chart")
+            .property("x_field", PropertySchema::string())
+            .property("y_fields", PropertySchema::array(PropertySchema::string()))
+            .property("data", PropertySchema::any())
+            .property("tick_margin", PropertySchema::integer())
+            .require("x_field")
+            .require("y_fields"),
+    );
+
+    reg(
+        registry,
+        "clustered_column_chart",
+        ComponentCategory::Charts,
+        "Clustered Column Chart",
+        "A grouped vertical column chart with side-by-side series",
+        ConfigSchema::new("clustered_column_chart")
+            .property("x_field", PropertySchema::string())
+            .property("y_fields", PropertySchema::array(PropertySchema::string()))
+            .property("data", PropertySchema::any())
+            .property("tick_margin", PropertySchema::integer())
+            .require("x_field")
+            .require("y_fields"),
+    );
+
+    reg(
+        registry,
+        "stacked_bar_chart",
+        ComponentCategory::Charts,
+        "Stacked Bar Chart",
+        "A stacked horizontal bar chart with multiple series",
+        ConfigSchema::new("stacked_bar_chart")
+            .property("y_field", PropertySchema::string())
+            .property("x_fields", PropertySchema::array(PropertySchema::string()))
+            .property("data", PropertySchema::any())
+            .property("tick_margin", PropertySchema::integer())
+            .require("y_field")
+            .require("x_fields"),
+    );
+
+    reg(
+        registry,
+        "clustered_bar_chart",
+        ComponentCategory::Charts,
+        "Clustered Bar Chart",
+        "A grouped horizontal bar chart with side-by-side series",
+        ConfigSchema::new("clustered_bar_chart")
+            .property("y_field", PropertySchema::string())
+            .property("x_fields", PropertySchema::array(PropertySchema::string()))
+            .property("data", PropertySchema::any())
+            .property("tick_margin", PropertySchema::integer())
+            .require("y_field")
+            .require("x_fields"),
+    );
+
+    reg(
+        registry,
+        "scatter_chart",
+        ComponentCategory::Charts,
+        "Scatter Chart",
+        "A scatter plot with data points on a numeric plane",
+        ConfigSchema::new("scatter_chart")
+            .property("x_field", PropertySchema::string())
+            .property("y_field", PropertySchema::string())
+            .property("data", PropertySchema::any())
+            .property("dot_size", PropertySchema::float())
+            .property("tick_margin", PropertySchema::integer())
+            .require("x_field")
+            .require("y_field"),
+    );
+
+    reg(
+        registry,
+        "bubble_chart",
+        ComponentCategory::Charts,
+        "Bubble Chart",
+        "A scatter chart with variable-size bubbles",
+        ConfigSchema::new("bubble_chart")
+            .property("x_field", PropertySchema::string())
+            .property("y_field", PropertySchema::string())
+            .property("size_field", PropertySchema::string())
+            .property("data", PropertySchema::any())
+            .property("min_radius", PropertySchema::float())
+            .property("max_radius", PropertySchema::float())
+            .property("tick_margin", PropertySchema::integer())
+            .require("x_field")
+            .require("y_field")
+            .require("size_field"),
+    );
+
+    reg(
+        registry,
+        "heatmap_chart",
+        ComponentCategory::Charts,
+        "Heatmap Chart",
+        "A grid of coloured cells representing values across two categories",
+        ConfigSchema::new("heatmap_chart")
+            .property("x_field", PropertySchema::string())
+            .property("y_field", PropertySchema::string())
+            .property("value_field", PropertySchema::string())
+            .property("data", PropertySchema::any())
+            .property("tick_margin", PropertySchema::integer())
+            .require("x_field")
+            .require("y_field")
+            .require("value_field"),
+    );
+
+    reg(
+        registry,
+        "radar_chart",
+        ComponentCategory::Charts,
+        "Radar Chart",
+        "A radar (spider/web) chart with polygonal data series",
+        ConfigSchema::new("radar_chart")
+            .property(
+                "categories",
+                PropertySchema::array(PropertySchema::string()),
+            )
+            .property("y_fields", PropertySchema::array(PropertySchema::string()))
+            .property("data", PropertySchema::any())
+            .property("max_value", PropertySchema::float())
+            .require("categories")
+            .require("y_fields"),
+    );
+
+    reg(
+        registry,
+        "pyramid_chart",
+        ComponentCategory::Charts,
+        "Pyramid Chart",
+        "A pyramid of centred horizontal bars sorted by value",
+        ConfigSchema::new("pyramid_chart")
+            .property("label_field", PropertySchema::string())
+            .property("value_field", PropertySchema::string())
+            .property("data", PropertySchema::any())
+            .require("label_field")
+            .require("value_field"),
+    );
+
+    reg(
+        registry,
+        "funnel_chart",
+        ComponentCategory::Charts,
+        "Funnel Chart",
+        "A funnel chart with narrowing trapezoid segments",
+        ConfigSchema::new("funnel_chart")
+            .property("label_field", PropertySchema::string())
+            .property("value_field", PropertySchema::string())
+            .property("data", PropertySchema::any())
+            .require("label_field")
+            .require("value_field"),
+    );
 }
 
 /// Registers all built-in data sources.
@@ -854,6 +1028,17 @@ mod tests {
         assert!(registry.has_component("area_chart"));
         assert!(registry.has_component("pie_chart"));
         assert!(registry.has_component("candlestick_chart"));
+        assert!(registry.has_component("column_chart"));
+        assert!(registry.has_component("stacked_column_chart"));
+        assert!(registry.has_component("clustered_column_chart"));
+        assert!(registry.has_component("stacked_bar_chart"));
+        assert!(registry.has_component("clustered_bar_chart"));
+        assert!(registry.has_component("scatter_chart"));
+        assert!(registry.has_component("bubble_chart"));
+        assert!(registry.has_component("heatmap_chart"));
+        assert!(registry.has_component("radar_chart"));
+        assert!(registry.has_component("pyramid_chart"));
+        assert!(registry.has_component("funnel_chart"));
         assert!(registry.has_component("textarea"));
         assert!(registry.has_component("code_editor"));
         assert!(registry.has_component("text_editor"));

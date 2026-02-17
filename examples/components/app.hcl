@@ -1322,7 +1322,7 @@ layout {
 
         component "charts_desc" {
           type = "text"
-          content = "Chart components for data visualization. Supports line, bar, area, pie, and candlestick charts."
+          content = "Chart components for data visualization. Supports line, bar, area, pie, candlestick, column, stacked, clustered, scatter, bubble, heatmap, radar, pyramid, and funnel charts."
         }
 
         # ── Line Chart ──────────────────────────────────────
@@ -1454,6 +1454,254 @@ layout {
             { date = "Wed", open = 104.0, high = 112.0, low = 100.0, close = 111.0 },
             { date = "Thu", open = 111.0, high = 120.0, low = 108.0, close = 118.0 },
             { date = "Fri", open = 118.0, high = 122.0, low = 110.0, close = 112.0 }
+          ]
+        }
+
+        # ── Column Chart ─────────────────────────────────────
+        component "chart_section_column" {
+          type = "label"
+          text = "Column Chart"
+          size = "sm"
+        }
+
+        component "column_chart_demo" {
+          type = "column_chart"
+          x_field = "month"
+          y_field = "sales"
+          show_label = true
+          height = 300
+          data = [
+            { month = "Jan", sales = 320 },
+            { month = "Feb", sales = 410 },
+            { month = "Mar", sales = 280 },
+            { month = "Apr", sales = 390 },
+            { month = "May", sales = 450 },
+            { month = "Jun", sales = 370 }
+          ]
+        }
+
+        # ── Stacked Column Chart ─────────────────────────────
+        component "chart_section_stacked_column" {
+          type = "label"
+          text = "Stacked Column Chart"
+          size = "sm"
+        }
+
+        component "stacked_column_chart_demo" {
+          type = "stacked_column_chart"
+          x_field = "quarter"
+          y_fields = ["product_a", "product_b", "product_c"]
+          height = 300
+          data = [
+            { quarter = "Q1", product_a = 120, product_b = 90, product_c = 60 },
+            { quarter = "Q2", product_a = 150, product_b = 110, product_c = 80 },
+            { quarter = "Q3", product_a = 130, product_b = 100, product_c = 95 },
+            { quarter = "Q4", product_a = 170, product_b = 120, product_c = 70 }
+          ]
+        }
+
+        # ── Clustered Column Chart ───────────────────────────
+        component "chart_section_clustered_column" {
+          type = "label"
+          text = "Clustered Column Chart"
+          size = "sm"
+        }
+
+        component "clustered_column_chart_demo" {
+          type = "clustered_column_chart"
+          x_field = "region"
+          y_fields = ["sales", "returns"]
+          height = 300
+          data = [
+            { region = "North", sales = 420, returns = 30 },
+            { region = "South", sales = 380, returns = 45 },
+            { region = "East", sales = 510, returns = 25 },
+            { region = "West", sales = 290, returns = 50 }
+          ]
+        }
+
+        # ── Stacked Bar Chart ────────────────────────────────
+        component "chart_section_stacked_bar" {
+          type = "label"
+          text = "Stacked Bar Chart (Horizontal)"
+          size = "sm"
+        }
+
+        component "stacked_bar_chart_demo" {
+          type = "stacked_bar_chart"
+          y_field = "department"
+          x_fields = ["budget", "spent"]
+          height = 300
+          data = [
+            { department = "Engineering", budget = 500, spent = 420 },
+            { department = "Marketing", budget = 300, spent = 280 },
+            { department = "Sales", budget = 400, spent = 350 },
+            { department = "Support", budget = 200, spent = 180 }
+          ]
+        }
+
+        # ── Clustered Bar Chart ──────────────────────────────
+        component "chart_section_clustered_bar" {
+          type = "label"
+          text = "Clustered Bar Chart (Horizontal)"
+          size = "sm"
+        }
+
+        component "clustered_bar_chart_demo" {
+          type = "clustered_bar_chart"
+          y_field = "language"
+          x_fields = ["stars", "forks"]
+          height = 300
+          data = [
+            { language = "Rust", stars = 850, forks = 120 },
+            { language = "Go", stars = 720, forks = 190 },
+            { language = "Python", stars = 950, forks = 310 },
+            { language = "TypeScript", stars = 680, forks = 150 }
+          ]
+        }
+
+        # ── Scatter Chart ────────────────────────────────────
+        component "chart_section_scatter" {
+          type = "label"
+          text = "Scatter Chart"
+          size = "sm"
+        }
+
+        component "scatter_chart_demo" {
+          type = "scatter_chart"
+          x_field = "weight"
+          y_field = "height"
+          dot_size = 5.0
+          height = 300
+          data = [
+            { weight = 60, height = 165 },
+            { weight = 72, height = 178 },
+            { weight = 55, height = 160 },
+            { weight = 85, height = 185 },
+            { weight = 68, height = 172 },
+            { weight = 90, height = 190 },
+            { weight = 63, height = 168 },
+            { weight = 78, height = 180 },
+            { weight = 50, height = 155 },
+            { weight = 95, height = 188 }
+          ]
+        }
+
+        # ── Bubble Chart ─────────────────────────────────────
+        component "chart_section_bubble" {
+          type = "label"
+          text = "Bubble Chart"
+          size = "sm"
+        }
+
+        component "bubble_chart_demo" {
+          type = "bubble_chart"
+          x_field = "gdp"
+          y_field = "life_expectancy"
+          size_field = "population"
+          min_radius = 5.0
+          max_radius = 35.0
+          height = 300
+          data = [
+            { gdp = 10, life_expectancy = 72, population = 50 },
+            { gdp = 35, life_expectancy = 78, population = 120 },
+            { gdp = 50, life_expectancy = 82, population = 30 },
+            { gdp = 25, life_expectancy = 75, population = 200 },
+            { gdp = 45, life_expectancy = 80, population = 80 },
+            { gdp = 15, life_expectancy = 68, population = 150 }
+          ]
+        }
+
+        # ── Heatmap Chart ────────────────────────────────────
+        component "chart_section_heatmap" {
+          type = "label"
+          text = "Heatmap Chart"
+          size = "sm"
+        }
+
+        component "heatmap_chart_demo" {
+          type = "heatmap_chart"
+          x_field = "day"
+          y_field = "hour"
+          value_field = "count"
+          height = 300
+          data = [
+            { day = "Mon", hour = "9am", count = 12 },
+            { day = "Mon", hour = "12pm", count = 25 },
+            { day = "Mon", hour = "3pm", count = 18 },
+            { day = "Tue", hour = "9am", count = 8 },
+            { day = "Tue", hour = "12pm", count = 30 },
+            { day = "Tue", hour = "3pm", count = 22 },
+            { day = "Wed", hour = "9am", count = 15 },
+            { day = "Wed", hour = "12pm", count = 20 },
+            { day = "Wed", hour = "3pm", count = 28 },
+            { day = "Thu", hour = "9am", count = 10 },
+            { day = "Thu", hour = "12pm", count = 35 },
+            { day = "Thu", hour = "3pm", count = 16 },
+            { day = "Fri", hour = "9am", count = 5 },
+            { day = "Fri", hour = "12pm", count = 18 },
+            { day = "Fri", hour = "3pm", count = 10 }
+          ]
+        }
+
+        # ── Radar Chart ──────────────────────────────────────
+        component "chart_section_radar" {
+          type = "label"
+          text = "Radar Chart"
+          size = "sm"
+        }
+
+        component "radar_chart_demo" {
+          type = "radar_chart"
+          categories = ["Speed", "Strength", "Defense", "Magic", "Stamina", "Luck"]
+          y_fields = ["warrior", "mage"]
+          max_value = 100.0
+          height = 300
+          data = [
+            { Speed = 80, Strength = 90, Defense = 70, Magic = 30, Stamina = 85, Luck = 50 },
+            { Speed = 60, Strength = 40, Defense = 50, Magic = 95, Stamina = 55, Luck = 75 }
+          ]
+        }
+
+        # ── Pyramid Chart ────────────────────────────────────
+        component "chart_section_pyramid" {
+          type = "label"
+          text = "Pyramid Chart"
+          size = "sm"
+        }
+
+        component "pyramid_chart_demo" {
+          type = "pyramid_chart"
+          label_field = "stage"
+          value_field = "count"
+          height = 300
+          data = [
+            { stage = "Awareness", count = 10000 },
+            { stage = "Interest", count = 6500 },
+            { stage = "Consideration", count = 3200 },
+            { stage = "Intent", count = 1800 },
+            { stage = "Purchase", count = 900 }
+          ]
+        }
+
+        # ── Funnel Chart ─────────────────────────────────────
+        component "chart_section_funnel" {
+          type = "label"
+          text = "Funnel Chart"
+          size = "sm"
+        }
+
+        component "funnel_chart_demo" {
+          type = "funnel_chart"
+          label_field = "step"
+          value_field = "users"
+          height = 300
+          data = [
+            { step = "Visited", users = 5000 },
+            { step = "Signed Up", users = 3200 },
+            { step = "Activated", users = 2100 },
+            { step = "Subscribed", users = 1400 },
+            { step = "Retained", users = 800 }
           ]
         }
       }
