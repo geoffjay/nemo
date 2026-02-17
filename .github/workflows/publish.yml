@@ -1,0 +1,98 @@
+name: Publish Crates
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g., v0.5.0)"
+        required: true
+        type: string
+      dry-run:
+        description: "Dry run (skip actual publish)"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+jobs:
+  publish:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ inputs.tag }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=${VERSION#v}" >> $GITHUB_OUTPUT
+          echo "tag=${VERSION}" >> $GITHUB_OUTPUT
+
+      - name: Verify crate versions match tag
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          for crate in nemo-plugin-api nemo-plugin nemo-wasm-guest; do
+            CRATE_VERSION=$(cargo metadata --format-version 1 --no-deps | \
+              jq -r ".packages[] | select(.name == \"$crate\") | .version")
+            if [ "$CRATE_VERSION" != "$TAG_VERSION" ]; then
+              echo "::error::$crate version ($CRATE_VERSION) does not match tag ($TAG_VERSION)"
+              exit 1
+            fi
+          done
+          echo "All crate versions match tag v$TAG_VERSION"
+
+      - name: Publish nemo-plugin-api
+        run: |
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            cargo publish -p nemo-plugin-api --dry-run
+          else
+            cargo publish -p nemo-plugin-api
+          fi
+
+      - name: Wait for nemo-plugin-api to be available
+        if: inputs.dry-run != 'true'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Waiting for nemo-plugin-api v$VERSION on crates.io..."
+          for i in $(seq 1 30); do
+            if cargo search nemo-plugin-api 2>/dev/null | grep -q "\"$VERSION\""; then
+              echo "nemo-plugin-api v$VERSION is available"
+              break
+            fi
+            echo "Attempt $i/30 - not yet available, waiting 10s..."
+            sleep 10
+          done
+
+      - name: Publish nemo-plugin
+        run: |
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            cargo publish -p nemo-plugin --dry-run
+          else
+            cargo publish -p nemo-plugin
+          fi
+
+      - name: Publish nemo-wasm-guest
+        run: |
+          if [ "${{ inputs.dry-run }}" = "true" ]; then
+            cargo publish -p nemo-wasm-guest --dry-run
+          else
+            cargo publish -p nemo-wasm-guest
+          fi
