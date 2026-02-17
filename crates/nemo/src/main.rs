@@ -8,9 +8,12 @@
 
 use anyhow::{Context as _, Result};
 use gpui::*;
-use gpui_component::v_flex;
+use gpui_component::label::Label;
+use gpui_component::notification::{Notification as Toast, NotificationType};
 use gpui_component::ActiveTheme;
 use gpui_component::Root;
+use gpui_component::WindowExt as _;
+use gpui_component::{h_flex, v_flex};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -29,12 +32,20 @@ mod workspace;
 
 use args::Args;
 use config::NemoConfig;
-use gpui_component::notification::{Notification as Toast, NotificationType};
-use gpui_component::WindowExt as _;
 use window::get_window_options;
 use workspace::{ProjectLoaderView, ProjectSelected};
 
-actions!(nemo, [ReloadConfig]);
+actions!(
+    nemo,
+    [
+        ReloadConfig,
+        QuitApp,
+        CloseProject,
+        OpenProject,
+        ToggleTheme,
+        ShowKeyboardShortcuts,
+    ]
+);
 
 /// The root workspace entity that manages the application state.
 /// It starts in either ProjectLoader mode (no app config) or Application mode.
@@ -49,6 +60,7 @@ struct Workspace {
     nemo_config: NemoConfig,
     ws_args: WorkspaceArgs,
     current_config_path: Option<PathBuf>,
+    pending_project_path: Option<PathBuf>,
     focus_handle: FocusHandle,
 }
 
@@ -96,10 +108,7 @@ impl Workspace {
     }
 
     fn reload_config(&mut self, _: &ReloadConfig, window: &mut Window, cx: &mut Context<Self>) {
-        tracing::debug!("ReloadConfig action dispatched");
-
         let Some(config_path) = self.current_config_path.clone() else {
-            tracing::warn!("ReloadConfig: no config path stored, nothing to reload");
             return;
         };
 
@@ -126,6 +135,92 @@ impl Workspace {
         }
     }
 
+    fn quit_app(&mut self, _: &QuitApp, _window: &mut Window, cx: &mut Context<Self>) {
+        tracing::info!("Quitting application");
+        self.shutdown(cx);
+        cx.quit();
+    }
+
+    fn close_project(&mut self, _: &CloseProject, window: &mut Window, cx: &mut Context<Self>) {
+        if !matches!(self.state, WorkspaceState::Application(_)) {
+            return;
+        }
+
+        tracing::info!("Closing current project");
+        self.shutdown(cx);
+        let loader = Workspace::create_loader(&self.nemo_config, window, cx);
+        self.state = WorkspaceState::ProjectLoader(loader);
+        self.current_config_path = None;
+        window.push_notification("Project closed", cx);
+        cx.notify();
+    }
+
+    fn open_project(&mut self, _: &OpenProject, _window: &mut Window, cx: &mut Context<Self>) {
+        let receiver = cx.prompt_for_paths(PathPromptOptions {
+            files: true,
+            directories: false,
+            multiple: false,
+            prompt: Some("Select an app.hcl configuration file".into()),
+        });
+
+        cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
+            if let Ok(Ok(Some(paths))) = receiver.await {
+                if let Some(path) = paths.into_iter().next() {
+                    let _ = this.update(cx, |ws, cx| {
+                        ws.pending_project_path = Some(path);
+                        cx.notify();
+                    });
+                }
+            }
+        })
+        .detach();
+    }
+
+    fn toggle_theme(&mut self, _: &ToggleTheme, window: &mut Window, cx: &mut Context<Self>) {
+        use gpui_component::{Theme, ThemeMode};
+
+        let current_mode = Theme::global(cx).mode;
+        let new_mode = if current_mode == ThemeMode::Dark {
+            ThemeMode::Light
+        } else {
+            ThemeMode::Dark
+        };
+
+        theme::change_color_mode(new_mode, window, cx);
+
+        let mode_name = if new_mode == ThemeMode::Dark {
+            "dark"
+        } else {
+            "light"
+        };
+        window.push_notification(format!("Switched to {} mode", mode_name), cx);
+        cx.notify();
+    }
+
+    fn show_keyboard_shortcuts(
+        &mut self,
+        _: &ShowKeyboardShortcuts,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        window.open_dialog(cx, |dialog, _window, _cx| {
+            dialog
+                .title("Keyboard Shortcuts")
+                .w(px(420.))
+                .close_button(true)
+                .child(
+                    v_flex()
+                        .gap_1()
+                        .child(shortcut_row("Open Project", "ctrl-o"))
+                        .child(shortcut_row("Close Project", "ctrl-w"))
+                        .child(shortcut_row("Reload Configuration", "ctrl-shift-r"))
+                        .child(shortcut_row("Toggle Light/Dark Theme", "ctrl-shift-t"))
+                        .child(shortcut_row("Keyboard Shortcuts", "f11"))
+                        .child(shortcut_row("Quit Application", "ctrl-q")),
+                )
+        });
+    }
+
     /// Create a ProjectLoaderView and subscribe to its events.
     fn create_loader(
         nemo_config: &NemoConfig,
@@ -147,6 +242,11 @@ impl Workspace {
 
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
+        // Process pending project path from async file picker
+        if let Some(path) = self.pending_project_path.take() {
+            self.load_project(path, window, cx);
+        }
+
         let bg_color = cx.theme().colors.background;
         let text_color = cx.theme().colors.foreground;
 
@@ -161,6 +261,11 @@ impl Render for Workspace {
             .text_color(text_color)
             .track_focus(&self.focus_handle)
             .on_action(cx.listener(Self::reload_config))
+            .on_action(cx.listener(Self::quit_app))
+            .on_action(cx.listener(Self::close_project))
+            .on_action(cx.listener(Self::open_project))
+            .on_action(cx.listener(Self::toggle_theme))
+            .on_action(cx.listener(Self::show_keyboard_shortcuts))
             .child(content);
 
         if let Some(dialog_layer) = Root::render_dialog_layer(window, cx) {
@@ -172,6 +277,18 @@ impl Render for Workspace {
 
         container
     }
+}
+
+/// Render a single row for the keyboard shortcuts dialog.
+fn shortcut_row(label: &str, keystroke: &str) -> impl IntoElement {
+    let kbd = gpui_component::kbd::Kbd::new(Keystroke::parse(keystroke).unwrap());
+    h_flex()
+        .w_full()
+        .justify_between()
+        .items_center()
+        .py_1()
+        .child(Label::new(label.to_string()))
+        .child(kbd)
 }
 
 /// Creates a NemoRuntime, applies extension dirs, loads config, and initializes.
@@ -280,7 +397,14 @@ fn main() -> Result<()> {
 
     gpui_app.run(move |cx| {
         gpui_component::init(cx);
-        cx.bind_keys([KeyBinding::new("ctrl-shift-r", ReloadConfig, None)]);
+        cx.bind_keys([
+            KeyBinding::new("ctrl-shift-r", ReloadConfig, None),
+            KeyBinding::new("ctrl-q", QuitApp, None),
+            KeyBinding::new("ctrl-w", CloseProject, None),
+            KeyBinding::new("ctrl-o", OpenProject, None),
+            KeyBinding::new("ctrl-shift-t", ToggleTheme, None),
+            KeyBinding::new("f11", ShowKeyboardShortcuts, None),
+        ]);
 
         // Store workspace entity for window close handler
         let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
@@ -340,6 +464,7 @@ fn main() -> Result<()> {
                     nemo_config,
                     ws_args,
                     current_config_path,
+                    pending_project_path: None,
                     focus_handle,
                 }
             });

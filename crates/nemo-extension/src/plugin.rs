@@ -1,4 +1,22 @@
 //! Native plugin loading and management.
+//!
+//! This module handles loading, initializing, and managing native (cdylib)
+//! plugins via `libloading`. Plugins expose two `extern "C"` symbols:
+//!
+//! - `nemo_plugin_manifest` — returns a [`PluginManifest`] describing the
+//!   plugin's identity and capabilities.
+//! - `nemo_plugin_entry` — called with a [`PluginRegistrar`] to register
+//!   components, data sources, transforms, actions, and templates.
+//!
+//! # Safety
+//!
+//! All plugin loading is `unsafe` because dynamic library loading cannot
+//! statically verify ABI compatibility. See [`PluginHost::load`] for the
+//! full list of invariants that must hold.
+//!
+//! Currently, there is **no ABI version check, manifest validation, or
+//! plugin signing**. The host trusts that the plugin binary was compiled
+//! with a compatible toolchain and crate version.
 
 use crate::error::ExtensionError;
 use libloading::{Library, Symbol};
@@ -56,10 +74,46 @@ impl PluginHost {
         }
     }
 
-    /// Loads a plugin from a path.
+    /// Loads a native plugin from a dynamic library at the given path.
+    ///
+    /// # Safety Considerations
+    ///
+    /// Loading dynamic libraries is inherently unsafe. This function uses
+    /// `libloading::Library::new` which calls `dlopen` (Unix) or
+    /// `LoadLibrary` (Windows). The following invariants must hold:
+    ///
+    /// - **ABI compatibility**: The plugin must be compiled with the exact
+    ///   same Rust compiler version and the same `nemo-plugin-api` crate
+    ///   version as the host. Different versions may produce incompatible
+    ///   type layouts (e.g. `PluginManifest`, `PluginRegistrar` vtable),
+    ///   leading to undefined behaviour.
+    /// - **Symbol correctness**: The library must export a
+    ///   `nemo_plugin_manifest` symbol with signature
+    ///   `extern "C" fn() -> PluginManifest`. If the symbol exists but has
+    ///   a different signature, calling it is undefined behaviour.
+    /// - **No constructor side-effects**: The library's load-time
+    ///   constructors (`__attribute__((constructor))` or `DllMain`) must
+    ///   not panic or perform operations that assume a specific runtime
+    ///   state.
+    /// - **Library lifetime**: The `Library` handle is stored in
+    ///   `LoadedPlugin` and dropped on `unload()`. Any function pointers
+    ///   or vtables obtained from the library become dangling after unload.
+    ///
+    /// ## What is NOT verified
+    ///
+    /// - ABI version compatibility (no version check between host and plugin)
+    /// - Plugin code integrity (no signing or sandboxing)
+    /// - Thread safety of plugin code
+    ///
+    /// ## Duplicate prevention
+    ///
+    /// If a plugin with the same `id` (from its manifest) is already loaded,
+    /// this function returns `ExtensionError::AlreadyLoaded` without loading
+    /// a second copy.
     pub fn load(&mut self, path: &Path) -> Result<String, ExtensionError> {
-        // Safety: Loading dynamic libraries is inherently unsafe.
-        // We trust that the plugin follows the expected ABI.
+        // SAFETY: We trust that the plugin binary follows the expected Nemo
+        // plugin ABI (same compiler version, same nemo-plugin-api version).
+        // No ABI version checking is currently performed.
         unsafe {
             let library = Library::new(path).map_err(|e| ExtensionError::LoadError {
                 id: path.to_string_lossy().to_string(),
@@ -182,7 +236,21 @@ impl PluginRegistrar for PluginRegistrarImpl {
 }
 
 impl PluginHost {
-    /// Initializes a single loaded plugin by calling its `nemo_plugin_entry` symbol.
+    /// Initializes a loaded plugin by calling its `nemo_plugin_entry` symbol.
+    ///
+    /// The plugin's entry function receives a [`PluginRegistrar`] that collects
+    /// all registrations (components, data sources, transforms, actions,
+    /// templates) into a [`PluginInitResult`].
+    ///
+    /// # Safety Considerations
+    ///
+    /// Same ABI invariants as [`load()`](Self::load). Additionally:
+    ///
+    /// - The entry function must not panic (undefined behaviour across FFI).
+    /// - The entry function must not store the `PluginRegistrar` reference
+    ///   beyond its own scope.
+    /// - The `context` Arc is provided to the plugin and may be retained for
+    ///   the lifetime of the library. It must remain valid until `unload()`.
     pub fn init_plugin(
         &self,
         id: &str,
@@ -193,7 +261,8 @@ impl PluginHost {
             .get(id)
             .ok_or_else(|| ExtensionError::NotFound { id: id.to_string() })?;
 
-        // Safety: we trust the plugin follows the expected ABI (same as load()).
+        // SAFETY: Same ABI trust as load(). The entry function must not panic
+        // or store the registrar reference beyond this call.
         unsafe {
             let entry_fn: Symbol<nemo_plugin_api::PluginEntryFn> = plugin
                 .library

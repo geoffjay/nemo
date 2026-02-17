@@ -30,6 +30,31 @@ pub struct SinkConfig {
 }
 
 /// The Nemo runtime manages all subsystems.
+///
+/// # Thread Safety
+///
+/// `NemoRuntime` itself is **not `Send` or `Sync`** due to two fields:
+///
+/// - **`extension_manager`** (`Arc<RwLock<ExtensionManager>>`): `ExtensionManager`
+///   is `!Send` because it contains a `rhai::Engine` and `rhai::Scope` which are
+///   not thread-safe. All access must occur on the main thread via the
+///   `RwLock` guard. The `Arc` wrapper exists for shared ownership, not for
+///   cross-thread transfer.
+///
+/// - **`integration`** (`Arc<IntegrationGateway>`): `IntegrationGateway` is
+///   `!Send` because `MqttClient` contains a `rumqttc::EventLoop` which is
+///   `!Send`. All MQTT operations must be driven from the main thread; other
+///   integration clients (HTTP, WebSocket, Redis, NATS) are individually
+///   `Send + Sync`.
+///
+/// The `#[allow(clippy::arc_with_non_send_sync)]` annotations on these fields
+/// are intentional: the `Arc` is used for shared ownership within the main
+/// thread, not for cross-thread sharing.
+///
+/// All async I/O (data source polling, HTTP requests, WebSocket streams) is
+/// dispatched to the tokio runtime via `tokio_runtime.spawn()`, which
+/// operates on `Send + Sync` handles (e.g. `Arc<DataFlowEngine>`). The
+/// runtime itself is only accessed from the main/UI thread.
 #[allow(dead_code)]
 pub struct NemoRuntime {
     /// Main configuration file path.
@@ -48,9 +73,9 @@ pub struct NemoRuntime {
     pub layout_manager: Arc<RwLock<LayoutManager>>,
     /// The data flow engine.
     pub data_engine: Arc<DataFlowEngine>,
-    /// The extension manager.
+    /// The extension manager (`!Send` — access only from main thread).
     pub extension_manager: Arc<RwLock<ExtensionManager>>,
-    /// The integration gateway.
+    /// The integration gateway (`!Send` — access only from main thread).
     pub integration: Arc<IntegrationGateway>,
     /// The tokio runtime for async operations.
     pub tokio_runtime: TokioRuntime,
@@ -75,8 +100,12 @@ impl NemoRuntime {
 
         let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
         let data_engine = Arc::new(DataFlowEngine::new());
+        // ExtensionManager is !Send (contains rhai::Engine). Wrapped in Arc for
+        // shared ownership on the main thread, not for cross-thread transfer.
         #[allow(clippy::arc_with_non_send_sync)]
         let extension_manager = Arc::new(RwLock::new(ExtensionManager::new()));
+        // IntegrationGateway is !Send (MqttClient contains rumqttc::EventLoop).
+        // Same pattern: Arc for shared ownership, main-thread only.
         #[allow(clippy::arc_with_non_send_sync)]
         let integration = Arc::new(IntegrationGateway::new());
         let schema_registry = Arc::new(SchemaRegistry::new());
@@ -776,6 +805,67 @@ fn get_nested_value<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
 }
 
 // ── Template expansion ────────────────────────────────────────────────────
+//
+// ## Overview
+//
+// Templates allow reusable component definitions in HCL. A template is
+// defined once, then instantiated by components that set `template = "name"`.
+//
+// ## Expansion Pipeline
+//
+// 1. `extract_templates()` — Collects all `templates { template "name" { .. } }`
+//    blocks from the parsed config into a `HashMap<String, Value>`.
+//
+// 2. Plugin templates — Templates registered by native plugins via
+//    `PluginRegistrar::register_template()` are merged in. HCL-defined
+//    templates override plugin templates on name collision.
+//
+// 3. `expand_children()` — Recursively walks all `component` children in the
+//    layout tree. For each child that has a `template = "name"` key, calls
+//    `expand_template()`.
+//
+// 4. `expand_template()` — The core expansion function:
+//    a. Resolves the template name, detecting circular references via a stack.
+//    b. Recursively expands template-of-template chains (a template can itself
+//       reference another template).
+//    c. Extracts and validates `vars` from the instance via `extract_vars()`.
+//    d. Interpolates `${var_name}` placeholders in the template body via
+//       `interpolate_variables()`.
+//    e. Deep-merges instance properties onto the expanded template via
+//       `deep_merge_values()`.
+//    f. Handles slot injection — if the template contains a child with
+//       `slot = true`, the instance's own children are injected there via
+//       `find_and_inject_slot()`.
+//    g. Scopes template-originated child IDs by prefixing with the instance ID
+//       (e.g. template child `"inner"` becomes `"page_a_inner"`) to prevent
+//       collisions when the same template is instantiated multiple times.
+//    h. Strips consumed keys (`template`, `slot`, `vars`) from the output.
+//
+// ## Deep Merge Semantics (`deep_merge_values`)
+//
+// - Scalar keys: overlay (instance) wins over base (template).
+// - `component` children: merged via `merge_component_children()` — base
+//   children are preserved, overlay children with the same ID replace them,
+//   new IDs are appended.
+// - `binding` blocks: merged by `target` property — overlay bindings with
+//   the same target replace base bindings, others are appended.
+// - `template` and `vars` keys in the overlay are skipped (consumed).
+//
+// ## Slot Injection (`find_and_inject_slot`)
+//
+// A template can designate one child as a "slot" by adding `slot = true`.
+// When the template is instantiated, the instance's own component children
+// are injected into the slot child's `component` map. This allows templates
+// to define a wrapper structure while letting each instance provide unique
+// content.
+//
+// ## ID Scoping (`scope_template_children`)
+//
+// To prevent ID collisions, template-originated child IDs are prefixed with
+// the parent instance ID: `"child"` → `"instance_child"`. Only IDs that
+// originated from the template are scoped; instance-injected children (e.g.
+// via slots) keep their original IDs. The scoping is recursive through
+// template-owned subtrees.
 
 type TemplateMap = HashMap<String, Value>;
 

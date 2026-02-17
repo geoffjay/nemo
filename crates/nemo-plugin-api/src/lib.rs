@@ -2,6 +2,67 @@
 //!
 //! This crate defines the stable API boundary between the Nemo host and native plugins.
 //! Plugins link against this crate to register their capabilities.
+//!
+//! # Writing a Plugin
+//!
+//! A Nemo plugin is a dynamic library (`cdylib`) that exports two symbols:
+//! - `nemo_plugin_manifest` - returns a [`PluginManifest`] describing the plugin
+//! - `nemo_plugin_entry` - called with a [`PluginRegistrar`] to register components,
+//!   data sources, transforms, actions, and templates
+//!
+//! Use the [`declare_plugin!`] macro to generate both exports.
+//!
+//! ## Minimal Example
+//!
+//! ```rust,no_run
+//! use nemo_plugin_api::*;
+//! use semver::Version;
+//!
+//! fn init(registrar: &mut dyn PluginRegistrar) {
+//!     // Register a custom component
+//!     registrar.register_component(
+//!         "my_counter",
+//!         ComponentSchema::new("my_counter")
+//!             .with_description("A counter component")
+//!             .with_property("initial", PropertySchema::integer())
+//!             .require("initial"),
+//!     );
+//!
+//!     // Access host data
+//!     if let Some(value) = registrar.context().get_data("app.settings.theme") {
+//!         registrar.context().log(LogLevel::Info, &format!("Theme: {:?}", value));
+//!     }
+//! }
+//!
+//! declare_plugin!(
+//!     PluginManifest::new("my-plugin", "My Plugin", Version::new(0, 1, 0))
+//!         .with_description("Example Nemo plugin")
+//!         .with_capability(Capability::Component("my_counter".into())),
+//!     init
+//! );
+//! ```
+//!
+//! ## Registering a Data Source
+//!
+//! ```rust,no_run
+//! # use nemo_plugin_api::*;
+//! fn init(registrar: &mut dyn PluginRegistrar) {
+//!     let mut schema = DataSourceSchema::new("my_feed");
+//!     schema.description = "Streams data from a custom feed".into();
+//!     schema.supports_streaming = true;
+//!     schema.properties.insert(
+//!         "url".into(),
+//!         PropertySchema::string().with_description("Feed URL"),
+//!     );
+//!     registrar.register_data_source("my_feed", schema);
+//! }
+//! ```
+//!
+//! ## Plugin Permissions
+//!
+//! Plugins declare required permissions in their manifest via [`PluginPermissions`].
+//! The host checks these before granting access to network, filesystem, or
+//! subprocess operations.
 
 use indexmap::IndexMap;
 use semver::Version;
@@ -127,50 +188,117 @@ pub struct PluginPermissions {
 }
 
 /// Trait for plugin registration.
+///
+/// Passed to the plugin entry point function. Plugins use this to register
+/// their capabilities (components, data sources, transforms, actions, and
+/// templates) with the Nemo host.
+///
+/// The registrar is only valid during the plugin entry call and must not be
+/// stored or used after the entry function returns.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use nemo_plugin_api::*;
+/// fn init(registrar: &mut dyn PluginRegistrar) {
+///     registrar.register_component(
+///         "widget",
+///         ComponentSchema::new("widget")
+///             .with_property("title", PropertySchema::string()),
+///     );
+///     registrar.register_action(
+///         "refresh_widget",
+///         ActionSchema::new("refresh_widget"),
+///     );
+/// }
+/// ```
 pub trait PluginRegistrar {
-    /// Registers a component factory.
+    /// Registers a component factory with the given name and schema.
     fn register_component(&mut self, name: &str, schema: ComponentSchema);
 
-    /// Registers a data source factory.
+    /// Registers a data source factory with the given name and schema.
     fn register_data_source(&mut self, name: &str, schema: DataSourceSchema);
 
-    /// Registers a transform.
+    /// Registers a transform with the given name and schema.
     fn register_transform(&mut self, name: &str, schema: TransformSchema);
 
-    /// Registers an action.
+    /// Registers an action with the given name and schema.
     fn register_action(&mut self, name: &str, schema: ActionSchema);
 
     /// Registers a UI template that can be referenced in HCL layout configs.
+    ///
+    /// Templates registered by plugins are merged with HCL-defined templates
+    /// during layout expansion. HCL-defined templates take precedence if there
+    /// is a name collision.
     fn register_template(&mut self, name: &str, template: PluginValue);
 
-    /// Gets the plugin context for API access.
+    /// Gets the plugin context for API access during initialization.
     fn context(&self) -> &dyn PluginContext;
 
-    /// Gets the plugin context as an Arc for use in background threads.
+    /// Gets the plugin context as an `Arc` for use in background threads.
+    ///
+    /// The returned `Arc<dyn PluginContext>` is `Send + Sync` and can safely
+    /// be moved to spawned tasks.
     fn context_arc(&self) -> std::sync::Arc<dyn PluginContext>;
 }
 
-/// Context providing API access to plugins.
+/// Context providing API access to plugins at runtime.
+///
+/// This trait is `Send + Sync`, allowing plugins to use it from background
+/// threads and async tasks. Obtain an `Arc<dyn PluginContext>` via
+/// [`PluginRegistrar::context_arc`] for shared ownership.
+///
+/// # Data Paths
+///
+/// Data paths use dot-separated notation: `"data.my_source.items"`.
+/// Config paths follow the same convention: `"app.settings.theme"`.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use nemo_plugin_api::*;
+/// fn read_and_write(ctx: &dyn PluginContext) {
+///     // Read a value
+///     if let Some(PluginValue::Integer(count)) = ctx.get_data("metrics.request_count") {
+///         ctx.log(LogLevel::Info, &format!("Requests: {}", count));
+///     }
+///
+///     // Write a value
+///     ctx.set_data("metrics.last_check", PluginValue::String("now".into())).ok();
+///
+///     // Emit an event for other plugins/components to observe
+///     ctx.emit_event("plugin:refresh", PluginValue::Null);
+/// }
+/// ```
 pub trait PluginContext: Send + Sync {
-    /// Gets data by path.
+    /// Gets data by dot-separated path (e.g. `"data.source.field"`).
     fn get_data(&self, path: &str) -> Option<PluginValue>;
 
-    /// Sets data at path.
+    /// Sets data at a dot-separated path.
+    ///
+    /// Returns `Err` if the path is invalid or permission is denied.
     fn set_data(&self, path: &str, value: PluginValue) -> Result<(), PluginError>;
 
-    /// Emits an event.
+    /// Emits a named event with an arbitrary payload.
+    ///
+    /// Events are delivered asynchronously via the host's event bus.
     fn emit_event(&self, event_type: &str, payload: PluginValue);
 
-    /// Gets configuration value.
+    /// Gets a configuration value by dot-separated path.
     fn get_config(&self, path: &str) -> Option<PluginValue>;
 
-    /// Logs a message.
+    /// Logs a message at the given severity level.
     fn log(&self, level: LogLevel, message: &str);
 
     /// Gets a component property by component ID and property name.
+    ///
+    /// Returns `None` if the component or property does not exist.
     fn get_component_property(&self, component_id: &str, property: &str) -> Option<PluginValue>;
 
     /// Sets a component property by component ID and property name.
+    ///
+    /// Returns `Err` if the component does not exist or the property is
+    /// read-only.
     fn set_component_property(
         &self,
         component_id: &str,
@@ -374,10 +502,50 @@ impl ActionSchema {
 }
 
 /// Plugin entry point function type.
+///
+/// # Safety
+///
+/// This type is the signature for native plugin entry points loaded via
+/// `dlopen`/`LoadLibrary`. The following invariants must hold:
+///
+/// - **ABI compatibility**: The plugin must be compiled with the same Rust
+///   compiler version and the same `nemo-plugin-api` crate version as the
+///   host. Mismatched versions cause undefined behaviour due to differing
+///   type layouts.
+/// - **Single-threaded call**: The host calls this function on the main
+///   thread. The `PluginRegistrar` reference is valid only for the duration
+///   of the call and must not be stored or sent to other threads.
+/// - **No unwinding**: The entry function must not panic. A panic across
+///   the FFI boundary is undefined behaviour. Use `catch_unwind` internally
+///   if necessary.
+/// - **Library lifetime**: The dynamic library must remain loaded for as
+///   long as any symbols (vtables, function pointers) obtained through the
+///   registrar are in use.
+/// - **No re-entrancy**: The entry function must not call back into the
+///   host's plugin loading machinery.
 #[allow(improper_ctypes_definitions)]
 pub type PluginEntryFn = unsafe extern "C" fn(&mut dyn PluginRegistrar);
 
 /// Macro to declare a plugin entry point.
+///
+/// Generates two `extern "C"` functions:
+/// - `nemo_plugin_manifest() -> PluginManifest` — returns the plugin descriptor
+/// - `nemo_plugin_entry(registrar: &mut dyn PluginRegistrar)` — called to
+///   register capabilities
+///
+/// # Example
+///
+/// ```rust,no_run
+/// # use nemo_plugin_api::*;
+/// # use semver::Version;
+/// declare_plugin!(
+///     PluginManifest::new("hello", "Hello Plugin", Version::new(1, 0, 0))
+///         .with_description("Greets the user"),
+///     |registrar: &mut dyn PluginRegistrar| {
+///         registrar.context().log(LogLevel::Info, "Hello from plugin!");
+///     }
+/// );
+/// ```
 #[macro_export]
 macro_rules! declare_plugin {
     ($manifest:expr, $init:expr) => {

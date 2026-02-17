@@ -1,8 +1,31 @@
 //! Error types for the layout engine.
+//!
+//! # Recovery Classification
+//!
+//! Layout errors are almost always **fatal** for the current layout build.
+//! They indicate problems in the HCL configuration (unknown types, missing
+//! properties, circular references) that require editing the config file.
 
 use thiserror::Error;
 
 /// Error during layout building.
+///
+/// # Recovery
+///
+/// All variants are **fatal** for the current layout build. The layout
+/// cannot be rendered until the underlying configuration error is fixed.
+///
+/// | Variant                | Notes                                          |
+/// |-----------------------|------------------------------------------------|
+/// | `UnknownComponent`    | Component type not registered; check type name |
+/// | `InvalidConfig`       | Bad property values; fix HCL config            |
+/// | `BindingError`        | Binding target/source mismatch                 |
+/// | `InvalidStructure`    | Malformed layout tree                          |
+/// | `RenderError`         | Component failed to render                     |
+/// | `MissingProperty`     | Required property not set                      |
+/// | `InvalidPropertyValue`| Property value doesn't match expected type     |
+/// | `CircularReference`   | Template/component cycle detected              |
+/// | `Registry`            | Internal registry error                        |
 #[derive(Debug, Error)]
 pub enum LayoutError {
     /// Component type not found in registry.
@@ -56,6 +79,15 @@ pub enum LayoutError {
 }
 
 /// Error during state operations.
+///
+/// # Recovery
+///
+/// | Variant                 | Recoverable? | Notes                          |
+/// |------------------------|-------------|--------------------------------|
+/// | `NotFound`             | Transient   | State may not exist yet        |
+/// | `SerializationFailed`  | Fatal       | Data cannot be serialized      |
+/// | `DeserializationFailed`| Fatal       | Stored data is corrupt         |
+/// | `PersistenceFailed`    | Transient   | Storage I/O; may resolve       |
 #[derive(Debug, Error)]
 pub enum StateError {
     /// State not found.

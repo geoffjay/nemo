@@ -6,6 +6,59 @@
 //! - A central repository for storing and observing data
 //! - An action system for triggering operations based on data conditions
 //! - A binding system for connecting data to UI components
+//!
+//! # Architecture
+//!
+//! ```text
+//!                        ┌────────────────────────────────────────────────┐
+//!                        │              DataFlowEngine                    │
+//!                        │                                                │
+//!  ┌──────────────┐      │  ┌──────────┐    ┌──────────┐   ┌──────────┐  │
+//!  │  HTTP Source  │─────►│  │          │    │          │   │          │  │
+//!  └──────────────┘      │  │          │    │          │   │          │  │
+//!  ┌──────────────┐      │  │ Pipeline │    │  Data    │   │ Binding  │  │
+//!  │  WS Source   │─────►│  │(Filter,  │───►│Repository│──►│ System   │──┼──► UI Components
+//!  └──────────────┘      │  │ Map,     │    │(MemStore)│   │          │  │
+//!  ┌──────────────┐      │  │ Sort,    │    │          │   │          │  │
+//!  │ Timer Source  │─────►│  │ Take...) │    │          │   │          │  │
+//!  └──────────────┘      │  └──────────┘    └────┬─────┘   └──────────┘  │
+//!  ┌──────────────┐      │                       │                       │
+//!  │  File Source  │─────►│                  ┌────▼─────┐                 │
+//!  └──────────────┘      │                  │  Action   │                │
+//!  ┌──────────────┐      │                  │  System   │                │
+//!  │  MQTT Source  │─────►│                  │(triggers, │                │
+//!  └──────────────┘      │                  │ conditions)│                │
+//!  ┌──────────────┐      │                  └───────────┘                │
+//!  │  NATS/Redis  │─────►│                                               │
+//!  └──────────────┘      └────────────────────────────────────────────────┘
+//! ```
+//!
+//! ## Data Flow
+//!
+//! 1. **Sources** produce [`DataUpdate`] values (full snapshots or deltas)
+//!    via `tokio::sync::broadcast` channels.
+//! 2. The engine's [`DataFlowEngine::process_update`] receives updates and
+//!    runs them through an optional **Pipeline** (a chain of [`Transform`]
+//!    implementations: filter, map, sort, take, skip, select).
+//! 3. Transformed data is stored in the **Repository** ([`DataRepository`]),
+//!    a thread-safe in-memory store keyed by dot-separated paths.
+//! 4. The **Binding System** ([`BindingSystem`]) maps repository paths to
+//!    UI component properties, producing [`BindingUpdate`] values that the
+//!    UI layer consumes to re-render.
+//! 5. The **Action System** ([`ActionSystem`]) monitors repository changes
+//!    and fires user-defined actions when trigger conditions are met.
+//!
+//! ## Module Map
+//!
+//! | Module       | Purpose                                               |
+//! |-------------|-------------------------------------------------------|
+//! | `source`    | `DataSource` trait, `DataUpdate`, `SourceConfig`       |
+//! | `sources`   | Concrete sources: HTTP, WebSocket, File, Timer, etc.  |
+//! | `transform` | `Transform` trait, `Pipeline`, built-in transforms    |
+//! | `repository`| `DataRepository`, `DataStore`, `DataPath`              |
+//! | `binding`   | `BindingSystem`, `Binding`, `BindingTarget`            |
+//! | `action`    | `ActionSystem`, `Action`, `TriggerCondition`           |
+//! | `error`     | All error types for the data layer                     |
 
 pub mod action;
 pub mod binding;

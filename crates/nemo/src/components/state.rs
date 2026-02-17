@@ -10,6 +10,49 @@ use std::sync::{Arc, Mutex};
 
 use super::table::NemoTableDelegate;
 
+/// Per-component runtime state.
+///
+/// # Thread Safety
+///
+/// Several variants wrap their inner value in `Arc<Mutex<T>>`. This provides
+/// shared ownership between the component's render closure (which runs on
+/// the main/UI thread) and callback closures (which also run on the main
+/// thread in GPUI's single-threaded model).
+///
+/// ## Why `Arc<Mutex<T>>` in a single-threaded model?
+///
+/// GPUI's rendering model is single-threaded, so these mutexes are never
+/// contended across threads. The `Arc` is needed because render closures
+/// and event callbacks each capture their own clone of the `Arc`, and the
+/// `Mutex` provides interior mutability behind the shared reference. A
+/// `RefCell` would also work but `Mutex` was chosen for `Send` compatibility
+/// with future async extensions.
+///
+/// ## Lock Ordering
+///
+/// There is no cross-`ComponentState` lock ordering concern because each
+/// component's mutex is independent — no code path locks two component
+/// state mutexes simultaneously. The only lock ordering rule:
+///
+/// 1. **Never hold a `ComponentState` mutex while accessing
+///    `ComponentStates` (the outer `HashMap`)**. In practice this is not
+///    an issue because `ComponentStates` is accessed via `&mut self`
+///    (exclusive borrow) during render, while the `Arc<Mutex<T>>` clones
+///    are used in closures that run later.
+///
+/// ## Deadlock Prevention
+///
+/// Lock scopes are kept minimal (lock, read/write, drop). No `MutexGuard`
+/// is held across `.await` points or render calls. This prevents deadlocks
+/// in both the current single-threaded model and any future multi-threaded
+/// extensions.
+///
+/// ## `Entity<T>` Variants
+///
+/// The `Input`, `Slider`, `Table`, and `Tree` variants use GPUI's
+/// `Entity<T>` (a reference-counted handle to framework-managed state).
+/// These are not wrapped in `Mutex` because GPUI entities have their own
+/// internal synchronization.
 pub enum ComponentState {
     Input(Entity<InputState>),
     Slider(Entity<SliderState>),
@@ -31,6 +74,12 @@ pub enum ComponentState {
     SelectedIndex(Arc<Mutex<Option<usize>>>),
 }
 
+/// Registry mapping component IDs to their runtime state.
+///
+/// Accessed exclusively via `&mut self` during the render pass. The
+/// `get_or_create_*` methods return `Arc<Mutex<T>>` clones that outlive
+/// the borrow — these clones are captured by event-handler closures and
+/// used later (still on the main thread) to mutate state.
 pub struct ComponentStates(HashMap<String, ComponentState>);
 
 impl ComponentStates {

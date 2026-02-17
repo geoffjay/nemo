@@ -1,8 +1,31 @@
 //! Integration gateway error types.
+//!
+//! # Recovery Classification
+//!
+//! Integration errors are a mix of transient network failures (retryable)
+//! and configuration problems (fatal). See the per-variant table below.
 
 use thiserror::Error;
 
 /// Errors that can occur in the integration gateway.
+///
+/// # Recovery
+///
+/// | Variant            | Recoverable? | Notes                                   |
+/// |-------------------|-------------|------------------------------------------|
+/// | `ConnectionFailed`| Transient   | Remote endpoint down; retry with backoff |
+/// | `RequestFailed`   | Transient   | HTTP/protocol error; retry               |
+/// | `Timeout`         | Transient   | Increase timeout or retry                |
+/// | `InvalidConfig`   | Fatal       | Bad URL, missing fields; fix config      |
+/// | `Protocol`        | Fatal       | Unexpected protocol message              |
+/// | `Serialization`   | Fatal       | Data cannot be serialized/deserialized   |
+/// | `ChannelClosed`   | Fatal       | Internal channel dropped; logic error    |
+/// | `NotConnected`    | Transient   | Reconnect first, then retry              |
+/// | `Http`            | Transient   | Underlying reqwest error                 |
+/// | `WebSocket`       | Transient   | Connection/frame error; reconnect        |
+/// | `Mqtt`            | Transient   | Broker communication error; reconnect    |
+/// | `Redis`           | Transient   | Server communication error; reconnect    |
+/// | `Io`              | Transient   | File/network I/O error                   |
 #[derive(Debug, Error)]
 pub enum IntegrationError {
     /// Connection failed.
