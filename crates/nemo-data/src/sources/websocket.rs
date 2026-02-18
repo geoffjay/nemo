@@ -130,16 +130,32 @@ impl DataSource for WebSocketSource {
 
                         let (mut write, mut read) = ws_stream.split();
 
+                        // Channel for sending messages (heartbeats and pong responses)
+                        let (write_tx, mut write_rx) = tokio::sync::mpsc::channel::<Message>(10);
+
+                        // Spawn write task to handle all outgoing messages
+                        let write_task = tokio::spawn(async move {
+                            while let Some(msg) = write_rx.recv().await {
+                                if write.send(msg).await.is_err() {
+                                    break;
+                                }
+                            }
+                        });
+
                         // Optional heartbeat task
                         let heartbeat_task = if let Some(hb) = &config.heartbeat {
                             let msg = hb.message.clone();
                             let interval = hb.interval;
+                            let hb_tx = write_tx.clone();
+                            
                             Some(tokio::spawn(async move {
                                 let mut timer = tokio::time::interval(interval);
                                 loop {
                                     timer.tick().await;
-                                    // Note: This won't work as write is moved, simplified for now
-                                    let _ = msg.clone();
+                                    let message = Message::Text(msg.clone());
+                                    if hb_tx.send(message).await.is_err() {
+                                        break;
+                                    }
                                 }
                             }))
                         } else {
@@ -172,7 +188,7 @@ impl DataSource for WebSocketSource {
                                     }
                                 }
                                 Ok(Message::Ping(data)) => {
-                                    let _ = write.send(Message::Pong(data)).await;
+                                    let _ = write_tx.send(Message::Pong(data)).await;
                                 }
                                 Ok(Message::Close(_)) => {
                                     break;
@@ -184,6 +200,9 @@ impl DataSource for WebSocketSource {
                             }
                         }
 
+                        // Cleanup tasks
+                        drop(write_tx);
+                        write_task.abort();
                         if let Some(task) = heartbeat_task {
                             task.abort();
                         }
