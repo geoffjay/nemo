@@ -4,6 +4,7 @@ use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
 use super::icon::map_icon_name;
+use crate::runtime::NemoRuntime;
 
 /// A vertical navigation sidebar that displays icon+label items.
 ///
@@ -19,6 +20,7 @@ pub struct SidenavBar {
     /// Raw child BuiltComponents so we can render SidenavBarItems ourselves.
     child_components: Vec<BuiltComponent>,
     entity_id: Option<EntityId>,
+    runtime: Option<Arc<NemoRuntime>>,
 }
 
 impl SidenavBar {
@@ -29,7 +31,13 @@ impl SidenavBar {
             children: Vec::new(),
             child_components: Vec::new(),
             entity_id: None,
+            runtime: None,
         }
+    }
+
+    pub fn runtime(mut self, runtime: Arc<NemoRuntime>) -> Self {
+        self.runtime = Some(runtime);
+        self
     }
 
     pub fn collapsed_state(mut self, state: Arc<Mutex<bool>>) -> Self {
@@ -89,9 +97,14 @@ impl RenderOnce for SidenavBar {
             .iter()
             .filter(|c| c.component_type == "sidenav_bar_item")
             .map(|child| {
-                SidenavBarItem::from_built_component(child, collapsed)
-                    .render(_window, cx)
-                    .into_any_element()
+                let mut item = SidenavBarItem::from_built_component(child, collapsed);
+                if let Some(ref runtime) = self.runtime {
+                    item = item.runtime(Arc::clone(runtime));
+                }
+                if let Some(entity_id) = self.entity_id {
+                    item = item.entity_id(entity_id);
+                }
+                item.render(_window, cx).into_any_element()
             })
             .collect();
 
@@ -110,17 +123,25 @@ impl RenderOnce for SidenavBar {
 /// A single item in a SidenavBar, showing an icon and optionally a label.
 #[derive(IntoElement)]
 pub struct SidenavBarItem {
+    component_id: String,
     icon: String,
     label: String,
     collapsed: bool,
+    click_handler: Option<String>,
+    runtime: Option<Arc<NemoRuntime>>,
+    entity_id: Option<EntityId>,
 }
 
 impl SidenavBarItem {
-    pub fn new(icon: String, label: String, collapsed: bool) -> Self {
+    pub fn new(component_id: String, icon: String, label: String, collapsed: bool) -> Self {
         Self {
+            component_id,
             icon,
             label,
             collapsed,
+            click_handler: None,
+            runtime: None,
+            entity_id: None,
         }
     }
 
@@ -138,7 +159,20 @@ impl SidenavBarItem {
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
-        Self::new(icon, label, collapsed)
+        let click_handler = component.handlers.get("click").cloned();
+        let mut item = Self::new(component.id.clone(), icon, label, collapsed);
+        item.click_handler = click_handler;
+        item
+    }
+
+    pub fn runtime(mut self, runtime: Arc<NemoRuntime>) -> Self {
+        self.runtime = Some(runtime);
+        self
+    }
+
+    pub fn entity_id(mut self, entity_id: EntityId) -> Self {
+        self.entity_id = Some(entity_id);
+        self
     }
 }
 
@@ -171,6 +205,16 @@ impl RenderOnce for SidenavBarItem {
             row = row
                 .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
             row = row.child(div().text_sm().child(self.label));
+        }
+
+        if let Some(handler) = self.click_handler {
+            if let (Some(runtime), Some(entity_id)) = (self.runtime, self.entity_id) {
+                let component_id = self.component_id;
+                row = row.on_mouse_down(MouseButton::Left, move |_event, _window, cx| {
+                    runtime.call_handler(&handler, &component_id, "click");
+                    cx.notify(entity_id);
+                });
+            }
         }
 
         row

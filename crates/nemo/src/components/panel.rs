@@ -9,6 +9,10 @@ pub struct Panel {
     source: nemo_layout::BuiltComponent,
     #[property]
     visible: Option<bool>,
+    #[property]
+    padding: Option<i64>,
+    #[property]
+    border: Option<i64>,
     #[children]
     children: Vec<AnyElement>,
 }
@@ -19,12 +23,26 @@ impl RenderOnce for Panel {
             return div().into_any_element();
         }
 
-        div()
+        let mut el = div()
             .flex()
             .flex_col()
+            .flex_1()
+            .overflow_hidden()
             .rounded_md()
-            .bg(cx.theme().colors.secondary)
-            .children(self.children)
-            .into_any_element()
+            .bg(cx.theme().colors.secondary);
+
+        if let Some(p) = self.padding {
+            el = el.p(px(p as f32));
+        }
+
+        if let Some(b) = self.border {
+            if b > 0 {
+                el = el
+                    .border(px(b as f32))
+                    .border_color(cx.theme().colors.border);
+            }
+        }
+
+        el.children(self.children).into_any_element()
     }
 }

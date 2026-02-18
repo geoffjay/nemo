@@ -864,6 +864,7 @@ impl App {
                     .child_components(child_components)
                     .children(other_children)
                     .entity_id(entity_id)
+                    .runtime(Arc::clone(&self.runtime))
                     .into_any_element()
             }
             "sidenav_bar_item" => {
