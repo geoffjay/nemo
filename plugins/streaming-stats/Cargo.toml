@@ -1,0 +1,12 @@
+[package]
+name = "streaming-stats-plugin"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+indexmap = { workspace = true }
+nemo-plugin-api = { path = "../../crates/nemo-plugin-api" }
+semver = { workspace = true }

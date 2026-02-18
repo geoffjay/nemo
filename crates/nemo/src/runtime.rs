@@ -9,7 +9,7 @@ use nemo_integration::IntegrationGateway;
 use nemo_layout::{LayoutConfig, LayoutManager, LayoutNode, LayoutType};
 use nemo_plugin_api::{LogLevel, PluginContext, PluginError, PluginValue};
 use nemo_registry::{register_all_builtins, ComponentRegistry};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -87,6 +87,8 @@ pub struct NemoRuntime {
     shutdown: Arc<tokio::sync::Notify>,
     /// Sink configurations for outbound data publishing.
     pub sink_configs: Arc<RwLock<HashMap<String, SinkConfig>>>,
+    /// Paths written by plugins that need binding propagation.
+    plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
 }
 
 impl NemoRuntime {
@@ -128,6 +130,7 @@ impl NemoRuntime {
             data_notify: Arc::new(tokio::sync::Notify::new()),
             shutdown: Arc::new(tokio::sync::Notify::new()),
             sink_configs: Arc::new(RwLock::new(HashMap::new())),
+            plugin_dirty_paths: Arc::new(RwLock::new(HashSet::new())),
         })
     }
 
@@ -315,6 +318,7 @@ impl NemoRuntime {
             Arc::clone(&self.data_engine.repository),
             Arc::clone(&self.data_dirty),
             Arc::clone(&self.data_notify),
+            Arc::clone(&self.plugin_dirty_paths),
         ));
 
         {
@@ -645,6 +649,29 @@ impl NemoRuntime {
                     if !updates.is_empty() {
                         layout_manager.apply_updates(updates);
                         any_updates = true;
+                    }
+                }
+            }
+        }
+
+        // Propagate plugin-written data paths through bindings
+        let dirty_paths: Vec<String> = {
+            if let Ok(mut paths) = self.plugin_dirty_paths.try_write() {
+                paths.drain().collect()
+            } else {
+                vec![]
+            }
+        };
+
+        for path in &dirty_paths {
+            if let Ok(data_path) = nemo_data::DataPath::parse(path) {
+                if let Some(value) = self.data_engine.repository.get(&data_path) {
+                    if let Ok(mut layout_manager) = self.layout_manager.try_write() {
+                        let updates = layout_manager.on_data_changed(path, &value);
+                        if !updates.is_empty() {
+                            layout_manager.apply_updates(updates);
+                            any_updates = true;
+                        }
                     }
                 }
             }
@@ -1582,6 +1609,7 @@ pub struct RuntimeContext {
     data_repository: Arc<DataRepository>,
     data_dirty: Arc<AtomicBool>,
     data_notify: Arc<tokio::sync::Notify>,
+    plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
 }
 
 impl RuntimeContext {
@@ -1593,6 +1621,7 @@ impl RuntimeContext {
         data_repository: Arc<DataRepository>,
         data_dirty: Arc<AtomicBool>,
         data_notify: Arc<tokio::sync::Notify>,
+        plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
     ) -> Self {
         Self {
             config,
@@ -1601,6 +1630,7 @@ impl RuntimeContext {
             data_repository,
             data_dirty,
             data_notify,
+            plugin_dirty_paths,
         }
     }
 }
@@ -1615,12 +1645,17 @@ impl PluginContext for RuntimeContext {
     }
 
     fn set_data(&self, path: &str, value: PluginValue) -> Result<(), PluginError> {
-        let data_path = nemo_data::DataPath::parse(&format!("data.{}", path))
+        let full_path = format!("data.{}", path);
+        let data_path = nemo_data::DataPath::parse(&full_path)
             .map_err(|e| PluginError::InvalidConfig(e.to_string()))?;
         let config_value = plugin_value_to_config_value(value);
         self.data_repository
             .set(&data_path, config_value)
             .map_err(|e| PluginError::InvalidConfig(e.to_string()))?;
+        // Record this path so apply_pending_data_updates propagates it through bindings.
+        if let Ok(mut paths) = self.plugin_dirty_paths.write() {
+            paths.insert(full_path);
+        }
         self.data_dirty.store(true, Ordering::Release);
         self.data_notify.notify_one();
         Ok(())
@@ -2253,6 +2288,7 @@ mod runtime_tests {
             repo,
             dirty.clone(),
             notify,
+            Arc::new(RwLock::new(HashSet::new())),
         );
 
         // set_data should store and mark dirty
@@ -2276,7 +2312,7 @@ mod runtime_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
         assert_eq!(ctx.get_data("nonexistent"), None);
     }
 
@@ -2296,7 +2332,7 @@ mod runtime_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
 
         assert_eq!(
             ctx.get_config("app.title"),
@@ -2328,7 +2364,7 @@ mod runtime_tests {
                 .unwrap();
         }
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
 
         assert_eq!(
             ctx.get_component_property("lbl", "text"),
@@ -3226,7 +3262,7 @@ mod error_path_tests {
                 .unwrap();
         }
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
 
         // Setting property on a nonexistent component should return error
         let result =
@@ -3245,7 +3281,7 @@ mod error_path_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify);
+        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
         assert_eq!(ctx.get_config("any.path"), None);
     }
 
