@@ -80,6 +80,19 @@ impl RenderOnce for SidenavBar {
             expanded_width
         };
 
+        let show_border_left = self
+            .source
+            .properties
+            .get("border_left")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+        let show_border_right = self
+            .source
+            .properties
+            .get("border_right")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(true);
+
         let mut container = div()
             .flex()
             .flex_col()
@@ -87,9 +100,15 @@ impl RenderOnce for SidenavBar {
             .h_full()
             .w(px(current_width))
             .bg(bg)
-            .border_x_1()
             .border_color(border_color)
             .py_2();
+
+        if show_border_left {
+            container = container.border_l_1();
+        }
+        if show_border_right {
+            container = container.border_r_1();
+        }
 
         // Render sidenav_bar_item children from their BuiltComponent data
         let items: Vec<AnyElement> = self
@@ -186,22 +205,19 @@ impl RenderOnce for SidenavBarItem {
             .flex()
             .flex_row()
             .items_center()
-            .px_2()
-            .py_1()
-            .mx_1()
             .rounded_md()
             .cursor_pointer()
             .text_color(fg)
             .hover(move |s| s.bg(hover_bg));
 
         if self.collapsed {
-            // Icon only, centered
-            row = row.justify_center();
+            // Icon only, centered — square aspect ratio
+            row = row.justify_center().mx_1().size(px(40.));
             row = row
                 .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
         } else {
             // Icon + label
-            row = row.gap_3();
+            row = row.px_2().py_1().mx_1().gap_3();
             row = row
                 .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
             row = row.child(div().text_sm().child(self.label));

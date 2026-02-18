@@ -43,19 +43,20 @@ layout {
 
     // ── Side Navigation ──────────────────────────────────────────────
     component "sidenav" {
-      type      = "sidenav_bar"
-      collapsed = true
+      type         = "sidenav_bar"
+      collapsed    = true
+      border_left  = false
 
       component "nav_charts" {
         type     = "sidenav_bar_item"
-        icon     = "bar_chart_big"
+        icon     = "chart-pie"
         label    = "Charts"
         on_click = "on_nav"
       }
 
       component "nav_tables" {
         type     = "sidenav_bar_item"
-        icon     = "table"
+        icon     = "layout-dashboard"
         label    = "Data Tables"
         on_click = "on_nav"
       }

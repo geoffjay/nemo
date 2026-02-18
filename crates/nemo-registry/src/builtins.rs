@@ -493,7 +493,9 @@ fn register_navigation_components(registry: &ComponentRegistry) {
         "A vertical navigation sidebar with collapsible icon+label items",
         ConfigSchema::new("sidenav_bar")
             .property("collapsed", PropertySchema::boolean().with_default(false))
-            .property("width", PropertySchema::integer().with_default(200i64)),
+            .property("width", PropertySchema::integer().with_default(200i64))
+            .property("border_left", PropertySchema::boolean().with_default(true))
+            .property("border_right", PropertySchema::boolean().with_default(true)),
     );
 
     reg(
