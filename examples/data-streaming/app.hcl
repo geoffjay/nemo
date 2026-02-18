@@ -54,6 +54,13 @@ layout {
         on_click = "on_nav"
       }
 
+      component "nav_timeseries" {
+        type     = "sidenav_bar_item"
+        icon     = "frame"
+        label    = "Time Series"
+        on_click = "on_nav"
+      }
+
       component "nav_tables" {
         type     = "sidenav_bar_item"
         icon     = "layout-dashboard"
@@ -132,6 +139,176 @@ layout {
             binding {
               source = "data.stats.summary"
               target = "data"
+            }
+          }
+        }
+      }
+
+      // ── Time Series Page ──────────────────────────────────────────
+      component "page_timeseries" {
+        type    = "panel"
+        visible = false
+
+        component "timeseries_stack" {
+          type      = "stack"
+          direction = "vertical"
+          spacing   = 16
+          padding   = 16
+          scroll    = true
+
+          component "timeseries_heading" {
+            type = "label"
+            text = "Live Time Series (30s window)"
+            size = "lg"
+          }
+
+          // ── Row 1: Temperature + Humidity ──────────────────────
+          component "ts_row_1" {
+            type      = "stack"
+            direction = "horizontal"
+            spacing   = 16
+
+            component "ts_temperature_panel" {
+              type    = "panel"
+              flex    = 1
+              padding = 12
+              border  = 1
+              border_color = "theme.border"
+
+              component "ts_temperature_stack" {
+                type      = "stack"
+                direction = "vertical"
+                spacing   = 4
+
+                component "ts_temperature_label" {
+                  type = "label"
+                  text = "Temperature (\u00B0C)"
+                  size = "sm"
+                }
+
+                component "ts_temperature" {
+                  type        = "realtime_chart"
+                  x_field     = "time"
+                  y_fields    = ["channel_0", "channel_5", "channel_10", "channel_15"]
+                  linear      = true
+                  tick_margin = 5
+                  height      = 250
+
+                  binding {
+                    source = "data.stats.timeseries.temperature"
+                    target = "data"
+                  }
+                }
+              }
+            }
+
+            component "ts_humidity_panel" {
+              type    = "panel"
+              flex    = 1
+              padding = 12
+              border  = 1
+              border_color = "theme.border"
+
+              component "ts_humidity_stack" {
+                type      = "stack"
+                direction = "vertical"
+                spacing   = 4
+
+                component "ts_humidity_label" {
+                  type = "label"
+                  text = "Humidity (%)"
+                  size = "sm"
+                }
+
+                component "ts_humidity" {
+                  type        = "realtime_chart"
+                  x_field     = "time"
+                  y_fields    = ["channel_1", "channel_6", "channel_11", "channel_16"]
+                  linear      = true
+                  tick_margin = 5
+                  height      = 250
+
+                  binding {
+                    source = "data.stats.timeseries.humidity"
+                    target = "data"
+                  }
+                }
+              }
+            }
+          }
+
+          // ── Row 2: Pressure + Speed ────────────────────────────
+          component "ts_row_2" {
+            type      = "stack"
+            direction = "horizontal"
+            spacing   = 16
+
+            component "ts_pressure_panel" {
+              type    = "panel"
+              flex    = 1
+              padding = 12
+              border  = 1
+              border_color = "theme.border"
+
+              component "ts_pressure_stack" {
+                type      = "stack"
+                direction = "vertical"
+                spacing   = 4
+
+                component "ts_pressure_label" {
+                  type = "label"
+                  text = "Pressure (PSI)"
+                  size = "sm"
+                }
+
+                component "ts_pressure" {
+                  type        = "realtime_chart"
+                  x_field     = "time"
+                  y_fields    = ["channel_2", "channel_7", "channel_12", "channel_17"]
+                  linear      = true
+                  tick_margin = 5
+                  height      = 250
+
+                  binding {
+                    source = "data.stats.timeseries.pressure"
+                    target = "data"
+                  }
+                }
+              }
+            }
+
+            component "ts_speed_panel" {
+              type    = "panel"
+              flex    = 1
+              padding = 12
+              border  = 1
+              border_color = "theme.border"
+
+              component "ts_speed_stack" {
+                type      = "stack"
+                direction = "vertical"
+                spacing   = 4
+
+                component "ts_speed_label" {
+                  type = "label"
+                  text = "Speed (RPM)"
+                  size = "sm"
+                }
+
+                component "ts_speed" {
+                  type        = "realtime_chart"
+                  x_field     = "time"
+                  y_fields    = ["channel_3", "channel_8", "channel_13", "channel_18"]
+                  linear      = true
+                  tick_margin = 5
+                  height      = 250
+
+                  binding {
+                    source = "data.stats.timeseries.speed"
+                    target = "data"
+                  }
+                }
+              }
             }
           }
         }

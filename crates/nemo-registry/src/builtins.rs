@@ -530,6 +530,21 @@ fn register_chart_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "realtime_chart",
+        ComponentCategory::Charts,
+        "Realtime Chart",
+        "A multi-line chart for live time-series data with multiple traces",
+        ConfigSchema::new("realtime_chart")
+            .property("x_field", PropertySchema::string())
+            .property("y_fields", PropertySchema::any())
+            .property("data", PropertySchema::any())
+            .property("linear", PropertySchema::boolean())
+            .property("tick_margin", PropertySchema::integer())
+            .require("x_field"),
+    );
+
+    reg(
+        registry,
         "bar_chart",
         ComponentCategory::Charts,
         "Bar Chart",
@@ -1026,6 +1041,7 @@ mod tests {
         assert!(registry.has_component("switch"));
         assert!(registry.has_component("toggle"));
         assert!(registry.has_component("line_chart"));
+        assert!(registry.has_component("realtime_chart"));
         assert!(registry.has_component("bar_chart"));
         assert!(registry.has_component("area_chart"));
         assert!(registry.has_component("pie_chart"));

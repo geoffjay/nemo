@@ -3,6 +3,7 @@
 fn on_nav(component_id, event_data) {
     // Hide all pages
     set_component_property("page_charts", "visible", false);
+    set_component_property("page_timeseries", "visible", false);
     set_component_property("page_tables", "visible", false);
 
     // Derive page ID from nav item ID: "nav_charts" -> "page_charts"

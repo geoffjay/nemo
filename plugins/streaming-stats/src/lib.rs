@@ -5,6 +5,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 const WINDOW_SECS: f64 = 60.0;
+const TIMESERIES_SIZE: usize = 30;
 
 struct ChannelWindow {
     samples: VecDeque<(Instant, f64)>,
@@ -73,11 +74,11 @@ impl ChannelWindow {
     }
 }
 
-/// Extract all channel names and values from a NATS batch message.
+/// Extract all channel names, values, and units from a NATS batch message.
 ///
 /// The NATS source stores data as `{ subject: string, payload: object }`.
-/// The payload contains `{ channels: { channel_N: { value: f64, ... }, ... }, timestamp: ... }`.
-fn extract_metrics(value: &PluginValue) -> Vec<(String, f64)> {
+/// The payload contains `{ channels: { channel_N: { value: f64, unit: string, ... }, ... }, timestamp: ... }`.
+fn extract_metrics(value: &PluginValue) -> Vec<(String, f64, String)> {
     let mut results = Vec::new();
     if let PluginValue::Object(obj) = value {
         let payload = match obj.get("payload") {
@@ -93,13 +94,28 @@ fn extract_metrics(value: &PluginValue) -> Vec<(String, f64)> {
                             Some(PluginValue::Integer(i)) => *i as f64,
                             _ => continue,
                         };
-                        results.push((channel_name.clone(), val));
+                        let unit = match ch_obj.get("unit") {
+                            Some(PluginValue::String(s)) => s.clone(),
+                            _ => "unknown".to_string(),
+                        };
+                        results.push((channel_name.clone(), val, unit));
                     }
                 }
             }
         }
     }
     results
+}
+
+/// Map unit strings to time-series category names.
+fn unit_to_category(unit: &str) -> Option<&'static str> {
+    match unit {
+        "celsius" => Some("temperature"),
+        "percent" => Some("humidity"),
+        "psi" => Some("pressure"),
+        "rpm" => Some("speed"),
+        _ => None,
+    }
 }
 
 fn init(registrar: &mut dyn PluginRegistrar) {
@@ -116,6 +132,10 @@ fn init(registrar: &mut dyn PluginRegistrar) {
 fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
     std::thread::spawn(move || {
         let mut windows: HashMap<String, ChannelWindow> = HashMap::new();
+        // channel_name -> unit
+        let mut channel_units: HashMap<String, String> = HashMap::new();
+        // Rolling time-series snapshots: each entry is (channel_name -> value)
+        let mut timeseries: VecDeque<HashMap<String, f64>> = VecDeque::new();
 
         loop {
             std::thread::sleep(std::time::Duration::from_secs(1));
@@ -123,11 +143,14 @@ fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
             let now = Instant::now();
 
             // Read the latest batch from the NATS data source.
-            // get_data() prepends "data." internally, so just use the source name.
+            let mut snapshot: HashMap<String, f64> = HashMap::new();
+
             if let Some(value) = ctx.get_data("metrics") {
-                for (channel, val) in extract_metrics(&value) {
-                    let window = windows.entry(channel).or_insert_with(ChannelWindow::new);
+                for (channel, val, unit) in extract_metrics(&value) {
+                    let window = windows.entry(channel.clone()).or_insert_with(ChannelWindow::new);
                     window.push(now, val);
+                    channel_units.insert(channel.clone(), unit);
+                    snapshot.insert(channel, val);
                 }
             }
 
@@ -136,14 +159,22 @@ fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
                 window.evict(now);
             }
 
+            // Update time-series rolling window
+            if !snapshot.is_empty() {
+                timeseries.push_back(snapshot);
+                while timeseries.len() > TIMESERIES_SIZE {
+                    timeseries.pop_front();
+                }
+            }
+
             // Write per-channel stats
             let mut summary_rows: Vec<PluginValue> = Vec::new();
 
             let mut channels: Vec<&String> = windows.keys().collect();
             channels.sort();
 
-            for channel in channels {
-                let window = &windows[channel];
+            for channel in &channels {
+                let window = &windows[*channel];
                 if window.count() == 0 {
                     continue;
                 }
@@ -163,7 +194,7 @@ fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
 
                 // Build summary row for table display
                 let mut row = IndexMap::new();
-                row.insert("channel".to_string(), PluginValue::String(channel.clone()));
+                row.insert("channel".to_string(), PluginValue::String((*channel).clone()));
                 row.insert("mean".to_string(), PluginValue::Float(mean));
                 row.insert("min".to_string(), PluginValue::Float(min));
                 row.insert("max".to_string(), PluginValue::Float(max));
@@ -173,6 +204,50 @@ fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
             }
 
             let _ = ctx.set_data("stats.summary", PluginValue::Array(summary_rows));
+
+            // Build time-series arrays grouped by metric category
+            // Group channels by category
+            let mut category_channels: HashMap<&str, Vec<&String>> = HashMap::new();
+            for channel in &channels {
+                if let Some(unit) = channel_units.get(*channel) {
+                    if let Some(category) = unit_to_category(unit) {
+                        category_channels
+                            .entry(category)
+                            .or_default()
+                            .push(*channel);
+                    }
+                }
+            }
+
+            let ts_len = timeseries.len();
+            for (category, cat_channels) in &category_channels {
+                let mut rows: Vec<PluginValue> = Vec::with_capacity(ts_len);
+
+                for (i, snapshot) in timeseries.iter().enumerate() {
+                    let mut row = IndexMap::new();
+                    // Time label: relative seconds from newest, e.g. "-29s" .. "0s"
+                    let secs_ago = ts_len as i64 - 1 - i as i64;
+                    let label = if secs_ago == 0 {
+                        "0s".to_string()
+                    } else {
+                        format!("-{secs_ago}s")
+                    };
+                    row.insert("time".to_string(), PluginValue::String(label));
+
+                    for ch in cat_channels {
+                        let val = snapshot.get(*ch).copied().unwrap_or(0.0);
+                        let val = (val * 1000.0).round() / 1000.0;
+                        row.insert(ch.to_string(), PluginValue::Float(val));
+                    }
+
+                    rows.push(PluginValue::Object(row));
+                }
+
+                let _ = ctx.set_data(
+                    &format!("stats.timeseries.{category}"),
+                    PluginValue::Array(rows),
+                );
+            }
         }
     });
 }

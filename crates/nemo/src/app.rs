@@ -21,7 +21,7 @@ use crate::components::{
     Button, CandlestickChart, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
     Collapsible, ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Label,
     LineChart, List, Modal, Notification, Panel, PieChart, Progress, PyramidChart, RadarChart,
-    Radio, ScatterChart, Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart,
+    Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart,
     StackedColumnChart, Switch, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip,
     Tree,
 };
@@ -752,6 +752,7 @@ impl App {
                     .into_any_element()
             }
             "line_chart" => LineChart::new(component.clone()).into_any_element(),
+            "realtime_chart" => RealtimeChart::new(component.clone()).into_any_element(),
             "bar_chart" => BarChart::new(component.clone()).into_any_element(),
             "area_chart" => AreaChart::new(component.clone()).into_any_element(),
             "pie_chart" => PieChart::new(component.clone()).into_any_element(),
