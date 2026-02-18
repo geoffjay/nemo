@@ -63,7 +63,11 @@ impl ChannelWindow {
             return 0.0;
         }
         let mean = self.mean();
-        let variance: f64 = self.samples.iter().map(|(_, v)| (v - mean).powi(2)).sum::<f64>()
+        let variance: f64 = self
+            .samples
+            .iter()
+            .map(|(_, v)| (v - mean).powi(2))
+            .sum::<f64>()
             / (self.samples.len() - 1) as f64;
         variance.sqrt()
     }
@@ -159,10 +163,7 @@ fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
 
                 // Build summary row for table display
                 let mut row = IndexMap::new();
-                row.insert(
-                    "channel".to_string(),
-                    PluginValue::String(channel.clone()),
-                );
+                row.insert("channel".to_string(), PluginValue::String(channel.clone()));
                 row.insert("mean".to_string(), PluginValue::Float(mean));
                 row.insert("min".to_string(), PluginValue::Float(min));
                 row.insert("max".to_string(), PluginValue::Float(max));

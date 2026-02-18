@@ -2312,7 +2312,15 @@ mod runtime_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
+        let ctx = RuntimeContext::new(
+            config,
+            layout_manager,
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+        );
         assert_eq!(ctx.get_data("nonexistent"), None);
     }
 
@@ -2332,7 +2340,15 @@ mod runtime_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
+        let ctx = RuntimeContext::new(
+            config,
+            layout_manager,
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+        );
 
         assert_eq!(
             ctx.get_config("app.title"),
@@ -2364,7 +2380,15 @@ mod runtime_tests {
                 .unwrap();
         }
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
+        let ctx = RuntimeContext::new(
+            config,
+            layout_manager,
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+        );
 
         assert_eq!(
             ctx.get_component_property("lbl", "text"),
@@ -3262,7 +3286,15 @@ mod error_path_tests {
                 .unwrap();
         }
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
+        let ctx = RuntimeContext::new(
+            config,
+            layout_manager,
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+        );
 
         // Setting property on a nonexistent component should return error
         let result =
@@ -3281,7 +3313,15 @@ mod error_path_tests {
         let dirty = Arc::new(AtomicBool::new(false));
         let notify = Arc::new(tokio::sync::Notify::new());
 
-        let ctx = RuntimeContext::new(config, layout_manager, event_bus, repo, dirty, notify, Arc::new(RwLock::new(HashSet::new())));
+        let ctx = RuntimeContext::new(
+            config,
+            layout_manager,
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+        );
         assert_eq!(ctx.get_config("any.path"), None);
     }
 
