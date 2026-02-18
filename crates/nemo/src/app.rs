@@ -21,9 +21,9 @@ use crate::components::{
     Button, CandlestickChart, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
     Collapsible, ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Label,
     LineChart, List, Modal, Notification, Panel, PieChart, Progress, PyramidChart, RadarChart,
-    Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart,
-    StackedColumnChart, Switch, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip,
-    Tree,
+    Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Slider, Spinner, Stack,
+    StackedBarChart, StackedColumnChart, Switch, Table, Tabs, Tag, Text, TextEditor, Textarea,
+    Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
 use crate::workspace::HeaderBar;

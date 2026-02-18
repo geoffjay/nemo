@@ -147,7 +147,7 @@ impl DataSource for WebSocketSource {
                             let msg = hb.message.clone();
                             let interval = hb.interval;
                             let hb_tx = write_tx.clone();
-                            
+
                             Some(tokio::spawn(async move {
                                 let mut timer = tokio::time::interval(interval);
                                 loop {

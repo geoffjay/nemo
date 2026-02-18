@@ -115,7 +115,12 @@ impl Plot for MultiLineChartInner {
                         i if i == data_len - 1 => TextAlign::Right,
                         _ => TextAlign::Center,
                     };
-                    AxisText::new(SharedString::from(label), x_tick, cx.theme().muted_foreground).align(align)
+                    AxisText::new(
+                        SharedString::from(label),
+                        x_tick,
+                        cx.theme().muted_foreground,
+                    )
+                    .align(align)
                 })
             } else {
                 None

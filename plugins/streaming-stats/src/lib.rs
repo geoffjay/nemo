@@ -147,7 +147,9 @@ fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
 
             if let Some(value) = ctx.get_data("metrics") {
                 for (channel, val, unit) in extract_metrics(&value) {
-                    let window = windows.entry(channel.clone()).or_insert_with(ChannelWindow::new);
+                    let window = windows
+                        .entry(channel.clone())
+                        .or_insert_with(ChannelWindow::new);
                     window.push(now, val);
                     channel_units.insert(channel.clone(), unit);
                     snapshot.insert(channel, val);
@@ -194,7 +196,10 @@ fn spawn_stats_thread(ctx: Arc<dyn PluginContext>) {
 
                 // Build summary row for table display
                 let mut row = IndexMap::new();
-                row.insert("channel".to_string(), PluginValue::String((*channel).clone()));
+                row.insert(
+                    "channel".to_string(),
+                    PluginValue::String((*channel).clone()),
+                );
                 row.insert("mean".to_string(), PluginValue::Float(mean));
                 row.insert("min".to_string(), PluginValue::Float(min));
                 row.insert("max".to_string(), PluginValue::Float(max));
