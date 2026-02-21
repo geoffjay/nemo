@@ -18,6 +18,7 @@ members = [
     "plugins/mock-data-wasm",
     "plugins/pid-control",
     "plugins/streaming-stats",
+    "plugins/demo-settings",
 ]
 
 [workspace.package]

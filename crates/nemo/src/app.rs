@@ -76,6 +76,11 @@ impl App {
         }
     }
 
+    /// Returns the runtime (for creating a settings view externally).
+    pub fn runtime(&self) -> &Arc<NemoRuntime> {
+        &self.runtime
+    }
+
     /// Shutdown the application and its runtime.
     pub fn shutdown(&mut self, _cx: &mut Context<Self>) {
         self.runtime.shutdown();

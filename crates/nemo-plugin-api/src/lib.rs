@@ -170,6 +170,8 @@ pub enum Capability {
     Action(String),
     /// Provides an event handler.
     EventHandler(String),
+    /// Provides a settings page.
+    Settings(String),
 }
 
 /// Permissions requested by a plugin.
@@ -224,6 +226,12 @@ pub trait PluginRegistrar {
 
     /// Registers an action with the given name and schema.
     fn register_action(&mut self, name: &str, schema: ActionSchema);
+
+    /// Registers a settings page with the given display name and UI definition.
+    ///
+    /// The `page` value is a `PluginValue::Object` describing the settings UI
+    /// using a declarative layout (e.g. `stack`, `label`, `switch`, `input`).
+    fn register_settings_page(&mut self, name: &str, page: PluginValue);
 
     /// Registers a UI template that can be referenced in HCL layout configs.
     ///

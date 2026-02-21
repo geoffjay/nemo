@@ -26,6 +26,7 @@ mod args;
 mod components;
 pub mod config;
 mod runtime;
+mod settings;
 mod theme;
 mod window;
 mod workspace;
@@ -44,6 +45,8 @@ actions!(
         OpenProject,
         ToggleTheme,
         ShowKeyboardShortcuts,
+        OpenSettings,
+        CloseSettings,
     ]
 );
 
@@ -63,6 +66,8 @@ struct Workspace {
     pending_project_path: Option<PathBuf>,
     pending_close_project: bool,
     focus_handle: FocusHandle,
+    show_settings: bool,
+    settings_view: Option<Entity<settings::SettingsView>>,
 }
 
 /// Subset of args needed after initial parse.
@@ -227,6 +232,32 @@ impl Workspace {
         cx.notify();
     }
 
+    fn open_settings(&mut self, _: &OpenSettings, window: &mut Window, cx: &mut Context<Self>) {
+        if let WorkspaceState::Application(app) = &self.state {
+            if self.settings_view.is_none() {
+                let runtime = app.read(cx).runtime().clone();
+                let sv = cx.new(|cx| settings::SettingsView::new(runtime, window, cx));
+                cx.subscribe_in(
+                    &sv,
+                    window,
+                    |ws: &mut Workspace, _, _: &settings::CloseSettingsEvent, _window, cx| {
+                        ws.show_settings = false;
+                        cx.notify();
+                    },
+                )
+                .detach();
+                self.settings_view = Some(sv);
+            }
+            self.show_settings = true;
+            cx.notify();
+        }
+    }
+
+    fn close_settings(&mut self, _: &CloseSettings, _window: &mut Window, cx: &mut Context<Self>) {
+        self.show_settings = false;
+        cx.notify();
+    }
+
     fn show_keyboard_shortcuts(
         &mut self,
         _: &ShowKeyboardShortcuts,
@@ -245,6 +276,7 @@ impl Workspace {
                         .child(shortcut_row("Close Project", "ctrl-w"))
                         .child(shortcut_row("Reload Configuration", "ctrl-shift-r"))
                         .child(shortcut_row("Toggle Light/Dark Theme", "ctrl-shift-t"))
+                        .child(shortcut_row("Settings", "ctrl-p"))
                         .child(shortcut_row("Keyboard Shortcuts", "f10"))
                         .child(shortcut_row("Quit Application", "ctrl-q")),
                 )
@@ -283,15 +315,29 @@ impl Render for Workspace {
             let loader = Workspace::create_loader(&self.nemo_config, window, cx);
             self.state = WorkspaceState::ProjectLoader(loader);
             self.current_config_path = None;
+            self.show_settings = false;
+            self.settings_view = None;
             window.push_notification("Project closed", cx);
         }
 
         let bg_color = cx.theme().colors.background;
         let text_color = cx.theme().colors.foreground;
 
-        let content: AnyElement = match &self.state {
-            WorkspaceState::ProjectLoader(loader) => loader.clone().into_any_element(),
-            WorkspaceState::Application(app) => app.clone().into_any_element(),
+        let content: AnyElement = if self.show_settings {
+            if let Some(sv) = &self.settings_view {
+                sv.clone().into_any_element()
+            } else {
+                // Shouldn't happen, but fall through to normal view
+                match &self.state {
+                    WorkspaceState::ProjectLoader(loader) => loader.clone().into_any_element(),
+                    WorkspaceState::Application(app) => app.clone().into_any_element(),
+                }
+            }
+        } else {
+            match &self.state {
+                WorkspaceState::ProjectLoader(loader) => loader.clone().into_any_element(),
+                WorkspaceState::Application(app) => app.clone().into_any_element(),
+            }
         };
 
         let mut container = v_flex()
@@ -305,6 +351,8 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::open_project))
             .on_action(cx.listener(Self::toggle_theme))
             .on_action(cx.listener(Self::show_keyboard_shortcuts))
+            .on_action(cx.listener(Self::open_settings))
+            .on_action(cx.listener(Self::close_settings))
             .child(content);
 
         if let Some(dialog_layer) = Root::render_dialog_layer(window, cx) {
@@ -442,6 +490,8 @@ fn main() -> Result<()> {
             KeyBinding::new("ctrl-w", CloseProject, None),
             KeyBinding::new("ctrl-o", OpenProject, None),
             KeyBinding::new("ctrl-shift-t", ToggleTheme, None),
+            KeyBinding::new("ctrl-p", OpenSettings, None),
+            KeyBinding::new("escape", CloseSettings, None),
             KeyBinding::new("f10", ShowKeyboardShortcuts, None),
         ]);
 
@@ -506,6 +556,8 @@ fn main() -> Result<()> {
                     pending_project_path: None,
                     pending_close_project: false,
                     focus_handle,
+                    show_settings: false,
+                    settings_view: None,
                 }
             });
 

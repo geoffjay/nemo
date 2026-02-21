@@ -15,6 +15,17 @@ pub mod rhai_engine;
 pub use error::ExtensionError;
 pub use loader::{ExtensionLoader, ExtensionManifest, ExtensionType};
 pub use plugin::{LoadedPlugin, PluginHost, PluginInitResult};
+
+/// Information about a settings page registered by a plugin.
+#[derive(Debug, Clone)]
+pub struct SettingsPageInfo {
+    /// The plugin that registered this page.
+    pub plugin_id: String,
+    /// Display name shown in the settings sidebar.
+    pub display_name: String,
+    /// The UI definition for the settings page.
+    pub page: nemo_plugin_api::PluginValue,
+}
 pub use registry::ExtensionRegistry;
 pub use rhai_engine::{RhaiConfig, RhaiEngine, RhaiFeatures};
 
@@ -37,6 +48,8 @@ pub struct ExtensionManager {
     loader: ExtensionLoader,
     /// Templates registered by native plugins (name → PluginValue tree).
     plugin_templates: HashMap<String, PluginValue>,
+    /// Settings pages registered by native plugins.
+    plugin_settings_pages: Vec<SettingsPageInfo>,
 }
 
 impl ExtensionManager {
@@ -50,6 +63,7 @@ impl ExtensionManager {
             wasm_host: nemo_wasm::WasmHost::new().expect("Failed to create WasmHost"),
             loader: ExtensionLoader::new(),
             plugin_templates: HashMap::new(),
+            plugin_settings_pages: Vec::new(),
         }
     }
 
@@ -63,6 +77,7 @@ impl ExtensionManager {
             wasm_host: nemo_wasm::WasmHost::new().expect("Failed to create WasmHost"),
             loader: ExtensionLoader::new(),
             plugin_templates: HashMap::new(),
+            plugin_settings_pages: Vec::new(),
         }
     }
 
@@ -202,6 +217,14 @@ impl ExtensionManager {
                         tracing::info!("Plugin '{}' registered template '{}'", id, name);
                         self.plugin_templates.insert(name, template);
                     }
+                    for (name, page) in init_result.settings_pages {
+                        tracing::info!("Plugin '{}' registered settings page '{}'", id, name);
+                        self.plugin_settings_pages.push(SettingsPageInfo {
+                            plugin_id: id.clone(),
+                            display_name: name,
+                            page,
+                        });
+                    }
                     tracing::info!("Plugin '{}' initialized successfully", id);
                 }
                 Err(e) => {
@@ -214,6 +237,11 @@ impl ExtensionManager {
     /// Returns templates registered by native plugins.
     pub fn plugin_templates(&self) -> &HashMap<String, PluginValue> {
         &self.plugin_templates
+    }
+
+    /// Returns settings pages registered by native plugins.
+    pub fn plugin_settings_pages(&self) -> &[SettingsPageInfo] {
+        &self.plugin_settings_pages
     }
 
     /// Registers the extension context API with the RHAI engine.

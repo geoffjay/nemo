@@ -188,6 +188,8 @@ pub struct PluginInitResult {
     pub transforms: Vec<(String, TransformSchema)>,
     /// Actions registered by the plugin.
     pub actions: Vec<(String, ActionSchema)>,
+    /// Settings pages registered by the plugin.
+    pub settings_pages: Vec<(String, PluginValue)>,
 }
 
 /// Concrete implementation of `PluginRegistrar` used during plugin initialization.
@@ -220,6 +222,10 @@ impl PluginRegistrar for PluginRegistrarImpl {
 
     fn register_action(&mut self, name: &str, schema: ActionSchema) {
         self.result.actions.push((name.to_string(), schema));
+    }
+
+    fn register_settings_page(&mut self, name: &str, page: PluginValue) {
+        self.result.settings_pages.push((name.to_string(), page));
     }
 
     fn register_template(&mut self, name: &str, template: PluginValue) {
