@@ -10,12 +10,12 @@ use crate::app;
 use crate::runtime::NemoRuntime;
 
 #[allow(dead_code)]
-pub struct MainPage {
+pub struct MainView {
     app_entity: Entity<app::App>,
 }
 
 #[allow(dead_code)]
-impl MainPage {
+impl MainView {
     pub fn new(runtime: Arc<NemoRuntime>, window: &mut Window, cx: &mut Context<Self>) -> Self {
         let app_entity = cx.new(|cx| app::App::new(runtime, window, cx));
         Self { app_entity }
@@ -28,7 +28,7 @@ impl MainPage {
     }
 }
 
-impl Render for MainPage {
+impl Render for MainView {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         self.app_entity.clone()
     }

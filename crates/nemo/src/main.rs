@@ -27,7 +27,6 @@ mod args;
 mod components;
 pub mod config;
 mod runtime;
-pub mod settings;
 mod theme;
 mod window;
 mod workspace;
@@ -66,7 +65,7 @@ struct ActiveProject {
     runtime: Arc<runtime::NemoRuntime>,
     app_entity: Entity<app::App>,
     header_bar: Entity<HeaderBar>,
-    settings_view: Option<Entity<settings::SettingsView>>,
+    settings_view: Option<Entity<workspace::settings::SettingsView>>,
 }
 
 /// The root workspace entity that manages the application state.
@@ -102,9 +101,7 @@ impl Workspace {
             Ok(rt) => {
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
-                let app_entity = cx.new(|cx| {
-                    app::App::new(Arc::clone(&rt), window, cx)
-                });
+                let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
@@ -168,9 +165,7 @@ impl Workspace {
                 self.shutdown(cx);
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
-                let app_entity = cx.new(|cx| {
-                    app::App::new(Arc::clone(&rt), window, cx)
-                });
+                let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
@@ -297,7 +292,7 @@ impl Workspace {
 
         if needs_create {
             let runtime = cx.global::<ActiveProject>().runtime.clone();
-            let sv = cx.new(|cx| settings::SettingsView::new(runtime, window, cx));
+            let sv = cx.new(|cx| workspace::settings::SettingsView::new(runtime, window, cx));
             cx.global_mut::<ActiveProject>().settings_view = Some(sv);
         }
 
@@ -618,9 +613,8 @@ fn main() -> Result<()> {
                             let header_bar = cx.new(|cx| {
                                 HeaderBar::new(title, github_url, theme_toggle, window, cx)
                             });
-                            let app_entity = cx.new(|cx| {
-                                app::App::new(Arc::clone(&rt), window, cx)
-                            });
+                            let app_entity =
+                                cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                             cx.set_global(ActiveProject {
                                 runtime: rt,
                                 app_entity,
