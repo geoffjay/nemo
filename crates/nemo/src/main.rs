@@ -35,6 +35,7 @@ mod workspace;
 use args::Args;
 use config::NemoConfig;
 use window::get_window_options;
+use workspace::layout::AppLayout;
 use workspace::{HeaderBar, ProjectLoaderView, ProjectSelected};
 
 actions!(
@@ -64,6 +65,7 @@ impl Global for ActiveProject {}
 struct ActiveProject {
     runtime: Arc<runtime::NemoRuntime>,
     app_entity: Entity<app::App>,
+    header_bar: Entity<HeaderBar>,
     settings_view: Option<Entity<settings::SettingsView>>,
 }
 
@@ -101,12 +103,12 @@ impl Workspace {
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
                 let app_entity = cx.new(|cx| {
-                    app::App::new(Arc::clone(&rt), header_bar.clone(), window, cx)
+                    app::App::new(Arc::clone(&rt), window, cx)
                 });
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
-
+                    header_bar,
                     settings_view: None,
                 });
                 self.current_config_path = Some(app_config_path);
@@ -167,12 +169,12 @@ impl Workspace {
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
                 let app_entity = cx.new(|cx| {
-                    app::App::new(Arc::clone(&rt), header_bar.clone(), window, cx)
+                    app::App::new(Arc::clone(&rt), window, cx)
                 });
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
-
+                    header_bar,
                     settings_view: None,
                 });
                 self.current_route = "/app".to_string();
@@ -386,17 +388,25 @@ impl Render for Workspace {
 
         let mut routes = Routes::new().child(Route::new().index().element(loader));
 
-        // Add app routes if project is active — flat routes, no layout wrapper.
-        // Each page (App, SettingsView) renders its own header bar via its Render impl.
+        // Add app routes if project is active — nested under AppLayout which
+        // provides the shared header bar, with child routes for main and settings.
         if let Some(project) = cx.try_global::<ActiveProject>() {
             let app_entity = project.app_entity.clone();
+            let header_bar = project.header_bar.clone();
             let settings_view = project.settings_view.clone();
 
-            routes = routes.child(Route::new().path("app").element(app_entity));
+            let mut app_children = vec![Route::new().index().element(app_entity)];
 
             if let Some(sv) = settings_view {
-                routes = routes.child(Route::new().path("app/settings").element(sv));
+                app_children.push(Route::new().path("settings").element(sv));
             }
+
+            routes = routes.child(
+                Route::new()
+                    .path("app")
+                    .layout(AppLayout::new(header_bar))
+                    .children(app_children),
+            );
         }
 
         let mut container = v_flex()
@@ -609,12 +619,12 @@ fn main() -> Result<()> {
                                 HeaderBar::new(title, github_url, theme_toggle, window, cx)
                             });
                             let app_entity = cx.new(|cx| {
-                                app::App::new(Arc::clone(&rt), header_bar.clone(), window, cx)
+                                app::App::new(Arc::clone(&rt), window, cx)
                             });
                             cx.set_global(ActiveProject {
                                 runtime: rt,
                                 app_entity,
-            
+                                header_bar,
                                 settings_view: None,
                             });
                             current_route = "/app".to_string();
