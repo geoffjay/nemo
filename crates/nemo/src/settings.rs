@@ -469,30 +469,6 @@ fn settings_row(label: &str, value: &str, muted: Hsla) -> Div {
 impl Render for SettingsView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let bg = cx.theme().colors.background;
-        let border_color = cx.theme().colors.border;
-
-        // Header
-        let header = div()
-            .flex()
-            .flex_row()
-            .items_center()
-            .justify_between()
-            .px_4()
-            .py_2()
-            .border_b_1()
-            .border_color(border_color)
-            .child(
-                Label::new("Settings")
-                    .text_size(px(16.))
-                    .font_weight(FontWeight::SEMIBOLD),
-            )
-            .child(
-                gpui_component::button::Button::new("settings-back")
-                    .label("Back")
-                    .on_click(cx.listener(|_this, _, _window, cx| {
-                        cx.emit(CloseSettingsEvent);
-                    })),
-            );
 
         // Content area
         let sidebar = self.render_sidebar(window, cx);
@@ -520,6 +496,6 @@ impl Render for SettingsView {
             .child(sidebar)
             .child(content_panel);
 
-        v_flex().size_full().bg(bg).child(header).child(body)
+        v_flex().size_full().bg(bg).child(body)
     }
 }

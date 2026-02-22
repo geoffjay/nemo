@@ -4,7 +4,7 @@
 //! - Parses CLI arguments
 //! - Loads configuration from HCL files
 //! - Initializes all subsystems
-//! - Launches the GPUI window
+//! - Launches the GPUI window with router-based navigation
 
 use anyhow::{Context as _, Result};
 use gpui::*;
@@ -14,6 +14,7 @@ use gpui_component::ActiveTheme;
 use gpui_component::Root;
 use gpui_component::WindowExt as _;
 use gpui_component::{h_flex, v_flex};
+use gpui_router::{init as router_init, use_navigate, Route, Routes};
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -26,7 +27,7 @@ mod args;
 mod components;
 pub mod config;
 mod runtime;
-mod settings;
+pub mod settings;
 mod theme;
 mod window;
 mod workspace;
@@ -34,7 +35,8 @@ mod workspace;
 use args::Args;
 use config::NemoConfig;
 use window::get_window_options;
-use workspace::{ProjectLoaderView, ProjectSelected};
+use workspace::layout::AppLayout;
+use workspace::{HeaderBar, ProjectLoaderView, ProjectSelected};
 
 actions!(
     nemo,
@@ -50,30 +52,34 @@ actions!(
     ]
 );
 
-/// The root workspace entity that manages the application state.
-/// It starts in either ProjectLoader mode (no app config) or Application mode.
-enum WorkspaceState {
-    ProjectLoader(Entity<ProjectLoaderView>),
-    Application(Entity<app::App>),
+/// Subset of args needed after initial parse.
+#[derive(Clone)]
+struct WorkspaceArgs {
+    extension_dirs: Vec<PathBuf>,
 }
 
+/// GPUI global that holds the active project state.
+/// Set when a project is loaded, cleared when closed.
+impl Global for ActiveProject {}
+
+struct ActiveProject {
+    runtime: Arc<runtime::NemoRuntime>,
+    app_entity: Entity<app::App>,
+    header_bar: Entity<HeaderBar>,
+    settings_view: Option<Entity<settings::SettingsView>>,
+}
+
+/// The root workspace entity that manages the application state.
 #[allow(dead_code)]
 struct Workspace {
-    state: WorkspaceState,
     nemo_config: NemoConfig,
     ws_args: WorkspaceArgs,
     current_config_path: Option<PathBuf>,
     pending_project_path: Option<PathBuf>,
     pending_close_project: bool,
     focus_handle: FocusHandle,
-    show_settings: bool,
-    settings_view: Option<Entity<settings::SettingsView>>,
-}
-
-/// Subset of args needed after initial parse.
-#[derive(Clone)]
-struct WorkspaceArgs {
-    extension_dirs: Vec<PathBuf>,
+    /// Current route path for the router.
+    current_route: String,
 }
 
 impl Workspace {
@@ -93,9 +99,19 @@ impl Workspace {
         match create_runtime(&app_config_path, &self.ws_args.extension_dirs) {
             Ok(rt) => {
                 apply_theme_from_runtime(&rt, cx);
+                let header_bar = self.create_header_bar(&rt, window, cx);
                 let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
-                self.state = WorkspaceState::Application(app_entity);
+                cx.set_global(ActiveProject {
+                    runtime: rt,
+                    app_entity,
+                    header_bar,
+                    settings_view: None,
+                });
                 self.current_config_path = Some(app_config_path);
+                self.current_route = "/app".to_string();
+
+                use_navigate(cx)("/app".into());
+                window.refresh();
                 cx.notify();
             }
             Err(e) => {
@@ -104,10 +120,33 @@ impl Workspace {
         }
     }
 
-    /// Shut down the application entity if active.
+    fn create_header_bar(
+        &self,
+        runtime: &Arc<runtime::NemoRuntime>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<HeaderBar> {
+        let title = runtime
+            .get_config("app.window.title")
+            .and_then(|v| v.as_str().map(|s| s.to_string()))
+            .unwrap_or_else(|| "Nemo Application".to_string());
+        let github_url = runtime
+            .get_config("app.window.header_bar.github_url")
+            .and_then(|v| v.as_str().map(|s| s.to_string()));
+        let theme_toggle = runtime
+            .get_config("app.window.header_bar.theme_toggle")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx))
+    }
+
+    /// Shut down the active project if one exists.
     fn shutdown(&self, cx: &mut Context<'_, Self>) {
-        if let WorkspaceState::Application(app) = &self.state {
-            app.update(cx, |a, cx| {
+        let app_entity = cx
+            .try_global::<ActiveProject>()
+            .map(|p| p.app_entity.clone());
+        if let Some(entity) = app_entity {
+            entity.update(cx, |a, cx| {
                 a.shutdown(cx);
             });
         }
@@ -124,8 +163,18 @@ impl Workspace {
             Ok(rt) => {
                 self.shutdown(cx);
                 apply_theme_from_runtime(&rt, cx);
+                let header_bar = self.create_header_bar(&rt, window, cx);
                 let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
-                self.state = WorkspaceState::Application(app_entity);
+                cx.set_global(ActiveProject {
+                    runtime: rt,
+                    app_entity,
+                    header_bar,
+                    settings_view: None,
+                });
+                self.current_route = "/app".to_string();
+
+                use_navigate(cx)("/app".into());
+                window.refresh();
                 window.push_notification("Configuration reloaded", cx);
                 cx.notify();
             }
@@ -165,7 +214,7 @@ impl Workspace {
     }
 
     fn close_project(&mut self, _: &CloseProject, window: &mut Window, cx: &mut Context<Self>) {
-        if !matches!(self.state, WorkspaceState::Application(_)) {
+        if cx.try_global::<ActiveProject>().is_none() {
             return;
         }
 
@@ -233,29 +282,34 @@ impl Workspace {
     }
 
     fn open_settings(&mut self, _: &OpenSettings, window: &mut Window, cx: &mut Context<Self>) {
-        if let WorkspaceState::Application(app) = &self.state {
-            if self.settings_view.is_none() {
-                let runtime = app.read(cx).runtime().clone();
-                let sv = cx.new(|cx| settings::SettingsView::new(runtime, window, cx));
-                cx.subscribe_in(
-                    &sv,
-                    window,
-                    |ws: &mut Workspace, _, _: &settings::CloseSettingsEvent, _window, cx| {
-                        ws.show_settings = false;
-                        cx.notify();
-                    },
-                )
-                .detach();
-                self.settings_view = Some(sv);
-            }
-            self.show_settings = true;
-            cx.notify();
+        if cx.try_global::<ActiveProject>().is_none() {
+            return;
         }
+
+        // Ensure settings view entity exists
+        let needs_create = cx
+            .global::<ActiveProject>()
+            .settings_view
+            .is_none();
+
+        if needs_create {
+            let runtime = cx.global::<ActiveProject>().runtime.clone();
+            let sv = cx.new(|cx| settings::SettingsView::new(runtime, window, cx));
+            cx.global_mut::<ActiveProject>().settings_view = Some(sv);
+        }
+
+        self.current_route = "/app/settings".to_string();
+        use_navigate(cx)("/app/settings".into());
+        window.refresh();
+        cx.notify();
     }
 
     fn close_settings(&mut self, _: &CloseSettings, _window: &mut Window, cx: &mut Context<Self>) {
-        self.show_settings = false;
-        cx.notify();
+        if self.current_route == "/app/settings" {
+            self.current_route = "/app".to_string();
+            use_navigate(cx)("/app".into());
+            cx.notify();
+        }
     }
 
     fn show_keyboard_shortcuts(
@@ -312,33 +366,52 @@ impl Render for Workspace {
             self.pending_close_project = false;
             tracing::info!("Closing current project");
             self.shutdown(cx);
-            let loader = Workspace::create_loader(&self.nemo_config, window, cx);
-            self.state = WorkspaceState::ProjectLoader(loader);
+            cx.remove_global::<ActiveProject>();
             self.current_config_path = None;
-            self.show_settings = false;
-            self.settings_view = None;
+            self.current_route = "/".to_string();
+
+            use_navigate(cx)("/".into());
+            window.refresh();
             window.push_notification("Project closed", cx);
         }
 
         let bg_color = cx.theme().colors.background;
         let text_color = cx.theme().colors.foreground;
 
-        let content: AnyElement = if self.show_settings {
-            if let Some(sv) = &self.settings_view {
-                sv.clone().into_any_element()
-            } else {
-                // Shouldn't happen, but fall through to normal view
-                match &self.state {
-                    WorkspaceState::ProjectLoader(loader) => loader.clone().into_any_element(),
-                    WorkspaceState::Application(app) => app.clone().into_any_element(),
-                }
+        // Build route elements based on current state
+        let loader = Workspace::create_loader(&self.nemo_config, window, cx);
+
+        let mut routes = Routes::new().child(
+            Route::new()
+                .index()
+                .element(loader),
+        );
+
+        // Add app routes if project is active
+        if let Some(project) = cx.try_global::<ActiveProject>() {
+            let app_entity = project.app_entity.clone();
+            let header_bar = project.header_bar.clone();
+            let settings_view = project.settings_view.clone();
+
+            let mut app_children = vec![Route::new()
+                .index()
+                .element(app_entity)];
+
+            if let Some(sv) = settings_view {
+                app_children.push(
+                    Route::new()
+                        .path("settings")
+                        .element(sv),
+                );
             }
-        } else {
-            match &self.state {
-                WorkspaceState::ProjectLoader(loader) => loader.clone().into_any_element(),
-                WorkspaceState::Application(app) => app.clone().into_any_element(),
-            }
-        };
+
+            routes = routes.child(
+                Route::new()
+                    .path("app")
+                    .layout(AppLayout::new(header_bar))
+                    .children(app_children),
+            );
+        }
 
         let mut container = v_flex()
             .size_full()
@@ -353,7 +426,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::show_keyboard_shortcuts))
             .on_action(cx.listener(Self::open_settings))
             .on_action(cx.listener(Self::close_settings))
-            .child(content);
+            .child(routes);
 
         if let Some(dialog_layer) = Root::render_dialog_layer(window, cx) {
             container = container.child(dialog_layer);
@@ -484,6 +557,8 @@ fn main() -> Result<()> {
 
     gpui_app.run(move |cx| {
         gpui_component::init(cx);
+        router_init(cx);
+
         cx.bind_keys([
             KeyBinding::new("ctrl-shift-r", ReloadConfig, None),
             KeyBinding::new("ctrl-q", QuitApp, None),
@@ -496,7 +571,8 @@ fn main() -> Result<()> {
         ]);
 
         // Store workspace entity for window close handler
-        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
+        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> =
+            Rc::new(RefCell::new(None));
 
         cx.on_window_closed({
             let workspace_entity = workspace_entity.clone();
@@ -520,46 +596,70 @@ fn main() -> Result<()> {
             let app_config_path = app_config_path.clone();
 
             let ws = cx.new(|cx| {
-                let (state, current_config_path) = if let Some(config_path) = app_config_path {
+                let mut current_route = "/".to_string();
+
+                // If app_config provided via CLI, load project immediately
+                if let Some(config_path) = app_config_path {
                     info!("Loading project from: {:?}", config_path);
 
-                    let mut recent = config::recent::RecentProjects::load();
-                    recent.add(config_path.clone());
-                    recent.save();
+                    let mut recent_projects = config::recent::RecentProjects::load();
+                    recent_projects.add(config_path.clone());
+                    recent_projects.save();
 
                     match create_runtime(&config_path, &ws_args.extension_dirs) {
                         Ok(rt) => {
                             apply_theme_from_runtime(&rt, cx);
+                            let title = rt
+                                .get_config("app.window.title")
+                                .and_then(|v| v.as_str().map(|s| s.to_string()))
+                                .unwrap_or_else(|| "Nemo Application".to_string());
+                            let github_url = rt
+                                .get_config("app.window.header_bar.github_url")
+                                .and_then(|v| v.as_str().map(|s| s.to_string()));
+                            let theme_toggle = rt
+                                .get_config("app.window.header_bar.theme_toggle")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                            let header_bar = cx.new(|cx| {
+                                HeaderBar::new(title, github_url, theme_toggle, window, cx)
+                            });
                             let app_entity =
                                 cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
-                            (WorkspaceState::Application(app_entity), Some(config_path))
+                            cx.set_global(ActiveProject {
+                                runtime: rt,
+                                app_entity,
+                                header_bar,
+                                settings_view: None,
+                            });
+                            current_route = "/app".to_string();
                         }
                         Err(e) => {
                             tracing::error!("Failed to load project: {}", e);
-                            let loader = Workspace::create_loader(&nemo_config, window, cx);
-                            (WorkspaceState::ProjectLoader(loader), None)
                         }
                     }
-                } else {
-                    let loader = Workspace::create_loader(&nemo_config, window, cx);
-                    (WorkspaceState::ProjectLoader(loader), None)
-                };
+                }
 
                 let focus_handle = cx.focus_handle();
                 focus_handle.focus(window);
 
                 Workspace {
-                    state,
                     nemo_config,
                     ws_args,
-                    current_config_path,
+                    current_config_path: if current_route == "/app" {
+                        args.app_config.clone()
+                    } else {
+                        None
+                    },
                     pending_project_path: None,
                     pending_close_project: false,
                     focus_handle,
-                    show_settings: false,
-                    settings_view: None,
+                    current_route,
                 }
             });
+
+            // Navigate to the initial route after window creation
+            let route = ws.read(cx).current_route.clone();
+            use_navigate(cx)(route.into());
 
             *workspace_entity.borrow_mut() = Some(ws.clone());
             cx.new(|_cx| Root::new(ws, window, _cx))

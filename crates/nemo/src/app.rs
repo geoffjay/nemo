@@ -26,33 +26,18 @@ use crate::components::{
     Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
-use crate::workspace::HeaderBar;
 use nemo_layout::BuiltComponent;
 
 /// The main Nemo GPUI application.
 pub struct App {
     runtime: Arc<NemoRuntime>,
-    header_bar: Entity<HeaderBar>,
     component_states: ComponentStates,
     _subscriptions: Vec<Subscription>,
 }
 
 impl App {
     /// Creates a new Nemo application.
-    pub fn new(runtime: Arc<NemoRuntime>, window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let title = runtime
-            .get_config("app.window.title")
-            .and_then(|v| v.as_str().map(|s| s.to_string()))
-            .unwrap_or_else(|| "Nemo Application".to_string());
-        let github_url = runtime
-            .get_config("app.window.header_bar.github_url")
-            .and_then(|v| v.as_str().map(|s| s.to_string()));
-        let theme_toggle = runtime
-            .get_config("app.window.header_bar.theme_toggle")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
-        let header_bar = cx.new(|_cx| HeaderBar::new(title, github_url, theme_toggle, window, _cx));
-
+    pub fn new(runtime: Arc<NemoRuntime>, _window: &mut Window, cx: &mut Context<Self>) -> Self {
         // Wait for data_notify signals and apply updates when data arrives.
         let poll_runtime = Arc::clone(&runtime);
         let data_notify = Arc::clone(&runtime.data_notify);
@@ -70,15 +55,9 @@ impl App {
 
         Self {
             runtime,
-            header_bar,
             component_states: ComponentStates::new(),
             _subscriptions,
         }
-    }
-
-    /// Returns the runtime (for creating a settings view externally).
-    pub fn runtime(&self) -> &Arc<NemoRuntime> {
-        &self.runtime
     }
 
     /// Shutdown the application and its runtime.
@@ -924,15 +903,7 @@ impl App {
 
 impl Render for App {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let bg_color = cx.theme().colors.background;
-        let text_color = cx.theme().colors.foreground;
-
-        v_flex()
-            .size_full()
-            .overflow_hidden()
-            .bg(bg_color)
-            .text_color(text_color)
-            .child(self.header_bar.clone())
-            .child(self.render_layout(window, cx))
+        // The header bar is now rendered by AppLayout; App only renders layout content.
+        div().size_full().child(self.render_layout(window, cx))
     }
 }
