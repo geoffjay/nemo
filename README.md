@@ -75,7 +75,10 @@ nemo --app-config examples/data-binding/app.hcl
 
 ## Documentation
 
-Full documentation is available at [geoffjay.github.io/nemo](https://geoffjay.github.io/nemo) or locally via `zensical serve`.
+Full documentation is available at [geoffjay.github.io/nemo][docs] or locally via `zensical serve`.
+
+Plugin API documentation is also available for [nemo-api][docs-nemo-api], [nemo-plugin-api][docs-nemo-plugin-api], and
+[nemo-wasm-guest][docs-nemo-wasm-guest].
 
 ## License
 
@@ -84,3 +87,7 @@ MIT OR Apache-2.0
 <!-- links -->
 
 [logo]: docs/assets/nemo.png
+[docs]: https://geoffjay.github.io/nemo
+[docs-nemo-api]: https://docs.rs/nemo-api
+[docs-nemo-plugin-api]: https://docs.rs/nemo-plugin-api
+[docs-nemo-wasm-guest]: https://docs.rs/nemo-wasm-guest

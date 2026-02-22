@@ -1,3 +1,8 @@
+[![Documentation][docsrs-badge]][docsrs-url]
+
+[docsrs-badge]: https://docs.rs/nemo-plugin/badge.svg
+[docsrs-url]: https://docs.rs/nemo-plugin
+
 # nemo-plugin
 
 A Rust library providing a fluent, type-safe builder API for developing Nemo plugins. This crate builds on top of `nemo-plugin-api` to make creating UI layouts and templates more ergonomic and less error-prone.

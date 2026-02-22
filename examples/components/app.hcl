@@ -19,6 +19,8 @@ app {
     name = "kanagawa"
     mode = "dark"
   }
+
+  plugins = ["demo-settings"]
 }
 
 scripts {

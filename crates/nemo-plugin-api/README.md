@@ -1,3 +1,8 @@
+[![Documentation][docsrs-badge]][docsrs-url]
+
+[docsrs-badge]: https://docs.rs/nemo-plugin-api/badge.svg
+[docsrs-url]: https://docs.rs/nemo-plugin-api
+
 # nemo-plugin-api
 
 Stable API interface for Nemo native plugins. This crate defines the boundary

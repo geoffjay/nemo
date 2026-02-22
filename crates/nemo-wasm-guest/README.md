@@ -1,3 +1,8 @@
+[![Documentation][docsrs-badge]][docsrs-url]
+
+[docsrs-badge]: https://docs.rs/nemo-wasm-guest/badge.svg
+[docsrs-url]: https://docs.rs/nemo-wasm-guest
+
 # nemo-wasm-guest
 
 WASM guest SDK for building Nemo plugins as WebAssembly components.
