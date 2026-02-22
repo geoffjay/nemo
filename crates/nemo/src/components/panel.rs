@@ -26,7 +26,6 @@ impl RenderOnce for Panel {
         let mut el = div()
             .flex()
             .flex_col()
-            .overflow_hidden()
             .rounded_md()
             .bg(cx.theme().colors.secondary);
 
