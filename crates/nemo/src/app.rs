@@ -904,6 +904,11 @@ impl App {
 impl Render for App {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         // The header bar is now rendered by AppLayout; App only renders layout content.
-        div().size_full().child(self.render_layout(window, cx))
+        // Use flex_1 + overflow_hidden so this fills remaining space in the layout's
+        // flex column and inner scrollable areas work correctly.
+        v_flex()
+            .flex_1()
+            .overflow_hidden()
+            .child(self.render_layout(window, cx))
     }
 }

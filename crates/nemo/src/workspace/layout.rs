@@ -37,6 +37,6 @@ impl RenderOnce for AppLayout {
             .bg(bg_color)
             .text_color(text_color)
             .child(self.header_bar)
-            .child(self.outlet)
+            .child(div().flex_1().overflow_hidden().child(self.outlet))
     }
 }

@@ -80,6 +80,8 @@ struct Workspace {
     focus_handle: FocusHandle,
     /// Current route path for the router.
     current_route: String,
+    /// The project loader view entity (persists across renders).
+    loader: Entity<ProjectLoaderView>,
 }
 
 impl Workspace {
@@ -369,6 +371,8 @@ impl Render for Workspace {
             cx.remove_global::<ActiveProject>();
             self.current_config_path = None;
             self.current_route = "/".to_string();
+            // Recreate loader so it gets fresh recent projects list
+            self.loader = Workspace::create_loader(&self.nemo_config, window, cx);
 
             use_navigate(cx)("/".into());
             window.refresh();
@@ -378,8 +382,8 @@ impl Render for Workspace {
         let bg_color = cx.theme().colors.background;
         let text_color = cx.theme().colors.foreground;
 
-        // Build route elements based on current state
-        let loader = Workspace::create_loader(&self.nemo_config, window, cx);
+        // Use the persisted loader entity so event subscriptions remain valid
+        let loader = self.loader.clone();
 
         let mut routes = Routes::new().child(
             Route::new()
@@ -642,6 +646,8 @@ fn main() -> Result<()> {
                 let focus_handle = cx.focus_handle();
                 focus_handle.focus(window);
 
+                let loader = Workspace::create_loader(&nemo_config, window, cx);
+
                 Workspace {
                     nemo_config,
                     ws_args,
@@ -654,6 +660,7 @@ fn main() -> Result<()> {
                     pending_close_project: false,
                     focus_handle,
                     current_route,
+                    loader,
                 }
             });
 
