@@ -1,6 +1,6 @@
 [project]
 name = "nemo-docs"
-version = "0.5.0"
+version = "0.6.0"
 description = "Documentation for Nemo - The application with no name"
 readme = "README.md"
 requires-python = ">=3.12.2"
