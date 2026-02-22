@@ -11,12 +11,16 @@ use gpui_router::{IntoLayout, Outlet};
 use crate::workspace::HeaderBar;
 
 /// The shared application layout with a header bar and outlet for child routes.
+/// Currently unused — pages render their own header bars.
+/// Will be used once gpui-router layout rendering supports definite-height flex chains.
 #[derive(IntoElement, IntoLayout)]
+#[allow(dead_code)]
 pub struct AppLayout {
     header_bar: Entity<HeaderBar>,
     outlet: Outlet,
 }
 
+#[allow(dead_code)]
 impl AppLayout {
     pub fn new(header_bar: Entity<HeaderBar>) -> Self {
         Self {
@@ -37,6 +41,6 @@ impl RenderOnce for AppLayout {
             .bg(bg_color)
             .text_color(text_color)
             .child(self.header_bar)
-            .child(div().flex_1().overflow_hidden().child(self.outlet))
+            .child(self.outlet)
     }
 }

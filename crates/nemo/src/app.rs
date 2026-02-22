@@ -26,18 +26,25 @@ use crate::components::{
     Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
+use crate::workspace::HeaderBar;
 use nemo_layout::BuiltComponent;
 
 /// The main Nemo GPUI application.
 pub struct App {
     runtime: Arc<NemoRuntime>,
+    header_bar: Entity<HeaderBar>,
     component_states: ComponentStates,
     _subscriptions: Vec<Subscription>,
 }
 
 impl App {
     /// Creates a new Nemo application.
-    pub fn new(runtime: Arc<NemoRuntime>, _window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        runtime: Arc<NemoRuntime>,
+        header_bar: Entity<HeaderBar>,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         // Wait for data_notify signals and apply updates when data arrives.
         let poll_runtime = Arc::clone(&runtime);
         let data_notify = Arc::clone(&runtime.data_notify);
@@ -55,6 +62,7 @@ impl App {
 
         Self {
             runtime,
+            header_bar,
             component_states: ComponentStates::new(),
             _subscriptions,
         }
@@ -903,12 +911,15 @@ impl App {
 
 impl Render for App {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // The header bar is now rendered by AppLayout; App only renders layout content.
-        // Use flex_1 + overflow_hidden so this fills remaining space in the layout's
-        // flex column and inner scrollable areas work correctly.
+        let bg_color = cx.theme().colors.background;
+        let text_color = cx.theme().colors.foreground;
+
         v_flex()
-            .flex_1()
+            .size_full()
             .overflow_hidden()
+            .bg(bg_color)
+            .text_color(text_color)
+            .child(self.header_bar.clone())
             .child(self.render_layout(window, cx))
     }
 }

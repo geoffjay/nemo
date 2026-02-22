@@ -35,7 +35,6 @@ mod workspace;
 use args::Args;
 use config::NemoConfig;
 use window::get_window_options;
-use workspace::layout::AppLayout;
 use workspace::{HeaderBar, ProjectLoaderView, ProjectSelected};
 
 actions!(
@@ -65,7 +64,6 @@ impl Global for ActiveProject {}
 struct ActiveProject {
     runtime: Arc<runtime::NemoRuntime>,
     app_entity: Entity<app::App>,
-    header_bar: Entity<HeaderBar>,
     settings_view: Option<Entity<settings::SettingsView>>,
 }
 
@@ -102,11 +100,13 @@ impl Workspace {
             Ok(rt) => {
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
-                let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                let app_entity = cx.new(|cx| {
+                    app::App::new(Arc::clone(&rt), header_bar.clone(), window, cx)
+                });
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
-                    header_bar,
+
                     settings_view: None,
                 });
                 self.current_config_path = Some(app_config_path);
@@ -166,11 +166,13 @@ impl Workspace {
                 self.shutdown(cx);
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
-                let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                let app_entity = cx.new(|cx| {
+                    app::App::new(Arc::clone(&rt), header_bar.clone(), window, cx)
+                });
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
-                    header_bar,
+
                     settings_view: None,
                 });
                 self.current_route = "/app".to_string();
@@ -289,10 +291,7 @@ impl Workspace {
         }
 
         // Ensure settings view entity exists
-        let needs_create = cx
-            .global::<ActiveProject>()
-            .settings_view
-            .is_none();
+        let needs_create = cx.global::<ActiveProject>().settings_view.is_none();
 
         if needs_create {
             let runtime = cx.global::<ActiveProject>().runtime.clone();
@@ -385,36 +384,19 @@ impl Render for Workspace {
         // Use the persisted loader entity so event subscriptions remain valid
         let loader = self.loader.clone();
 
-        let mut routes = Routes::new().child(
-            Route::new()
-                .index()
-                .element(loader),
-        );
+        let mut routes = Routes::new().child(Route::new().index().element(loader));
 
-        // Add app routes if project is active
+        // Add app routes if project is active — flat routes, no layout wrapper.
+        // Each page (App, SettingsView) renders its own header bar via its Render impl.
         if let Some(project) = cx.try_global::<ActiveProject>() {
             let app_entity = project.app_entity.clone();
-            let header_bar = project.header_bar.clone();
             let settings_view = project.settings_view.clone();
 
-            let mut app_children = vec![Route::new()
-                .index()
-                .element(app_entity)];
+            routes = routes.child(Route::new().path("app").element(app_entity));
 
             if let Some(sv) = settings_view {
-                app_children.push(
-                    Route::new()
-                        .path("settings")
-                        .element(sv),
-                );
+                routes = routes.child(Route::new().path("app/settings").element(sv));
             }
-
-            routes = routes.child(
-                Route::new()
-                    .path("app")
-                    .layout(AppLayout::new(header_bar))
-                    .children(app_children),
-            );
         }
 
         let mut container = v_flex()
@@ -575,8 +557,7 @@ fn main() -> Result<()> {
         ]);
 
         // Store workspace entity for window close handler
-        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> =
-            Rc::new(RefCell::new(None));
+        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
 
         cx.on_window_closed({
             let workspace_entity = workspace_entity.clone();
@@ -627,12 +608,13 @@ fn main() -> Result<()> {
                             let header_bar = cx.new(|cx| {
                                 HeaderBar::new(title, github_url, theme_toggle, window, cx)
                             });
-                            let app_entity =
-                                cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                            let app_entity = cx.new(|cx| {
+                                app::App::new(Arc::clone(&rt), header_bar.clone(), window, cx)
+                            });
                             cx.set_global(ActiveProject {
                                 runtime: rt,
                                 app_entity,
-                                header_bar,
+            
                                 settings_view: None,
                             });
                             current_route = "/app".to_string();
