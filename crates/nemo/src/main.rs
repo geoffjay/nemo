@@ -95,6 +95,16 @@ fn main() -> Result<()> {
         gpui_component::init(cx);
         router_init(cx);
 
+        // Apply theme from TOML config (base app settings)
+        if nemo_config.app.theme_name != "default" {
+            theme::apply_configured_theme(
+                &nemo_config.app.theme_name,
+                "system",
+                None,
+                cx,
+            );
+        }
+
         cx.bind_keys([
             KeyBinding::new("ctrl-shift-r", ReloadConfig, None),
             KeyBinding::new("ctrl-q", QuitApp, None),

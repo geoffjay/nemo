@@ -22,7 +22,7 @@ pub struct Args {
     pub app_config_dirs: Vec<PathBuf>,
 
     /// Extension/plugin directories
-    #[arg(short, long)]
+    #[arg(short, long, env = "NEMO_EXTENSION_DIRS", value_delimiter = ':')]
     pub extension_dirs: Vec<PathBuf>,
 
     /// Enable verbose logging
