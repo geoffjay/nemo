@@ -10,8 +10,12 @@ app {
     height = 800
 
     header_bar {
-      github_url = "https://github.com/geoffjay/nemo/tree/main/components/basic"
+      github_url = "https://github.com/geoffjay/nemo/tree/main/examples/components"
       theme_toggle = true
+    }
+
+    footer_bar {
+      enabled = false
     }
   }
 

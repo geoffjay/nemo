@@ -35,7 +35,7 @@ use args::Args;
 use config::NemoConfig;
 use window::get_window_options;
 use workspace::layout::AppLayout;
-use workspace::{HeaderBar, ProjectLoaderView, ProjectSelected};
+use workspace::{FooterBar, HeaderBar, ProjectLoaderView, ProjectSelected};
 
 actions!(
     nemo,
@@ -65,6 +65,7 @@ struct ActiveProject {
     runtime: Arc<runtime::NemoRuntime>,
     app_entity: Entity<app::App>,
     header_bar: Entity<HeaderBar>,
+    footer_bar: Option<Entity<FooterBar>>,
     settings_view: Option<Entity<workspace::settings::SettingsView>>,
 }
 
@@ -101,11 +102,13 @@ impl Workspace {
             Ok(rt) => {
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
+                let footer_bar = self.create_footer_bar(&rt, window, cx);
                 let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
                     header_bar,
+                    footer_bar,
                     settings_view: None,
                 });
                 self.current_config_path = Some(app_config_path);
@@ -141,6 +144,23 @@ impl Workspace {
         cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx))
     }
 
+    fn create_footer_bar(
+        &self,
+        runtime: &Arc<runtime::NemoRuntime>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<Entity<FooterBar>> {
+        let enabled = runtime
+            .get_config("app.window.footer_bar.enabled")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        if enabled {
+            Some(cx.new(|cx| FooterBar::new(window, cx)))
+        } else {
+            None
+        }
+    }
+
     /// Shut down the active project if one exists.
     fn shutdown(&self, cx: &mut Context<'_, Self>) {
         let app_entity = cx
@@ -165,11 +185,13 @@ impl Workspace {
                 self.shutdown(cx);
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
+                let footer_bar = self.create_footer_bar(&rt, window, cx);
                 let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                 cx.set_global(ActiveProject {
                     runtime: rt,
                     app_entity,
                     header_bar,
+                    footer_bar,
                     settings_view: None,
                 });
                 self.current_route = "/app".to_string();
@@ -388,6 +410,7 @@ impl Render for Workspace {
         if let Some(project) = cx.try_global::<ActiveProject>() {
             let app_entity = project.app_entity.clone();
             let header_bar = project.header_bar.clone();
+            let footer_bar = project.footer_bar.clone();
             let settings_view = project.settings_view.clone();
 
             let mut app_children = vec![Route::new().index().element(app_entity)];
@@ -399,7 +422,7 @@ impl Render for Workspace {
             routes = routes.child(
                 Route::new()
                     .path("app")
-                    .layout(AppLayout::new(header_bar))
+                    .layout(AppLayout::new(header_bar, footer_bar))
                     .children(app_children),
             );
         }
@@ -613,12 +636,22 @@ fn main() -> Result<()> {
                             let header_bar = cx.new(|cx| {
                                 HeaderBar::new(title, github_url, theme_toggle, window, cx)
                             });
+                            let footer_bar_enabled = rt
+                                .get_config("app.window.footer_bar.enabled")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                            let footer_bar = if footer_bar_enabled {
+                                Some(cx.new(|cx| FooterBar::new(window, cx)))
+                            } else {
+                                None
+                            };
                             let app_entity =
                                 cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                             cx.set_global(ActiveProject {
                                 runtime: rt,
                                 app_entity,
                                 header_bar,
+                                footer_bar,
                                 settings_view: None,
                             });
                             current_route = "/app".to_string();
