@@ -26,6 +26,7 @@ mod app;
 mod args;
 mod components;
 pub mod config;
+mod project;
 mod runtime;
 mod theme;
 mod window;
@@ -33,6 +34,7 @@ mod workspace;
 
 use args::Args;
 use config::NemoConfig;
+use project::ActiveProject;
 use window::get_window_options;
 use workspace::layout::AppLayout;
 use workspace::{FooterBar, HeaderBar, ProjectLoaderView, ProjectSelected};
@@ -55,18 +57,6 @@ actions!(
 #[derive(Clone)]
 struct WorkspaceArgs {
     extension_dirs: Vec<PathBuf>,
-}
-
-/// GPUI global that holds the active project state.
-/// Set when a project is loaded, cleared when closed.
-impl Global for ActiveProject {}
-
-struct ActiveProject {
-    runtime: Arc<runtime::NemoRuntime>,
-    app_entity: Entity<app::App>,
-    header_bar: Entity<HeaderBar>,
-    footer_bar: Option<Entity<FooterBar>>,
-    settings_view: Option<Entity<workspace::settings::SettingsView>>,
 }
 
 /// The root workspace entity that manages the application state.
