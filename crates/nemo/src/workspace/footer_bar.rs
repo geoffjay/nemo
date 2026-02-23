@@ -7,7 +7,6 @@ impl FooterBar {
     pub fn new(_window: &mut Window, _cx: &mut Context<Self>) -> Self {
         Self
     }
-
 }
 
 impl Render for FooterBar {
