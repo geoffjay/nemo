@@ -14,7 +14,7 @@
   <layout type="stack">
     <!-- Display showing current input and result -->
     <panel id="display" margin="8">
-      <label id="result" text="0" margin="16" />
+      <label id="display_result" text="0" margin="16" />
     </panel>
 
     <!-- Button rows for calculator -->

@@ -360,10 +360,7 @@ impl RhaiEngine {
         self.engine
             .register_fn("get_component_label", move |component_id: &str| -> String {
                 ctx.get_component_property(component_id, "label")
-                    .and_then(|v| match v {
-                        PluginValue::String(s) => Some(s),
-                        _ => None,
-                    })
+                    .map(plugin_value_to_string)
                     .unwrap_or_default()
             });
 
@@ -371,10 +368,7 @@ impl RhaiEngine {
         self.engine
             .register_fn("get_component_text", move |component_id: &str| -> String {
                 ctx.get_component_property(component_id, "text")
-                    .and_then(|v| match v {
-                        PluginValue::String(s) => Some(s),
-                        _ => None,
-                    })
+                    .map(plugin_value_to_string)
                     .unwrap_or_default()
             });
 
@@ -421,6 +415,18 @@ impl RhaiEngine {
 impl Default for RhaiEngine {
     fn default() -> Self {
         Self::new(RhaiConfig::default())
+    }
+}
+
+/// Converts a PluginValue to a String, handling all variant types.
+fn plugin_value_to_string(value: PluginValue) -> String {
+    match value {
+        PluginValue::String(s) => s,
+        PluginValue::Integer(i) => i.to_string(),
+        PluginValue::Float(f) => f.to_string(),
+        PluginValue::Bool(b) => b.to_string(),
+        PluginValue::Null => String::new(),
+        PluginValue::Array(_) | PluginValue::Object(_) => format!("{:?}", value),
     }
 }
 
