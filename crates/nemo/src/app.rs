@@ -383,7 +383,7 @@ impl App {
                 div()
                     .text_lg()
                     .text_color(cx.theme().colors.muted_foreground)
-                    .child("Configure your application in app.hcl"),
+                    .child("Configure your application in app.xml"),
             )
             .into_any_element()
     }
@@ -903,7 +903,7 @@ impl App {
 
 impl Render for App {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Header bar is rendered by AppLayout; App only renders HCL layout content.
+        // Header bar is rendered by AppLayout; App only renders layout content.
         self.render_layout(window, cx)
     }
 }

@@ -1,0 +1,26 @@
+<nemo>
+  <app title="My Nemo App">
+    <window title="Nemo Example">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/basic"
+                  theme-toggle="true" />
+    </window>
+    <theme name="kanagawa" mode="dark" />
+  </app>
+
+  <!-- Scripts configuration -->
+  <script src="./scripts" />
+
+  <!-- Layout configuration -->
+  <layout type="stack">
+    <label id="header" text="Welcome to Nemo" />
+
+    <panel id="content">
+      <button id="button" label="Click Me" on-click="on_button_click" />
+    </panel>
+  </layout>
+
+  <!-- Data sources -->
+  <data>
+    <source name="api" type="http" url="https://api.example.com" refresh="30" />
+  </data>
+</nemo>

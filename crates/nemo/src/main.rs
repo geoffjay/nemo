@@ -2,7 +2,7 @@
 //!
 //! This is the main entry point for Nemo applications. It:
 //! - Parses CLI arguments
-//! - Loads configuration from HCL files
+//! - Loads configuration from XML files
 //! - Initializes all subsystems
 //! - Launches the GPUI window with router-based navigation
 

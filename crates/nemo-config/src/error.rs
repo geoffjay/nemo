@@ -29,7 +29,7 @@ pub enum ConfigError {
     SchemaNotFound { name: String },
 }
 
-/// Error during HCL parsing.
+/// Error during configuration parsing.
 #[derive(Debug)]
 pub struct ParseError {
     /// Error message.

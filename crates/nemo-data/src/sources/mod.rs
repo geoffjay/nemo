@@ -19,7 +19,7 @@ pub use self::websocket::{WebSocketSource, WebSocketSourceConfig};
 use crate::source::DataSource;
 use nemo_config::Value;
 
-/// Creates a DataSource from a type name and HCL configuration.
+/// Creates a DataSource from a type name and XML configuration.
 ///
 /// Returns `None` for unknown source types or missing required fields.
 pub fn create_source(name: &str, source_type: &str, config: &Value) -> Option<Box<dyn DataSource>> {

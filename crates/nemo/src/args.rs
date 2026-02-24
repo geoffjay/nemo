@@ -7,7 +7,7 @@ use tracing::Level;
 #[command(name = "nemo")]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// Path to the HCL project configuration file (app.hcl).
+    /// Path to the project configuration file (app.xml).
     /// When not provided, shows the project loader screen.
     #[arg(long, env = "NEMO_APP_CONFIG")]
     pub app_config: Option<PathBuf>,

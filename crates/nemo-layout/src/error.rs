@@ -3,7 +3,7 @@
 //! # Recovery Classification
 //!
 //! Layout errors are almost always **fatal** for the current layout build.
-//! They indicate problems in the HCL configuration (unknown types, missing
+//! They indicate problems in the XML configuration (unknown types, missing
 //! properties, circular references) that require editing the config file.
 
 use thiserror::Error;
@@ -18,7 +18,7 @@ use thiserror::Error;
 /// | Variant                | Notes                                          |
 /// |-----------------------|------------------------------------------------|
 /// | `UnknownComponent`    | Component type not registered; check type name |
-/// | `InvalidConfig`       | Bad property values; fix HCL config            |
+/// | `InvalidConfig`       | Bad property values; fix XML config             |
 /// | `BindingError`        | Binding target/source mismatch                 |
 /// | `InvalidStructure`    | Malformed layout tree                          |
 /// | `RenderError`         | Component failed to render                     |
