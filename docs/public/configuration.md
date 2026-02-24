@@ -1,38 +1,33 @@
 # Configuration Reference
 
-Nemo applications are defined in HCL (HashiCorp Configuration Language) files. This page is a complete reference for every block, attribute, and component type.
+Nemo applications are defined in XML files. This page is a complete reference for every element, attribute, and component type.
 
 ## File Structure
 
-A Nemo configuration file contains up to six top-level blocks:
+A Nemo configuration file contains up to six top-level elements, all wrapped in a `<nemo>` root:
 
-```hcl
-variable "name" { ... }   # Variable definitions (0 or more)
-app { ... }                # Application and window settings
-scripts { ... }            # Script loading configuration
-templates { ... }          # Reusable component templates
-data { ... }               # Data source and sink definitions
-layout { ... }             # UI component tree
+```xml
+<nemo>
+  <variable name="..." ... />       <!-- Variable definitions (0 or more) -->
+  <app>...</app>                     <!-- Application and window settings -->
+  <script src="..." />               <!-- Script loading configuration -->
+  <templates>...</templates>         <!-- Reusable component templates -->
+  <data>...</data>                   <!-- Data source and sink definitions -->
+  <layout>...</layout>               <!-- UI component tree -->
+</nemo>
 ```
 
-All blocks are optional. A minimal valid configuration is an empty file, though it will produce a blank window.
+All elements are optional. A minimal valid configuration is `<nemo></nemo>`, though it will produce a blank window.
 
 ---
 
-## `variable` Block
+## `variable` Element
 
 Define reusable variables with type and default value. Variables are referenced elsewhere via `${var.name}`.
 
-```hcl
-variable "button_height" {
-  type    = "int"
-  default = 48
-}
-
-variable "api_base" {
-  type    = "string"
-  default = "https://api.example.com"
-}
+```xml
+<variable name="button_height" type="int" default="48" />
+<variable name="api_base" type="string" default="https://api.example.com" />
 ```
 
 | Attribute | Type | Required | Description |
@@ -42,44 +37,27 @@ variable "api_base" {
 
 Use variables in any attribute value:
 
-```hcl
-min_height = "${var.button_height}"
-url        = "${var.api_base}/users"
+```xml
+min-height="${var.button_height}"
+url="${var.api_base}/users"
 ```
 
 ---
 
-## `app` Block
+## `app` Element
 
 Application metadata, window settings, and theme configuration.
 
-```hcl
-app {
-  title = "My Application"
+```xml
+<app title="My Application">
+  <window title="Window Title" width="1024" height="768" min-width="320" min-height="240">
+    <header-bar github-url="https://github.com/user/repo" theme-toggle="true" />
+  </window>
 
-  window {
-    title      = "Window Title"
-    width      = 1024
-    height     = 768
-    min_width  = 320
-    min_height = 240
-
-    header_bar {
-      github_url   = "https://github.com/user/repo"
-      theme_toggle = true
-    }
-  }
-
-  theme {
-    name = "kanagawa"
-    mode = "dark"
-
-    extend "custom" {
-      primary    = "#FF6600"
-      background = "#1A1A2E"
-    }
-  }
-}
+  <theme name="kanagawa" mode="dark">
+    <extend name="custom" primary="#FF6600" background="#1A1A2E" />
+  </theme>
+</app>
 ```
 
 ### `app.window`
@@ -124,14 +102,12 @@ The optional `extend` sub-block allows overriding individual theme colors.
 
 ---
 
-## `scripts` Block
+## `script` Element
 
 Configure where RHAI scripts are loaded from.
 
-```hcl
-scripts {
-  path = "./scripts"
-}
+```xml
+<script src="./scripts" />
 ```
 
 | Attribute | Type | Description |
@@ -142,34 +118,24 @@ All `.rhai` files in the directory are loaded at startup. Scripts are identified
 
 ---
 
-## `templates` Block
+## `templates` Element
 
 Define reusable component templates that can be referenced by components in the layout. Templates reduce duplication when many components share the same base configuration.
 
 ### Defining Templates
 
-```hcl
-templates {
-  template "nav_item" {
-    type         = "button"
-    variant      = "ghost"
-    size         = "sm"
-    on_click     = "on_nav"
-  }
+```xml
+<templates>
+  <template name="nav_item">
+    <button variant="ghost" size="sm" on-click="on_nav" />
+  </template>
 
-  template "content_page" {
-    type    = "panel"
-    visible = false
-
-    component "inner" {
-      type      = "stack"
-      direction = "vertical"
-      spacing   = 12
-      padding   = 32
-      slot      = true
-    }
-  }
-}
+  <template name="content_page">
+    <panel visible="false">
+      <stack id="inner" direction="vertical" spacing="12" padding="32" slot="true" />
+    </panel>
+  </template>
+</templates>
 ```
 
 Each `template` block defines a named set of component properties. Templates can include nested `component` children and all standard component properties.
@@ -178,20 +144,11 @@ Each `template` block defines a named set of component properties. Templates can
 
 Reference a template from any component in the layout with the `template` property:
 
-```hcl
-layout {
-  type = "stack"
-
-  component "nav_home" {
-    template = "nav_item"
-    label    = "Home"
-  }
-
-  component "nav_settings" {
-    template = "nav_item"
-    label    = "Settings"
-  }
-}
+```xml
+<layout type="stack">
+  <panel id="nav_home" template="nav_item" label="Home" />
+  <panel id="nav_settings" template="nav_item" label="Settings" />
+</layout>
 ```
 
 The component inherits all properties from the template. Properties set on the instance override the template's defaults (e.g., `label` above overrides anything the template set).
@@ -200,32 +157,20 @@ The component inherits all properties from the template. Properties set on the i
 
 Templates can designate a child component as a **slot** by setting `slot = true`. When an instance provides children, they are injected into the slot rather than appended at the top level:
 
-```hcl
-templates {
-  template "card" {
-    type    = "panel"
-    padding = 16
+```xml
+<templates>
+  <template name="card">
+    <panel padding="16">
+      <stack id="body" direction="vertical" slot="true" />
+    </panel>
+  </template>
+</templates>
 
-    component "body" {
-      type = "stack"
-      direction = "vertical"
-      slot = true
-    }
-  }
-}
-
-layout {
-  type = "stack"
-
-  component "user_card" {
-    template = "card"
-
-    component "title" {
-      type = "label"
-      text = "User Profile"
-    }
-  }
-}
+<layout type="stack">
+  <panel id="user_card" template="card">
+    <label id="title" text="User Profile" />
+  </panel>
+</layout>
 ```
 
 Here, the `title` label is injected inside the `body` stack, not directly under the `panel`.
@@ -240,22 +185,20 @@ Here, the `title` label is injected inside the `body` stack, not directly under 
 
 ---
 
-## `data` Block
+## `data` Element
 
 Define data sources (inputs) and sinks (outputs).
 
-```hcl
-data {
-  source "name" {
-    type = "..."
-    # source-specific attributes
-  }
+```xml
+<data>
+  <source name="name" type="...">
+    <!-- source-specific attributes -->
+  </source>
 
-  sink "name" {
-    type = "..."
-    # sink-specific attributes
-  }
-}
+  <sink name="name" type="...">
+    <!-- sink-specific attributes -->
+  </sink>
+</data>
 ```
 
 ### Data Source Types
@@ -264,11 +207,8 @@ data {
 
 Emits an incrementing tick count at a fixed interval.
 
-```hcl
-source "ticker" {
-  type     = "timer"
-  interval = 1
-}
+```xml
+<source name="ticker" type="timer" interval="1" />
 ```
 
 | Attribute | Type | Default | Description |
@@ -281,14 +221,8 @@ source "ticker" {
 
 Polls an HTTP endpoint at a regular interval.
 
-```hcl
-source "api" {
-  type     = "http"
-  url      = "https://httpbin.org/get"
-  interval = 30
-  method   = "GET"
-  timeout  = 30
-}
+```xml
+<source name="api" type="http" url="https://httpbin.org/get" interval="30" method="GET" timeout="30" />
 ```
 
 | Attribute | Type | Default | Description |
@@ -306,11 +240,8 @@ source "api" {
 
 Maintains a persistent WebSocket connection with automatic reconnection.
 
-```hcl
-source "stream" {
-  type = "websocket"
-  url  = "wss://api.example.com/stream"
-}
+```xml
+<source name="stream" type="websocket" url="wss://api.example.com/stream" />
 ```
 
 | Attribute | Type | Description |
@@ -323,14 +254,8 @@ source "stream" {
 
 Subscribes to MQTT topics.
 
-```hcl
-source "sensors" {
-  type      = "mqtt"
-  host      = "localhost"
-  port      = 1883
-  topics    = ["sensors/#", "alerts/high"]
-  client_id = "nemo-app"
-}
+```xml
+<source name="sensors" type="mqtt" host="localhost" port="1883" topics='["sensors/#", "alerts/high"]' client-id="nemo-app" />
 ```
 
 | Attribute | Type | Default | Description |
@@ -347,12 +272,8 @@ source "sensors" {
 
 Subscribes to Redis pub/sub channels.
 
-```hcl
-source "events" {
-  type     = "redis"
-  url      = "redis://127.0.0.1:6379"
-  channels = ["app-events", "notifications"]
-}
+```xml
+<source name="events" type="redis" url="redis://127.0.0.1:6379" channels='["app-events", "notifications"]' />
 ```
 
 | Attribute | Type | Description |
@@ -366,12 +287,8 @@ source "events" {
 
 Subscribes to NATS subjects.
 
-```hcl
-source "messages" {
-  type     = "nats"
-  url      = "nats://127.0.0.1:4222"
-  subjects = ["updates.>", "commands.*"]
-}
+```xml
+<source name="messages" type="nats" url="nats://127.0.0.1:4222" subjects='["updates.>", "commands.*"]' />
 ```
 
 | Attribute | Type | Description |
@@ -385,13 +302,8 @@ source "messages" {
 
 Reads from the filesystem, optionally watching for changes.
 
-```hcl
-source "config_file" {
-  type   = "file"
-  path   = "/path/to/data.json"
-  watch  = true
-  format = "json"
-}
+```xml
+<source name="config_file" type="file" path="/path/to/data.json" watch="true" format="json" />
 ```
 
 | Attribute | Type | Default | Description |
@@ -406,55 +318,35 @@ Sinks are destinations for publishing data from scripts.
 
 #### MQTT Sink
 
-```hcl
-sink "commands" {
-  type  = "mqtt"
-  host  = "localhost"
-  port  = 1883
-  topic = "commands"
-}
+```xml
+<sink name="commands" type="mqtt" host="localhost" port="1883" topic="commands" />
 ```
 
 #### Redis Sink
 
-```hcl
-sink "outbound" {
-  type    = "redis"
-  url     = "redis://127.0.0.1:6379"
-  channel = "app-commands"
-}
+```xml
+<sink name="outbound" type="redis" url="redis://127.0.0.1:6379" channel="app-commands" />
 ```
 
 #### NATS Sink
 
-```hcl
-sink "nats_out" {
-  type    = "nats"
-  url     = "nats://127.0.0.1:4222"
-  subject = "commands.>"
-}
+```xml
+<sink name="nats_out" type="nats" url="nats://127.0.0.1:4222" subject="commands.>" />
 ```
 
 ---
 
-## `layout` Block
+## `layout` Element
 
-Defines the UI component tree. The layout block specifies a root layout type and contains nested `component` blocks.
+Defines the UI component tree. The layout element specifies a root layout type and contains nested component elements.
 
-```hcl
-layout {
-  type = "stack"
-
-  component "id" {
-    type = "component_type"
-    # properties...
-
-    component "child_id" {
-      type = "label"
-      text = "Nested child"
-    }
-  }
-}
+```xml
+<layout type="stack">
+  <component_type id="id">
+    <!-- properties as attributes -->
+    <label id="child_id" text="Nested child" />
+  </component_type>
+</layout>
 ```
 
 | Attribute | Type | Description |
@@ -529,13 +421,8 @@ Directional properties override their generic counterpart. For example, `margin_
 
 Arranges children in a vertical or horizontal flex layout.
 
-```hcl
-component "toolbar" {
-  type      = "stack"
-  direction = "horizontal"
-  spacing   = 8
-  padding   = 16
-}
+```xml
+<stack id="toolbar" direction="horizontal" spacing="8" padding="16" />
 ```
 
 | Property | Type | Default | Description |
@@ -551,14 +438,8 @@ component "toolbar" {
 
 A styled container with background, optional border, and shadow.
 
-```hcl
-component "card" {
-  type         = "panel"
-  padding      = 16
-  border       = 2
-  border_color = "theme.border"
-  shadow       = "md"
-}
+```xml
+<panel id="card" padding="16" border="2" border-color="theme.border" shadow="md" />
 ```
 
 | Property | Type | Default | Description |
@@ -573,12 +454,8 @@ component "card" {
 
 Displays text with configurable size.
 
-```hcl
-component "title" {
-  type = "label"
-  text = "Hello World"
-  size = "xl"
-}
+```xml
+<label id="title" text="Hello World" size="xl" />
 ```
 
 | Property | Type | Default | Description |
@@ -590,11 +467,8 @@ component "title" {
 
 A block of text content.
 
-```hcl
-component "paragraph" {
-  type    = "text"
-  content = "A longer block of text content."
-}
+```xml
+<text id="paragraph" content="A longer block of text content." />
 ```
 
 | Property | Type | Default | Description |
@@ -605,13 +479,8 @@ component "paragraph" {
 
 A clickable button with style variants.
 
-```hcl
-component "submit" {
-  type     = "button"
-  label    = "Submit"
-  variant  = "primary"
-  on_click = "on_submit"
-}
+```xml
+<button id="submit" label="Submit" variant="primary" on-click="on_submit" />
 ```
 
 | Property | Type | Default | Description |
@@ -627,12 +496,8 @@ component "submit" {
 
 A text input field.
 
-```hcl
-component "name_input" {
-  type        = "input"
-  placeholder = "Enter your name"
-  disabled    = false
-}
+```xml
+<input id="name_input" placeholder="Enter your name" disabled="false" />
 ```
 
 | Property | Type | Default | Description |
@@ -645,13 +510,8 @@ component "name_input" {
 
 A toggleable checkbox with optional label.
 
-```hcl
-component "agree" {
-  type     = "checkbox"
-  label    = "I agree to the terms"
-  checked  = false
-  on_click = "on_agree_changed"
-}
+```xml
+<checkbox id="agree" label="I agree to the terms" checked="false" on-click="on_agree_changed" />
 ```
 
 | Property | Type | Default | Description |
@@ -666,12 +526,8 @@ The change handler receives `"true"` or `"false"` as event data.
 
 A dropdown selection component.
 
-```hcl
-component "color_picker" {
-  type    = "select"
-  options = ["Red", "Green", "Blue"]
-  value   = "Red"
-}
+```xml
+<select id="color_picker" options='["Red", "Green", "Blue"]' value="Red" />
 ```
 
 | Property | Type | Default | Description |
@@ -683,12 +539,8 @@ component "color_picker" {
 
 Displays a named icon.
 
-```hcl
-component "settings_icon" {
-  type = "icon"
-  name = "settings"
-  size = "md"
-}
+```xml
+<icon id="settings_icon" name="settings" size="md" />
 ```
 
 | Property | Type | Default | Description |
@@ -700,12 +552,8 @@ component "settings_icon" {
 
 Displays an image.
 
-```hcl
-component "logo" {
-  type = "image"
-  src  = "/path/to/image.png"
-  alt  = "Company logo"
-}
+```xml
+<image id="logo" src="/path/to/image.png" alt="Company logo" />
 ```
 
 | Property | Type | Default | Description |
@@ -717,11 +565,8 @@ component "logo" {
 
 A progress bar.
 
-```hcl
-component "upload_progress" {
-  type  = "progress"
-  value = 75
-}
+```xml
+<progress id="upload_progress" value="75" />
 ```
 
 | Property | Type | Default | Description |
@@ -732,11 +577,8 @@ component "upload_progress" {
 
 A vertical list of items.
 
-```hcl
-component "task_list" {
-  type  = "list"
-  items = ["Task 1", "Task 2", "Task 3"]
-}
+```xml
+<list id="task_list" items='["Task 1", "Task 2", "Task 3"]' />
 ```
 
 | Property | Type | Default | Description |
@@ -747,12 +589,8 @@ component "task_list" {
 
 A status notification message.
 
-```hcl
-component "alert" {
-  type    = "notification"
-  message = "Operation completed successfully"
-  kind    = "success"
-}
+```xml
+<notification id="alert" message="Operation completed successfully" kind="success" />
 ```
 
 | Property | Type | Default | Description |
@@ -764,17 +602,10 @@ component "alert" {
 
 An overlay dialog, conditionally rendered.
 
-```hcl
-component "confirm_dialog" {
-  type  = "modal"
-  title = "Confirm Action"
-  open  = false
-
-  component "body" {
-    type    = "label"
-    text    = "Are you sure?"
-  }
-}
+```xml
+<modal id="confirm_dialog" title="Confirm Action" open="false">
+  <label id="body" text="Are you sure?" />
+</modal>
 ```
 
 | Property | Type | Default | Description |
@@ -786,16 +617,10 @@ component "confirm_dialog" {
 
 Wraps child content with a tooltip.
 
-```hcl
-component "help" {
-  type    = "tooltip"
-  content = "This is additional context"
-
-  component "icon" {
-    type = "icon"
-    name = "help"
-  }
-}
+```xml
+<tooltip id="help" content="This is additional context">
+  <icon id="icon" name="help" />
+</tooltip>
 ```
 
 | Property | Type | Default | Description |
@@ -806,37 +631,19 @@ component "help" {
 
 A tabbed container.
 
-```hcl
-component "view_tabs" {
-  type = "tabs"
-
-  component "tab1" {
-    type = "label"
-    text = "Tab 1 Content"
-  }
-
-  component "tab2" {
-    type = "label"
-    text = "Tab 2 Content"
-  }
-}
+```xml
+<tabs id="view_tabs">
+  <label id="tab1" text="Tab 1 Content" />
+  <label id="tab2" text="Tab 2 Content" />
+</tabs>
 ```
 
 ### `accordion`
 
 Collapsible content sections. Each item has a title and expandable content.
 
-```hcl
-component "faq" {
-  type = "accordion"
-  items = [
-    { title = "Question 1", content = "Answer 1", open = true },
-    { title = "Question 2", content = "Answer 2" },
-    { title = "Question 3", content = "Answer 3" }
-  ]
-  multiple = true
-  bordered = false
-}
+```xml
+<accordion id="faq" items='[{"title": "Question 1", "content": "Answer 1", "open": true}, {"title": "Question 2", "content": "Answer 2"}, {"title": "Question 3", "content": "Answer 3"}]' multiple="true" bordered="false" />
 ```
 
 | Property | Type | Default | Description |
@@ -849,13 +656,8 @@ component "faq" {
 
 Displays an important status message with a variant-colored indicator.
 
-```hcl
-component "error_alert" {
-  type    = "alert"
-  title   = "Error"
-  message = "Something went wrong."
-  variant = "error"
-}
+```xml
+<alert id="error_alert" title="Error" message="Something went wrong." variant="error" />
 ```
 
 | Property | Type | Default | Description |
@@ -868,11 +670,8 @@ component "error_alert" {
 
 Displays user initials derived from a name.
 
-```hcl
-component "user_avatar" {
-  type = "avatar"
-  name = "Alice Johnson"
-}
+```xml
+<avatar id="user_avatar" name="Alice Johnson" />
 ```
 
 | Property | Type | Default | Description |
@@ -883,16 +682,10 @@ component "user_avatar" {
 
 Overlays a count or dot indicator on a child element.
 
-```hcl
-component "notification_badge" {
-  type  = "badge"
-  count = 5
-
-  component "btn" {
-    type  = "button"
-    label = "Inbox"
-  }
-}
+```xml
+<badge id="notification_badge" count="5">
+  <button id="btn" label="Inbox" />
+</badge>
 ```
 
 | Property | Type | Default | Description |
@@ -906,17 +699,10 @@ Badge wraps its child component and renders the indicator in the top-right corne
 
 A single expandable/collapsible section with a clickable title bar.
 
-```hcl
-component "details" {
-  type  = "collapsible"
-  title = "Show Details"
-  open  = false
-
-  component "content" {
-    type    = "text"
-    content = "Hidden content revealed when expanded."
-  }
-}
+```xml
+<collapsible id="details" title="Show Details" open="false">
+  <text id="content" content="Hidden content revealed when expanded." />
+</collapsible>
 ```
 
 | Property | Type | Default | Description |
@@ -928,13 +714,8 @@ component "details" {
 
 A button that opens a dropdown menu with selectable items.
 
-```hcl
-component "actions" {
-  type    = "dropdown_button"
-  label   = "Actions"
-  variant = "primary"
-  items   = ["Copy", "Paste", "Cut"]
-}
+```xml
+<dropdown_button id="actions" label="Actions" variant="primary" items='["Copy", "Paste", "Cut"]' />
 ```
 
 | Property | Type | Default | Description |
@@ -947,13 +728,8 @@ component "actions" {
 
 A group of mutually exclusive options.
 
-```hcl
-component "size_picker" {
-  type      = "radio"
-  options   = ["Small", "Medium", "Large"]
-  value     = "Medium"
-  direction = "horizontal"
-}
+```xml
+<radio id="size_picker" options='["Small", "Medium", "Large"]' value="Medium" direction="horizontal" />
 ```
 
 | Property | Type | Default | Description |
@@ -966,14 +742,8 @@ component "size_picker" {
 
 A draggable range input for numeric values.
 
-```hcl
-component "volume" {
-  type  = "slider"
-  min   = 0
-  max   = 100
-  step  = 1
-  value = 50
-}
+```xml
+<slider id="volume" min="0" max="100" step="1" value="50" />
 ```
 
 | Property | Type | Default | Description |
@@ -987,11 +757,8 @@ component "volume" {
 
 An animated loading indicator.
 
-```hcl
-component "loading" {
-  type = "spinner"
-  size = "lg"
-}
+```xml
+<spinner id="loading" size="lg" />
 ```
 
 | Property | Type | Default | Description |
@@ -1002,12 +769,8 @@ component "loading" {
 
 A toggle control with a sliding visual style.
 
-```hcl
-component "dark_mode" {
-  type    = "switch"
-  label   = "Dark Mode"
-  checked = true
-}
+```xml
+<switch id="dark_mode" label="Dark Mode" checked="true" />
 ```
 
 | Property | Type | Default | Description |
@@ -1020,13 +783,8 @@ component "dark_mode" {
 
 A small colored label for categorization.
 
-```hcl
-component "status_tag" {
-  type    = "tag"
-  label   = "Active"
-  variant = "success"
-  outline = true
-}
+```xml
+<tag id="status_tag" label="Active" variant="success" outline="true" />
 ```
 
 | Property | Type | Default | Description |
@@ -1039,13 +797,8 @@ component "status_tag" {
 
 A button that toggles between on/off states, optionally with an icon.
 
-```hcl
-component "favorite" {
-  type    = "toggle"
-  label   = "Favorite"
-  icon    = "star"
-  checked = false
-}
+```xml
+<toggle id="favorite" label="Favorite" icon="star" checked="false" />
 ```
 
 | Property | Type | Default | Description |
@@ -1059,30 +812,12 @@ component "favorite" {
 
 A vertical navigation sidebar with collapsible icon+label items. When collapsed, only icons are shown. When expanded, icons and labels are shown side by side. Has a 1px border on left and right by default.
 
-```hcl
-component "sidebar" {
-  type      = "sidenav_bar"
-  collapsed = false
-  width     = 200
-
-  component "nav_home" {
-    type  = "sidenav_bar_item"
-    icon  = "globe"
-    label = "Home"
-  }
-
-  component "nav_inbox" {
-    type  = "sidenav_bar_item"
-    icon  = "inbox"
-    label = "Inbox"
-  }
-
-  component "nav_settings" {
-    type  = "sidenav_bar_item"
-    icon  = "settings"
-    label = "Settings"
-  }
-}
+```xml
+<sidenav_bar id="sidebar" collapsed="false" width="200">
+  <sidenav_bar_item id="nav_home" icon="globe" label="Home" />
+  <sidenav_bar_item id="nav_inbox" icon="inbox" label="Inbox" />
+  <sidenav_bar_item id="nav_settings" icon="settings" label="Settings" />
+</sidenav_bar>
 ```
 
 | Property | Type | Default | Description |
@@ -1098,12 +833,8 @@ Non-`sidenav_bar_item` children (such as buttons) are rendered at the bottom of 
 
 A navigation item for use inside a `sidenav_bar`. Displays an icon and a label. When the parent `sidenav_bar` is collapsed, only the icon is shown.
 
-```hcl
-component "nav_home" {
-  type  = "sidenav_bar_item"
-  icon  = "globe"
-  label = "Home"
-}
+```xml
+<sidenav_bar_item id="nav_home" icon="globe" label="Home" />
 ```
 
 | Property | Type | Default | Description |
@@ -1117,20 +848,11 @@ Items use the `theme.sidebar_foreground` text color and `theme.list_hover` backg
 
 Tabular data display with columns, sorting, and striped rows.
 
-```hcl
-component "users" {
-  type   = "table"
-  stripe = true
-  columns = [
-    { key = "name",  label = "Name",  width = 150 },
-    { key = "email", label = "Email", width = 220 },
-    { key = "role",  label = "Role",  width = 120 }
-  ]
-  data = [
-    { name = "Alice", email = "alice@example.com", role = "Admin" },
-    { name = "Bob",   email = "bob@example.com",   role = "Editor" }
-  ]
-}
+```xml
+<table id="users" stripe="true"
+  columns='[{"key": "name", "label": "Name", "width": 150}, {"key": "email", "label": "Email", "width": 220}, {"key": "role", "label": "Role", "width": 120}]'
+  data='[{"name": "Alice", "email": "alice@example.com", "role": "Admin"}, {"name": "Bob", "email": "bob@example.com", "role": "Editor"}]'
+/>
 ```
 
 | Property | Type | Default | Description |
@@ -1147,22 +869,8 @@ component "users" {
 
 Hierarchical tree view with expand/collapse and keyboard navigation.
 
-```hcl
-component "file_tree" {
-  type = "tree"
-  items = [
-    {
-      id       = "src"
-      label    = "src"
-      expanded = true
-      children = [
-        { id = "src/main.rs", label = "main.rs" },
-        { id = "src/lib.rs",  label = "lib.rs" }
-      ]
-    },
-    { id = "Cargo.toml", label = "Cargo.toml" }
-  ]
-}
+```xml
+<tree id="file_tree" items='[{"id": "src", "label": "src", "expanded": true, "children": [{"id": "src/main.rs", "label": "main.rs"}, {"id": "src/lib.rs", "label": "lib.rs"}]}, {"id": "Cargo.toml", "label": "Cargo.toml"}]' />
 ```
 
 | Property | Type | Default | Description |
@@ -1186,19 +894,10 @@ Nemo includes five chart types for data visualization. All charts read data from
 
 #### `line_chart`
 
-```hcl
-component "revenue" {
-  type    = "line_chart"
-  x_field = "month"
-  y_field = "revenue"
-  dot     = true
-  height  = 300
-  data = [
-    { month = "Jan", revenue = 186 },
-    { month = "Feb", revenue = 305 },
-    { month = "Mar", revenue = 237 }
-  ]
-}
+```xml
+<line_chart id="revenue" x-field="month" y-field="revenue" dot="true" height="300"
+  data='[{"month": "Jan", "revenue": 186}, {"month": "Feb", "revenue": 305}, {"month": "Mar", "revenue": 237}]'
+/>
 ```
 
 | Property | Type | Default | Description |
@@ -1212,18 +911,10 @@ component "revenue" {
 
 #### `bar_chart`
 
-```hcl
-component "visitors" {
-  type       = "bar_chart"
-  x_field    = "month"
-  y_field    = "visitors"
-  show_label = true
-  height     = 300
-  data = [
-    { month = "Jan", visitors = 275 },
-    { month = "Feb", visitors = 200 }
-  ]
-}
+```xml
+<bar_chart id="visitors" x-field="month" y-field="visitors" show-label="true" height="300"
+  data='[{"month": "Jan", "visitors": 275}, {"month": "Feb", "visitors": 200}]'
+/>
 ```
 
 | Property | Type | Default | Description |
@@ -1238,17 +929,10 @@ component "visitors" {
 
 Supports multiple series via `y_fields`.
 
-```hcl
-component "traffic" {
-  type     = "area_chart"
-  x_field  = "month"
-  y_fields = ["desktop", "mobile"]
-  height   = 300
-  data = [
-    { month = "Jan", desktop = 186, mobile = 80 },
-    { month = "Feb", desktop = 305, mobile = 200 }
-  ]
-}
+```xml
+<area_chart id="traffic" x-field="month" y-fields='["desktop", "mobile"]' height="300"
+  data='[{"month": "Jan", "desktop": 186, "mobile": 80}, {"month": "Feb", "desktop": 305, "mobile": 200}]'
+/>
 ```
 
 | Property | Type | Default | Description |
@@ -1263,17 +947,10 @@ component "traffic" {
 
 Set `inner_radius` to create a donut chart.
 
-```hcl
-component "browsers" {
-  type        = "pie_chart"
-  value_field = "amount"
-  height      = 300
-  data = [
-    { label = "Chrome",  amount = 275 },
-    { label = "Safari",  amount = 200 },
-    { label = "Firefox", amount = 187 }
-  ]
-}
+```xml
+<pie_chart id="browsers" value-field="amount" height="300"
+  data='[{"label": "Chrome", "amount": 275}, {"label": "Safari", "amount": 200}, {"label": "Firefox", "amount": 187}]'
+/>
 ```
 
 | Property | Type | Default | Description |
@@ -1288,20 +965,10 @@ component "browsers" {
 
 Financial OHLC (Open-High-Low-Close) chart.
 
-```hcl
-component "stocks" {
-  type        = "candlestick_chart"
-  x_field     = "date"
-  open_field  = "open"
-  high_field  = "high"
-  low_field   = "low"
-  close_field = "close"
-  height      = 300
-  data = [
-    { date = "Mon", open = 100.0, high = 110.0, low = 95.0,  close = 108.0 },
-    { date = "Tue", open = 108.0, high = 115.0, low = 102.0, close = 104.0 }
-  ]
-}
+```xml
+<candlestick_chart id="stocks" x-field="date" open-field="open" high-field="high" low-field="low" close-field="close" height="300"
+  data='[{"date": "Mon", "open": 100.0, "high": 110.0, "low": 95.0, "close": 108.0}, {"date": "Tue", "open": 108.0, "high": 115.0, "low": 102.0, "close": 104.0}]'
+/>
 ```
 
 | Property | Type | Default | Description |
@@ -1320,19 +987,12 @@ component "stocks" {
 
 Connect data sources to component properties so that components update automatically when data changes.
 
-### Binding Block
+### Binding Element
 
-```hcl
-component "display" {
-  type = "label"
-  text = "Waiting..."
-
-  binding {
-    source    = "data.ticker"
-    target    = "text"
-    transform = "tick"
-  }
-}
+```xml
+<label id="display" text="Waiting...">
+  <binding source="data.ticker" target="text" transform="tick" />
+</label>
 ```
 
 | Attribute | Type | Default | Description |
@@ -1344,23 +1004,16 @@ component "display" {
 
 ### Shorthand Binding
 
-Use the `bind_` prefix as a shortcut:
+Use the `bind-` prefix as a shortcut:
 
-```hcl
-component "raw_data" {
-  type         = "text"
-  content      = "No data yet"
-  bind_content = "data.api"
-}
+```xml
+<text id="raw_data" content="No data yet" bind-content="data.api" />
 ```
 
 This is equivalent to:
 
-```hcl
-binding {
-  source = "data.api"
-  target = "content"
-}
+```xml
+<binding source="data.api" target="content" />
 ```
 
 ### Transform
@@ -1376,17 +1029,10 @@ Nested paths are supported: `transform = "payload.temperature"`.
 
 A component can have multiple bindings:
 
-```hcl
-component "sensor" {
-  type = "label"
-  text = "Loading..."
-
-  binding {
-    source    = "data.sensors"
-    target    = "text"
-    transform = "payload"
-  }
-}
+```xml
+<label id="sensor" text="Loading...">
+  <binding source="data.sensors" target="text" transform="payload" />
+</label>
 ```
 
 ---
@@ -1395,43 +1041,39 @@ component "sensor" {
 
 Attach RHAI functions to component events using `on_<event>` attributes.
 
-```hcl
-component "btn" {
-  type     = "button"
-  label    = "Click"
-  on_click = "handle_click"
-}
+```xml
+<button id="btn" label="Click" on-click="handle_click" />
 ```
 
 The handler name references a function defined in a RHAI script. By default, Nemo looks for the function in the `handlers` script (loaded from `scripts/handlers.rhai`). To call a function in a different script, use the `script_id::function_name` format:
 
-```hcl
-on_click = "utils::format_data"
+```xml
+on-click="utils::format_data"
 ```
 
 ---
 
 ## Expression Language
 
-HCL attributes support expressions inside `${}` delimiters.
+XML attributes support expressions inside `${}` delimiters.
 
 ### Variable References
 
-```hcl
-min_height = "${var.button_height}"
-url        = "${var.api_base}/endpoint"
+```xml
+min-height="${var.button_height}"
+url="${var.api_base}/endpoint"
 ```
 
 ### Environment Variables
 
-```hcl
-path = "${env.HOME}/config"
+```xml
+path="${env.HOME}/config"
 ```
 
 ### String Interpolation
 
-```hcl
-title = "Hello ${var.user_name}!"
+```xml
+title="Hello ${var.user_name}!"
 ```
 
 ### Built-in Functions
@@ -1447,8 +1089,8 @@ title = "Hello ${var.user_name}!"
 
 ### Conditional Expressions
 
-```hcl
-text = "${var.enabled ? \"Active\" : \"Inactive\"}"
+```xml
+text="${var.enabled ? 'Active' : 'Inactive'}"
 ```
 
 ---
@@ -1473,7 +1115,7 @@ Reference colors from the active theme:
 
 Standard CSS hex colors:
 
-```hcl
-border_color = "#FF6600"
-border_color = "#FF660080"   # with alpha
+```xml
+border-color="#FF6600"
+border-color="#FF660080"   <!-- with alpha -->
 ```

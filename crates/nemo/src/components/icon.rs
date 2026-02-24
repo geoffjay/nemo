@@ -2,6 +2,19 @@ use gpui::*;
 use gpui_component::{Icon as GpuiIcon, IconName};
 use nemo_macros::NemoComponent;
 
+/// An icon display component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <icon id="status" name="check" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `name` | string | Icon name (e.g. `"check"`, `"bell"`, `"arrow-right"`) |
 #[derive(IntoElement, NemoComponent)]
 pub struct Icon {
     #[property(default = "info")]

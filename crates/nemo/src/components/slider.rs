@@ -2,6 +2,22 @@ use gpui::*;
 use gpui_component::slider::{Slider as GpuiSlider, SliderState};
 use nemo_layout::BuiltComponent;
 
+/// A range slider component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <slider id="volume" min="0" max="100" step="1" value="50" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `min` | float | Minimum slider value |
+/// | `max` | float | Maximum slider value |
+/// | `step` | float | Step increment between values |
+/// | `value` | float | Current slider value |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Slider {

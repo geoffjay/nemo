@@ -2,6 +2,22 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
+/// A modal dialog overlay component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <modal id="confirm" title="Are you sure?" open="true">
+///   <!-- modal body content -->
+/// </modal>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `title` | string | Title displayed in the modal header |
+/// | `open` | bool | Whether the modal is visible |
 #[derive(IntoElement, NemoComponent)]
 pub struct Modal {
     #[property(default = "")]

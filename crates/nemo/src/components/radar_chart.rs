@@ -10,6 +10,24 @@ use super::chart_utils::{
 
 /// A radar (spider / web) chart. Categories are arranged around a central
 /// point and one or more data series are drawn as filled polygons.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <radar-chart id="skills" max-value="100" categories='["Speed","Power","Defense"]'
+///   y-fields='["player1","player2"]' height="300">
+///   <data bind="skillData" />
+/// </radar-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `max-value` | float | Maximum value for the radar axes |
+/// | `categories` | JSON array | Array of category labels around the radar |
+/// | `y-fields` | JSON array | Array of data field names for each series |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct RadarChart {
     #[property]

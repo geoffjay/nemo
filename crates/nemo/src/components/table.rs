@@ -102,7 +102,23 @@ impl TableDelegate for NemoTableDelegate {
     }
 }
 
-/// Nemo Table wrapper component.
+/// A data table component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <table id="users" columns='[{"key":"name","label":"Name"},{"key":"age","label":"Age"}]'
+///   stripe="true" bordered="true" height="400" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `columns` | JSON array | Array of column definitions with `key` and `label` |
+/// | `stripe` | bool | Alternate row background colors |
+/// | `bordered` | bool | Show cell borders |
+/// | `height` | int | Fixed table height in pixels |
 #[derive(IntoElement)]
 pub struct Table {
     source: BuiltComponent,

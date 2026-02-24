@@ -5,6 +5,22 @@ use nemo_layout::BuiltComponent;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
+/// An expandable accordion component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <accordion id="faq" multiple="true" bordered="true"
+///   items='[{"title":"Question 1","content":"Answer 1"},{"title":"Question 2","content":"Answer 2"}]' />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `items` | JSON array | Array of accordion items with `title` and `content` |
+/// | `multiple` | bool | Allow multiple sections open simultaneously |
+/// | `bordered` | bool | Show borders around sections |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Accordion {

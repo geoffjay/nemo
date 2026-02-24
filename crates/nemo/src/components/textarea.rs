@@ -5,6 +5,24 @@ use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
 
+/// A multi-line text input component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <textarea id="notes" placeholder="Enter notes..." rows="5" default-value="" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `placeholder` | string | Placeholder text shown when empty |
+/// | `default-value` | string | Initial text content |
+/// | `rows` | int | Number of visible text rows |
+/// | `auto-grow-min` | int | Minimum rows for auto-grow |
+/// | `auto-grow-max` | int | Maximum rows for auto-grow |
+/// | `disabled` | bool | Whether the textarea is disabled |
 #[derive(IntoElement, NemoComponent)]
 #[allow(dead_code)]
 pub struct Textarea {

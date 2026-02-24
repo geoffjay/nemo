@@ -5,6 +5,22 @@ use gpui_component::{ActiveTheme, Sizable};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
+/// An expandable/collapsible section component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <collapsible id="details" title="More Details" open="false">
+///   <!-- collapsible content -->
+/// </collapsible>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `title` | string | Header text for the collapsible section |
+/// | `open` | bool | Whether the section is initially expanded |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Collapsible {

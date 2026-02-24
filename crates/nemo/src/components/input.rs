@@ -5,6 +5,22 @@ use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
 
+/// A single-line text input component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <input id="email" placeholder="Enter your email" value="" on-change="handleEmail" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `placeholder` | string | Placeholder text shown when empty |
+/// | `value` | string | Current input value |
+/// | `disabled` | bool | Whether the input is disabled |
+/// | `on-change` | string | Event handler invoked when value changes |
 #[derive(IntoElement, NemoComponent)]
 #[allow(dead_code)]
 pub struct Input {

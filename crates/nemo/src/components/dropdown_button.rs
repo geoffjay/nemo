@@ -6,6 +6,22 @@ use gpui_component::menu::PopupMenuItem;
 use nemo_config::Value;
 use nemo_layout::BuiltComponent;
 
+/// A button with a dropdown menu component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <dropdown-button id="actions" label="Actions" variant="primary"
+///   items='[{"label":"Edit"},{"label":"Delete"}]' />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label` | string | Button text label |
+/// | `variant` | string | Button style variant |
+/// | `items` | JSON array | Array of menu item objects with `label` fields |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct DropdownButton {

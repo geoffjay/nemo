@@ -1,0 +1,456 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           elementFormDefault="qualified">
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Root element
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="nemo">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="variable" />
+        <xs:element ref="app" />
+        <xs:element ref="script" />
+        <xs:element ref="data" />
+        <xs:element ref="template" />
+        <xs:element ref="templates" />
+        <xs:element ref="include" />
+        <xs:element ref="layout" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Common attribute groups
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:attributeGroup name="identifiable">
+    <xs:attribute name="id" type="xs:string" />
+    <xs:attribute name="name" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="layout-attrs">
+    <xs:attribute name="flex" type="xs:string" />
+    <xs:attribute name="width" type="xs:string" />
+    <xs:attribute name="height" type="xs:string" />
+    <xs:attribute name="min-width" type="xs:string" />
+    <xs:attribute name="min-height" type="xs:string" />
+    <xs:attribute name="margin" type="xs:string" />
+    <xs:attribute name="margin-x" type="xs:string" />
+    <xs:attribute name="margin-y" type="xs:string" />
+    <xs:attribute name="margin-left" type="xs:string" />
+    <xs:attribute name="margin-right" type="xs:string" />
+    <xs:attribute name="margin-top" type="xs:string" />
+    <xs:attribute name="margin-bottom" type="xs:string" />
+    <xs:attribute name="padding" type="xs:string" />
+    <xs:attribute name="padding-x" type="xs:string" />
+    <xs:attribute name="padding-y" type="xs:string" />
+    <xs:attribute name="padding-left" type="xs:string" />
+    <xs:attribute name="padding-right" type="xs:string" />
+    <xs:attribute name="padding-top" type="xs:string" />
+    <xs:attribute name="padding-bottom" type="xs:string" />
+    <xs:attribute name="spacing" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="border-attrs">
+    <xs:attribute name="border" type="xs:string" />
+    <xs:attribute name="border-x" type="xs:string" />
+    <xs:attribute name="border-y" type="xs:string" />
+    <xs:attribute name="border-left" type="xs:string" />
+    <xs:attribute name="border-right" type="xs:string" />
+    <xs:attribute name="border-top" type="xs:string" />
+    <xs:attribute name="border-bottom" type="xs:string" />
+    <xs:attribute name="border-color" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="decoration-attrs">
+    <xs:attribute name="shadow" type="xs:string" />
+    <xs:attribute name="rounded" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="event-attrs">
+    <xs:attribute name="on-click" type="xs:string" />
+    <xs:attribute name="on-change" type="xs:string" />
+    <xs:attribute name="on-input" type="xs:string" />
+    <xs:attribute name="on-submit" type="xs:string" />
+    <xs:attribute name="on-nav" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="binding-attrs">
+    <xs:attribute name="bind-text" type="xs:string" />
+    <xs:attribute name="bind-value" type="xs:string" />
+    <xs:attribute name="bind-content" type="xs:string" />
+    <xs:attribute name="bind-visible" type="xs:string" />
+    <xs:attribute name="bind-data" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="visibility-attrs">
+    <xs:attribute name="visible" type="xs:string" />
+    <xs:attribute name="disabled" type="xs:string" />
+  </xs:attributeGroup>
+
+  <xs:attributeGroup name="template-attrs">
+    <xs:attribute name="template" type="xs:string" />
+  </xs:attributeGroup>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Variable declaration
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="variable">
+    <xs:complexType>
+      <xs:attribute name="name" type="xs:string" use="required" />
+      <xs:attribute name="type" type="xs:string" />
+      <xs:attribute name="default" type="xs:string" />
+      <xs:attribute name="description" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Application configuration
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="app">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="window" />
+        <xs:element ref="theme" />
+      </xs:choice>
+      <xs:attribute name="title" type="xs:string" />
+      <xs:attribute name="plugins" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="window">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="header-bar" />
+        <xs:element ref="footer-bar" />
+      </xs:choice>
+      <xs:attribute name="title" type="xs:string" />
+      <xs:attribute name="width" type="xs:integer" />
+      <xs:attribute name="height" type="xs:integer" />
+      <xs:attribute name="min-width" type="xs:integer" />
+      <xs:attribute name="min-height" type="xs:integer" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="header-bar">
+    <xs:complexType>
+      <xs:attribute name="github-url" type="xs:string" />
+      <xs:attribute name="theme-toggle" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="footer-bar">
+    <xs:complexType>
+      <xs:attribute name="enabled" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="theme">
+    <xs:complexType>
+      <xs:attribute name="name" type="xs:string" />
+      <xs:attribute name="mode" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Scripts
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="script">
+    <xs:complexType mixed="true">
+      <xs:attribute name="src" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Data sources and sinks
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="data">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="source" />
+        <xs:element ref="sink" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="source">
+    <xs:complexType>
+      <xs:attribute name="name" type="xs:string" use="required" />
+      <xs:attribute name="type" type="xs:string" use="required" />
+      <xs:attribute name="url" type="xs:string" />
+      <xs:attribute name="host" type="xs:string" />
+      <xs:attribute name="port" type="xs:string" />
+      <xs:attribute name="interval" type="xs:string" />
+      <xs:attribute name="refresh" type="xs:string" />
+      <xs:attribute name="topics" type="xs:string" />
+      <xs:attribute name="channels" type="xs:string" />
+      <xs:attribute name="subjects" type="xs:string" />
+      <xs:attribute name="client-id" type="xs:string" />
+      <xs:anyAttribute processContents="lax" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="sink">
+    <xs:complexType>
+      <xs:attribute name="name" type="xs:string" use="required" />
+      <xs:attribute name="type" type="xs:string" use="required" />
+      <xs:attribute name="host" type="xs:string" />
+      <xs:attribute name="port" type="xs:string" />
+      <xs:attribute name="topic" type="xs:string" />
+      <xs:attribute name="channel" type="xs:string" />
+      <xs:attribute name="subject" type="xs:string" />
+      <xs:attribute name="url" type="xs:string" />
+      <xs:anyAttribute processContents="lax" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Templates
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="templates">
+    <xs:complexType>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element ref="template" />
+      </xs:choice>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="template">
+    <xs:complexType>
+      <xs:group ref="component-children" />
+      <xs:attribute name="name" type="xs:string" use="required" />
+      <xs:anyAttribute processContents="lax" />
+    </xs:complexType>
+  </xs:element>
+
+  <xs:element name="slot">
+    <xs:complexType />
+  </xs:element>
+
+  <xs:element name="vars">
+    <xs:complexType>
+      <xs:anyAttribute processContents="lax" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Include (multi-file composition)
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="include">
+    <xs:complexType>
+      <xs:attribute name="src" type="xs:string" use="required" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Layout
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="layout">
+    <xs:complexType>
+      <xs:group ref="component-children" />
+      <xs:attribute name="type" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Binding element
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="binding">
+    <xs:complexType>
+      <xs:attribute name="source" type="xs:string" use="required" />
+      <xs:attribute name="target" type="xs:string" use="required" />
+      <xs:attribute name="mode" type="xs:string" />
+      <xs:attribute name="transform" type="xs:string" />
+    </xs:complexType>
+  </xs:element>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Component children group (reused by layout, template, and all
+       container components)
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:group name="component-children">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <!-- Containers -->
+        <xs:element ref="stack" />
+        <xs:element ref="panel" />
+        <xs:element ref="tabs" />
+        <xs:element ref="modal" />
+        <xs:element ref="tooltip" />
+        <xs:element ref="badge" />
+        <xs:element ref="collapsible" />
+
+        <!-- Basic components -->
+        <xs:element ref="label" />
+        <xs:element ref="button" />
+        <xs:element ref="text" />
+        <xs:element ref="icon" />
+        <xs:element ref="image" />
+        <xs:element ref="spinner" />
+        <xs:element ref="progress" />
+        <xs:element ref="tag" />
+        <xs:element ref="avatar" />
+        <xs:element ref="alert" />
+        <xs:element ref="notification" />
+
+        <!-- Input components -->
+        <xs:element ref="input" />
+        <xs:element ref="textarea" />
+        <xs:element ref="code-editor" />
+        <xs:element ref="text-editor" />
+        <xs:element ref="select" />
+        <xs:element ref="checkbox" />
+        <xs:element ref="radio" />
+        <xs:element ref="slider" />
+        <xs:element ref="switch" />
+        <xs:element ref="toggle" />
+        <xs:element ref="dropdown-button" />
+
+        <!-- Data components -->
+        <xs:element ref="list" />
+        <xs:element ref="table" />
+        <xs:element ref="tree" />
+        <xs:element ref="accordion" />
+
+        <!-- Chart components -->
+        <xs:element ref="line-chart" />
+        <xs:element ref="bar-chart" />
+        <xs:element ref="area-chart" />
+        <xs:element ref="pie-chart" />
+        <xs:element ref="column-chart" />
+        <xs:element ref="stacked-column-chart" />
+        <xs:element ref="clustered-column-chart" />
+        <xs:element ref="stacked-bar-chart" />
+        <xs:element ref="clustered-bar-chart" />
+        <xs:element ref="scatter-chart" />
+        <xs:element ref="bubble-chart" />
+        <xs:element ref="heatmap-chart" />
+        <xs:element ref="radar-chart" />
+        <xs:element ref="pyramid-chart" />
+        <xs:element ref="funnel-chart" />
+        <xs:element ref="candlestick-chart" />
+        <xs:element ref="realtime-chart" />
+
+        <!-- Navigation -->
+        <xs:element ref="sidenav-bar" />
+        <xs:element ref="sidenav-bar-item" />
+
+        <!-- Template support -->
+        <xs:element ref="binding" />
+        <xs:element ref="slot" />
+        <xs:element ref="vars" />
+      </xs:choice>
+    </xs:sequence>
+  </xs:group>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Component type: shared base for all UI components
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:complexType name="componentType">
+    <xs:group ref="component-children" />
+    <xs:attributeGroup ref="identifiable" />
+    <xs:attributeGroup ref="layout-attrs" />
+    <xs:attributeGroup ref="border-attrs" />
+    <xs:attributeGroup ref="decoration-attrs" />
+    <xs:attributeGroup ref="event-attrs" />
+    <xs:attributeGroup ref="binding-attrs" />
+    <xs:attributeGroup ref="visibility-attrs" />
+    <xs:attributeGroup ref="template-attrs" />
+    <xs:anyAttribute processContents="lax" />
+  </xs:complexType>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Container components
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="stack" type="componentType" />
+  <xs:element name="panel" type="componentType" />
+  <xs:element name="tabs" type="componentType" />
+  <xs:element name="modal" type="componentType" />
+  <xs:element name="tooltip" type="componentType" />
+  <xs:element name="badge" type="componentType" />
+  <xs:element name="collapsible" type="componentType" />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Basic components
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="label" type="componentType" />
+  <xs:element name="button" type="componentType" />
+  <xs:element name="text" type="componentType" />
+  <xs:element name="icon" type="componentType" />
+  <xs:element name="image" type="componentType" />
+  <xs:element name="spinner" type="componentType" />
+  <xs:element name="progress" type="componentType" />
+  <xs:element name="tag" type="componentType" />
+  <xs:element name="avatar" type="componentType" />
+  <xs:element name="alert" type="componentType" />
+  <xs:element name="notification" type="componentType" />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Input components
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="input" type="componentType" />
+  <xs:element name="textarea" type="componentType" />
+  <xs:element name="code-editor" type="componentType" />
+  <xs:element name="text-editor" type="componentType" />
+  <xs:element name="select" type="componentType" />
+  <xs:element name="checkbox" type="componentType" />
+  <xs:element name="radio" type="componentType" />
+  <xs:element name="slider" type="componentType" />
+  <xs:element name="switch" type="componentType" />
+  <xs:element name="toggle" type="componentType" />
+  <xs:element name="dropdown-button" type="componentType" />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Data components
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="list" type="componentType" />
+  <xs:element name="table" type="componentType" />
+  <xs:element name="tree" type="componentType" />
+  <xs:element name="accordion" type="componentType" />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Chart components
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="line-chart" type="componentType" />
+  <xs:element name="bar-chart" type="componentType" />
+  <xs:element name="area-chart" type="componentType" />
+  <xs:element name="pie-chart" type="componentType" />
+  <xs:element name="column-chart" type="componentType" />
+  <xs:element name="stacked-column-chart" type="componentType" />
+  <xs:element name="clustered-column-chart" type="componentType" />
+  <xs:element name="stacked-bar-chart" type="componentType" />
+  <xs:element name="clustered-bar-chart" type="componentType" />
+  <xs:element name="scatter-chart" type="componentType" />
+  <xs:element name="bubble-chart" type="componentType" />
+  <xs:element name="heatmap-chart" type="componentType" />
+  <xs:element name="radar-chart" type="componentType" />
+  <xs:element name="pyramid-chart" type="componentType" />
+  <xs:element name="funnel-chart" type="componentType" />
+  <xs:element name="candlestick-chart" type="componentType" />
+  <xs:element name="realtime-chart" type="componentType" />
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Navigation components
+       ═══════════════════════════════════════════════════════════════ -->
+
+  <xs:element name="sidenav-bar" type="componentType" />
+  <xs:element name="sidenav-bar-item" type="componentType" />
+
+</xs:schema>

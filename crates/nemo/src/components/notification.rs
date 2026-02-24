@@ -2,6 +2,20 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
+/// A toast notification component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <notification id="saved" message="Changes saved successfully." kind="success" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `message` | string | Notification text |
+/// | `kind` | string | Notification type: `"info"`, `"success"`, `"warning"`, or `"error"` |
 #[derive(IntoElement, NemoComponent)]
 pub struct Notification {
     #[property(default = "")]

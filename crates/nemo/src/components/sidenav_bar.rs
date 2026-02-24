@@ -11,6 +11,24 @@ use crate::runtime::NemoRuntime;
 /// When `collapsed = true`, only icons are shown. When `collapsed = false`,
 /// icons and labels are shown side by side. Has a 1px border on left and right
 /// by default.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <sidenav-bar id="nav" collapsed="false" border-right="true" width="200">
+///   <sidenav-bar-item id="home" icon="home" label="Home" on-click="goHome" />
+///   <sidenav-bar-item id="settings" icon="settings" label="Settings" on-click="goSettings" />
+/// </sidenav-bar>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `collapsed` | bool | Show only icons when true |
+/// | `border-left` | bool | Show a left border |
+/// | `border-right` | bool | Show a right border |
+/// | `width` | int | Sidebar width in pixels |
 #[derive(IntoElement)]
 pub struct SidenavBar {
     source: BuiltComponent,

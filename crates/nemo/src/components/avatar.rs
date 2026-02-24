@@ -2,6 +2,19 @@ use gpui::*;
 use gpui_component::avatar::Avatar as GpuiAvatar;
 use nemo_layout::BuiltComponent;
 
+/// A user avatar component displaying initials or an image.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <avatar id="user" name="John Doe" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `name` | string | User name used to generate initials |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Avatar {

@@ -6,9 +6,25 @@ use super::chart_utils::{
     chart_color, empty_chart_placeholder, extract_data_array, get_f64_field, get_string_field,
 };
 
-/// A funnel chart — successive trapezoid segments narrowing from top to
+/// A funnel chart -- successive trapezoid segments narrowing from top to
 /// bottom, representing stages in a process. Data items should be provided
 /// in funnel-stage order (widest first).
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <funnel-chart id="pipeline" label-field="stage" value-field="count" height="400">
+///   <data bind="pipelineData" />
+/// </funnel-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label-field` | string | Data field for stage labels |
+/// | `value-field` | string | Data field for stage values |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct FunnelChart {
     #[property(default = "")]

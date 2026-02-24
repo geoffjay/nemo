@@ -2,6 +2,21 @@ use gpui::*;
 use gpui_component::tag::Tag as GpuiTag;
 use nemo_layout::BuiltComponent;
 
+/// A colored tag/chip component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <tag id="status" label="Active" variant="success" outline="true" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label` | string | Text displayed in the tag |
+/// | `variant` | string | Color variant for the tag |
+/// | `outline` | bool | Use outlined style instead of filled |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Tag {

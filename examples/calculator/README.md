@@ -1,13 +1,13 @@
 # Calculator Example
 
-A functional calculator built entirely with HCL configuration and RHAI scripting.
+A functional calculator built entirely with XML configuration and RHAI scripting.
 
 ![Screenshot](./screenshot.png)
 
 ## Run
 
 ```sh
-cargo run -- --app-config examples/calculator/app.hcl
+cargo run -- --app-config examples/calculator/app.xml
 ```
 
 ## What It Shows

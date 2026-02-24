@@ -233,10 +233,10 @@ pub trait PluginRegistrar {
     /// using a declarative layout (e.g. `stack`, `label`, `switch`, `input`).
     fn register_settings_page(&mut self, name: &str, page: PluginValue);
 
-    /// Registers a UI template that can be referenced in HCL layout configs.
+    /// Registers a UI template that can be referenced in XML layout configs.
     ///
-    /// Templates registered by plugins are merged with HCL-defined templates
-    /// during layout expansion. HCL-defined templates take precedence if there
+    /// Templates registered by plugins are merged with XML-defined templates
+    /// during layout expansion. XML-defined templates take precedence if there
     /// is a name collision.
     fn register_template(&mut self, name: &str, template: PluginValue);
 

@@ -680,7 +680,7 @@ impl NemoRuntime {
         any_updates
     }
 
-    /// Parses sink configuration from HCL and stores sink configs.
+    /// Parses sink configuration and stores sink configs.
     fn setup_data_sinks(&self) -> Result<()> {
         let data_config = {
             let config = self.config.read().expect("config lock poisoned");
@@ -835,7 +835,7 @@ fn get_nested_value<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
 //
 // ## Overview
 //
-// Templates allow reusable component definitions in HCL. A template is
+// Templates allow reusable component definitions in XML. A template is
 // defined once, then instantiated by components that set `template = "name"`.
 //
 // ## Expansion Pipeline
@@ -844,7 +844,7 @@ fn get_nested_value<'a>(value: &'a Value, path: &str) -> Option<&'a Value> {
 //    blocks from the parsed config into a `HashMap<String, Value>`.
 //
 // 2. Plugin templates — Templates registered by native plugins via
-//    `PluginRegistrar::register_template()` are merged in. HCL-defined
+//    `PluginRegistrar::register_template()` are merged in. XML-defined
 //    templates override plugin templates on name collision.
 //
 // 3. `expand_children()` — Recursively walks all `component` children in the
@@ -898,7 +898,7 @@ type TemplateMap = HashMap<String, Value>;
 
 /// Extracts template definitions from the parsed config.
 ///
-/// HCL `templates { template "name" { ... } }` parses as:
+/// XML `<templates><template name="name">...</template></templates>` parses as:
 /// `config["templates"]["template"]["name"] = { ... }`
 fn extract_templates(config: &Value) -> TemplateMap {
     let mut map = TemplateMap::new();
@@ -1416,13 +1416,13 @@ fn expand_children(
 /// Parses layout configuration from a Value.
 ///
 /// `extra_templates` are templates registered by native plugins, merged
-/// with any templates defined in the HCL config. Plugin templates are
-/// added first so HCL-defined templates can override them.
+/// with any templates defined in the XML config. Plugin templates are
+/// added first so XML-defined templates can override them.
 fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<LayoutConfig> {
     let layout = config.get("layout")?;
     let mut templates = extract_templates(config);
 
-    // Merge plugin-registered templates (HCL templates take precedence)
+    // Merge plugin-registered templates (XML templates take precedence)
     for (name, value) in extra_templates {
         templates
             .entry(name.clone())
@@ -1471,7 +1471,7 @@ fn parse_layout_node_as_root(layout: &Value, layout_type: &LayoutType) -> Option
 
     // Parse component children from the layout object
     if let Some(layout_obj) = layout.as_object() {
-        // In HCL, labeled blocks like `component "header" { ... }` are parsed as:
+        // Components are parsed as:
         // layout.component = { "header": {...}, "content": {...} }
         // So we look for the "component" key which is an object of named components
         if let Some(components) = layout_obj.get("component") {
@@ -1519,8 +1519,8 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
         match key.as_str() {
             "type" | "id" => continue,
             "component" => {
-                // Nested components - HCL labeled blocks are parsed as objects
-                // e.g., component "button" { ... } becomes component: { button: {...} }
+                // Nested components - parsed as objects
+                // e.g., component: { button: {...} }
                 if let Some(comp_obj) = val.as_object() {
                     for (child_id, child_config) in comp_obj {
                         if let Some(child) =
@@ -2209,21 +2209,21 @@ mod runtime_tests {
 
     #[test]
     fn test_runtime_new_nonexistent_config() {
-        let rt = NemoRuntime::new(Path::new("/nonexistent/config.hcl")).unwrap();
+        let rt = NemoRuntime::new(Path::new("/nonexistent/config.xml")).unwrap();
         // Should succeed — config file is checked lazily in load_config
         assert!(rt.get_config("anything").is_none());
     }
 
     #[test]
     fn test_runtime_load_config_missing_file() {
-        let rt = NemoRuntime::new(Path::new("/does/not/exist.hcl")).unwrap();
+        let rt = NemoRuntime::new(Path::new("/does/not/exist.xml")).unwrap();
         // load_config should succeed gracefully when file doesn't exist
         assert!(rt.load_config().is_ok());
     }
 
     #[test]
     fn test_runtime_get_config_empty() {
-        let rt = NemoRuntime::new(Path::new("/tmp/empty.hcl")).unwrap();
+        let rt = NemoRuntime::new(Path::new("/tmp/empty.xml")).unwrap();
         assert!(rt.get_config("app.title").is_none());
     }
 
@@ -2233,7 +2233,7 @@ mod runtime_tests {
     fn test_call_handler_with_script_prefix() {
         // Just verify the parsing logic — handler execution will warn
         // about missing scripts, which is fine for this test
-        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
         rt.load_config().unwrap();
         rt.initialize().unwrap();
         // Should not panic; the handler will log a warning
@@ -2242,7 +2242,7 @@ mod runtime_tests {
 
     #[test]
     fn test_call_handler_without_script_prefix() {
-        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
         rt.load_config().unwrap();
         rt.initialize().unwrap();
         // Should default to "handlers" script
@@ -2253,14 +2253,14 @@ mod runtime_tests {
 
     #[test]
     fn test_apply_pending_data_updates_when_clean() {
-        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
         // data_dirty starts false, should return false
         assert!(!rt.apply_pending_data_updates());
     }
 
     #[test]
     fn test_apply_pending_data_updates_when_dirty_no_sources() {
-        let rt = NemoRuntime::new(Path::new("/tmp/test.hcl")).unwrap();
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
         rt.data_dirty.store(true, Ordering::Release);
         // Dirty but no sources registered — still returns false (no updates to apply)
         assert!(!rt.apply_pending_data_updates());
@@ -2527,44 +2527,59 @@ mod template_tests_continued {
     #[test]
     fn test_template_child_ids_scoped() {
         // Two pages using the same template should get unique inner child IDs
-        let schema_registry = std::sync::Arc::new(SchemaRegistry::new());
-        let loader = ConfigurationLoader::new(schema_registry);
-
-        let hcl = r#"
-templates {
-  template "page" {
-    type    = "panel"
-    visible = false
-
-    component "inner" {
-      type = "stack"
-      slot = true
-    }
-  }
-}
-
-layout {
-  type = "stack"
-
-  component "page_a" {
-    template = "page"
-
-    component "child_a" {
-      type = "label"
-    }
-  }
-
-  component "page_b" {
-    template = "page"
-
-    component "child_b" {
-      type = "label"
-    }
-  }
-}
-"#;
-
-        let config = loader.load_string(hcl, "test").expect("HCL parse failed");
+        let config = obj(vec![
+            (
+                "templates",
+                obj(vec![(
+                    "template",
+                    obj(vec![(
+                        "page",
+                        obj(vec![
+                            ("type", s("panel")),
+                            ("visible", Value::Bool(false)),
+                            (
+                                "component",
+                                obj(vec![(
+                                    "inner",
+                                    obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
+                                )]),
+                            ),
+                        ]),
+                    )]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            (
+                                "page_a",
+                                obj(vec![
+                                    ("template", s("page")),
+                                    (
+                                        "component",
+                                        obj(vec![("child_a", obj(vec![("type", s("label"))]))]),
+                                    ),
+                                ]),
+                            ),
+                            (
+                                "page_b",
+                                obj(vec![
+                                    ("template", s("page")),
+                                    (
+                                        "component",
+                                        obj(vec![("child_b", obj(vec![("type", s("label"))]))]),
+                                    ),
+                                ]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
         let layout_config =
             parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
         let root = &layout_config.root;
@@ -2585,28 +2600,31 @@ layout {
     #[test]
     fn test_template_handler_preserved() {
         // on_click from template should survive expansion
-        let schema_registry = std::sync::Arc::new(SchemaRegistry::new());
-        let loader = ConfigurationLoader::new(schema_registry);
-
-        let hcl = r#"
-templates {
-  template "nav" {
-    type     = "button"
-    on_click = "on_nav"
-  }
-}
-
-layout {
-  type = "stack"
-
-  component "nav_btn" {
-    template = "nav"
-    label    = "Test"
-  }
-}
-"#;
-
-        let config = loader.load_string(hcl, "test").expect("HCL parse failed");
+        let config = obj(vec![
+            (
+                "templates",
+                obj(vec![(
+                    "template",
+                    obj(vec![(
+                        "nav",
+                        obj(vec![("type", s("button")), ("on_click", s("on_nav"))]),
+                    )]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![(
+                            "nav_btn",
+                            obj(vec![("template", s("nav")), ("label", s("Test"))]),
+                        )]),
+                    ),
+                ]),
+            ),
+        ]);
         let layout_config =
             parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
 
@@ -2619,52 +2637,76 @@ layout {
 
     #[test]
     fn test_template_integration() {
-        // Parse real HCL through the config loader
-        let schema_registry = std::sync::Arc::new(SchemaRegistry::new());
-        let loader = ConfigurationLoader::new(schema_registry);
-
-        let hcl = r#"
-templates {
-  template "nav" {
-    type         = "button"
-    variant      = "ghost"
-    size         = "sm"
-    on_click     = "on_nav"
-  }
-
-  template "page" {
-    type    = "panel"
-    visible = false
-
-    component "inner" {
-      type      = "stack"
-      direction = "vertical"
-      slot      = true
-    }
-  }
-}
-
-layout {
-  type = "stack"
-
-  component "nav_btn" {
-    template = "nav"
-    label    = "Button"
-  }
-
-  component "page_btn" {
-    template = "page"
-    visible  = true
-
-    component "title" {
-      type = "label"
-      text = "Button Page"
-    }
-  }
-}
-"#;
-
-        let config = loader.load_string(hcl, "test").expect("HCL parse failed");
+        // Build config Value directly to test template expansion
+        let config = obj(vec![
+            (
+                "templates",
+                obj(vec![(
+                    "template",
+                    obj(vec![
+                        (
+                            "nav",
+                            obj(vec![
+                                ("type", s("button")),
+                                ("variant", s("ghost")),
+                                ("size", s("sm")),
+                                ("on_click", s("on_nav")),
+                            ]),
+                        ),
+                        (
+                            "page",
+                            obj(vec![
+                                ("type", s("panel")),
+                                ("visible", Value::Bool(false)),
+                                (
+                                    "component",
+                                    obj(vec![(
+                                        "inner",
+                                        obj(vec![
+                                            ("type", s("stack")),
+                                            ("direction", s("vertical")),
+                                            ("slot", Value::Bool(true)),
+                                        ]),
+                                    )]),
+                                ),
+                            ]),
+                        ),
+                    ]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            (
+                                "nav_btn",
+                                obj(vec![("template", s("nav")), ("label", s("Button"))]),
+                            ),
+                            (
+                                "page_btn",
+                                obj(vec![
+                                    ("template", s("page")),
+                                    ("visible", Value::Bool(true)),
+                                    (
+                                        "component",
+                                        obj(vec![(
+                                            "title",
+                                            obj(vec![
+                                                ("type", s("label")),
+                                                ("text", s("Button Page")),
+                                            ]),
+                                        )]),
+                                    ),
+                                ]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
         let layout_config =
             parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
 
@@ -3331,20 +3373,20 @@ mod error_path_tests {
     fn test_runtime_load_malformed_config() {
         use std::io::Write;
         let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("bad.hcl");
+        let config_path = dir.path().join("bad.xml");
         {
             let mut f = std::fs::File::create(&config_path).unwrap();
-            writeln!(f, "this is {{{{ not valid }} hcl {{{{{{{{").unwrap();
+            writeln!(f, "<nemo><unclosed>not valid xml").unwrap();
         }
         let rt = NemoRuntime::new(&config_path).unwrap();
         let result = rt.load_config();
-        assert!(result.is_err(), "Malformed HCL should produce an error");
+        assert!(result.is_err(), "Malformed XML should produce an error");
     }
 
     #[test]
     fn test_runtime_load_empty_config_file() {
         let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("empty.hcl");
+        let config_path = dir.path().join("empty.xml");
         {
             std::fs::File::create(&config_path).unwrap();
         }

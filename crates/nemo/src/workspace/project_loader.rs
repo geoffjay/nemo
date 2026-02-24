@@ -9,7 +9,7 @@ use tracing::info;
 use crate::config::recent::RecentProjects;
 use crate::config::NemoConfig;
 
-/// Action emitted when a project is selected (carries the app.hcl path).
+/// Action emitted when a project is selected (carries the config file path).
 #[derive(Clone, Debug)]
 pub struct ProjectSelected(pub PathBuf);
 
@@ -37,7 +37,7 @@ impl ProjectLoaderView {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Select an app.hcl configuration file".into()),
+            prompt: Some("Select an app.xml configuration file".into()),
         });
 
         cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
@@ -99,15 +99,15 @@ impl ProjectLoaderView {
 
                         match output {
                             Ok(result) if result.status.success() => {
-                                let app_hcl = target.join("app.hcl");
-                                if app_hcl.exists() {
+                                let app_xml = target.join("app.xml");
+                                if app_xml.exists() {
                                     let _ = entity.update(cx, |_view, cx| {
-                                        cx.emit(ProjectSelected(app_hcl));
+                                        cx.emit(ProjectSelected(app_xml));
                                     });
                                 } else {
                                     let _ = entity.update(cx, |view, cx| {
                                         view.clone_error = Some(format!(
-                                            "Cloned successfully but no app.hcl found in {}",
+                                            "Cloned successfully but no app.xml found in {}",
                                             target.display()
                                         ));
                                         cx.notify();

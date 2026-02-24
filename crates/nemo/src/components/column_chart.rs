@@ -9,6 +9,25 @@ use super::chart_utils::{
 
 /// A column chart (vertical bars). Functionally identical to BarChart but
 /// provided as a distinct component name for chart-taxonomy clarity.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <column-chart id="revenue" x-field="month" y-field="revenue" show-label="true"
+///   tick-margin="20" height="300">
+///   <data bind="revenueData" />
+/// </column-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis categories |
+/// | `y-field` | string | Data field for the y-axis values |
+/// | `show-label` | bool | Display value labels on columns |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct ColumnChart {
     #[property(default = "")]

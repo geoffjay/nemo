@@ -6,6 +6,22 @@ use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
 
+/// A checkbox toggle component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <checkbox id="agree" label="I agree to the terms" checked="false" on-change="handleCheck" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label` | string | Text label displayed next to the checkbox |
+/// | `checked` | bool | Whether the checkbox is checked |
+/// | `disabled` | bool | Whether the checkbox is disabled |
+/// | `on-change` | string | Event handler invoked when toggled |
 #[derive(IntoElement, NemoComponent)]
 pub struct Checkbox {
     #[source]

@@ -22,7 +22,7 @@
 
 ![Nemo][logo]
 
-A configuration-driven desktop application framework. Define UI, data sources, and event handlers in HCL -- Nemo renders a native, GPU-accelerated application.
+A configuration-driven desktop application framework. Define UI, data sources, and event handlers in XML -- Nemo renders a native, GPU-accelerated application.
 
 Built on [GPUI](https://gpui.rs).
 
@@ -30,35 +30,27 @@ Built on [GPUI](https://gpui.rs).
 
 ```bash
 cargo build --release
-nemo --app-config app.hcl
+nemo --app-config app.xml
 ```
 
 A minimal application:
 
-```hcl
-app {
-  window {
-    title = "Hello Nemo"
-  }
-  theme {
-    name = "kanagawa"
-    mode = "dark"
-  }
-}
+```xml
+<nemo>
+  <app title="Hello Nemo">
+    <window title="Hello Nemo" />
+    <theme name="kanagawa" mode="dark" />
+  </app>
 
-layout {
-  type = "stack"
-
-  component "greeting" {
-    type = "label"
-    text = "Hello, World!"
-  }
-}
+  <layout type="stack">
+    <label id="greeting" text="Hello, World!" />
+  </layout>
+</nemo>
 ```
 
 ## Features
 
-- **Declarative UI** -- Component trees defined in HCL configuration
+- **Declarative UI** -- Component trees defined in XML configuration
 - **Live data binding** -- Connect timer, HTTP, WebSocket, MQTT, Redis, and NATS sources to components
 - **Scripted logic** -- Event handlers written in RHAI
 - **Theming** -- Built-in themes (Kanagawa, Catppuccin, Tokyo Night, Gruvbox, Nord) with dark/light modes
@@ -67,10 +59,10 @@ layout {
 ## Examples
 
 ```bash
-nemo --app-config examples/basic/app.hcl
-nemo --app-config examples/calculator/app.hcl
-nemo --app-config examples/components/app.hcl
-nemo --app-config examples/data-binding/app.hcl
+nemo --app-config examples/basic/app.xml
+nemo --app-config examples/calculator/app.xml
+nemo --app-config examples/components/app.xml
+nemo --app-config examples/data-binding/app.xml
 ```
 
 ## Documentation

@@ -2,6 +2,20 @@ use gpui::*;
 use gpui_component::label::Label as GpuiLabel;
 use nemo_macros::NemoComponent;
 
+/// A text display component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <label id="title" text="Hello World" size="lg" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `text` | string | The text content to display |
+/// | `size` | string | Text size: `"sm"`, `"md"` (default), `"lg"`, or `"xl"` |
 #[derive(IntoElement, NemoComponent)]
 pub struct Label {
     #[property(default = "")]

@@ -1,0 +1,62 @@
+<nemo>
+  <variable name="button_height" type="int" default="${var.button_height}" />
+
+  <app title="Nemo Calculator">
+    <window title="Calculator" width="320" height="480" min-width="280" min-height="400">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/calculator"
+                  theme-toggle="true" />
+    </window>
+    <theme name="kanagawa" mode="dark" />
+  </app>
+
+  <script src="./scripts" />
+
+  <layout type="stack">
+    <!-- Display showing current input and result -->
+    <panel id="display" margin="8">
+      <label id="display_result" text="0" margin="16" />
+    </panel>
+
+    <!-- Button rows for calculator -->
+    <stack id="buttons" direction="vertical" spacing="6" padding="8" flex="1">
+      <!-- Row 1: Clear, +/-, %, / -->
+      <stack id="row1" direction="horizontal" spacing="6" flex="1">
+        <button id="btn_clear" label="C" flex="1" min-height="${var.button_height}" on-click="on_clear" />
+        <button id="btn_negate" label="+/-" flex="1" min-height="${var.button_height}" on-click="on_negate" />
+        <button id="btn_percent" label="%" flex="1" min-height="${var.button_height}" on-click="on_percent" />
+        <button id="btn_divide" label="/" flex="1" min-height="${var.button_height}" on-click="on_operator" />
+      </stack>
+
+      <!-- Row 2: 7, 8, 9, * -->
+      <stack id="row2" direction="horizontal" spacing="6" flex="1">
+        <button id="btn_7" label="7" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_8" label="8" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_9" label="9" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_multiply" label="*" flex="1" min-height="${var.button_height}" on-click="on_operator" />
+      </stack>
+
+      <!-- Row 3: 4, 5, 6, - -->
+      <stack id="row3" direction="horizontal" spacing="6" flex="1">
+        <button id="btn_4" label="4" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_5" label="5" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_6" label="6" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_subtract" label="-" flex="1" min-height="${var.button_height}" on-click="on_operator" />
+      </stack>
+
+      <!-- Row 4: 1, 2, 3, + -->
+      <stack id="row4" direction="horizontal" spacing="6" flex="1">
+        <button id="btn_1" label="1" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_2" label="2" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_3" label="3" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_add" label="+" flex="1" min-height="${var.button_height}" on-click="on_operator" />
+      </stack>
+
+      <!-- Row 5: 0, ., = -->
+      <stack id="row5" direction="horizontal" spacing="6" flex="1">
+        <button id="btn_0" label="0" flex="1" min-height="${var.button_height}" on-click="on_digit" />
+        <button id="btn_decimal" label="." flex="1" min-height="${var.button_height}" on-click="on_decimal" />
+        <button id="btn_equals" label="=" flex="1" min-height="${var.button_height}" on-click="on_equals" />
+      </stack>
+    </stack>
+  </layout>
+</nemo>

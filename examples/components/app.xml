@@ -1,0 +1,851 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Component Gallery -->
+<!-- Interactive showcase of all Nemo components with sidebar navigation. -->
+<nemo>
+  <app title="Nemo Component Gallery" plugins='["demo-settings"]'>
+    <window title="Component Gallery" width="1200" height="800">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/components" theme-toggle="true" />
+      <footer-bar enabled="false" />
+    </window>
+    <theme name="kanagawa" mode="dark" />
+  </app>
+
+  <script src="./scripts" />
+
+  <!-- Templates -->
+  <templates>
+    <template name="nav_item">
+      <button
+        variant="ghost"
+        size="sm"
+        text-color="theme.muted_foreground"
+        full-width="true"
+        min-height="24"
+        align="left"
+        padding-left="2"
+        on-click="on_nav" />
+    </template>
+
+    <template name="content_page">
+      <panel visible="false">
+        <stack id="inner" direction="vertical" spacing="12" padding="32">
+          <slot />
+        </stack>
+      </panel>
+    </template>
+  </templates>
+
+  <layout type="stack">
+    <!-- Root horizontal stack: sidebar + content -->
+    <stack id="root_row" direction="horizontal" spacing="0">
+
+      <!-- Sidebar -->
+      <panel id="sidebar">
+        <stack id="sidebar_inner" direction="vertical" spacing="8" padding="16" scroll="true" border-right="1" border-color="theme.border">
+          <label id="sidebar_title" text="Components" size="lg" />
+
+          <!-- Reference -->
+          <label id="cat_reference" text="Reference" size="sm" />
+          <button id="nav_styling" template="nav_item" label="Styling" />
+
+          <!-- Basic -->
+          <label id="cat_basic" text="Basic" size="sm" />
+          <button id="nav_button" template="nav_item" label="Button" />
+          <button id="nav_label" template="nav_item" label="Label" />
+          <button id="nav_icon" template="nav_item" label="Icon" />
+          <button id="nav_text" template="nav_item" label="Text" />
+          <button id="nav_image" template="nav_item" label="Image" />
+          <button id="nav_checkbox" template="nav_item" label="Checkbox" />
+          <button id="nav_progress" template="nav_item" label="Progress" />
+          <button id="nav_accordion" template="nav_item" label="Accordion" />
+          <button id="nav_alert" template="nav_item" label="Alert" />
+          <button id="nav_avatar" template="nav_item" label="Avatar" />
+          <button id="nav_badge" template="nav_item" label="Badge" />
+          <button id="nav_collapsible" template="nav_item" label="Collapsible" />
+          <button id="nav_dropdown_button" template="nav_item" label="Dropdown Button" />
+          <button id="nav_spinner" template="nav_item" label="Spinner" />
+          <button id="nav_tag" template="nav_item" label="Tag" />
+          <button id="nav_tooltip" template="nav_item" label="Tooltip" />
+
+          <!-- Form -->
+          <label id="cat_form" text="Form" size="sm" />
+          <button id="nav_input" template="nav_item" label="Input" />
+          <button id="nav_textarea" template="nav_item" label="Textarea" />
+          <button id="nav_code_editor" template="nav_item" label="Code Editor" />
+          <button id="nav_text_editor" template="nav_item" label="Text Editor" />
+          <button id="nav_select" template="nav_item" label="Select" />
+          <button id="nav_radio" template="nav_item" label="Radio" />
+          <button id="nav_slider" template="nav_item" label="Slider" />
+          <button id="nav_switch" template="nav_item" label="Switch" />
+          <button id="nav_toggle" template="nav_item" label="Toggle" />
+
+          <!-- Layout -->
+          <label id="cat_layout" text="Layout" size="sm" />
+          <button id="nav_panel" template="nav_item" label="Panel &amp; Stack" />
+          <button id="nav_list" template="nav_item" label="List" />
+          <button id="nav_notification" template="nav_item" label="Notification" />
+          <button id="nav_modal" template="nav_item" label="Modal" />
+
+          <!-- Advanced -->
+          <label id="cat_advanced" text="Advanced" size="sm" />
+          <button id="nav_table" template="nav_item" label="Table" />
+          <button id="nav_tree" template="nav_item" label="Tree" />
+          <button id="nav_charts" template="nav_item" label="Charts" />
+
+          <!-- Navigation -->
+          <label id="cat_navigation" text="Navigation" size="sm" />
+          <button id="nav_sidenavbar" template="nav_item" label="Sidenav Bar" />
+        </stack>
+      </panel>
+
+      <!-- Content area -->
+      <stack id="content" direction="vertical" spacing="0" padding="16" scroll="true">
+
+        <!-- Button page (visible by default) -->
+        <panel id="page_button" template="content_page" visible="true">
+          <label id="btn_title" text="Button" size="lg" />
+          <text id="btn_desc" content="Buttons trigger actions. Available variants: primary, secondary, danger, ghost, warning, success, info." />
+
+          <!-- Variants row -->
+          <label id="btn_section_variants" text="Variants" size="sm" />
+          <stack id="btn_variants_row" direction="horizontal" spacing="8">
+            <button id="btn_primary" label="Primary" variant="primary" />
+            <button id="btn_secondary" label="Secondary" variant="secondary" />
+            <button id="btn_danger" label="Danger" variant="danger" />
+            <button id="btn_ghost" label="Ghost" variant="ghost" />
+            <button id="btn_warning" label="Warning" variant="warning" />
+            <button id="btn_success" label="Success" variant="success" />
+            <button id="btn_info" label="Info" variant="info" />
+          </stack>
+
+          <!-- Disabled state -->
+          <label id="btn_section_disabled" text="Disabled" size="sm" />
+          <stack id="btn_disabled_row" direction="horizontal" spacing="8">
+            <button id="btn_disabled_1" label="Disabled Primary" variant="primary" disabled="true" />
+            <button id="btn_disabled_2" label="Disabled Secondary" disabled="true" />
+          </stack>
+        </panel>
+
+        <!-- Label page -->
+        <panel id="page_label" template="content_page">
+          <label id="lbl_title" text="Label" size="lg" />
+          <text id="lbl_desc" content="Labels display text at various sizes: xs, sm, md (default), lg, xl." />
+
+          <label id="lbl_section_sizes" text="Sizes" size="sm" />
+          <label id="lbl_xs" text="Extra small label (xs)" size="xs" />
+          <label id="lbl_sm" text="Small label (sm)" size="sm" />
+          <label id="lbl_md" text="Medium label (md) — default" size="md" />
+          <label id="lbl_lg" text="Large label (lg)" size="lg" />
+          <label id="lbl_xl" text="Extra large label (xl)" size="xl" />
+        </panel>
+
+        <!-- Icon page -->
+        <panel id="page_icon" template="content_page">
+          <label id="icon_title" text="Icon" size="lg" />
+          <text id="icon_desc" content="Icons render named vector icons from the gpui-component icon set." />
+
+          <label id="icon_section_grid" text="Available Icons" size="sm" />
+          <stack id="icon_row1" direction="horizontal" spacing="16">
+            <icon id="icon_search" name="search" />
+            <icon id="icon_settings" name="settings" />
+            <icon id="icon_bell" name="bell" />
+            <icon id="icon_check" name="check" />
+            <icon id="icon_close" name="close" />
+            <icon id="icon_file" name="file" />
+            <icon id="icon_folder" name="folder" />
+          </stack>
+          <stack id="icon_row2" direction="horizontal" spacing="16">
+            <icon id="icon_github" name="github" />
+            <icon id="icon_globe" name="globe" />
+            <icon id="icon_user" name="user" />
+            <icon id="icon_heart" name="heart" />
+            <icon id="icon_star" name="star" />
+            <icon id="icon_plus" name="plus" />
+            <icon id="icon_minus" name="minus" />
+          </stack>
+          <stack id="icon_row3" direction="horizontal" spacing="16">
+            <icon id="icon_sun" name="sun" />
+            <icon id="icon_moon" name="moon" />
+            <icon id="icon_inbox" name="inbox" />
+            <icon id="icon_copy" name="copy" />
+            <icon id="icon_trash" name="trash" />
+            <icon id="icon_eye" name="eye" />
+            <icon id="icon_menu" name="menu" />
+          </stack>
+        </panel>
+
+        <!-- Checkbox page -->
+        <panel id="page_checkbox" template="content_page">
+          <label id="cb_title" text="Checkbox" size="lg" />
+          <text id="cb_desc" content="Checkboxes toggle boolean state. Support labels and disabled state." />
+
+          <label id="cb_section_states" text="States" size="sm" />
+          <checkbox id="cb_unchecked" label="Unchecked" checked="false" />
+          <checkbox id="cb_checked" label="Checked" checked="true" />
+          <checkbox id="cb_disabled" label="Disabled checkbox" checked="false" disabled="true" />
+          <checkbox id="cb_disabled_checked" label="Disabled checked" checked="true" disabled="true" />
+        </panel>
+
+        <!-- Input page -->
+        <panel id="page_input" template="content_page">
+          <label id="inp_title" text="Input" size="lg" />
+          <text id="inp_desc" content="Text inputs for user data entry. Support placeholder text and disabled state." />
+
+          <label id="inp_section_basic" text="Basic Input" size="sm" />
+          <input id="inp_basic" placeholder="Type something..." />
+
+          <label id="inp_section_disabled" text="Disabled Input" size="sm" />
+          <input id="inp_disabled" placeholder="Cannot edit" disabled="true" />
+        </panel>
+
+        <!-- Textarea page -->
+        <panel id="page_textarea" template="content_page">
+          <label id="textarea_title" text="Textarea" size="lg" />
+          <text id="textarea_desc" content="Textarea is a multi-line text input. Supports configurable rows, placeholder text, auto-grow, and default values." />
+
+          <label id="textarea_section_basic" text="Basic Textarea" size="sm" />
+          <textarea id="textarea_basic" placeholder="Enter your message..." rows="4" />
+
+          <label id="textarea_section_autogrow" text="Auto-grow (1-6 rows)" size="sm" />
+          <textarea id="textarea_autogrow" placeholder="Start typing and the textarea will grow..." auto-grow-min="1" auto-grow-max="6" />
+
+          <label id="textarea_section_default" text="With Default Value" size="sm" />
+          <textarea id="textarea_default" rows="3" default-value="This textarea has a default value.&#10;It supports multiple lines of text." />
+
+          <label id="textarea_section_disabled" text="Disabled" size="sm" />
+          <textarea id="textarea_disabled" placeholder="Cannot edit" rows="3" disabled="true" />
+        </panel>
+
+        <!-- Code Editor page -->
+        <panel id="page_code_editor" template="content_page">
+          <label id="code_editor_title" text="Code Editor" size="lg" />
+          <text id="code_editor_desc" content="Code Editor provides syntax-highlighted code editing with line numbers, search, and configurable indentation." />
+
+          <label id="code_editor_section_rust" text="Rust" size="sm" />
+          <code-editor id="code_editor_rust" language="rust" line-number="true" searchable="true" tab-size="4" default-value="fn main() {&#10;    println!(&quot;Hello, world!&quot;);&#10;}&#10;&#10;struct App {&#10;    name: String,&#10;    version: u32,&#10;}" />
+
+          <label id="code_editor_section_js" text="JavaScript" size="sm" />
+          <code-editor id="code_editor_js" language="javascript" line-number="true" tab-size="2" default-value="function greet(name) {&#10;  return 'Hello, ' + name + '!';&#10;}&#10;&#10;const result = greet('World');&#10;console.log(result);" />
+
+          <label id="code_editor_section_noline" text="No Line Numbers" size="sm" />
+          <code-editor id="code_editor_noline" language="python" line-number="false" searchable="false" tab-size="4" default-value="def hello():&#10;    print(&quot;Hello from Python!&quot;)&#10;&#10;hello()" />
+
+          <label id="code_editor_section_tabs" text="Hard Tabs" size="sm" />
+          <code-editor id="code_editor_hard_tabs" language="go" line-number="true" hard-tabs="true" default-value="package main&#10;&#10;import &quot;fmt&quot;&#10;&#10;func main() {&#10;&#9;fmt.Println(&quot;Hello, Go!&quot;)&#10;}" />
+        </panel>
+
+        <!-- Text Editor page -->
+        <panel id="page_text_editor" template="content_page">
+          <label id="text_editor_title" text="Text Editor" size="lg" />
+          <text id="text_editor_desc" content="Text Editor is a rich-text editing area with a toolbar for basic formatting: Bold, Italic, and Underline. Uses markdown-style markers." />
+
+          <label id="text_editor_section_basic" text="Basic Text Editor" size="sm" />
+          <text-editor id="text_editor_basic" placeholder="Start writing..." rows="6" />
+
+          <label id="text_editor_section_default" text="With Default Value" size="sm" />
+          <text-editor id="text_editor_default" rows="8" default-value="# Welcome to the Text Editor&#10;&#10;Use the toolbar above to insert **bold**, _italic_, or __underline__ markers.&#10;&#10;This is a simple rich-text editing experience." />
+        </panel>
+
+        <!-- Select page -->
+        <panel id="page_select" template="content_page">
+          <label id="sel_title" text="Select" size="lg" />
+          <text id="sel_desc" content="Select presents a list of options for the user to choose from." />
+
+          <label id="sel_section_basic" text="Basic Select" size="sm" />
+          <select id="sel_basic" options='["Apple","Banana","Cherry","Date","Elderberry"]' value="Cherry" />
+        </panel>
+
+        <!-- Progress page -->
+        <panel id="page_progress" template="content_page">
+          <label id="prog_title" text="Progress" size="lg" />
+          <text id="prog_desc" content="Progress bars show completion percentage. Set value (0-100) and optional max." />
+
+          <label id="prog_section_values" text="Various Values" size="sm" />
+          <label id="prog_label_0" text="0%" size="xs" />
+          <progress id="prog_0" value="0" />
+          <label id="prog_label_25" text="25%" size="xs" />
+          <progress id="prog_25" value="25" />
+          <label id="prog_label_50" text="50%" size="xs" />
+          <progress id="prog_50" value="50" />
+          <label id="prog_label_75" text="75%" size="xs" />
+          <progress id="prog_75" value="75" />
+          <label id="prog_label_100" text="100%" size="xs" />
+          <progress id="prog_100" value="100" />
+        </panel>
+
+        <!-- Notification page -->
+        <panel id="page_notification" template="content_page">
+          <label id="notif_title" text="Notification" size="lg" />
+          <text id="notif_desc" content="Notifications display status messages. Types: info, success, warning, error." />
+
+          <label id="notif_section_types" text="Notification Types" size="sm" />
+          <notification id="notif_info" message="This is an informational message." kind="info" />
+          <notification id="notif_success" message="Operation completed successfully!" kind="success" />
+          <notification id="notif_warning" message="Warning: please review before proceeding." kind="warning" />
+          <notification id="notif_error" message="Error: something went wrong." kind="error" />
+        </panel>
+
+        <!-- Modal page -->
+        <panel id="page_modal" template="content_page">
+          <label id="modal_title" text="Modal" size="lg" />
+          <text id="modal_desc" content="Modals display overlay dialogs. Toggle the open property to show or hide." />
+
+          <button id="modal_toggle_btn" label="Open Modal" variant="primary" on-click="on_toggle_modal" />
+          <modal id="demo_modal" title="Example Modal" open="false">
+            <text id="modal_content_text" content="This is the modal content. Click the button again to close." />
+            <button id="modal_close_btn" label="Close" variant="danger" on-click="on_toggle_modal" />
+          </modal>
+        </panel>
+
+        <!-- Text page -->
+        <panel id="page_text" template="content_page">
+          <label id="text_title" text="Text" size="lg" />
+          <text id="text_desc" content="Text displays plain content blocks. Use for paragraphs or descriptions." />
+
+          <label id="text_section_examples" text="Examples" size="sm" />
+          <text id="text_example_1" content="This is a simple text block. It renders plain content without any special formatting." />
+          <text id="text_example_2" content="Text components are useful for displaying descriptions, help text, and other informational content within your application layout." />
+        </panel>
+
+        <!-- List page -->
+        <panel id="page_list" template="content_page">
+          <label id="list_title" text="List" size="lg" />
+          <text id="list_desc" content="Lists render arrays of items as a vertical list with hover highlighting." />
+
+          <label id="list_section_basic" text="Basic List" size="sm" />
+          <list id="list_basic" items='["First item","Second item","Third item","Fourth item","Fifth item"]' />
+        </panel>
+
+        <!-- Panel & Stack page -->
+        <panel id="page_panel" template="content_page">
+          <label id="panel_title" text="Panel &amp; Stack" size="lg" />
+          <text id="panel_desc" content="Panels are containers with padding and background. Stacks arrange children vertically or horizontally with configurable spacing." />
+
+          <label id="panel_section_nested" text="Nested Panels" size="sm" />
+          <panel id="panel_outer">
+            <label id="panel_outer_label" text="Outer panel" />
+            <panel id="panel_inner">
+              <label id="panel_inner_label" text="Inner nested panel" />
+            </panel>
+          </panel>
+
+          <label id="panel_section_stacks" text="Horizontal Stack" size="sm" />
+          <stack id="panel_h_stack" direction="horizontal" spacing="8">
+            <panel id="panel_h_item1">
+              <label id="panel_h_item1_label" text="Column 1" />
+            </panel>
+            <panel id="panel_h_item2">
+              <label id="panel_h_item2_label" text="Column 2" />
+            </panel>
+            <panel id="panel_h_item3">
+              <label id="panel_h_item3_label" text="Column 3" />
+            </panel>
+          </stack>
+        </panel>
+
+        <!-- Table page -->
+        <panel id="page_table" template="content_page">
+          <label id="table_title" text="Table" size="lg" />
+          <text id="table_desc" content="Table displays tabular data with columns, sorting, and row selection." />
+
+          <table id="table_demo" stripe="true"
+            columns='[{"key":"name","label":"Name","width":150},{"key":"email","label":"Email","width":220},{"key":"role","label":"Role","width":120},{"key":"status","label":"Status","width":100}]'
+            data='[{"name":"Alice Johnson","email":"alice@example.com","role":"Admin","status":"Active"},{"name":"Bob Smith","email":"bob@example.com","role":"Editor","status":"Active"},{"name":"Carol White","email":"carol@example.com","role":"Viewer","status":"Inactive"},{"name":"Dave Brown","email":"dave@example.com","role":"Editor","status":"Active"},{"name":"Eve Davis","email":"eve@example.com","role":"Admin","status":"Active"}]' />
+        </panel>
+
+        <!-- Tree page -->
+        <panel id="page_tree" template="content_page">
+          <label id="tree_title" text="Tree" size="lg" />
+          <text id="tree_desc" content="Tree displays hierarchical data with expand/collapse and keyboard navigation." />
+
+          <tree id="tree_demo" items='[{"id":"src","label":"src","expanded":true,"children":[{"id":"src/main.rs","label":"main.rs"},{"id":"src/lib.rs","label":"lib.rs"},{"id":"src/components","label":"components","expanded":true,"children":[{"id":"src/components/mod.rs","label":"mod.rs"},{"id":"src/components/table.rs","label":"table.rs"},{"id":"src/components/tree.rs","label":"tree.rs"}]}]},{"id":"Cargo.toml","label":"Cargo.toml"},{"id":"README.md","label":"README.md"}]' />
+        </panel>
+
+        <!-- Image page -->
+        <panel id="page_image" template="content_page">
+          <label id="image_title" text="Image" size="lg" />
+          <text id="image_desc" content="Image displays an image from a source path. Falls back to alt text when no source is provided." />
+
+          <label id="image_section_fallback" text="Alt Text Fallback" size="sm" />
+          <image id="image_no_src" alt="Placeholder: no image source provided" />
+          <image id="image_another" alt="Another image placeholder with alt text" />
+        </panel>
+
+        <!-- Charts page -->
+        <panel id="page_charts" template="content_page">
+          <label id="charts_title" text="Charts" size="lg" />
+          <text id="charts_desc" content="Chart components for data visualization. Supports line, bar, area, pie, candlestick, column, stacked, clustered, scatter, bubble, heatmap, radar, pyramid, and funnel charts." />
+
+          <!-- Line Chart -->
+          <label id="chart_section_line" text="Line Chart" size="sm" />
+          <line-chart id="line_chart_demo" x-field="month" y-field="revenue" dot="true" height="300"
+            data='[{"month":"Jan","revenue":186},{"month":"Feb","revenue":305},{"month":"Mar","revenue":237},{"month":"Apr","revenue":73},{"month":"May","revenue":209},{"month":"Jun","revenue":214}]' />
+
+          <!-- Bar Chart -->
+          <label id="chart_section_bar" text="Bar Chart" size="sm" />
+          <bar-chart id="bar_chart_demo" x-field="month" y-field="visitors" show-label="true" height="300"
+            data='[{"month":"Jan","visitors":275},{"month":"Feb","visitors":200},{"month":"Mar","visitors":187},{"month":"Apr","visitors":173},{"month":"May","visitors":90},{"month":"Jun","visitors":301}]' />
+
+          <!-- Area Chart -->
+          <label id="chart_section_area" text="Area Chart (Multi-Series)" size="sm" />
+          <area-chart id="area_chart_demo" x-field="month" y-fields='["desktop","mobile"]' height="300"
+            data='[{"month":"Jan","desktop":186,"mobile":80},{"month":"Feb","desktop":305,"mobile":200},{"month":"Mar","desktop":237,"mobile":120},{"month":"Apr","desktop":73,"mobile":190},{"month":"May","desktop":209,"mobile":130},{"month":"Jun","desktop":214,"mobile":140}]' />
+
+          <!-- Pie Chart -->
+          <label id="chart_section_pie" text="Pie Chart" size="sm" />
+          <pie-chart id="pie_chart_demo" value-field="amount" height="300"
+            data='[{"label":"Chrome","amount":275},{"label":"Safari","amount":200},{"label":"Firefox","amount":187},{"label":"Edge","amount":173},{"label":"Other","amount":90}]' />
+
+          <!-- Donut Chart -->
+          <label id="chart_section_donut" text="Donut Chart (Pie with inner radius)" size="sm" />
+          <pie-chart id="donut_chart_demo" value-field="value" inner-radius="60.0" height="300"
+            data='[{"name":"Rent","value":1200},{"name":"Food","value":450},{"name":"Transport","value":200},{"name":"Utilities","value":150}]' />
+
+          <!-- Candlestick Chart -->
+          <label id="chart_section_candlestick" text="Candlestick Chart" size="sm" />
+          <candlestick-chart id="candlestick_chart_demo" x-field="date" open-field="open" high-field="high" low-field="low" close-field="close" height="300"
+            data='[{"date":"Mon","open":100.0,"high":110.0,"low":95.0,"close":108.0},{"date":"Tue","open":108.0,"high":115.0,"low":102.0,"close":104.0},{"date":"Wed","open":104.0,"high":112.0,"low":100.0,"close":111.0},{"date":"Thu","open":111.0,"high":120.0,"low":108.0,"close":118.0},{"date":"Fri","open":118.0,"high":122.0,"low":110.0,"close":112.0}]' />
+
+          <!-- Column Chart -->
+          <label id="chart_section_column" text="Column Chart" size="sm" />
+          <column-chart id="column_chart_demo" x-field="month" y-field="sales" show-label="true" height="300"
+            data='[{"month":"Jan","sales":320},{"month":"Feb","sales":410},{"month":"Mar","sales":280},{"month":"Apr","sales":390},{"month":"May","sales":450},{"month":"Jun","sales":370}]' />
+
+          <!-- Stacked Column Chart -->
+          <label id="chart_section_stacked_column" text="Stacked Column Chart" size="sm" />
+          <stacked-column-chart id="stacked_column_chart_demo" x-field="quarter" y-fields='["product_a","product_b","product_c"]' height="300"
+            data='[{"quarter":"Q1","product_a":120,"product_b":90,"product_c":60},{"quarter":"Q2","product_a":150,"product_b":110,"product_c":80},{"quarter":"Q3","product_a":130,"product_b":100,"product_c":95},{"quarter":"Q4","product_a":170,"product_b":120,"product_c":70}]' />
+
+          <!-- Clustered Column Chart -->
+          <label id="chart_section_clustered_column" text="Clustered Column Chart" size="sm" />
+          <clustered-column-chart id="clustered_column_chart_demo" x-field="region" y-fields='["sales","returns"]' height="300"
+            data='[{"region":"North","sales":420,"returns":30},{"region":"South","sales":380,"returns":45},{"region":"East","sales":510,"returns":25},{"region":"West","sales":290,"returns":50}]' />
+
+          <!-- Stacked Bar Chart -->
+          <label id="chart_section_stacked_bar" text="Stacked Bar Chart (Horizontal)" size="sm" />
+          <stacked-bar-chart id="stacked_bar_chart_demo" y-field="department" x-fields='["budget","spent"]' height="300"
+            data='[{"department":"Engineering","budget":500,"spent":420},{"department":"Marketing","budget":300,"spent":280},{"department":"Sales","budget":400,"spent":350},{"department":"Support","budget":200,"spent":180}]' />
+
+          <!-- Clustered Bar Chart -->
+          <label id="chart_section_clustered_bar" text="Clustered Bar Chart (Horizontal)" size="sm" />
+          <clustered-bar-chart id="clustered_bar_chart_demo" y-field="language" x-fields='["stars","forks"]' height="300"
+            data='[{"language":"Rust","stars":850,"forks":120},{"language":"Go","stars":720,"forks":190},{"language":"Python","stars":950,"forks":310},{"language":"TypeScript","stars":680,"forks":150}]' />
+
+          <!-- Scatter Chart -->
+          <label id="chart_section_scatter" text="Scatter Chart" size="sm" />
+          <scatter-chart id="scatter_chart_demo" x-field="weight" y-field="height" dot-size="5.0" height="300"
+            data='[{"weight":60,"height":165},{"weight":72,"height":178},{"weight":55,"height":160},{"weight":85,"height":185},{"weight":68,"height":172},{"weight":90,"height":190},{"weight":63,"height":168},{"weight":78,"height":180},{"weight":50,"height":155},{"weight":95,"height":188}]' />
+
+          <!-- Bubble Chart -->
+          <label id="chart_section_bubble" text="Bubble Chart" size="sm" />
+          <bubble-chart id="bubble_chart_demo" x-field="gdp" y-field="life_expectancy" size-field="population" min-radius="5.0" max-radius="35.0" height="300"
+            data='[{"gdp":10,"life_expectancy":72,"population":50},{"gdp":35,"life_expectancy":78,"population":120},{"gdp":50,"life_expectancy":82,"population":30},{"gdp":25,"life_expectancy":75,"population":200},{"gdp":45,"life_expectancy":80,"population":80},{"gdp":15,"life_expectancy":68,"population":150}]' />
+
+          <!-- Heatmap Chart -->
+          <label id="chart_section_heatmap" text="Heatmap Chart" size="sm" />
+          <heatmap-chart id="heatmap_chart_demo" x-field="day" y-field="hour" value-field="count" height="300"
+            data='[{"day":"Mon","hour":"9am","count":12},{"day":"Mon","hour":"12pm","count":25},{"day":"Mon","hour":"3pm","count":18},{"day":"Tue","hour":"9am","count":8},{"day":"Tue","hour":"12pm","count":30},{"day":"Tue","hour":"3pm","count":22},{"day":"Wed","hour":"9am","count":15},{"day":"Wed","hour":"12pm","count":20},{"day":"Wed","hour":"3pm","count":28},{"day":"Thu","hour":"9am","count":10},{"day":"Thu","hour":"12pm","count":35},{"day":"Thu","hour":"3pm","count":16},{"day":"Fri","hour":"9am","count":5},{"day":"Fri","hour":"12pm","count":18},{"day":"Fri","hour":"3pm","count":10}]' />
+
+          <!-- Radar Chart -->
+          <label id="chart_section_radar" text="Radar Chart" size="sm" />
+          <radar-chart id="radar_chart_demo" categories='["Speed","Strength","Defense","Magic","Stamina","Luck"]' y-fields='["warrior","mage"]' max-value="100.0" height="300"
+            data='[{"Speed":80,"Strength":90,"Defense":70,"Magic":30,"Stamina":85,"Luck":50},{"Speed":60,"Strength":40,"Defense":50,"Magic":95,"Stamina":55,"Luck":75}]' />
+
+          <!-- Pyramid Chart -->
+          <label id="chart_section_pyramid" text="Pyramid Chart" size="sm" />
+          <pyramid-chart id="pyramid_chart_demo" label-field="stage" value-field="count" height="300"
+            data='[{"stage":"Awareness","count":10000},{"stage":"Interest","count":6500},{"stage":"Consideration","count":3200},{"stage":"Intent","count":1800},{"stage":"Purchase","count":900}]' />
+
+          <!-- Funnel Chart -->
+          <label id="chart_section_funnel" text="Funnel Chart" size="sm" />
+          <funnel-chart id="funnel_chart_demo" label-field="step" value-field="users" height="300"
+            data='[{"step":"Visited","users":5000},{"step":"Signed Up","users":3200},{"step":"Activated","users":2100},{"step":"Subscribed","users":1400},{"step":"Retained","users":800}]' />
+        </panel>
+
+        <!-- Accordion page -->
+        <panel id="page_accordion" template="content_page">
+          <label id="accordion_title" text="Accordion" size="lg" />
+          <text id="accordion_desc" content="Accordions show collapsible content sections. Supports multiple open items and bordered styles." />
+
+          <label id="accordion_section_basic" text="Basic Accordion" size="sm" />
+          <accordion id="accordion_demo"
+            items='[{"title":"What is Nemo?","content":"Nemo is a GPUI desktop application framework configured with HCL.","open":true},{"title":"How do I get started?","content":"Create an app.hcl file and define your layout with components."},{"title":"Can I use custom themes?","content":"Yes, Nemo supports theme configuration via the app.theme block."}]' />
+
+          <label id="accordion_section_multi" text="Multiple Open (no border)" size="sm" />
+          <accordion id="accordion_multi" multiple="true" bordered="false"
+            items='[{"title":"Section A","content":"Content for section A.","open":true},{"title":"Section B","content":"Content for section B.","open":true},{"title":"Section C","content":"Content for section C."}]' />
+        </panel>
+
+        <!-- Alert page -->
+        <panel id="page_alert" template="content_page">
+          <label id="alert_title" text="Alert" size="lg" />
+          <text id="alert_desc" content="Alerts display important messages. Variants: info, success, warning, error." />
+
+          <label id="alert_section_variants" text="Variants" size="sm" />
+          <alert id="alert_info" title="Information" message="This is an informational alert message." variant="info" />
+          <alert id="alert_success" title="Success" message="The operation completed successfully." variant="success" />
+          <alert id="alert_warning" title="Warning" message="Please review the changes before continuing." variant="warning" />
+          <alert id="alert_error" title="Error" message="Something went wrong. Please try again." variant="error" />
+        </panel>
+
+        <!-- Avatar page -->
+        <panel id="page_avatar" template="content_page">
+          <label id="avatar_title" text="Avatar" size="lg" />
+          <text id="avatar_desc" content="Avatars display user initials. Provide a name to generate initials automatically." />
+
+          <label id="avatar_section_examples" text="Examples" size="sm" />
+          <stack id="avatar_row" direction="horizontal" spacing="12">
+            <avatar id="avatar_alice" name="Alice Johnson" />
+            <avatar id="avatar_bob" name="Bob Smith" />
+            <avatar id="avatar_carol" name="Carol White" />
+            <avatar id="avatar_dave" name="Dave Brown" />
+          </stack>
+        </panel>
+
+        <!-- Badge page -->
+        <panel id="page_badge" template="content_page">
+          <label id="badge_title" text="Badge" size="lg" />
+          <text id="badge_desc" content="Badges show notification counts or dot indicators on child elements." />
+
+          <label id="badge_section_count" text="Count Badge" size="sm" />
+          <stack id="badge_count_row" direction="horizontal" spacing="16">
+            <badge id="badge_count_demo" count="5">
+              <button id="badge_count_btn" label="Notifications" variant="secondary" />
+            </badge>
+            <badge id="badge_count_large" count="99">
+              <button id="badge_count_large_btn" label="Messages" variant="secondary" />
+            </badge>
+          </stack>
+
+          <label id="badge_section_dot" text="Dot Badge" size="sm" />
+          <badge id="badge_dot_demo" dot="true">
+            <button id="badge_dot_btn" label="Updates" variant="secondary" />
+          </badge>
+        </panel>
+
+        <!-- Collapsible page -->
+        <panel id="page_collapsible" template="content_page">
+          <label id="collapsible_title" text="Collapsible" size="lg" />
+          <text id="collapsible_desc" content="Collapsible sections expand and collapse to reveal child content." />
+
+          <label id="collapsible_section_examples" text="Examples" size="sm" />
+          <collapsible id="collapsible_open" title="Click to collapse" open="true">
+            <text id="collapsible_open_content" content="This content is visible by default because open = true." />
+          </collapsible>
+          <collapsible id="collapsible_closed" title="Click to expand" open="false">
+            <text id="collapsible_closed_content" content="This content is hidden by default and will show when expanded." />
+          </collapsible>
+        </panel>
+
+        <!-- Dropdown Button page -->
+        <panel id="page_dropdown_button" template="content_page">
+          <label id="dropdown_title" text="Dropdown Button" size="lg" />
+          <text id="dropdown_desc" content="Dropdown buttons combine a button with a dropdown menu indicator." />
+
+          <label id="dropdown_section_variants" text="Variants" size="sm" />
+          <stack id="dropdown_row" direction="horizontal" spacing="8">
+            <dropdown-button id="dropdown_default" label="Actions" items='["Copy","Paste","Cut"]' />
+            <dropdown-button id="dropdown_primary" label="Save" variant="primary" items='["Save as Draft","Save and Publish","Save as Template"]' />
+            <dropdown-button id="dropdown_danger" label="Delete" variant="danger" items='["Move to Trash","Delete Permanently"]' />
+          </stack>
+        </panel>
+
+        <!-- Spinner page -->
+        <panel id="page_spinner" template="content_page">
+          <label id="spinner_title" text="Spinner" size="lg" />
+          <text id="spinner_desc" content="Spinners indicate loading state. Available sizes: xs, sm, md (default), lg." />
+
+          <label id="spinner_section_sizes" text="Sizes" size="sm" />
+          <stack id="spinner_row" direction="horizontal" spacing="24">
+            <spinner id="spinner_xs" size="xs" />
+            <spinner id="spinner_sm" size="sm" />
+            <spinner id="spinner_md" />
+            <spinner id="spinner_lg" size="lg" />
+          </stack>
+        </panel>
+
+        <!-- Tag page -->
+        <panel id="page_tag" template="content_page">
+          <label id="tag_title" text="Tag" size="lg" />
+          <text id="tag_desc" content="Tags are small labels for categorization. Variants: primary, secondary, danger, success, warning, info." />
+
+          <label id="tag_section_filled" text="Filled Tags" size="sm" />
+          <stack id="tag_filled_row" direction="horizontal" spacing="8">
+            <tag id="tag_primary" label="Primary" variant="primary" />
+            <tag id="tag_secondary" label="Secondary" variant="secondary" />
+            <tag id="tag_danger" label="Danger" variant="danger" />
+            <tag id="tag_success" label="Success" variant="success" />
+            <tag id="tag_warning" label="Warning" variant="warning" />
+            <tag id="tag_info" label="Info" variant="info" />
+          </stack>
+
+          <label id="tag_section_outline" text="Outline Tags" size="sm" />
+          <stack id="tag_outline_row" direction="horizontal" spacing="8">
+            <tag id="tag_outline_primary" label="Primary" variant="primary" outline="true" />
+            <tag id="tag_outline_danger" label="Danger" variant="danger" outline="true" />
+            <tag id="tag_outline_success" label="Success" variant="success" outline="true" />
+          </stack>
+        </panel>
+
+        <!-- Tooltip page -->
+        <panel id="page_tooltip" template="content_page">
+          <label id="tooltip_title" text="Tooltip" size="lg" />
+          <text id="tooltip_desc" content="Tooltips show additional information on hover." />
+
+          <label id="tooltip_section_examples" text="Hover the buttons below" size="sm" />
+          <stack id="tooltip_row" direction="horizontal" spacing="8">
+            <tooltip id="tooltip_demo1" content="This is a helpful tooltip">
+              <button id="tooltip_btn1" label="Hover me" variant="primary" />
+            </tooltip>
+            <tooltip id="tooltip_demo2" content="Another tooltip with more info">
+              <button id="tooltip_btn2" label="More info" variant="secondary" />
+            </tooltip>
+          </stack>
+        </panel>
+
+        <!-- Radio page -->
+        <panel id="page_radio" template="content_page">
+          <label id="radio_title" text="Radio" size="lg" />
+          <text id="radio_desc" content="Radio groups allow selecting one option from a set. Support vertical and horizontal layouts." />
+
+          <label id="radio_section_vertical" text="Vertical (default)" size="sm" />
+          <radio id="radio_vertical" options='["Option A","Option B","Option C"]' value="Option A" />
+
+          <label id="radio_section_horizontal" text="Horizontal" size="sm" />
+          <radio id="radio_horizontal" options='["Small","Medium","Large"]' value="Medium" direction="horizontal" />
+        </panel>
+
+        <!-- Slider page -->
+        <panel id="page_slider" template="content_page">
+          <label id="slider_title" text="Slider" size="lg" />
+          <text id="slider_desc" content="Sliders allow selecting a numeric value within a range. Supports min, max, step, and default value." />
+
+          <label id="slider_section_basic" text="Basic Slider (0-100)" size="sm" />
+          <slider id="slider_basic" min="0" max="100" step="1" value="50" />
+
+          <label id="slider_section_fine" text="Fine Step (0-1, step 0.1)" size="sm" />
+          <slider id="slider_fine" min="0.0" max="1.0" step="0.1" value="0.5" />
+        </panel>
+
+        <!-- Switch page -->
+        <panel id="page_switch" template="content_page">
+          <label id="switch_title" text="Switch" size="lg" />
+          <text id="switch_desc" content="Switches toggle boolean state, similar to checkboxes but with a sliding visual style." />
+
+          <label id="switch_section_states" text="States" size="sm" />
+          <switch id="switch_off" label="Off by default" checked="false" />
+          <switch id="switch_on" label="On by default" checked="true" />
+          <switch id="switch_disabled" label="Disabled switch" checked="false" disabled="true" />
+          <switch id="switch_disabled_on" label="Disabled (on)" checked="true" disabled="true" />
+        </panel>
+
+        <!-- Toggle page -->
+        <panel id="page_toggle" template="content_page">
+          <label id="toggle_title" text="Toggle" size="lg" />
+          <text id="toggle_desc" content="Toggle buttons switch between on/off states. Support labels and icons." />
+
+          <label id="toggle_section_basic" text="Basic Toggles" size="sm" />
+          <stack id="toggle_row" direction="horizontal" spacing="8">
+            <toggle id="toggle_off" label="Off" checked="false" />
+            <toggle id="toggle_on" label="On" checked="true" />
+            <toggle id="toggle_disabled" label="Disabled" checked="false" disabled="true" />
+          </stack>
+
+          <label id="toggle_section_icons" text="With Icons" size="sm" />
+          <stack id="toggle_icon_row" direction="horizontal" spacing="8">
+            <toggle id="toggle_star" label="Star" icon="star" checked="false" />
+            <toggle id="toggle_heart" label="Heart" icon="heart" checked="true" />
+            <toggle id="toggle_bell" label="Bell" icon="bell" checked="false" />
+          </stack>
+        </panel>
+
+        <!-- Styling page -->
+        <panel id="page_styling" template="content_page">
+          <label id="styling_title" text="Styling" size="lg" />
+          <text id="styling_desc" content="All components support shared styling attributes via apply_layout_styles: padding, margin, border, shadow, and rounded. These wrap any component in a styled container." />
+
+          <!-- Padding -->
+          <label id="styling_padding_title" text="Padding" size="sm" />
+          <tabs id="styling_padding_tabs" tabs='["Preview","HCL"]'>
+            <stack id="styling_padding_preview" direction="vertical" spacing="8">
+              <label id="styling_pad_uniform" text="padding = 16" padding="16" border="1" border-color="theme.border" />
+              <stack id="styling_pad_xy_row" direction="horizontal" spacing="8">
+                <label id="styling_pad_x" text="padding_x = 24" padding-x="24" border="1" border-color="theme.border" />
+                <label id="styling_pad_y" text="padding_y = 24" padding-y="24" border="1" border-color="theme.border" />
+              </stack>
+              <stack id="styling_pad_dir_row" direction="horizontal" spacing="8">
+                <label id="styling_pad_left" text="padding_left = 32" padding-left="32" border="1" border-color="theme.border" />
+                <label id="styling_pad_right" text="padding_right = 32" padding-right="32" border="1" border-color="theme.border" />
+                <label id="styling_pad_top" text="padding_top = 32" padding-top="32" border="1" border-color="theme.border" />
+                <label id="styling_pad_bottom" text="padding_bottom = 32" padding-bottom="32" border="1" border-color="theme.border" />
+              </stack>
+            </stack>
+            <panel id="styling_padding_hcl">
+              <code-editor id="styling_padding_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform padding on all sides&#10;padding = 16&#10;&#10;# Axis padding (horizontal / vertical)&#10;padding_x = 24&#10;padding_y = 24&#10;&#10;# Directional padding&#10;padding_left   = 32&#10;padding_right  = 32&#10;padding_top    = 32&#10;padding_bottom = 32" />
+            </panel>
+          </tabs>
+
+          <!-- Margin -->
+          <label id="styling_margin_title" text="Margin" size="sm" />
+          <tabs id="styling_margin_tabs" tabs='["Preview","HCL"]'>
+            <stack id="styling_margin_preview" direction="vertical" spacing="12">
+              <stack id="styling_margin_uniform_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                <label id="styling_margin_box1" text="margin = 4" margin="4" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_box2" text="margin = 12" margin="12" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_box3" text="margin = 24" margin="24" border="1" border-color="theme.primary" padding="8" />
+              </stack>
+              <stack id="styling_margin_axis_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                <label id="styling_margin_x" text="margin_x = 20" margin-x="20" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_y" text="margin_y = 20" margin-y="20" border="1" border-color="theme.primary" padding="8" />
+              </stack>
+              <stack id="styling_margin_dir_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                <label id="styling_margin_left" text="margin_left = 24" margin-left="24" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_right" text="margin_right = 24" margin-right="24" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_top" text="margin_top = 16" margin-top="16" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_bottom" text="margin_bottom = 16" margin-bottom="16" border="1" border-color="theme.primary" padding="8" />
+              </stack>
+            </stack>
+            <panel id="styling_margin_hcl">
+              <code-editor id="styling_margin_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform margin on all sides&#10;margin = 12&#10;&#10;# Axis margin (horizontal / vertical)&#10;margin_x = 20&#10;margin_y = 20&#10;&#10;# Directional margin&#10;margin_left   = 24&#10;margin_right  = 24&#10;margin_top    = 16&#10;margin_bottom = 16" />
+            </panel>
+          </tabs>
+
+          <!-- Border -->
+          <label id="styling_border_title" text="Border" size="sm" />
+          <tabs id="styling_border_tabs" tabs='["Preview","HCL"]'>
+            <stack id="styling_border_preview" direction="vertical" spacing="12">
+              <stack id="styling_border_uniform_row" direction="horizontal" spacing="12">
+                <label id="styling_border_1" text="border = 1" border="1" border-color="theme.border" padding="12" />
+                <label id="styling_border_2" text="border = 2" border="2" border-color="theme.border" padding="12" />
+                <label id="styling_border_primary" text="theme.primary" border="2" border-color="theme.primary" padding="12" />
+                <label id="styling_border_danger" text="theme.danger" border="2" border-color="theme.danger" padding="12" />
+              </stack>
+              <stack id="styling_border_axis_row" direction="horizontal" spacing="12">
+                <label id="styling_border_x" text="border_x = 2" border-x="2" border-color="theme.primary" padding="12" />
+                <label id="styling_border_y" text="border_y = 2" border-y="2" border-color="theme.primary" padding="12" />
+              </stack>
+              <stack id="styling_border_dir_row" direction="horizontal" spacing="12">
+                <label id="styling_border_left" text="border_left = 3" border-left="3" border-color="theme.primary" padding="12" />
+                <label id="styling_border_right" text="border_right = 3" border-right="3" border-color="theme.primary" padding="12" />
+                <label id="styling_border_top" text="border_top = 3" border-top="3" border-color="theme.primary" padding="12" />
+                <label id="styling_border_bottom" text="border_bottom = 3" border-bottom="3" border-color="theme.primary" padding="12" />
+              </stack>
+            </stack>
+            <panel id="styling_border_hcl">
+              <code-editor id="styling_border_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform border on all sides&#10;border = 1&#10;border = 2&#10;&#10;# Axis border (horizontal / vertical)&#10;border_x = 2&#10;border_y = 2&#10;&#10;# Directional border&#10;border_left   = 3&#10;border_right  = 3&#10;border_top    = 3&#10;border_bottom = 3&#10;&#10;# Border color (theme references or hex)&#10;border_color = &quot;theme.border&quot;&#10;border_color = &quot;theme.primary&quot;&#10;border_color = &quot;#FF6600&quot;" />
+            </panel>
+          </tabs>
+
+          <!-- Shadow -->
+          <label id="styling_shadow_title" text="Shadow" size="sm" />
+          <tabs id="styling_shadow_tabs" tabs='["Preview","HCL"]'>
+            <stack id="styling_shadow_preview" direction="horizontal" spacing="20">
+              <label id="styling_shadow_sm" text="sm" shadow="sm" padding="16" rounded="md" />
+              <label id="styling_shadow_md" text="md" shadow="md" padding="16" rounded="md" />
+              <label id="styling_shadow_lg" text="lg" shadow="lg" padding="16" rounded="md" />
+              <label id="styling_shadow_xl" text="xl" shadow="xl" padding="16" rounded="md" />
+              <label id="styling_shadow_2xl" text="2xl" shadow="2xl" padding="16" rounded="md" />
+            </stack>
+            <panel id="styling_shadow_hcl">
+              <code-editor id="styling_shadow_code" language="hcl" line-number="false" searchable="false" default-value="# Shadow sizes: sm, md, lg, xl, 2xl&#10;shadow = &quot;sm&quot;&#10;shadow = &quot;md&quot;&#10;shadow = &quot;lg&quot;&#10;shadow = &quot;xl&quot;&#10;shadow = &quot;2xl&quot;" />
+            </panel>
+          </tabs>
+
+          <!-- Rounded -->
+          <label id="styling_rounded_title" text="Rounded" size="sm" />
+          <tabs id="styling_rounded_tabs" tabs='["Preview","HCL"]'>
+            <stack id="styling_rounded_preview" direction="horizontal" spacing="12">
+              <label id="styling_rounded_sm" text="sm" rounded="sm" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_md" text="md" rounded="md" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_lg" text="lg" rounded="lg" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_xl" text="xl" rounded="xl" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_full" text="full" rounded="full" border="2" border-color="theme.border" padding="16" />
+            </stack>
+            <panel id="styling_rounded_hcl">
+              <code-editor id="styling_rounded_code" language="hcl" line-number="false" searchable="false" default-value="# Rounded sizes: sm, md, lg, xl, full&#10;rounded = &quot;sm&quot;&#10;rounded = &quot;md&quot;&#10;rounded = &quot;lg&quot;&#10;rounded = &quot;xl&quot;&#10;rounded = &quot;full&quot;" />
+            </panel>
+          </tabs>
+
+          <!-- Combined -->
+          <label id="styling_combined_title" text="Combined" size="sm" />
+          <tabs id="styling_combined_tabs" tabs='["Preview","HCL"]'>
+            <stack id="styling_combined_preview" direction="horizontal" spacing="16">
+              <stack id="styling_card1" direction="vertical" spacing="8" padding="24" border="1" border-color="theme.border" shadow="md" rounded="lg">
+                <label id="styling_card1_title" text="Styled Card" size="md" />
+                <text id="styling_card1_body" content="This card combines border, shadow, rounded, and padding to create a polished container." />
+              </stack>
+              <stack id="styling_card2" direction="vertical" spacing="8" padding="24" border="2" border-color="theme.primary" shadow="lg" rounded="xl">
+                <label id="styling_card2_title" text="Accent Card" size="md" />
+                <text id="styling_card2_body" content="An accent-bordered card with a larger shadow and rounder corners." />
+              </stack>
+            </stack>
+            <panel id="styling_combined_hcl">
+              <code-editor id="styling_combined_code" language="hcl" line-number="false" searchable="false" default-value="component &quot;styled_card&quot; {&#10;  type         = &quot;stack&quot;&#10;  direction    = &quot;vertical&quot;&#10;  spacing      = 8&#10;  padding      = 24&#10;  border       = 1&#10;  border_color = &quot;theme.border&quot;&#10;  shadow       = &quot;md&quot;&#10;  rounded      = &quot;lg&quot;&#10;&#10;  component &quot;title&quot; {&#10;    type = &quot;label&quot;&#10;    text = &quot;Styled Card&quot;&#10;  }&#10;&#10;  component &quot;body&quot; {&#10;    type    = &quot;text&quot;&#10;    content = &quot;Card content here.&quot;&#10;  }&#10;}" />
+            </panel>
+          </tabs>
+        </panel>
+
+        <!-- Sidenav Bar page -->
+        <panel id="page_sidenavbar" template="content_page">
+          <label id="sidenav_title" text="Sidenav Bar" size="xl" />
+          <text id="sidenav_desc" content="A vertical navigation sidebar with icon and label items. Supports collapsed (icon-only) and expanded (icon + label) modes." />
+
+          <!-- Three sidenav bars side by side -->
+          <stack id="sidenav_demos" direction="horizontal" spacing="24">
+
+            <!-- Left: collapsed (icons only) -->
+            <stack id="sidenav_demo_left_collapsed" direction="vertical" spacing="8">
+              <label id="sidenav_demo_left_collapsed_label" text="Collapsed (icons only)" size="sm" />
+              <stack id="sidenav_left_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                <sidenav-bar id="sidenav_left_collapsed" collapsed="true">
+                  <sidenav-bar-item id="snlc_item_home" icon="globe" label="Home" />
+                  <sidenav-bar-item id="snlc_item_inbox" icon="inbox" label="Inbox" />
+                  <sidenav-bar-item id="snlc_item_search" icon="search" label="Search" />
+                  <sidenav-bar-item id="snlc_item_settings" icon="settings" label="Settings" />
+                </sidenav-bar>
+              </stack>
+            </stack>
+
+            <!-- Center: expanded with toggle button -->
+            <stack id="sidenav_demo_center_expanded" direction="vertical" spacing="8">
+              <label id="sidenav_demo_center_label" text="Expanded (with toggle)" size="sm" />
+              <stack id="sidenav_center_expanded_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                <sidenav-bar id="sidenav_center_expanded" collapsed="false">
+                  <sidenav-bar-item id="snce_item_home" icon="globe" label="Home" />
+                  <sidenav-bar-item id="snce_item_inbox" icon="inbox" label="Inbox" />
+                  <sidenav-bar-item id="snce_item_search" icon="search" label="Search" />
+                  <sidenav-bar-item id="snce_item_settings" icon="settings" label="Settings" />
+                  <button id="snce_toggle_btn" label="Toggle" variant="ghost" size="sm" icon="menu" on-click="on_toggle_sidenav" />
+                </sidenav-bar>
+              </stack>
+            </stack>
+
+            <!-- Right: collapsed (icons only) -->
+            <stack id="sidenav_demo_right_collapsed" direction="vertical" spacing="8">
+              <label id="sidenav_demo_right_collapsed_label" text="Collapsed (right side)" size="sm" />
+              <stack id="sidenav_right_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                <!-- Spacer pushes sidenav to the right -->
+                <panel id="snrc_spacer" flex="1" />
+                <sidenav-bar id="sidenav_right_collapsed" collapsed="true">
+                  <sidenav-bar-item id="snrc_item_user" icon="user" label="Profile" />
+                  <sidenav-bar-item id="snrc_item_bell" icon="bell" label="Notifications" />
+                  <sidenav-bar-item id="snrc_item_star" icon="star" label="Favorites" />
+                  <sidenav-bar-item id="snrc_item_settings" icon="settings" label="Settings" />
+                </sidenav-bar>
+              </stack>
+            </stack>
+          </stack>
+
+          <!-- HCL example -->
+          <tabs id="sidenav_hcl_tabs" tabs='["Preview","HCL"]'>
+            <text id="sidenav_preview_placeholder" content="See the sidenav bar demos above." />
+            <panel id="sidenav_hcl_code">
+              <code-editor id="sidenav_hcl_text" language="hcl" line-number="false" searchable="false" default-value="component &quot;my_sidenav&quot; {&#10;  type      = &quot;sidenav_bar&quot;&#10;  collapsed = false&#10;&#10;  component &quot;item_home&quot; {&#10;    type  = &quot;sidenav_bar_item&quot;&#10;    icon  = &quot;globe&quot;&#10;    label = &quot;Home&quot;&#10;  }&#10;&#10;  component &quot;item_inbox&quot; {&#10;    type  = &quot;sidenav_bar_item&quot;&#10;    icon  = &quot;inbox&quot;&#10;    label = &quot;Inbox&quot;&#10;  }&#10;}" />
+            </panel>
+          </tabs>
+        </panel>
+
+      </stack>
+    </stack>
+  </layout>
+</nemo>

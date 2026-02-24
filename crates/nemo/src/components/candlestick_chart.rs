@@ -7,6 +7,28 @@ use super::chart_utils::{
     empty_chart_placeholder, extract_data_array, get_f64_field, get_string_field,
 };
 
+/// A candlestick chart for financial OHLC data.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <candlestick-chart id="stock" x-field="date" open-field="open" high-field="high"
+///   low-field="low" close-field="close" tick-margin="20" height="400">
+///   <data bind="stockData" />
+/// </candlestick-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis (date/time) |
+/// | `open-field` | string | Data field for opening price |
+/// | `high-field` | string | Data field for high price |
+/// | `low-field` | string | Data field for low price |
+/// | `close-field` | string | Data field for closing price |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct CandlestickChart {
     #[property(default = "")]

@@ -10,6 +10,23 @@ use super::chart_utils::{chart_color, empty_chart_placeholder, extract_data_arra
 
 /// A scatter chart plotting individual data points on a two-dimensional
 /// numeric plane. Each point is rendered as a filled circle.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <scatter-chart id="correlation" x-field="height" y-field="weight" dot-size="4" height="300">
+///   <data bind="measurements" />
+/// </scatter-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for x-axis values |
+/// | `y-field` | string | Data field for y-axis values |
+/// | `dot-size` | float | Radius of each data point |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct ScatterChart {
     #[property(default = "")]

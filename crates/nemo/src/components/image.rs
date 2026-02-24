@@ -1,6 +1,20 @@
 use gpui::*;
 use nemo_macros::NemoComponent;
 
+/// An image display component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <image id="logo" src="https://example.com/logo.png" alt="Company Logo" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `src` | string | URL or file path of the image |
+/// | `alt` | string | Alternative text shown when image cannot load |
 #[derive(IntoElement, NemoComponent)]
 pub struct Image {
     #[property(default = "")]

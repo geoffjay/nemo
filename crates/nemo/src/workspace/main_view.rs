@@ -1,7 +1,7 @@
-//! Main application page — renders the HCL layout content.
+//! Main application page — renders the layout content.
 //!
 //! This is the content shown at the `/app` route.
-//! It creates and manages an `app::App` entity that handles HCL layout rendering.
+//! It creates and manages an `app::App` entity that handles layout rendering.
 
 use gpui::*;
 use std::sync::Arc;

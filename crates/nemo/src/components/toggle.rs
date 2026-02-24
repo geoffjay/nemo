@@ -5,6 +5,23 @@ use std::sync::{Arc, Mutex};
 
 use crate::runtime::NemoRuntime;
 
+/// A toggle button component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <toggle id="bold" label="Bold" icon="bold" checked="false" on-change="handleBold" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label` | string | Button text label |
+/// | `icon` | string | Icon name displayed in the button |
+/// | `disabled` | bool | Whether the toggle is disabled |
+/// | `checked` | bool | Whether the toggle is active |
+/// | `on-change` | string | Event handler invoked when toggled |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Toggle {
