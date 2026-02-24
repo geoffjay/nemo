@@ -1,6 +1,7 @@
 .claude/settings.local.json
 .claude/scripts/
 .claude/settings/
+.claude/worktrees/
 
 # Generated agent configurations (source of truth is in templates/)
 .opencode/
