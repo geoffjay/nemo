@@ -18,12 +18,12 @@ pub use error::{ConfigError, ErrorCode, ParseError, ResolveError, SchemaError, V
 pub use loader::ConfigurationLoader;
 pub use location::SourceLocation;
 pub use path::{ConfigPath, PathParseError, PathSegment};
-pub use xml_parser::XmlParser;
 pub use registry::SchemaRegistry;
 pub use resolver::{ConfigFunction, ConfigResolver, ResolveContext};
 pub use schema::{ConfigSchema, PropertySchema, ValidationRule, ValueType};
 pub use validator::{ConfigValidator, ValidationResult};
 pub use value::Value;
+pub use xml_parser::XmlParser;
 
 #[cfg(test)]
 mod tests {

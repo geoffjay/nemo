@@ -246,11 +246,7 @@ impl XmlParser {
     }
 
     /// Processes <script> elements into the `scripts` object.
-    fn process_script(
-        &self,
-        obj: &IndexMap<String, Value>,
-        result: &mut IndexMap<String, Value>,
-    ) {
+    fn process_script(&self, obj: &IndexMap<String, Value>, result: &mut IndexMap<String, Value>) {
         let scripts = result
             .entry("scripts".to_string())
             .or_insert_with(|| Value::Object(IndexMap::new()));
@@ -276,11 +272,7 @@ impl XmlParser {
     }
 
     /// Processes <data> elements into the `data` object.
-    fn process_data(
-        &self,
-        obj: &IndexMap<String, Value>,
-        result: &mut IndexMap<String, Value>,
-    ) {
+    fn process_data(&self, obj: &IndexMap<String, Value>, result: &mut IndexMap<String, Value>) {
         let data = result
             .entry("data".to_string())
             .or_insert_with(|| Value::Object(IndexMap::new()));
@@ -293,10 +285,7 @@ impl XmlParser {
                             .get("__type__")
                             .and_then(|v| v.as_str())
                             .unwrap_or("");
-                        let name = child_obj
-                            .get("name")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("");
+                        let name = child_obj.get("name").and_then(|v| v.as_str()).unwrap_or("");
 
                         if name.is_empty() {
                             continue;
@@ -487,7 +476,11 @@ impl XmlParser {
 
         let content = std::fs::read_to_string(&include_path).map_err(|e| {
             ParseError::new(
-                format!("Failed to read include file {}: {}", include_path.display(), e),
+                format!(
+                    "Failed to read include file {}: {}",
+                    include_path.display(),
+                    e
+                ),
                 SourceLocation::new(&self.source_name, 1, 1),
             )
         })?;
@@ -553,8 +546,10 @@ impl XmlParser {
 
         // If the element has a __type__ that's a known component type, add it
         if let Some(element_type) = obj.get("__type__").and_then(|v| v.as_str()) {
-            if !["template", "variable", "app", "script", "data", "include", "nemo", "layout"]
-                .contains(&element_type)
+            if ![
+                "template", "variable", "app", "script", "data", "include", "nemo", "layout",
+            ]
+            .contains(&element_type)
             {
                 component.insert("type".to_string(), Value::String(element_type.to_string()));
             }
@@ -731,10 +726,7 @@ impl XmlParser {
                 .map_err(|e| format!("Invalid UTF-8 in element name: {}", e))?
                 .to_string();
 
-            obj.insert(
-                "__type__".to_string(),
-                Value::String(kebab_to_snake(&name)),
-            );
+            obj.insert("__type__".to_string(), Value::String(kebab_to_snake(&name)));
 
             // Parse attributes
             for attr_result in tag.attributes() {
@@ -771,7 +763,9 @@ impl XmlParser {
                     cdata_content = Some(text);
                 }
                 Ok(Event::Text(ref text)) => {
-                    let s = text.unescape().map_err(|e| format!("Invalid text: {}", e))?;
+                    let s = text
+                        .unescape()
+                        .map_err(|e| format!("Invalid text: {}", e))?;
                     if !s.trim().is_empty() {
                         // Store text content
                         if cdata_content.is_none() {
@@ -815,10 +809,7 @@ impl XmlParser {
         let name = std::str::from_utf8(qname.as_ref())
             .map_err(|e| format!("Invalid UTF-8 in element name: {}", e))?;
 
-        obj.insert(
-            "__type__".to_string(),
-            Value::String(kebab_to_snake(name)),
-        );
+        obj.insert("__type__".to_string(), Value::String(kebab_to_snake(name)));
 
         for attr_result in tag.attributes() {
             let attr = attr_result.map_err(|e| format!("Invalid attribute: {}", e))?;
@@ -982,10 +973,7 @@ mod tests {
 
         let vars = value.get("variable").unwrap();
         let bh = vars.get("button_height").unwrap();
-        assert_eq!(
-            bh.get("type"),
-            Some(&Value::String("int".to_string()))
-        );
+        assert_eq!(bh.get("type"), Some(&Value::String("int".to_string())));
         assert_eq!(bh.get("default"), Some(&Value::Integer(48)));
     }
 
@@ -1105,10 +1093,7 @@ mod tests {
 
         let inner_components = content.get("component").unwrap();
         let btn = inner_components.get("btn").unwrap();
-        assert_eq!(
-            btn.get("type"),
-            Some(&Value::String("button".to_string()))
-        );
+        assert_eq!(btn.get("type"), Some(&Value::String("button".to_string())));
         assert_eq!(
             btn.get("on_click"),
             Some(&Value::String("on_button_click".to_string()))
@@ -1153,11 +1138,8 @@ mod tests {
         assert_eq!(coerce_value("false"), Value::Bool(false));
         assert_eq!(coerce_value("42"), Value::Integer(42));
         assert_eq!(coerce_value("-7"), Value::Integer(-7));
-        assert_eq!(coerce_value("3.14"), Value::Float(3.14));
-        assert_eq!(
-            coerce_value("hello"),
-            Value::String("hello".to_string())
-        );
+        assert_eq!(coerce_value("3.125"), Value::Float(3.125));
+        assert_eq!(coerce_value("hello"), Value::String("hello".to_string()));
         assert_eq!(
             coerce_value("${var.name}"),
             Value::String("${var.name}".to_string())
@@ -1251,21 +1233,12 @@ mod tests {
 
         // Should have component children
         let components = page.get("component").unwrap();
-        let inner = components
-            .as_object()
-            .unwrap()
-            .values()
-            .next()
-            .unwrap();
+        let inner = components.as_object().unwrap().values().next().unwrap();
 
         // The panel should contain a component with slot=true
         // Navigate into the nested structure
         if let Some(panel_components) = inner.get("component") {
-            let inner_stack = panel_components
-                .as_object()
-                .unwrap()
-                .get("inner")
-                .unwrap();
+            let inner_stack = panel_components.as_object().unwrap().get("inner").unwrap();
             assert_eq!(inner_stack.get("slot"), Some(&Value::Bool(true)));
         }
     }
@@ -1331,10 +1304,7 @@ mod tests {
         let value = parser.parse(xml).unwrap();
 
         let app = value.get("app").unwrap();
-        assert_eq!(
-            app.get("title"),
-            Some(&Value::String("Test".to_string()))
-        );
+        assert_eq!(app.get("title"), Some(&Value::String("Test".to_string())));
 
         let theme = app.get("theme").unwrap();
         assert_eq!(
@@ -1446,10 +1416,7 @@ mod tests {
         let layout = value.get("layout").unwrap();
         let components = layout.get("component").unwrap();
         let row = components.get("row1").unwrap();
-        assert_eq!(
-            row.get("type"),
-            Some(&Value::String("stack".to_string()))
-        );
+        assert_eq!(row.get("type"), Some(&Value::String("stack".to_string())));
         assert_eq!(
             row.get("direction"),
             Some(&Value::String("horizontal".to_string()))

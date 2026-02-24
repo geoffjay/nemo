@@ -19,13 +19,13 @@ pub mod project_loader;
 pub mod settings;
 pub mod utils;
 
-pub use footer_bar::FooterBar;
-pub use header_bar::HeaderBar;
-use layout::AppLayout;
 use actions::{
     CloseProject, CloseSettings, OpenProject, OpenSettings, QuitApp, ReloadConfig,
     ShowKeyboardShortcuts, ToggleTheme,
 };
+pub use footer_bar::FooterBar;
+pub use header_bar::HeaderBar;
+use layout::AppLayout;
 use project_loader::{ProjectLoaderView, ProjectSelected};
 use settings::SettingsView;
 use utils::{apply_theme_from_runtime, create_runtime, shortcut_row};

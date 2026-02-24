@@ -30,11 +30,11 @@ use args::Args;
 use config::NemoConfig;
 use project::ActiveProject;
 use window::get_window_options;
-use workspace::utils::{apply_theme_from_runtime, create_runtime};
 use workspace::actions::{
     CloseProject, CloseSettings, OpenProject, OpenSettings, QuitApp, ReloadConfig,
     ShowKeyboardShortcuts, ToggleTheme,
 };
+use workspace::utils::{apply_theme_from_runtime, create_runtime};
 use workspace::{FooterBar, HeaderBar, Workspace, WorkspaceArgs};
 
 fn main() -> Result<()> {
@@ -97,12 +97,7 @@ fn main() -> Result<()> {
 
         // Apply theme from TOML config (base app settings)
         if nemo_config.app.theme_name != "default" {
-            theme::apply_configured_theme(
-                &nemo_config.app.theme_name,
-                "system",
-                None,
-                cx,
-            );
+            theme::apply_configured_theme(&nemo_config.app.theme_name, "system", None, cx);
         }
 
         cx.bind_keys([

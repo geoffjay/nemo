@@ -2528,37 +2528,57 @@ mod template_tests_continued {
     fn test_template_child_ids_scoped() {
         // Two pages using the same template should get unique inner child IDs
         let config = obj(vec![
-            ("templates", obj(vec![
-                ("template", obj(vec![
-                    ("page", obj(vec![
-                        ("type", s("panel")),
-                        ("visible", Value::Bool(false)),
-                        ("component", obj(vec![
-                            ("inner", obj(vec![
-                                ("type", s("stack")),
-                                ("slot", Value::Bool(true)),
-                            ])),
-                        ])),
-                    ])),
-                ])),
-            ])),
-            ("layout", obj(vec![
-                ("type", s("stack")),
-                ("component", obj(vec![
-                    ("page_a", obj(vec![
-                        ("template", s("page")),
-                        ("component", obj(vec![
-                            ("child_a", obj(vec![("type", s("label"))])),
-                        ])),
-                    ])),
-                    ("page_b", obj(vec![
-                        ("template", s("page")),
-                        ("component", obj(vec![
-                            ("child_b", obj(vec![("type", s("label"))])),
-                        ])),
-                    ])),
-                ])),
-            ])),
+            (
+                "templates",
+                obj(vec![(
+                    "template",
+                    obj(vec![(
+                        "page",
+                        obj(vec![
+                            ("type", s("panel")),
+                            ("visible", Value::Bool(false)),
+                            (
+                                "component",
+                                obj(vec![(
+                                    "inner",
+                                    obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
+                                )]),
+                            ),
+                        ]),
+                    )]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            (
+                                "page_a",
+                                obj(vec![
+                                    ("template", s("page")),
+                                    (
+                                        "component",
+                                        obj(vec![("child_a", obj(vec![("type", s("label"))]))]),
+                                    ),
+                                ]),
+                            ),
+                            (
+                                "page_b",
+                                obj(vec![
+                                    ("template", s("page")),
+                                    (
+                                        "component",
+                                        obj(vec![("child_b", obj(vec![("type", s("label"))]))]),
+                                    ),
+                                ]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
         ]);
         let layout_config =
             parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
@@ -2581,23 +2601,29 @@ mod template_tests_continued {
     fn test_template_handler_preserved() {
         // on_click from template should survive expansion
         let config = obj(vec![
-            ("templates", obj(vec![
-                ("template", obj(vec![
-                    ("nav", obj(vec![
-                        ("type", s("button")),
-                        ("on_click", s("on_nav")),
-                    ])),
-                ])),
-            ])),
-            ("layout", obj(vec![
-                ("type", s("stack")),
-                ("component", obj(vec![
-                    ("nav_btn", obj(vec![
-                        ("template", s("nav")),
-                        ("label", s("Test")),
-                    ])),
-                ])),
-            ])),
+            (
+                "templates",
+                obj(vec![(
+                    "template",
+                    obj(vec![(
+                        "nav",
+                        obj(vec![("type", s("button")), ("on_click", s("on_nav"))]),
+                    )]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![(
+                            "nav_btn",
+                            obj(vec![("template", s("nav")), ("label", s("Test"))]),
+                        )]),
+                    ),
+                ]),
+            ),
         ]);
         let layout_config =
             parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
@@ -2613,46 +2639,73 @@ mod template_tests_continued {
     fn test_template_integration() {
         // Build config Value directly to test template expansion
         let config = obj(vec![
-            ("templates", obj(vec![
-                ("template", obj(vec![
-                    ("nav", obj(vec![
-                        ("type", s("button")),
-                        ("variant", s("ghost")),
-                        ("size", s("sm")),
-                        ("on_click", s("on_nav")),
-                    ])),
-                    ("page", obj(vec![
-                        ("type", s("panel")),
-                        ("visible", Value::Bool(false)),
-                        ("component", obj(vec![
-                            ("inner", obj(vec![
-                                ("type", s("stack")),
-                                ("direction", s("vertical")),
-                                ("slot", Value::Bool(true)),
-                            ])),
-                        ])),
-                    ])),
-                ])),
-            ])),
-            ("layout", obj(vec![
-                ("type", s("stack")),
-                ("component", obj(vec![
-                    ("nav_btn", obj(vec![
-                        ("template", s("nav")),
-                        ("label", s("Button")),
-                    ])),
-                    ("page_btn", obj(vec![
-                        ("template", s("page")),
-                        ("visible", Value::Bool(true)),
-                        ("component", obj(vec![
-                            ("title", obj(vec![
-                                ("type", s("label")),
-                                ("text", s("Button Page")),
-                            ])),
-                        ])),
-                    ])),
-                ])),
-            ])),
+            (
+                "templates",
+                obj(vec![(
+                    "template",
+                    obj(vec![
+                        (
+                            "nav",
+                            obj(vec![
+                                ("type", s("button")),
+                                ("variant", s("ghost")),
+                                ("size", s("sm")),
+                                ("on_click", s("on_nav")),
+                            ]),
+                        ),
+                        (
+                            "page",
+                            obj(vec![
+                                ("type", s("panel")),
+                                ("visible", Value::Bool(false)),
+                                (
+                                    "component",
+                                    obj(vec![(
+                                        "inner",
+                                        obj(vec![
+                                            ("type", s("stack")),
+                                            ("direction", s("vertical")),
+                                            ("slot", Value::Bool(true)),
+                                        ]),
+                                    )]),
+                                ),
+                            ]),
+                        ),
+                    ]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            (
+                                "nav_btn",
+                                obj(vec![("template", s("nav")), ("label", s("Button"))]),
+                            ),
+                            (
+                                "page_btn",
+                                obj(vec![
+                                    ("template", s("page")),
+                                    ("visible", Value::Bool(true)),
+                                    (
+                                        "component",
+                                        obj(vec![(
+                                            "title",
+                                            obj(vec![
+                                                ("type", s("label")),
+                                                ("text", s("Button Page")),
+                                            ]),
+                                        )]),
+                                    ),
+                                ]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
         ]);
         let layout_config =
             parse_layout_config(&config, &TemplateMap::new()).expect("Layout parse failed");
