@@ -7,6 +7,22 @@ use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
 
+/// A rich text editor component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <text-editor id="content" placeholder="Start writing..." rows="10" default-value="" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `placeholder` | string | Placeholder text shown when empty |
+/// | `default-value` | string | Initial text content |
+/// | `rows` | int | Number of visible rows |
+/// | `disabled` | bool | Whether the editor is read-only |
 #[derive(IntoElement, NemoComponent)]
 #[allow(dead_code)]
 pub struct TextEditor {

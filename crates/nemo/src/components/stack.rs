@@ -1,6 +1,23 @@
 use gpui::*;
 use nemo_macros::NemoComponent;
 
+/// A flex container component for arranging children horizontally or vertically.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <stack id="main" direction="horizontal" spacing="8" scroll="true">
+///   <!-- child elements -->
+/// </stack>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `direction` | string | Layout direction: `"horizontal"` or `"vertical"` (default) |
+/// | `spacing` | int | Gap between children in pixels (default: 4) |
+/// | `scroll` | bool | Enable scrolling along the layout axis |
 #[derive(IntoElement, NemoComponent)]
 pub struct Stack {
     #[property(default = "vertical")]

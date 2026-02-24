@@ -2,6 +2,20 @@ use gpui::*;
 use gpui_component::progress::Progress as GpuiProgress;
 use nemo_macros::NemoComponent;
 
+/// A progress bar component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <progress id="upload" value="65" max="100" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `value` | float | Current progress value (0-100) |
+/// | `max` | float | Maximum value (default: 100) |
 #[derive(IntoElement, NemoComponent)]
 pub struct Progress {
     #[property]

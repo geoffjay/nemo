@@ -5,6 +5,24 @@ use nemo_macros::NemoComponent;
 
 use super::chart_utils::{chart_color, empty_chart_placeholder, extract_data_array, get_f64_field};
 
+/// A pie chart component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <pie-chart id="share" value-field="amount" outer-radius="120" inner-radius="60" height="300">
+///   <data bind="shareData" />
+/// </pie-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `value-field` | string | Data field for slice values |
+/// | `outer-radius` | float | Outer radius of the pie |
+/// | `inner-radius` | float | Inner radius (set > 0 for donut chart) |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct PieChart {
     #[property(default = "")]

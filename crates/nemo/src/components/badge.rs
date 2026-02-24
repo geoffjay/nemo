@@ -2,6 +2,22 @@ use gpui::*;
 use gpui_component::badge::Badge as GpuiBadge;
 use nemo_layout::BuiltComponent;
 
+/// A badge component with an optional count indicator or dot.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <badge id="notifications" count="5">
+///   <icon name="bell" />
+/// </badge>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `count` | int | Numeric count displayed on the badge |
+/// | `dot` | bool | Show a small dot indicator instead of a count |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Badge {

@@ -2,6 +2,21 @@ use gpui::*;
 use gpui_component::alert::{Alert as GpuiAlert, AlertVariant};
 use nemo_layout::BuiltComponent;
 
+/// An alert/status message component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <alert id="warn" message="Disk space is running low." variant="warning" title="Warning" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `message` | string | Alert body text |
+/// | `variant` | string | Alert type: `"info"`, `"success"`, `"warning"`, or `"error"` |
+/// | `title` | string | Optional title displayed above the message |
 #[derive(IntoElement)]
 pub struct Alert {
     source: BuiltComponent,

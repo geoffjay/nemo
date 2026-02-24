@@ -5,6 +5,27 @@ use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
 
+/// A code editor component with syntax highlighting.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <code-editor id="editor" language="rust" line-number="true" searchable="true"
+///   rows="20" tab-size="4" default-value="fn main() {}" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `language` | string | Programming language for syntax highlighting |
+/// | `line-number` | bool | Show line numbers |
+/// | `searchable` | bool | Enable search functionality |
+/// | `default-value` | string | Initial code content |
+/// | `rows` | int | Number of visible rows |
+/// | `tab-size` | int | Number of spaces per tab |
+/// | `hard-tabs` | bool | Use tab characters instead of spaces |
+/// | `disabled` | bool | Whether the editor is read-only |
 #[derive(IntoElement, NemoComponent)]
 #[allow(dead_code)]
 pub struct CodeEditor {

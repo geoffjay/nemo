@@ -15,6 +15,24 @@ use super::chart_utils::{
 
 /// A stacked column chart: multiple series stacked vertically within each
 /// category band, using the low-level Plot primitives.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <stacked-column-chart id="breakdown" x-field="quarter" y-fields='["productA","productB"]'
+///   tick-margin="20" height="300">
+///   <data bind="quarterlyData" />
+/// </stacked-column-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis categories |
+/// | `y-fields` | JSON array | Array of data field names for stacked series |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct StackedColumnChart {
     #[property(default = "")]

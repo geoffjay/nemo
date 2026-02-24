@@ -13,6 +13,26 @@ use super::chart_utils::{
     get_string_field,
 };
 
+/// A realtime streaming line chart that updates as new data arrives.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <realtime-chart id="monitor" x-field="time" y-fields='["cpu","memory"]'
+///   linear="true" tick-margin="20" height="300">
+///   <data bind="metricsStream" />
+/// </realtime-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis (typically time) |
+/// | `y-fields` | JSON array | Array of data field names for each line series |
+/// | `linear` | bool | Use linear interpolation instead of curved |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct RealtimeChart {
     #[property(default = "")]

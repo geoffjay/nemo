@@ -7,6 +7,24 @@ use std::sync::Arc;
 use super::resolve_color;
 use crate::runtime::NemoRuntime;
 
+/// A clickable button component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <button id="submit" label="Save" variant="primary" size="md" on-click="handleSave" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label` | string | Button text (default: `"Button"`) |
+/// | `variant` | string | Style variant: `"primary"`, `"ghost"`, `"outline"`, `"danger"`, or `"link"` |
+/// | `disabled` | bool | Whether the button is disabled |
+/// | `size` | string | Button size: `"sm"`, `"md"`, or `"lg"` |
+/// | `full-width` | bool | Stretch the button to fill its container |
+/// | `on-click` | string | Event handler invoked on click |
 #[derive(IntoElement, NemoComponent)]
 pub struct Button {
     #[source]
