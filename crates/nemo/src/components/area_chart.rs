@@ -8,6 +8,24 @@ use super::chart_utils::{
     get_string_field,
 };
 
+/// An area chart component with filled regions under the lines.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <area-chart id="traffic" x-field="date" fill-opacity="0.3" tick-margin="20" height="300">
+///   <data bind="trafficData" />
+/// </area-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis |
+/// | `fill-opacity` | float | Opacity of the filled area (0.0-1.0) |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct AreaChart {
     #[property(default = "")]

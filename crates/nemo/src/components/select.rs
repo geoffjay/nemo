@@ -5,6 +5,21 @@ use std::sync::{Arc, Mutex};
 
 use crate::runtime::NemoRuntime;
 
+/// A dropdown select component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <select id="country" options='["USA","Canada","Mexico"]' value="USA" on-change="handleSelect" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `options` | JSON array | Array of option strings |
+/// | `value` | string | Currently selected value |
+/// | `on-change` | string | Event handler invoked when selection changes |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Select {

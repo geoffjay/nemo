@@ -14,6 +14,24 @@ use super::chart_utils::{
 };
 
 /// A stacked bar chart with horizontal bars.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <stacked-bar-chart id="usage" y-field="category" x-fields='["desktop","mobile"]'
+///   tick-margin="20" height="300">
+///   <data bind="usageData" />
+/// </stacked-bar-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `y-field` | string | Data field for the y-axis categories |
+/// | `x-fields` | JSON array | Array of data field names for stacked series |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct StackedBarChart {
     #[property(default = "")]

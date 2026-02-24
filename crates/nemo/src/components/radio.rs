@@ -6,6 +6,22 @@ use std::sync::{Arc, Mutex};
 
 use crate::runtime::NemoRuntime;
 
+/// A radio button group component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <radio id="size" options='["Small","Medium","Large"]' direction="vertical" value="Medium" on-change="handleSize" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `options` | JSON array | Array of option strings |
+/// | `direction` | string | Layout direction: `"horizontal"` or `"vertical"` |
+/// | `value` | string | Currently selected option |
+/// | `on-change` | string | Event handler invoked when selection changes |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Radio {

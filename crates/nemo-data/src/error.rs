@@ -133,7 +133,7 @@ pub enum RepositoryError {
 ///
 /// All binding errors are **fatal** for the affected binding. They indicate
 /// a configuration problem (wrong path, missing component, incompatible
-/// transform). Fix the binding definition in the HCL config.
+/// transform). Fix the binding definition in the XML config.
 #[derive(Debug, Error)]
 pub enum BindingError {
     /// Source path not found.

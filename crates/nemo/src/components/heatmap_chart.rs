@@ -13,6 +13,25 @@ use super::chart_utils::{
 /// A heatmap chart rendering a grid of coloured cells. Each data item
 /// specifies an x category, y category, and a numeric value that is mapped
 /// to a colour intensity.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <heatmap-chart id="activity" x-field="day" y-field="hour" value-field="count"
+///   tick-margin="20" height="300">
+///   <data bind="activityData" />
+/// </heatmap-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for x-axis categories |
+/// | `y-field` | string | Data field for y-axis categories |
+/// | `value-field` | string | Data field for the heat intensity value |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct HeatmapChart {
     #[property(default = "")]

@@ -21,7 +21,7 @@ The binary is produced at `target/release/nemo`.
 
 ## Your First Application
 
-Create a directory for your application and add an `app.hcl` file:
+Create a directory for your application and add an `app.xml` file:
 
 ```bash
 mkdir my-app && cd my-app
@@ -29,69 +29,33 @@ mkdir my-app && cd my-app
 
 ### 1. Define the Application
 
-Create `app.hcl`:
+Create `app.xml`:
 
-```hcl
-app {
-  window {
-    title = "My First App"
-    width = 800
-    height = 600
+```xml
+<nemo>
+  <app>
+    <window title="My First App" width="800" height="600">
+      <header-bar theme-toggle="true" />
+    </window>
+    <theme name="kanagawa" mode="dark" />
+  </app>
 
-    header_bar {
-      theme_toggle = true
-    }
-  }
+  <script src="./scripts" />
 
-  theme {
-    name = "kanagawa"
-    mode = "dark"
-  }
-}
+  <layout type="stack">
+    <stack id="main" direction="vertical" margin="16" spacing="8">
+      <label id="title" text="My First Nemo App" size="xl" />
 
-scripts {
-  path = "./scripts"
-}
+      <panel id="content" padding="16">
+        <label id="greeting" text="Click the button below to see scripting in action." />
+      </panel>
 
-layout {
-  type = "stack"
+      <button id="action" label="Say Hello" variant="primary" on-click="on_say_hello" />
 
-  component "main" {
-    type = "stack"
-    direction = "vertical"
-    margin = 16
-    spacing = 8
-
-    component "title" {
-      type = "label"
-      text = "My First Nemo App"
-      size = "xl"
-    }
-
-    component "content" {
-      type = "panel"
-      padding = 16
-
-      component "greeting" {
-        type = "label"
-        text = "Click the button below to see scripting in action."
-      }
-    }
-
-    component "action" {
-      type = "button"
-      label = "Say Hello"
-      variant = "primary"
-      on_click = "on_say_hello"
-    }
-
-    component "output" {
-      type = "label"
-      id = "output_label"
-      text = ""
-    }
-  }
-}
+      <label id="output_label" text="" />
+    </stack>
+  </layout>
+</nemo>
 ```
 
 ### 2. Add an Event Handler
@@ -108,16 +72,16 @@ fn on_say_hello(component_id, event_data) {
 ### 3. Run It
 
 ```bash
-nemo --app-config app.hcl
+nemo --app-config app.xml
 ```
 
 You should see a window with a title, a panel, a button, and a label. Clicking the button updates the label text via the RHAI script.
 
 ## Core Concepts
 
-### Configuration (HCL)
+### Configuration (XML)
 
-Nemo applications are defined in [HCL](https://github.com/hashicorp/hcl) files. The configuration contains up to six top-level blocks:
+Nemo applications are defined in XML files. The configuration contains up to six top-level elements:
 
 | Block | Purpose |
 |-------|---------|
@@ -132,13 +96,8 @@ Nemo applications are defined in [HCL](https://github.com/hashicorp/hcl) files. 
 
 Components are the building blocks of your UI. Each component has a `type` and a set of properties specific to that type.
 
-```hcl
-component "my_button" {
-  type = "button"
-  label = "Click Me"
-  variant = "primary"
-  on_click = "handle_click"
-}
+```xml
+<button id="my_button" label="Click Me" variant="primary" on-click="handle_click" />
 ```
 
 Available component types:
@@ -156,13 +115,10 @@ Available component types:
 
 Data sources connect external systems to your UI. When a source emits new data, bound components update automatically.
 
-```hcl
-data {
-  source "ticker" {
-    type     = "timer"
-    interval = 1
-  }
-}
+```xml
+<data>
+  <source name="ticker" type="timer" interval="1" />
+</data>
 ```
 
 Supported source types: `timer`, `http`, `websocket`, `mqtt`, `redis`, `nats`, `file`.
@@ -171,17 +127,10 @@ Supported source types: `timer`, `http`, `websocket`, `mqtt`, `redis`, `nats`, `
 
 Bind data source output directly to component properties:
 
-```hcl
-component "counter" {
-  type = "label"
-  text = "Waiting..."
-
-  binding {
-    source    = "data.ticker"
-    target    = "text"
-    transform = "tick"
-  }
-}
+```xml
+<label id="counter" text="Waiting...">
+  <binding source="data.ticker" target="text" transform="tick" />
+</label>
 ```
 
 When the `ticker` source emits `{ tick: 42, timestamp: "..." }`, the binding extracts the `tick` field and sets the label text to `42`.
@@ -200,12 +149,8 @@ fn handle_click(component_id, event_data) {
 
 Link handlers to components with `on_click`:
 
-```hcl
-component "btn" {
-  type     = "button"
-  label    = "Refresh"
-  on_click = "handle_click"
-}
+```xml
+<button id="btn" label="Refresh" on-click="handle_click" />
 ```
 
 ### Themes
@@ -222,13 +167,10 @@ Nemo ships with several built-in themes:
 
 Set the theme in your `app` block:
 
-```hcl
-app {
-  theme {
-    name = "catppuccin"
-    mode = "dark"
-  }
-}
+```xml
+<app>
+  <theme name="catppuccin" mode="dark" />
+</app>
 ```
 
 ## Example Applications
@@ -245,8 +187,8 @@ The `examples/` directory contains complete applications:
 Run any example:
 
 ```bash
-nemo --app-config examples/basic/app.hcl
-nemo --app-config examples/calculator/app.hcl
+nemo --app-config examples/basic/app.xml
+nemo --app-config examples/calculator/app.xml
 ```
 
 ## Next Steps

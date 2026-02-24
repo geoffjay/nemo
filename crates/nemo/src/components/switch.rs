@@ -6,6 +6,22 @@ use std::sync::{Arc, Mutex};
 
 use crate::runtime::NemoRuntime;
 
+/// An on/off switch component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <switch id="darkmode" label="Dark Mode" checked="true" on-change="handleToggle" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label` | string | Text label displayed next to the switch |
+/// | `disabled` | bool | Whether the switch is disabled |
+/// | `checked` | bool | Whether the switch is on |
+/// | `on-change` | string | Event handler invoked when toggled |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Switch {

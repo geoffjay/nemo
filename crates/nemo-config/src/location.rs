@@ -82,8 +82,8 @@ mod tests {
 
     #[test]
     fn test_location_display() {
-        let loc = SourceLocation::new("config.hcl", 10, 5);
-        assert_eq!(loc.to_string(), "config.hcl:10:5");
+        let loc = SourceLocation::new("config.xml", 10, 5);
+        assert_eq!(loc.to_string(), "config.xml:10:5");
     }
 
     #[test]
@@ -95,7 +95,7 @@ mod tests {
     #[test]
     fn test_display_context() {
         let source = "line 1\nline 2\nline 3\nline 4\nline 5";
-        let loc = SourceLocation::new("test.hcl", 3, 2);
+        let loc = SourceLocation::new("test.xml", 3, 2);
         let context = loc.display_context(source, 1);
         assert!(context.contains("line 2"));
         assert!(context.contains("line 3"));

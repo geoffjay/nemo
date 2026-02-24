@@ -267,7 +267,7 @@ enum PluginValue {
 Place compiled plugin libraries in a directory and pass it to Nemo:
 
 ```bash
-nemo --app-config app.hcl --extension-dirs ./plugins
+nemo --app-config app.xml --extension-dirs ./plugins
 ```
 
 Nemo scans for `.so` (Linux), `.dylib` (macOS), or `.dll` (Windows) files and loads them at startup.
@@ -280,7 +280,7 @@ Application developers who want to contribute built-in components or build Nemo 
 
 ### The `NemoComponent` Macro
 
-The `#[derive(NemoComponent)]` macro generates a constructor that extracts properties from the HCL configuration.
+The `#[derive(NemoComponent)]` macro generates a constructor that extracts properties from the XML configuration.
 
 ```rust
 use gpui::*;
@@ -350,7 +350,7 @@ impl RenderOnce for MyComponent {
 
 ### Registering a Component
 
-To make a component available in HCL configurations, register it in the component registry and add a match arm in `app.rs`:
+To make a component available in XML configurations, register it in the component registry and add a match arm in `app.rs`:
 
 ```rust
 // In render_component():
@@ -407,7 +407,7 @@ The Nemo codebase is organized as a Cargo workspace:
 | Crate | Purpose |
 |-------|---------|
 | `nemo` | Application shell, GPUI integration, components |
-| `nemo-config` | HCL parsing, validation, expression resolution |
+| `nemo-config` | XML parsing, validation, expression resolution |
 | `nemo-layout` | Component tree building, binding management |
 | `nemo-data` | Data sources, repository, binding system |
 | `nemo-registry` | Component/source/transform catalog |
@@ -437,8 +437,8 @@ cargo test --workspace
 ### Running Examples
 
 ```bash
-cargo run -- --app-config examples/basic/app.hcl
-cargo run -- --app-config examples/calculator/app.hcl
-cargo run -- --app-config examples/components/app.hcl
-cargo run -- --app-config examples/data-binding/app.hcl
+cargo run -- --app-config examples/basic/app.xml
+cargo run -- --app-config examples/calculator/app.xml
+cargo run -- --app-config examples/components/app.xml
+cargo run -- --app-config examples/data-binding/app.xml
 ```

@@ -12,7 +12,7 @@ nemo [OPTIONS]
 
 | Option | Short | Default | Description |
 |--------|-------|---------|-------------|
-| `--app-config <PATH>` | `-c` | `app.hcl` | Path to the main HCL configuration file |
+| `--app-config <PATH>` | `-c` | `app.xml` | Path to the main XML configuration file |
 | `--app-config-dirs <DIR>` | `-d` | | Additional configuration directories to scan (repeatable) |
 | `--extension-dirs <DIR>` | `-e` | | Extension/plugin directories to load (repeatable) |
 | `--verbose` | `-v` | | Enable debug-level logging |
@@ -26,27 +26,27 @@ nemo [OPTIONS]
 ### Run an application
 
 ```bash
-nemo --app-config app.hcl
+nemo --app-config app.xml
 ```
 
 ### Run with verbose logging
 
 ```bash
-nemo -c app.hcl --verbose
+nemo -c app.xml --verbose
 ```
 
 ### Validate configuration without launching
 
 ```bash
-nemo -c app.hcl --validate-only
+nemo -c app.xml --validate-only
 ```
 
-This parses the HCL file, checks for syntax errors and schema violations, then exits. Useful in CI pipelines or before deploying configuration changes.
+This parses the XML file, checks for syntax errors and schema violations, then exits. Useful in CI pipelines or before deploying configuration changes.
 
 ### Run in headless mode
 
 ```bash
-nemo -c app.hcl --headless
+nemo -c app.xml --headless
 ```
 
 Starts data sources and event handling without opening a window. Useful for background data processing or testing. Press `Ctrl-C` to stop.
@@ -54,10 +54,10 @@ Starts data sources and event handling without opening a window. Useful for back
 ### Load additional config and extension directories
 
 ```bash
-nemo -c app.hcl -d ./config.d -e ./plugins -e ./scripts
+nemo -c app.xml -d ./config.d -e ./plugins -e ./scripts
 ```
 
-Multiple directories can be specified by repeating the flag. Config directories are scanned for additional HCL files. Extension directories are scanned for `.rhai` scripts and native plugin libraries.
+Multiple directories can be specified by repeating the flag. Config directories are scanned for additional XML files. Extension directories are scanned for `.rhai` scripts and native plugin libraries.
 
 ## Exit Codes
 
@@ -69,7 +69,7 @@ Multiple directories can be specified by repeating the flag. Config directories 
 
 ## Environment
 
-Nemo reads environment variables in HCL expressions via the `${env.VARIABLE_NAME}` syntax. No special environment variables are required by Nemo itself.
+Nemo reads environment variables in XML expressions via the `${env.VARIABLE_NAME}` syntax. No special environment variables are required by Nemo itself.
 
 ## Logging
 
@@ -82,7 +82,7 @@ Log output includes thread IDs and module targets for troubleshooting:
 
 ```
 2026-02-09T12:00:00.000Z  INFO nemo: Nemo v0.1.0 starting...
-2026-02-09T12:00:00.001Z  INFO nemo::runtime: Loading configuration from: "app.hcl"
+2026-02-09T12:00:00.001Z  INFO nemo::runtime: Loading configuration from: "app.xml"
 2026-02-09T12:00:00.010Z  INFO nemo::runtime: Initializing subsystems...
 2026-02-09T12:00:00.015Z  INFO nemo: Starting GPUI application...
 ```

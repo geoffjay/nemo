@@ -7,6 +7,26 @@ use super::chart_utils::{
     empty_chart_placeholder, extract_data_array, get_f64_field, get_string_field,
 };
 
+/// A bar chart component (horizontal bars).
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <bar-chart id="sales" x-field="category" y-field="amount" show-label="true"
+///   tick-margin="20" height="300">
+///   <data bind="salesData" />
+/// </bar-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis |
+/// | `y-field` | string | Data field for the y-axis |
+/// | `show-label` | bool | Display value labels on bars |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct BarChart {
     #[property(default = "")]

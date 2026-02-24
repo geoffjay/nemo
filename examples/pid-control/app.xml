@@ -1,0 +1,43 @@
+<nemo>
+  <app>
+    <window title="PID Control Demo">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/pid-control"
+                  theme-toggle="true" />
+    </window>
+    <theme name="kanagawa" mode="dark" />
+  </app>
+
+  <script src="./scripts" />
+
+  <!-- Timer source drives the simulated plant -->
+  <data>
+    <source name="plant" type="timer" interval="1" />
+  </data>
+
+  <layout type="stack">
+    <stack id="root_panel" direction="vertical" margin="16" spacing="8">
+      <label id="title" text="PID Control Demo" size="xl" />
+
+      <stack id="main_content" direction="horizontal" spacing="16">
+        <!-- Left: Motor 1 PID control panel -->
+        <panel id="motor1_pid" template="pid_control">
+          <vars ns="pid.motor1" />
+        </panel>
+
+        <!-- Center: Motor 2 PID control panel -->
+        <panel id="motor2_pid" template="pid_control">
+          <vars ns="pid.motor2" />
+        </panel>
+
+        <!-- Right: Output display panel -->
+        <panel id="output_panel" padding="16" border="2" border-color="theme.border" shadow="md">
+          <label id="output_title" text="Process Status" />
+          <stack id="output_stack" direction="vertical" spacing="8">
+            <label id="motor1_output" text="Motor 1: 0.0" bind-text="data.pid.motor1.output_display" />
+            <label id="motor2_output" text="Motor 2: 0.0" bind-text="data.pid.motor2.output_display" />
+          </stack>
+        </panel>
+      </stack>
+    </stack>
+  </layout>
+</nemo>

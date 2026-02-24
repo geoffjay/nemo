@@ -6,9 +6,25 @@ use super::chart_utils::{
     chart_color, empty_chart_placeholder, extract_data_array, get_f64_field, get_string_field,
 };
 
-/// A pyramid chart — horizontal bars of decreasing width stacked vertically
+/// A pyramid chart -- horizontal bars of decreasing width stacked vertically
 /// from bottom (widest) to top (narrowest), centred on the vertical axis.
 /// Data items are sorted by value descending before rendering.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <pyramid-chart id="population" label-field="age_group" value-field="count" height="400">
+///   <data bind="populationData" />
+/// </pyramid-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `label-field` | string | Data field for segment labels |
+/// | `value-field` | string | Data field for segment values |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct PyramidChart {
     #[property(default = "")]

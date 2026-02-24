@@ -12,6 +12,24 @@ use super::chart_utils::{
 };
 
 /// A clustered (grouped) bar chart with horizontal bars.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <clustered-bar-chart id="grouped" y-field="department" x-fields='["q1","q2"]'
+///   tick-margin="20" height="300">
+///   <data bind="departmentData" />
+/// </clustered-bar-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `y-field` | string | Data field for the y-axis categories |
+/// | `x-fields` | JSON array | Array of data field names for grouped series |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct ClusteredBarChart {
     #[property(default = "")]

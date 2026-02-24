@@ -7,6 +7,27 @@ use super::chart_utils::{
     empty_chart_placeholder, extract_data_array, get_f64_field, get_string_field,
 };
 
+/// A line chart component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <line-chart id="trend" x-field="date" y-field="value" dot="true" linear="false"
+///   tick-margin="20" height="300">
+///   <data bind="chartData" />
+/// </line-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis |
+/// | `y-field` | string | Data field for the y-axis |
+/// | `dot` | bool | Show data point dots |
+/// | `linear` | bool | Use linear interpolation instead of curved |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct LineChart {
     #[property(default = "")]

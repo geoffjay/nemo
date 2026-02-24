@@ -13,6 +13,24 @@ use super::chart_utils::{
 
 /// A clustered (grouped) column chart: multiple series rendered side-by-side
 /// within each category band.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <clustered-column-chart id="comparison" x-field="month" y-fields='["2024","2025"]'
+///   tick-margin="20" height="300">
+///   <data bind="comparisonData" />
+/// </clustered-column-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for the x-axis categories |
+/// | `y-fields` | JSON array | Array of data field names for grouped series |
+/// | `tick-margin` | int | Margin for axis tick labels |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct ClusteredColumnChart {
     #[property(default = "")]

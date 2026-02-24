@@ -2,6 +2,23 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
+/// A generic container panel component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <panel id="info" visible="true" padding="16" border="1">
+///   <!-- child elements -->
+/// </panel>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `visible` | bool | Whether the panel is visible |
+/// | `padding` | int | Inner padding in pixels |
+/// | `border` | int | Border width in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct Panel {
     #[source]

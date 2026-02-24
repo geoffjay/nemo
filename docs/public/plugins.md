@@ -147,37 +147,21 @@ This produces `target/debug/libmy_sensor_plugin.dylib` (macOS) or `target/debug/
 Pass the plugin directory to Nemo:
 
 ```bash
-nemo --app-config app.hcl --extension-dirs ./target/debug
+nemo --app-config app.xml --extension-dirs ./target/debug
 ```
 
 Nemo discovers and loads the library, calls the manifest and entry functions, and the plugin begins publishing data.
 
 #### 6. Bind Plugin Data to UI
 
-In your `app.hcl`, bind components to the data paths the plugin sets:
+In your `app.xml`, bind components to the data paths the plugin sets:
 
-```hcl
-layout {
-  type = "stack"
-
-  component "temp_display" {
-    type = "label"
-    text = "Temperature: waiting..."
-    bind_text = "sensor.temperature"
-  }
-
-  component "humidity_display" {
-    type = "label"
-    text = "Humidity: waiting..."
-    bind_text = "sensor.humidity"
-  }
-
-  component "counter_display" {
-    type = "label"
-    text = "Counter: 0"
-    bind_text = "sensor.counter"
-  }
-}
+```xml
+<layout type="stack">
+  <label id="temp_display" text="Temperature: waiting..." bind-text="sensor.temperature" />
+  <label id="humidity_display" text="Humidity: waiting..." bind-text="sensor.humidity" />
+  <label id="counter_display" text="Counter: 0" bind-text="sensor.counter" />
+</layout>
 ```
 
 The `bind_text` shorthand creates a one-way binding from the plugin's data path to the label's `text` property. As the plugin updates values via `set_data()`, the UI automatically refreshes.
@@ -529,7 +513,7 @@ This produces `target/wasm32-wasip2/debug/my_wasm_plugin.wasm`.
 Pass the directory containing the `.wasm` file to Nemo:
 
 ```bash
-nemo --app-config app.hcl --extension-dirs ./target/wasm32-wasip2/debug
+nemo --app-config app.xml --extension-dirs ./target/wasm32-wasip2/debug
 ```
 
 Nemo discovers `.wasm` files alongside native libraries and loads them via Wasmtime.

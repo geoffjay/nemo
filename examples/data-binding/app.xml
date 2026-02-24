@@ -1,0 +1,115 @@
+<nemo>
+  <app>
+    <window title="Nemo Data Binding Demo">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/data-binding"
+                  theme-toggle="true" />
+    </window>
+    <theme name="nord" mode="dark" />
+  </app>
+
+  <script src="./scripts" />
+
+  <!-- Data sources configuration -->
+  <data>
+    <!-- Timer source - works without external dependencies -->
+    <source name="ticker" type="timer" interval="1" />
+
+    <!-- HTTP source - polls a public API periodically -->
+    <source name="api" type="http" url="https://httpbin.org/get" interval="30" />
+
+    <!-- MQTT source (requires running broker) -->
+    <source name="sensors" type="mqtt" host="localhost" port="1883"
+            topics='["sensors/#"]' client-id="nemo-demo" />
+
+    <!-- Redis pub/sub (requires running Redis) -->
+    <source name="events" type="redis" url="redis://127.0.0.1:6379"
+            channels='["app-events", "notifications"]' />
+
+    <!-- NATS (requires running NATS server) -->
+    <source name="messages" type="nats" url="nats://127.0.0.1:4222"
+            subjects='["updates.>"]' />
+
+    <!-- Outbound sink for publishing data -->
+    <sink name="commands" type="mqtt" host="localhost" port="1883" topic="commands" />
+  </data>
+
+  <!-- Layout -->
+  <layout type="stack">
+    <stack id="root_panel" direction="vertical" margin="16" spacing="8">
+      <label id="title" text="Data Binding Demo" />
+
+      <panel id="main_panel" padding="16" shadow="md">
+        <stack id="main_content" direction="vertical" spacing="16">
+
+          <!-- Timer source -->
+          <panel id="timer_section" padding="16" border="2" border-color="theme.border" shadow="md">
+            <label id="timer_heading" text="Timer Source (ticker)" />
+            <label id="tick_count" text="Tick: waiting...">
+              <binding source="data.ticker" target="text" transform="tick" />
+            </label>
+            <label id="tick_timestamp" text="Timestamp: waiting...">
+              <binding source="data.ticker" target="text" transform="timestamp" />
+            </label>
+          </panel>
+
+          <!-- HTTP source -->
+          <panel id="api_section" padding="16" border="2" border-color="theme.border" shadow="md">
+            <label id="api_heading" text="HTTP Source (api)" />
+            <label id="api_origin" text="Origin: waiting...">
+              <binding source="data.api" target="text" transform="origin" />
+            </label>
+            <label id="api_url" text="URL: waiting...">
+              <binding source="data.api" target="text" transform="url" />
+            </label>
+            <text id="api_raw" content="Waiting for API response..." bind-content="data.api" />
+          </panel>
+
+          <!-- MQTT source -->
+          <panel id="mqtt_section" padding="16" border="2" border-color="theme.border" shadow="md">
+            <label id="mqtt_heading" text="MQTT Source (sensors)" />
+            <label id="mqtt_topic" text="Topic: waiting for message...">
+              <binding source="data.sensors" target="text" transform="topic" />
+            </label>
+            <label id="mqtt_payload" text="Payload: --">
+              <binding source="data.sensors" target="text" transform="payload" />
+            </label>
+            <text id="mqtt_raw" content="No MQTT data yet" bind-content="data.sensors" />
+          </panel>
+
+          <!-- Redis source -->
+          <panel id="redis_section" padding="16" border="2" border-color="theme.border" shadow="md">
+            <label id="redis_heading" text="Redis Source (events)" />
+            <label id="redis_channel" text="Channel: waiting for message...">
+              <binding source="data.events" target="text" transform="channel" />
+            </label>
+            <label id="redis_payload" text="Payload: --">
+              <binding source="data.events" target="text" transform="payload" />
+            </label>
+            <text id="redis_raw" content="No Redis data yet" bind-content="data.events" />
+          </panel>
+
+          <!-- NATS source -->
+          <panel id="nats_section" padding="16" border="2" border-color="theme.border" shadow="md">
+            <label id="nats_heading" text="NATS Source (messages)" />
+            <label id="nats_subject" text="Subject: waiting for message...">
+              <binding source="data.messages" target="text" transform="subject" />
+            </label>
+            <label id="nats_payload" text="Payload: --">
+              <binding source="data.messages" target="text" transform="payload" />
+            </label>
+            <text id="nats_raw" content="No NATS data yet" bind-content="data.messages" />
+          </panel>
+
+          <!-- Interactive section -->
+          <panel id="actions_section" padding="16" border="2" border-color="theme.border" shadow="md">
+            <label id="actions_heading" text="Actions" />
+            <button id="refresh_btn" label="Read Data" on-click="on_read_data" />
+            <button id="write_btn" label="Write Data" on-click="on_write_data" />
+            <label id="result_display" text="Click a button to interact with data sources" />
+          </panel>
+
+        </stack>
+      </panel>
+    </stack>
+  </layout>
+</nemo>

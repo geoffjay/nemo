@@ -1,18 +1,16 @@
 //! Configuration loader - main entry point for loading configurations.
 
 use crate::error::ConfigError;
-use crate::parser::HclParser;
 use crate::registry::SchemaRegistry;
 use crate::resolver::{ConfigResolver, ResolveContext};
 use crate::validator::{ConfigValidator, ValidationResult};
+use crate::xml_parser::XmlParser;
 use crate::Value;
 use std::path::Path;
 use std::sync::Arc;
 
 /// Main entry point for loading and processing configuration files.
 pub struct ConfigurationLoader {
-    #[allow(dead_code)]
-    parser: HclParser,
     validator: ConfigValidator,
     resolver: ConfigResolver,
     #[allow(dead_code)]
@@ -23,7 +21,6 @@ impl ConfigurationLoader {
     /// Creates a new configuration loader.
     pub fn new(schema_registry: Arc<SchemaRegistry>) -> Self {
         ConfigurationLoader {
-            parser: HclParser::new(),
             validator: ConfigValidator::new(Arc::clone(&schema_registry)),
             resolver: ConfigResolver::new(),
             schema_registry,
@@ -38,13 +35,21 @@ impl ConfigurationLoader {
         })?;
 
         let source_name = path.display().to_string();
-        self.load_string(&content, &source_name)
+        self.load_xml_string(&content, &source_name, path.parent())
     }
 
-    /// Loads configuration from a string.
-    pub fn load_string(&self, content: &str, source_name: &str) -> Result<Value, ConfigError> {
-        // Parse
-        let parser = HclParser::new().with_source_name(source_name);
+    /// Loads configuration from an XML string.
+    pub fn load_xml_string(
+        &self,
+        content: &str,
+        source_name: &str,
+        base_dir: Option<&Path>,
+    ) -> Result<Value, ConfigError> {
+        let mut parser = XmlParser::new().with_source_name(source_name);
+        if let Some(dir) = base_dir {
+            parser = parser.with_base_dir(dir);
+        }
+
         let raw_value = parser.parse(content).map_err(ConfigError::Parse)?;
 
         // Build resolve context from the parsed config
@@ -124,35 +129,56 @@ mod tests {
     }
 
     #[test]
-    fn test_load_simple_config() {
+    fn test_load_xml_string() {
         let loader = create_test_loader();
 
         let content = r#"
-            name = "test"
-            count = 42
+        <nemo>
+            <app title="XML App">
+                <window title="Test" />
+                <theme name="kanagawa" mode="dark" />
+            </app>
+            <script src="./scripts" />
+            <layout type="stack">
+                <label id="header" text="Hello XML" />
+            </layout>
+        </nemo>
         "#;
 
-        let value = loader.load_string(content, "test.hcl").unwrap();
-        assert_eq!(value.get("name"), Some(&Value::String("test".to_string())));
-        assert_eq!(value.get("count"), Some(&Value::Integer(42)));
+        let value = loader.load_xml_string(content, "test.xml", None).unwrap();
+        let app = value.get("app").unwrap();
+        assert_eq!(
+            app.get("title"),
+            Some(&Value::String("XML App".to_string()))
+        );
+
+        let layout = value.get("layout").unwrap();
+        assert_eq!(
+            layout.get("type"),
+            Some(&Value::String("stack".to_string()))
+        );
     }
 
     #[test]
-    fn test_load_with_variables() {
+    fn test_load_xml_with_variables() {
         let loader = create_test_loader();
 
         let content = r#"
-            variable "app_name" {
-                default = "My App"
-            }
-
-            name = "${var.app_name}"
+        <nemo>
+            <variable name="greeting" default="Hello World" />
+            <layout type="stack">
+                <label id="lbl" text="${var.greeting}" />
+            </layout>
+        </nemo>
         "#;
 
-        let value = loader.load_string(content, "test.hcl").unwrap();
+        let value = loader.load_xml_string(content, "test.xml", None).unwrap();
+        let layout = value.get("layout").unwrap();
+        let components = layout.get("component").unwrap();
+        let lbl = components.get("lbl").unwrap();
         assert_eq!(
-            value.get("name"),
-            Some(&Value::String("My App".to_string()))
+            lbl.get("text"),
+            Some(&Value::String("Hello World".to_string()))
         );
     }
 }

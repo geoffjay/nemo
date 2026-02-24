@@ -3,6 +3,19 @@ use gpui_component::spinner::Spinner as GpuiSpinner;
 use gpui_component::{Sizable, Size as ComponentSize};
 use nemo_layout::BuiltComponent;
 
+/// A loading spinner component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <spinner id="loading" size="md" />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `size` | string | Spinner size: `"sm"`, `"md"`, or `"lg"` |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Spinner {

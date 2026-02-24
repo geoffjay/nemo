@@ -8,8 +8,28 @@ use nemo_macros::NemoComponent;
 
 use super::chart_utils::{chart_color, empty_chart_placeholder, extract_data_array, get_f64_field};
 
-/// A bubble chart — a scatter chart where each point has a third dimension
+/// A bubble chart -- a scatter chart where each point has a third dimension
 /// (size) encoded as the radius of the circle.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <bubble-chart id="market" x-field="revenue" y-field="growth" size-field="employees"
+///   min-radius="4" max-radius="40" height="400">
+///   <data bind="companies" />
+/// </bubble-chart>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `x-field` | string | Data field for x-axis values |
+/// | `y-field` | string | Data field for y-axis values |
+/// | `size-field` | string | Data field controlling bubble radius |
+/// | `min-radius` | float | Minimum bubble radius |
+/// | `max-radius` | float | Maximum bubble radius |
+/// | `height` | int | Chart height in pixels |
 #[derive(IntoElement, NemoComponent)]
 pub struct BubbleChart {
     #[property(default = "")]

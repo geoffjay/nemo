@@ -1,0 +1,139 @@
+<nemo>
+  <app>
+    <window title="Data Streaming Dashboard">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/data-streaming"
+                  theme-toggle="true" />
+    </window>
+    <theme name="kanagawa" mode="dark" />
+  </app>
+
+  <script src="./scripts" />
+
+  <data>
+    <source name="metrics" type="nats" url="nats://127.0.0.1:4222"
+            subjects='["metrics.>"]' />
+  </data>
+
+  <layout type="stack">
+    <stack id="root_row" direction="horizontal" spacing="0">
+
+      <!-- Side Navigation -->
+      <sidenav-bar id="sidenav" collapsed="true" border-left="false">
+        <sidenav-bar-item id="nav_charts" icon="chart-pie" label="Charts" on-click="on_nav" />
+        <sidenav-bar-item id="nav_timeseries" icon="frame" label="Time Series" on-click="on_nav" />
+        <sidenav-bar-item id="nav_tables" icon="layout-dashboard" label="Data Tables" on-click="on_nav" />
+      </sidenav-bar>
+
+      <!-- Content Area -->
+      <stack id="content" direction="vertical" flex="1">
+
+        <!-- Charts Page -->
+        <panel id="page_charts" visible="true">
+          <stack id="charts_stack" direction="vertical" spacing="16" padding="16" scroll="true">
+            <label id="charts_heading" text="Live Metrics" size="lg" />
+            <label id="status_label" text="NATS: waiting for data...">
+              <binding source="data.metrics" target="text" transform="subject" />
+            </label>
+
+            <label id="chart_1_label" text="Channel Statistics (Mean / Min / Max)" size="sm" />
+            <stacked-column-chart id="chart_1" x-field="channel"
+                                  y-fields='["mean", "min", "max"]' height="300">
+              <binding source="data.stats.summary" target="data" />
+            </stacked-column-chart>
+
+            <label id="chart_2_label" text="Channel Variability (StdDev)" size="sm" />
+            <column-chart id="chart_2" x-field="channel" y-field="stddev" height="300">
+              <binding source="data.stats.summary" target="data" />
+            </column-chart>
+          </stack>
+        </panel>
+
+        <!-- Time Series Page -->
+        <panel id="page_timeseries" visible="false">
+          <stack id="timeseries_stack" direction="vertical" spacing="16" padding="16" scroll="true">
+            <label id="timeseries_heading" text="Live Time Series (30s window)" size="lg" />
+
+            <!-- Row 1: Temperature + Humidity -->
+            <stack id="ts_row_1" direction="horizontal" spacing="16">
+              <panel id="ts_temperature_panel" flex="1" padding="12" border="1" border-color="theme.border">
+                <stack id="ts_temperature_stack" direction="vertical" spacing="4">
+                  <label id="ts_temperature_label" text="Temperature (°C)" size="sm" />
+                  <realtime-chart id="ts_temperature" x-field="time"
+                                  y-fields='["channel_0", "channel_5", "channel_10", "channel_15"]'
+                                  linear="true" tick-margin="5" height="250">
+                    <binding source="data.stats.timeseries.temperature" target="data" />
+                  </realtime-chart>
+                </stack>
+              </panel>
+              <panel id="ts_humidity_panel" flex="1" padding="12" border="1" border-color="theme.border">
+                <stack id="ts_humidity_stack" direction="vertical" spacing="4">
+                  <label id="ts_humidity_label" text="Humidity (%)" size="sm" />
+                  <realtime-chart id="ts_humidity" x-field="time"
+                                  y-fields='["channel_1", "channel_6", "channel_11", "channel_16"]'
+                                  linear="true" tick-margin="5" height="250">
+                    <binding source="data.stats.timeseries.humidity" target="data" />
+                  </realtime-chart>
+                </stack>
+              </panel>
+            </stack>
+
+            <!-- Row 2: Pressure + Speed -->
+            <stack id="ts_row_2" direction="horizontal" spacing="16">
+              <panel id="ts_pressure_panel" flex="1" padding="12" border="1" border-color="theme.border">
+                <stack id="ts_pressure_stack" direction="vertical" spacing="4">
+                  <label id="ts_pressure_label" text="Pressure (PSI)" size="sm" />
+                  <realtime-chart id="ts_pressure" x-field="time"
+                                  y-fields='["channel_2", "channel_7", "channel_12", "channel_17"]'
+                                  linear="true" tick-margin="5" height="250">
+                    <binding source="data.stats.timeseries.pressure" target="data" />
+                  </realtime-chart>
+                </stack>
+              </panel>
+              <panel id="ts_speed_panel" flex="1" padding="12" border="1" border-color="theme.border">
+                <stack id="ts_speed_stack" direction="vertical" spacing="4">
+                  <label id="ts_speed_label" text="Speed (RPM)" size="sm" />
+                  <realtime-chart id="ts_speed" x-field="time"
+                                  y-fields='["channel_3", "channel_8", "channel_13", "channel_18"]'
+                                  linear="true" tick-margin="5" height="250">
+                    <binding source="data.stats.timeseries.speed" target="data" />
+                  </realtime-chart>
+                </stack>
+              </panel>
+            </stack>
+          </stack>
+        </panel>
+
+        <!-- Data Tables Page -->
+        <panel id="page_tables" visible="false">
+          <stack id="tables_stack" direction="vertical" spacing="16" padding="16" scroll="true">
+            <label id="tables_heading" text="Data Tables" size="lg" />
+
+            <panel id="quick_stats" padding="16" border="2" border-color="theme.border" shadow="md">
+              <stack id="quick_stats_content" direction="vertical" spacing="8">
+                <label id="quick_stats_title" text="Channel 0 Detail" size="sm" />
+                <stack id="stats_row" direction="horizontal" spacing="16">
+                  <label id="ch0_mean" text="Mean: --" bind-text="data.stats.channel_0.mean" />
+                  <label id="ch0_min" text="Min: --" bind-text="data.stats.channel_0.min" />
+                  <label id="ch0_max" text="Max: --" bind-text="data.stats.channel_0.max" />
+                  <label id="ch0_stddev" text="StdDev: --" bind-text="data.stats.channel_0.stddev" />
+                  <label id="ch0_count" text="Samples: --" bind-text="data.stats.channel_0.count" />
+                </stack>
+              </stack>
+            </panel>
+
+            <panel id="table_section" padding="16" border="2" border-color="theme.border" shadow="md">
+              <stack id="table_content" direction="vertical" spacing="8">
+                <label id="table_heading" text="All Channels Summary" size="sm" />
+                <table id="stats_table" stripe="true" height="500"
+                       columns='[{"key":"channel","label":"Channel","width":140},{"key":"mean","label":"Mean","width":100},{"key":"min","label":"Min","width":100},{"key":"max","label":"Max","width":100},{"key":"stddev","label":"StdDev","width":100},{"key":"count","label":"Samples","width":100}]'>
+                  <binding source="data.stats.summary" target="data" />
+                </table>
+              </stack>
+            </panel>
+          </stack>
+        </panel>
+
+      </stack>
+    </stack>
+  </layout>
+</nemo>

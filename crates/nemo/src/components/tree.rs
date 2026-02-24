@@ -43,6 +43,21 @@ pub fn values_to_tree_items(values: &[Value]) -> Vec<TreeItem> {
 }
 
 /// Nemo Tree wrapper component.
+/// A tree view component for hierarchical data.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <tree id="files" height="300"
+///   items='[{"id":"src","label":"src","children":[{"id":"main","label":"main.rs"}]}]' />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `height` | int | Fixed tree height in pixels |
+/// | `items` | JSON array | Array of tree node objects with `id`, `label`, and optional `children` |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Tree {

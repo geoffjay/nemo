@@ -2,6 +2,19 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
+/// A list display component.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <list id="fruits" items='["Apple","Banana","Cherry"]' />
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `items` | JSON array | Array of items to display |
 #[derive(IntoElement, NemoComponent)]
 pub struct List {
     #[source]

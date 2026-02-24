@@ -2,6 +2,21 @@ use gpui::*;
 use gpui_component::tooltip::Tooltip as GpuiTooltip;
 use nemo_layout::BuiltComponent;
 
+/// A tooltip wrapper component that shows a popup on hover.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <tooltip id="help-tip" content="Click to submit the form">
+///   <button label="Submit" />
+/// </tooltip>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `content` | string | Text displayed in the tooltip popup |
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Tooltip {

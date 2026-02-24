@@ -16,7 +16,7 @@ Shows Nemo's position in relation to external systems and users.
 C4Context
     title Nemo System Context
 
-    Person(developer, "Application Developer", "Writes HCL config, RHAI scripts, and native plugins")
+    Person(developer, "Application Developer", "Writes XML config, RHAI scripts, and native plugins")
     Person(enduser, "End User", "Uses Nemo-built applications")
     
     System(nemo, "Nemo Framework", "Configuration-driven desktop application framework built on GPUI")
@@ -28,7 +28,7 @@ C4Context
     System_Ext(nats, "NATS", "Cloud messaging")
     System_Ext(filesystem, "File System", "Config files, plugins, data")
 
-    Rel(developer, nemo, "Configures via HCL, extends via RHAI/plugins")
+    Rel(developer, nemo, "Configures via XML, extends via RHAI/plugins")
     Rel(enduser, nemo, "Interacts with built applications")
     Rel(nemo, http_api, "Fetches data, calls APIs")
     Rel(nemo, websocket, "Streams real-time data")
@@ -126,14 +126,14 @@ graph TB
 ```mermaid
 flowchart TB
     subgraph Input
-        hcl_files[HCL Files]
+        xml_files[XML Files]
         env_vars[Environment Variables]
         cli_args[CLI Arguments]
     end
     
     subgraph "Configuration Engine"
         loader[ConfigurationLoader]
-        parser[HCL Parser<br/>hcl-rs]
+        parser[XML Parser<br/>quick-xml]
         validator[SchemaValidator]
         resolver[ExpressionResolver]
         watcher[FileWatcher<br/>notify crate]
@@ -152,7 +152,7 @@ flowchart TB
         int_cfg[Integration Config]
     end
     
-    hcl_files --> loader
+    xml_files --> loader
     env_vars --> resolver
     cli_args --> resolver
     
@@ -453,14 +453,14 @@ sequenceDiagram
 sequenceDiagram
     participant CLI as CLI Args
     participant Loader as ConfigLoader
-    participant Parser as HCL Parser
+    participant Parser as XML Parser
     participant Schema as SchemaRegistry
     participant Validator as Validator
     participant Resolver as Resolver
     participant App as Application
 
     CLI->>Loader: config path
-    Loader->>Parser: parse HCL files
+    Loader->>Parser: parse XML files
     Parser->>Loader: AST
     Loader->>Schema: get schemas
     Schema->>Loader: component schemas
@@ -744,7 +744,7 @@ classDiagram
 ```mermaid
 graph TB
     subgraph "Developer Machine"
-        dev_code[Application Code<br/>HCL + RHAI + Plugins]
+        dev_code[Application Code<br/>XML + RHAI + Plugins]
         nemo_dev[Nemo Framework]
         
         dev_code --> nemo_dev

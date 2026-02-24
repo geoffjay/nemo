@@ -4,6 +4,23 @@ use gpui_component::tab::{Tab as GpuiTab, TabBar, TabVariant};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
+/// A tabbed container component for organizing content into switchable panels.
+///
+/// # XML Configuration
+///
+/// ```xml
+/// <tabs id="settings" tabs='[{"label":"General"},{"label":"Advanced"}]' variant="pills" active-tab="0">
+///   <!-- tab panel children -->
+/// </tabs>
+/// ```
+///
+/// # Properties
+///
+/// | Property | Type | Description |
+/// |----------|------|-------------|
+/// | `tabs` | JSON array | Array of tab objects with `label` fields |
+/// | `variant` | string | Tab style variant |
+/// | `active-tab` | int | Index of the initially active tab |
 #[derive(IntoElement)]
 pub struct Tabs {
     source: BuiltComponent,
