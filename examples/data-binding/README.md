@@ -1,6 +1,6 @@
 # Data Binding Example
 
-Demonstrates Nemo's data source binding system — HCL-configured data sources that feed live data into UI components through declarative bindings.
+Demonstrates Nemo's data source binding system — XML-configured data sources that feed live data into UI components through declarative bindings.
 
 ![Screenshot](./screenshot.png)
 
@@ -9,7 +9,7 @@ Demonstrates Nemo's data source binding system — HCL-configured data sources t
 The example works out of the box with the built-in **timer** and **HTTP** data sources:
 
 ```sh
-cargo run -- --app-config examples/data-binding/app.hcl
+cargo run -- --app-config examples/data-binding/app.xml
 ```
 
 - The timer source updates a tick counter every second
@@ -26,7 +26,7 @@ cd examples/data-binding
 docker compose up -d
 ```
 
-Then uncomment the relevant `source` blocks in `app.hcl` and restart.
+Then uncomment the relevant `<source>` elements in `app.xml` and restart.
 
 ### Testing MQTT
 
@@ -59,46 +59,35 @@ cargo build -p mock-data-plugin
 
 Load it by adding a plugin path to your configuration.
 
-## HCL Configuration Reference
+## XML Configuration Reference
 
 ### Data Sources
 
-```hcl
-data {
-  source "name" {
-    type     = "timer"    # timer, http, websocket, mqtt, redis, nats, file
-    interval = 1          # source-specific config
-  }
-}
+```xml
+<data>
+  <source name="ticker" type="timer" interval="1" />
+  <source name="api" type="http" url="https://example.com" interval="30" />
+</data>
 ```
 
 ### Bindings
 
-```hcl
-component "display" {
-  type      = "label"
-  bind_text = "data.source_name"           # shorthand one-way binding
+```xml
+<label id="display" bind-text="data.source_name" />
 
-  binding {                                 # explicit binding block
-    source    = "data.source_name.field"
-    target    = "text"
-    mode      = "one_way"                   # one_way (default) or two_way
-    transform = "payload.temperature"       # field extraction transform
-  }
-}
+<!-- Explicit binding element -->
+<label id="display" text="waiting...">
+  <binding source="data.source_name.field" target="text"
+           mode="one_way" transform="payload.temperature" />
+</label>
 ```
 
 ### Sinks
 
-```hcl
-data {
-  sink "name" {
-    type  = "mqtt"
-    topic = "commands"
-    host  = "localhost"
-    port  = 1883
-  }
-}
+```xml
+<data>
+  <sink name="output" type="mqtt" topic="commands" host="localhost" port="1883" />
+</data>
 ```
 
 ### RHAI Script API

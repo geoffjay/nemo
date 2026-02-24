@@ -7,7 +7,7 @@ An interactive showcase of every built-in Nemo component, organized with sidebar
 ## Run
 
 ```sh
-cargo run -- --app-config examples/components/app.hcl
+cargo run -- --app-config examples/components/app.xml
 ```
 
 ## What It Shows
