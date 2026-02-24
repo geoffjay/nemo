@@ -602,7 +602,7 @@ impl XmlParser {
                     .unwrap_or("");
 
                 // Skip non-component elements
-                if ["binding", "slot"].contains(&child_type) {
+                if ["binding", "slot", "vars"].contains(&child_type) {
                     continue;
                 }
 
