@@ -212,7 +212,11 @@ fn main() -> Result<()> {
 
             // Navigate to the initial route after window creation
             let route = ws.read(cx).current_route.clone();
+            let needs_refresh = route != "/";
             use_navigate(cx)(route.into());
+            if needs_refresh {
+                window.refresh();
+            }
 
             *workspace_entity.borrow_mut() = Some(ws.clone());
             cx.new(|_cx| Root::new(ws, window, _cx))

@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Complete Example -->
+<!-- Demonstrates multi-file configuration with includes, templates, -->
+<!-- data binding, RHAI scripts, and the demo-settings plugin. -->
+<nemo>
+  <variable name="app_title" type="string" default="Nemo Complete Example" />
+  <variable name="refresh_interval" type="int" default="5" />
+
+  <app title="${var.app_title}" plugins='["demo-settings"]'>
+    <window title="${var.app_title}" width="1000" height="700">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/complete"
+                  theme-toggle="true" />
+      <footer-bar enabled="false" />
+    </window>
+    <theme name="kanagawa" mode="dark" />
+  </app>
+
+  <script src="./scripts" />
+
+  <!-- Multi-file includes: templates and data sources from separate files -->
+  <include href="templates/nav.xml" />
+  <include href="templates/cards.xml" />
+  <include href="templates/data.xml" />
+
+  <layout type="stack">
+    <stack id="main" direction="horizontal" spacing="0">
+
+      <!-- Sidebar navigation -->
+      <panel id="sidebar">
+        <stack id="sidebar_inner" direction="vertical" spacing="8" padding="16"
+               scroll="true" border-right="1" border-color="theme.border">
+          <label id="sidebar_title" text="${var.app_title}" size="lg" />
+          <label id="cat_main" text="Pages" size="sm" />
+          <button id="nav_dashboard" template="nav_item" label="Dashboard" />
+          <button id="nav_monitoring" template="nav_item" label="Monitoring" />
+          <button id="nav_settings" template="nav_item" label="Settings" />
+        </stack>
+      </panel>
+
+      <!-- Content area -->
+      <stack id="content" direction="vertical" spacing="0" padding="16" scroll="true">
+
+        <!-- Dashboard page (visible by default) -->
+        <panel id="page_dashboard" template="content_page" visible="true">
+          <label id="dash_title" text="Dashboard" size="lg" />
+          <text id="dash_desc" content="Overview of application state with live data from timer sources." />
+
+          <!-- Status cards using included template -->
+          <stack id="dash_cards" direction="horizontal" spacing="16">
+            <panel id="card_uptime" template="status_card">
+              <label id="uptime_title" text="Uptime" size="sm" />
+              <label id="uptime_value" text="0s" size="xl">
+                <binding source="data.ticker" target="text" transform="format_uptime" />
+              </label>
+            </panel>
+
+            <panel id="card_counter" template="status_card">
+              <label id="counter_title" text="Event Counter" size="sm" />
+              <label id="counter_value" text="Count: 0" size="xl">
+                <binding source="data.ticker" target="text" transform="format_counter" />
+              </label>
+              <button id="btn_reset" label="Reset" variant="danger" size="sm"
+                      on-click="on_reset_counter" />
+            </panel>
+
+            <panel id="card_refresh" template="status_card">
+              <label id="refresh_title" text="Stats Refresh" size="sm" />
+              <label id="refresh_value" text="Last update: --" size="md">
+                <binding source="data.stats" target="text" transform="format_timestamp" />
+              </label>
+            </panel>
+          </stack>
+
+          <!-- Metrics section using included template -->
+          <label id="dash_metrics_title" text="Metrics" size="md" />
+          <panel id="metrics_panel" padding="16" border="1" border-color="theme.border" rounded="md">
+            <stack id="metric_1" template="metric_display">
+              <label id="metric_1_name" text="Ticker Interval" size="sm" />
+              <label id="metric_1_val" text="1s" size="sm" />
+            </stack>
+            <stack id="metric_2" template="metric_display">
+              <label id="metric_2_name" text="Stats Interval" size="sm" />
+              <label id="metric_2_val" text="${var.refresh_interval}s" size="sm" />
+            </stack>
+            <stack id="metric_3" template="metric_display">
+              <label id="metric_3_name" text="Plugin" size="sm" />
+              <label id="metric_3_val" text="demo-settings" size="sm" />
+            </stack>
+          </panel>
+        </panel>
+
+        <!-- Monitoring page -->
+        <panel id="page_monitoring" template="content_page">
+          <label id="mon_title" text="Monitoring" size="lg" />
+          <text id="mon_desc" content="Live data monitoring with real-time updates from data sources." />
+
+          <stack id="mon_status_row" direction="horizontal" spacing="8">
+            <tag id="mon_tag_active" label="Active" variant="success" />
+            <tag id="mon_tag_sources" label="2 Sources" variant="info" />
+          </stack>
+
+          <label id="mon_ticker_title" text="Ticker Source" size="md" />
+          <panel id="mon_ticker_panel" padding="12" border="1" border-color="theme.border" rounded="md">
+            <label id="mon_ticker_val" text="Waiting...">
+              <binding source="data.ticker" target="text" transform="format_uptime" />
+            </label>
+            <progress id="mon_ticker_progress" value="0">
+              <binding source="data.ticker" target="value" />
+            </progress>
+          </panel>
+
+          <label id="mon_stats_title" text="Stats Source" size="md" />
+          <panel id="mon_stats_panel" padding="12" border="1" border-color="theme.border" rounded="md">
+            <label id="mon_stats_val" text="Waiting...">
+              <binding source="data.stats" target="text" transform="format_timestamp" />
+            </label>
+          </panel>
+        </panel>
+
+        <!-- Settings page -->
+        <panel id="page_settings" template="content_page">
+          <label id="settings_title" text="Settings" size="lg" />
+          <text id="settings_desc" content="Application settings. The demo-settings plugin provides additional configuration options." />
+
+          <label id="settings_app_title" text="Application" size="md" />
+          <panel id="settings_app_panel" padding="16" border="1" border-color="theme.border" rounded="md">
+            <switch id="settings_auto_refresh" label="Auto-refresh data" checked="true"
+                    on-click="on_toggle_refresh" />
+            <stack id="settings_interval_row" direction="horizontal" spacing="8">
+              <label id="settings_interval_label" text="Refresh interval" size="sm" />
+              <slider id="settings_interval_slider" min="1" max="30" step="1"
+                      value="${var.refresh_interval}" />
+            </stack>
+          </panel>
+
+          <label id="settings_theme_title" text="Theme" size="md" />
+          <panel id="settings_theme_panel" padding="16" border="1" border-color="theme.border" rounded="md">
+            <radio id="settings_theme_mode" options='["Dark","Light"]' value="Dark"
+                   direction="horizontal" />
+          </panel>
+        </panel>
+
+      </stack>
+    </stack>
+  </layout>
+</nemo>

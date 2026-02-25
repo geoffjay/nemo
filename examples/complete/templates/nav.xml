@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Navigation templates for the complete example -->
+<nemo>
+  <templates>
+    <template name="nav_item">
+      <button
+        variant="ghost"
+        size="sm"
+        text-color="theme.muted_foreground"
+        full-width="true"
+        min-height="24"
+        align="left"
+        padding-left="2"
+        on-click="on_nav" />
+    </template>
+  </templates>
+</nemo>

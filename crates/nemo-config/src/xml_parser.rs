@@ -460,7 +460,11 @@ impl XmlParser {
         obj: &IndexMap<String, Value>,
         result: &mut IndexMap<String, Value>,
     ) -> Result<(), ParseError> {
-        let src = match obj.get("src").and_then(|v| v.as_str()) {
+        let src = match obj
+            .get("src")
+            .or_else(|| obj.get("href"))
+            .and_then(|v| v.as_str())
+        {
             Some(s) => s,
             None => return Ok(()),
         };
@@ -1516,5 +1520,61 @@ mod tests {
         let template = templates.get("template").unwrap();
         assert!(template.get("nav_item").is_some());
         assert!(template.get("content_page").is_some());
+    }
+
+    #[test]
+    fn test_include_href_attribute() {
+        let dir = tempfile::tempdir().unwrap();
+
+        // Create an included file with templates
+        let templates_dir = dir.path().join("templates");
+        std::fs::create_dir_all(&templates_dir).unwrap();
+        std::fs::write(
+            templates_dir.join("buttons.xml"),
+            r#"<nemo>
+  <templates>
+    <template name="primary_btn">
+      <button variant="primary" size="md" />
+    </template>
+  </templates>
+</nemo>"#,
+        )
+        .unwrap();
+
+        // Main file uses href instead of src
+        let main_xml = r#"<nemo>
+  <include href="templates/buttons.xml" />
+
+  <layout type="stack">
+    <button id="my_btn" template="primary_btn" label="Click" />
+  </layout>
+</nemo>"#;
+
+        let parser = XmlParser::new()
+            .with_source_name("test".to_string())
+            .with_base_dir(dir.path());
+        let value = parser.parse(main_xml).unwrap();
+
+        // Verify the included templates were merged
+        let templates = value.get("templates").unwrap();
+        let template = templates.get("template").unwrap();
+        assert!(template.get("primary_btn").is_some());
+    }
+
+    #[test]
+    fn test_parse_example_complete() {
+        let value = parse_example("complete");
+        assert!(value.get("app").is_some());
+        assert!(value.get("templates").is_some());
+        assert!(value.get("scripts").is_some());
+        assert!(value.get("layout").is_some());
+        assert!(value.get("data").is_some());
+
+        // Verify templates from included files were merged
+        let templates = value.get("templates").unwrap();
+        let template = templates.get("template").unwrap();
+        assert!(template.get("nav_item").is_some());
+        assert!(template.get("status_card").is_some());
+        assert!(template.get("metric_display").is_some());
     }
 }

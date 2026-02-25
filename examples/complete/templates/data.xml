@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Data source definitions for the complete example -->
+<nemo>
+  <data>
+    <source name="ticker" type="timer" interval="1" />
+    <source name="stats" type="timer" interval="5" />
+  </data>
+</nemo>
