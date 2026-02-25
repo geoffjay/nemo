@@ -1467,7 +1467,7 @@ fn parse_layout_node_as_root(layout: &Value, layout_type: &LayoutType) -> Option
         LayoutType::Tiles => "tiles",
     };
 
-    let mut root = LayoutNode::new(root_type).with_id("root");
+    let mut root = LayoutNode::new(root_type).with_id("__layout_root__");
 
     // Parse component children from the layout object
     if let Some(layout_obj) = layout.as_object() {
