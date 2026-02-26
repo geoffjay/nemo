@@ -1,3 +1,5 @@
+#[cfg(feature = "bevy")]
+pub(crate) mod bevy_scene;
 mod accordion;
 mod alert;
 mod area_chart;
@@ -164,6 +166,8 @@ pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>) -> Div {
     }
 }
 
+#[cfg(feature = "bevy")]
+pub use bevy_scene::{BevyScene, BevySceneState};
 pub use accordion::Accordion;
 pub use alert::Alert;
 pub use area_chart::AreaChart;

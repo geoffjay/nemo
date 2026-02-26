@@ -72,6 +72,9 @@ pub enum ComponentState {
     SelectedValue(Arc<Mutex<String>>),
     /// Shared selected index (radio).
     SelectedIndex(Arc<Mutex<Option<usize>>>),
+    /// Bevy 3D scene renderer state.
+    #[cfg(feature = "bevy")]
+    Bevy(Entity<super::bevy_scene::BevySceneState>),
 }
 
 /// Registry mapping component IDs to their runtime state.

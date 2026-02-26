@@ -19,6 +19,7 @@ members = [
     "plugins/pid-control",
     "plugins/streaming-stats",
     "plugins/demo-settings",
+    "crates/nemo-bevy",
 ]
 
 [workspace.package]
@@ -97,3 +98,4 @@ nemo-plugin-api = { version = "0.6.0", path = "crates/nemo-plugin-api" }
 nemo-plugin = { version = "0.6.0", path = "crates/nemo-plugin" }
 nemo-macros = { path = "crates/nemo-macros" }
 nemo-wasm = { path = "crates/nemo-wasm" }
+nemo-bevy = { path = "crates/nemo-bevy" }
