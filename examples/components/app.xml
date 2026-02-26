@@ -2,7 +2,10 @@
 <!-- Component Gallery -->
 <!-- Interactive showcase of all Nemo components with sidebar navigation. -->
 <nemo>
-  <app title="Nemo Component Gallery" plugins='["demo-settings"]'>
+  <app title="Nemo Component Gallery">
+    <plugins>
+      <plugin name="demo-settings" />
+    </plugins>
     <window title="Component Gallery" width="1200" height="800">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/components" theme-toggle="true" />
       <footer-bar enabled="false" />

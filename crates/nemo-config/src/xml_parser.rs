@@ -200,6 +200,10 @@ impl XmlParser {
                         "theme" => {
                             app.insert("theme".to_string(), self.clean_element(child_obj));
                         }
+                        "plugins" => {
+                            let plugins = self.process_plugins_block(child_obj);
+                            app.insert("plugins".to_string(), plugins);
+                        }
                         _ => {
                             let cleaned = self.clean_element(child_obj);
                             app.insert(child_type.to_string(), cleaned);
@@ -210,6 +214,30 @@ impl XmlParser {
         }
 
         Value::Object(app)
+    }
+
+    /// Processes a `<plugins>` block into a `Value::Array` of plugin objects.
+    ///
+    /// Each `<plugin name="foo" />` child becomes `{ "name": "foo" }`.
+    /// An optional `load="false"` attribute is preserved for the runtime to filter on.
+    fn process_plugins_block(&self, obj: &IndexMap<String, Value>) -> Value {
+        let mut plugins = Vec::new();
+
+        if let Some(children) = obj.get("__children__").and_then(|v| v.as_array()) {
+            for child in children {
+                if let Some(child_obj) = child.as_object() {
+                    let child_type = child_obj
+                        .get("__type__")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    if child_type == "plugin" {
+                        plugins.push(self.clean_element(child_obj));
+                    }
+                }
+            }
+        }
+
+        Value::Array(plugins)
     }
 
     /// Processes a nested block element (like <window>) that may have sub-elements.

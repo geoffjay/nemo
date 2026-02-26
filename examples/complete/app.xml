@@ -6,7 +6,10 @@
   <variable name="app_title" type="string" default="Nemo Complete Example" />
   <variable name="refresh_interval" type="int" default="5" />
 
-  <app title="${var.app_title}" plugins='["demo-settings"]'>
+  <app title="${var.app_title}">
+    <plugins>
+      <plugin name="demo-settings" />
+    </plugins>
     <window title="${var.app_title}" width="1000" height="700">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/complete"
                   theme-toggle="true" />

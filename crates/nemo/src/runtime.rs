@@ -178,6 +178,35 @@ impl NemoRuntime {
 
         // Initialize extensions (sync — no async work needed)
         {
+            // Build allowed plugin set from config (<plugins> block).
+            // If absent, no plugins are loaded. Plugins with load="false" are skipped.
+            let allowed_plugins: HashSet<String> = {
+                let config = self.config.read().expect("config lock poisoned");
+                config
+                    .get("app")
+                    .and_then(|app| app.get("plugins"))
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|plugin| {
+                                let obj = plugin.as_object()?;
+                                // Skip if load is explicitly false
+                                let load = obj
+                                    .get("load")
+                                    .and_then(|v| v.as_bool())
+                                    .unwrap_or(true);
+                                if !load {
+                                    return None;
+                                }
+                                obj.get("name")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.replace('_', "-"))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            };
+
             let ext = self
                 .extension_manager
                 .read()
@@ -197,14 +226,35 @@ impl NemoRuntime {
                             tracing::warn!("Failed to load script {:?}: {}", manifest.path, e);
                         }
                     }
-                    nemo_extension::ExtensionType::Plugin => {
-                        if let Err(e) = ext.load_plugin(&manifest.path) {
-                            tracing::warn!("Failed to load plugin {:?}: {}", manifest.path, e);
+                    nemo_extension::ExtensionType::Plugin
+                    | nemo_extension::ExtensionType::WasmPlugin => {
+                        let normalized_id = manifest
+                            .id
+                            .replace('_', "-")
+                            .trim_end_matches("-plugin")
+                            .to_string();
+                        if !allowed_plugins.contains(&normalized_id) {
+                            debug!(
+                                "Skipping plugin {:?} (not in app.plugins)",
+                                manifest.id
+                            );
+                            continue;
                         }
-                    }
-                    nemo_extension::ExtensionType::WasmPlugin => {
-                        if let Err(e) = ext.load_wasm_plugin(&manifest.path) {
-                            tracing::warn!("Failed to load WASM plugin {:?}: {}", manifest.path, e);
+                        let result = match manifest.extension_type {
+                            nemo_extension::ExtensionType::Plugin => {
+                                ext.load_plugin(&manifest.path)
+                            }
+                            nemo_extension::ExtensionType::WasmPlugin => {
+                                ext.load_wasm_plugin(&manifest.path)
+                            }
+                            _ => unreachable!(),
+                        };
+                        if let Err(e) = result {
+                            tracing::warn!(
+                                "Failed to load plugin {:?}: {}",
+                                manifest.path,
+                                e
+                            );
                         }
                     }
                 }
