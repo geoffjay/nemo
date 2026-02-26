@@ -7,7 +7,7 @@ mod bar_chart;
 mod bubble_chart;
 mod button;
 mod candlestick_chart;
-pub(crate) mod chart_utils;
+pub mod chart_utils;
 mod checkbox;
 mod clustered_bar_chart;
 mod clustered_column_chart;
@@ -17,7 +17,7 @@ mod column_chart;
 mod dropdown_button;
 mod funnel_chart;
 mod heatmap_chart;
-pub(crate) mod icon;
+pub mod icon;
 mod image;
 mod input;
 mod label;
@@ -34,15 +34,15 @@ mod radio;
 mod realtime_chart;
 mod scatter_chart;
 mod select;
-pub(crate) mod sidenav_bar;
-pub(crate) mod slider;
+pub mod sidenav_bar;
+pub mod slider;
 mod spinner;
 mod stack;
 mod stacked_bar_chart;
 mod stacked_column_chart;
-pub(crate) mod state;
+pub mod state;
 mod switch;
-pub(crate) mod table;
+pub mod table;
 mod tabs;
 mod tag;
 mod text;
@@ -50,7 +50,7 @@ mod text_editor;
 mod textarea;
 mod toggle;
 mod tooltip;
-pub(crate) mod tree;
+pub mod tree;
 
 use gpui::*;
 use gpui_component::ActiveTheme;
@@ -60,7 +60,7 @@ use gpui_component::ActiveTheme;
 /// Supports two formats:
 /// - Theme reference: `"theme.border"`, `"theme.accent"`, `"theme.danger"`, etc.
 /// - Hex color: `"#4c566a"`, `"4c566aff"`, `"#FF0000"`
-pub(crate) fn resolve_color(value: &str, cx: &App) -> Option<Hsla> {
+pub fn resolve_color(value: &str, cx: &App) -> Option<Hsla> {
     if let Some(name) = value.strip_prefix("theme.") {
         resolve_theme_color(name, cx)
     } else {
@@ -139,7 +139,7 @@ fn resolve_theme_color(name: &str, cx: &App) -> Option<Hsla> {
 /// Applies a shadow preset to a div element.
 ///
 /// Supported sizes: "sm", "md", "lg", "xl", "2xl"
-pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
+pub fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
     match shadow {
         Some("sm") => base.shadow_sm(),
         Some("md") => base.shadow_md(),
@@ -153,7 +153,7 @@ pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
 /// Applies a rounded corner preset to a div element.
 ///
 /// Supported sizes: "sm", "md", "lg", "xl", "full"
-pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>) -> Div {
+pub fn apply_rounded(base: Div, rounded: Option<&str>) -> Div {
     match rounded {
         Some("sm") => base.rounded_sm(),
         Some("md") => base.rounded_md(),

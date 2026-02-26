@@ -2,6 +2,8 @@
 resolver = "2"
 members = [
     "crates/nemo",
+    "crates/nemo-ui",
+    "crates/nemo-tui",
     "crates/nemo-config",
     "crates/nemo-registry",
     "crates/nemo-layout",
@@ -33,6 +35,10 @@ gpui = "0.2.2"
 gpui-component = "0.5.1"
 gpui-component-assets = "0.5"
 gpui-router = "0.2"
+
+# TUI
+ratatui = "0.29"
+crossterm = "0.28"
 
 # Async
 tokio = { version = "1", features = ["full"] }
@@ -96,4 +102,6 @@ nemo-events = { path = "crates/nemo-events" }
 nemo-plugin-api = { version = "0.6.0", path = "crates/nemo-plugin-api" }
 nemo-plugin = { version = "0.6.0", path = "crates/nemo-plugin" }
 nemo-macros = { path = "crates/nemo-macros" }
+nemo-ui = { path = "crates/nemo-ui" }
+nemo-tui = { path = "crates/nemo-tui" }
 nemo-wasm = { path = "crates/nemo-wasm" }

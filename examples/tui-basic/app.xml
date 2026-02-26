@@ -1,0 +1,32 @@
+<nemo>
+  <app title="Nemo TUI Demo" default="tui">
+    <window title="Nemo TUI Example" />
+  </app>
+
+  <!-- Layout configuration -->
+  <layout type="stack" direction="vertical">
+    <!-- Header -->
+    <label id="header" text="Nemo TUI Dashboard" height="1" />
+
+    <!-- Main content: horizontal split -->
+    <stack id="main" direction="horizontal" flex="1">
+      <!-- Left panel: status -->
+      <panel id="status-panel" title="Status" flex="1">
+        <label id="status-label" text="System Status: Online" />
+        <text id="status-details" content="All services are running normally. Last check: just now." />
+        <progress id="cpu-usage" label="CPU: 45%" value="45" max="100" />
+        <progress id="mem-usage" label="Memory: 72%" value="72" max="100" />
+      </panel>
+
+      <!-- Right panel: data table -->
+      <panel id="data-panel" title="Services" flex="2">
+        <table id="service-table"
+               columns='[{"key":"name","label":"Service"},{"key":"status","label":"Status"},{"key":"uptime","label":"Uptime"}]'
+               data='[{"name":"API","status":"Running","uptime":"24h"},{"name":"Database","status":"Running","uptime":"48h"},{"name":"Cache","status":"Running","uptime":"12h"},{"name":"Worker","status":"Stopped","uptime":"0h"}]' />
+      </panel>
+    </stack>
+
+    <!-- Footer -->
+    <label id="footer" text="Press 'q' to quit" height="1" />
+  </layout>
+</nemo>

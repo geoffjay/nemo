@@ -36,6 +36,14 @@ pub struct Args {
     /// Validate configuration and exit
     #[arg(long)]
     pub validate_only: bool,
+
+    /// Run in terminal UI mode (ratatui)
+    #[arg(long, conflicts_with = "ui")]
+    pub tui: bool,
+
+    /// Run in desktop UI mode (GPUI) — this is the default
+    #[arg(long, conflicts_with = "tui")]
+    pub ui: bool,
 }
 
 impl Args {
