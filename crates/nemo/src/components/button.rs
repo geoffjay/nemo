@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::button::{Button as GpuiButton, ButtonVariants};
+use gpui_component::button::{Button as GpuiButton, ButtonRounded, ButtonVariants};
 use gpui_component::{Disableable, Sizable, Size as ComponentSize};
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
@@ -129,6 +129,17 @@ impl RenderOnce for Button {
             if let Some(color) = resolve_color(color_str, _cx) {
                 btn = btn.text_color(color);
             }
+        }
+
+        if let Some(rounded) = props.get("rounded").and_then(|v| v.as_str()) {
+            btn = btn.rounded(match rounded {
+                "none" => ButtonRounded::None,
+                "sm" => ButtonRounded::Small,
+                "md" => ButtonRounded::Medium,
+                "lg" => ButtonRounded::Large,
+                "full" => ButtonRounded::Size(px(9999.)),
+                _ => ButtonRounded::Medium,
+            });
         }
 
         btn

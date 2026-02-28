@@ -22,7 +22,6 @@ use nemo_macros::NemoComponent;
 #[derive(IntoElement, NemoComponent)]
 pub struct Panel {
     #[source]
-    #[allow(dead_code)]
     source: nemo_layout::BuiltComponent,
     #[property]
     visible: Option<bool>,
@@ -43,8 +42,16 @@ impl RenderOnce for Panel {
         let mut el = div()
             .flex()
             .flex_col()
-            .rounded_md()
             .bg(cx.theme().colors.secondary);
+
+        el = match self.source.properties.get("rounded").and_then(|v| v.as_str()) {
+            Some("sm") => el.rounded_sm(),
+            Some("lg") => el.rounded_lg(),
+            Some("xl") => el.rounded_xl(),
+            Some("full") => el.rounded(px(9999.)),
+            Some("none") => el,
+            _ => el.rounded_md(),
+        };
 
         if let Some(p) = self.padding {
             el = el.p(px(p as f32));

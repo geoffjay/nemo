@@ -453,6 +453,7 @@ impl App {
         // Decoration
         let shadow = props.get("shadow").and_then(|v| v.as_str());
         let rounded = props.get("rounded").and_then(|v| v.as_str());
+        let background = props.get("background").and_then(|v| v.as_str());
 
         // Early return if nothing to apply
         if [
@@ -487,6 +488,7 @@ impl App {
             && flex.is_none()
             && shadow.is_none()
             && rounded.is_none()
+            && background.is_none()
             && border_color.is_none()
         {
             return element;
