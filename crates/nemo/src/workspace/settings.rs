@@ -4,7 +4,7 @@
 //! Shows general application settings and plugin-contributed settings sections.
 
 use gpui::*;
-use gpui_component::input::{Input as GpuiInput, InputState};
+use gpui_component::input::{Input as GpuiInput, InputEvent, InputState};
 use gpui_component::label::Label;
 use gpui_component::slider::{Slider as GpuiSlider, SliderState};
 use gpui_component::switch::Switch as GpuiSwitch;
@@ -15,6 +15,7 @@ use nemo_plugin_api::PluginValue;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
+use crate::config::NemoConfig;
 use crate::runtime::NemoRuntime;
 
 /// Event emitted when the user wants to close the settings view.
@@ -37,16 +38,65 @@ pub struct SettingsView {
     bool_states: HashMap<String, Arc<Mutex<bool>>>,
     input_states: HashMap<String, Entity<InputState>>,
     slider_states: HashMap<String, Entity<SliderState>>,
+    font_input_state: Entity<InputState>,
 }
 
 impl SettingsView {
-    pub fn new(runtime: Arc<NemoRuntime>, _window: &mut Window, _cx: &mut Context<Self>) -> Self {
+    pub fn new(
+        runtime: Arc<NemoRuntime>,
+        nemo_config: Arc<Mutex<NemoConfig>>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Self {
         let plugin_pages = runtime
             .extension_manager
             .read()
             .expect("extension_manager lock poisoned")
             .plugin_settings_pages()
             .to_vec();
+
+        let current_font = cx.theme().font_family.to_string();
+        let font_input_state = cx.new(|cx| {
+            let mut state = InputState::new(window, cx).placeholder("System default");
+            state.set_value(current_font, window, cx);
+            state
+        });
+
+        // Subscribe to font input events (blur and enter) to apply + persist
+        {
+            let nemo_config = Arc::clone(&nemo_config);
+            cx.subscribe_in(&font_input_state, window, move |_this, font_state, event, window, cx| {
+                let should_apply = matches!(event, InputEvent::Blur | InputEvent::PressEnter { .. });
+                if !should_apply {
+                    return;
+                }
+
+                let value = font_state.read(cx).value().to_string();
+                let trimmed = value.trim().to_string();
+
+                if trimmed.is_empty() {
+                    let default_font: SharedString = if cfg!(target_os = "macos") {
+                        ".SystemUIFont".into()
+                    } else {
+                        "sans-serif".into()
+                    };
+                    gpui_component::Theme::global_mut(cx).font_family = default_font;
+                    if let Ok(mut cfg) = nemo_config.lock() {
+                        cfg.app.font_family = None;
+                        let _ = cfg.save();
+                    }
+                } else {
+                    let family: SharedString = trimmed.clone().into();
+                    gpui_component::Theme::global_mut(cx).font_family = family;
+                    if let Ok(mut cfg) = nemo_config.lock() {
+                        cfg.app.font_family = Some(trimmed);
+                        let _ = cfg.save();
+                    }
+                }
+                window.refresh();
+                cx.notify();
+            }).detach();
+        }
 
         Self {
             runtime,
@@ -55,6 +105,7 @@ impl SettingsView {
             bool_states: HashMap::new(),
             input_states: HashMap::new(),
             slider_states: HashMap::new(),
+            font_input_state,
         }
     }
 
@@ -219,6 +270,12 @@ impl SettingsView {
                     .gap_3()
                     .child(settings_row("Theme", &theme_name, muted))
                     .child(settings_row("Color Mode", &theme_mode, muted))
+                    .child(
+                        v_flex()
+                            .gap_1()
+                            .child(Label::new("Font Family").text_size(px(14.)))
+                            .child(GpuiInput::new(&self.font_input_state)),
+                    )
                     .child(settings_row("Project Directory", &project_dir, muted))
                     .child(settings_row("Version", env!("CARGO_PKG_VERSION"), muted)),
             )

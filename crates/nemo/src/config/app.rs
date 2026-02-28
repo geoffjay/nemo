@@ -5,12 +5,14 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct AppConfig {
     pub theme_name: String,
+    pub font_family: Option<String>,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
             theme_name: "default".to_string(),
+            font_family: None,
         }
     }
 }

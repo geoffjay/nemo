@@ -55,6 +55,14 @@ pub fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gp
 
         theme::apply_configured_theme(&theme_name, &mode, overrides.as_ref(), cx);
     }
+
+    // Apply per-project font family override
+    if let Some(font_family) = runtime
+        .get_config("app.theme.font_family")
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+    {
+        gpui_component::Theme::global_mut(cx).font_family = font_family.into();
+    }
 }
 
 /// Render a single row for the keyboard shortcuts dialog.

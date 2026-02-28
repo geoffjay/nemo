@@ -166,6 +166,33 @@ mod tests {
 
             assert_eq!(config.project_dir, dirs::home_dir().unwrap());
         }
+
+        #[test]
+        fn test_font_family_none_by_default() {
+            let config = NemoConfig::from_toml("").expect("Failed to deserialize");
+            assert!(config.app.font_family.is_none());
+        }
+
+        #[test]
+        fn test_font_family_from_toml() {
+            let toml_str = r#"
+                [app]
+                font_family = "Inter"
+            "#;
+            let config = NemoConfig::from_toml(toml_str).expect("Failed to deserialize");
+            assert_eq!(config.app.font_family, Some("Inter".to_string()));
+        }
+
+        #[test]
+        fn test_font_family_roundtrip() {
+            let mut config = NemoConfig::default();
+            config.app.font_family = Some("JetBrains Mono".to_string());
+
+            let toml_str = toml::to_string_pretty(&config).expect("Failed to serialize");
+            let parsed: NemoConfig = toml::from_str(&toml_str).expect("Failed to deserialize");
+
+            assert_eq!(parsed.app.font_family, Some("JetBrains Mono".to_string()));
+        }
     }
 
     mod file_io_tests {

@@ -12,7 +12,7 @@ use gpui_component::Root;
 use gpui_router::{init as router_init, use_navigate};
 use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tracing::info;
 use tracing_subscriber::FmtSubscriber;
 
@@ -100,6 +100,14 @@ fn main() -> Result<()> {
             theme::apply_configured_theme(&nemo_config.app.theme_name, "system", None, cx);
         }
 
+        // Apply global font family from TOML config
+        if let Some(ref font_family) = nemo_config.app.font_family {
+            gpui_component::Theme::global_mut(cx).font_family = font_family.clone().into();
+        }
+
+        // Wrap config in Arc<Mutex<>> for sharing with settings view
+        let nemo_config = Arc::new(Mutex::new(nemo_config));
+
         cx.bind_keys([
             KeyBinding::new("ctrl-shift-r", ReloadConfig, None),
             KeyBinding::new("ctrl-q", QuitApp, None),
@@ -127,8 +135,29 @@ fn main() -> Result<()> {
         })
         .detach();
 
-        // Default window options
-        let window_options = get_window_options(cx, None, None, None, None);
+        // If app_config provided, create runtime early so we can read window dimensions
+        let early_runtime = app_config_path.as_ref().and_then(|config_path| {
+            match create_runtime(config_path, &ws_args.extension_dirs) {
+                Ok(rt) => Some(rt),
+                Err(e) => {
+                    tracing::error!("Failed to load project: {}", e);
+                    None
+                }
+            }
+        });
+
+        // Read window dimensions from runtime config (if available)
+        let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
+            let w = rt.get_config("app.window.width").and_then(|v| v.as_i64().map(|n| n as u32));
+            let h = rt.get_config("app.window.height").and_then(|v| v.as_i64().map(|n| n as u32));
+            let mw = rt.get_config("app.window.min_width").and_then(|v| v.as_i64().map(|n| n as u32));
+            let mh = rt.get_config("app.window.min_height").and_then(|v| v.as_i64().map(|n| n as u32));
+            (w, h, mw, mh)
+        } else {
+            (None, None, None, None)
+        };
+
+        let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h);
 
         cx.open_window(window_options, |window, cx| {
             let nemo_config = nemo_config.clone();
@@ -138,7 +167,7 @@ fn main() -> Result<()> {
             let ws = cx.new(|cx| {
                 let mut current_route = "/".to_string();
 
-                // If app_config provided via CLI, load project immediately
+                // If app_config provided via CLI, use the early-created runtime
                 if let Some(config_path) = app_config_path {
                     info!("Loading project from: {:?}", config_path);
 
@@ -146,46 +175,41 @@ fn main() -> Result<()> {
                     recent_projects.add(config_path.clone());
                     recent_projects.save();
 
-                    match create_runtime(&config_path, &ws_args.extension_dirs) {
-                        Ok(rt) => {
-                            apply_theme_from_runtime(&rt, cx);
-                            let title = rt
-                                .get_config("app.window.title")
-                                .and_then(|v| v.as_str().map(|s| s.to_string()))
-                                .unwrap_or_else(|| "Nemo Application".to_string());
-                            let github_url = rt
-                                .get_config("app.window.header_bar.github_url")
-                                .and_then(|v| v.as_str().map(|s| s.to_string()));
-                            let theme_toggle = rt
-                                .get_config("app.window.header_bar.theme_toggle")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false);
-                            let header_bar = cx.new(|cx| {
-                                HeaderBar::new(title, github_url, theme_toggle, window, cx)
-                            });
-                            let footer_bar_enabled = rt
-                                .get_config("app.window.footer_bar.enabled")
-                                .and_then(|v| v.as_bool())
-                                .unwrap_or(false);
-                            let footer_bar = if footer_bar_enabled {
-                                Some(cx.new(|cx| FooterBar::new(window, cx)))
-                            } else {
-                                None
-                            };
-                            let app_entity =
-                                cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
-                            cx.set_global(ActiveProject {
-                                runtime: rt,
-                                app_entity,
-                                header_bar,
-                                footer_bar,
-                                settings_view: None,
-                            });
-                            current_route = "/app".to_string();
-                        }
-                        Err(e) => {
-                            tracing::error!("Failed to load project: {}", e);
-                        }
+                    if let Some(rt) = early_runtime {
+                        apply_theme_from_runtime(&rt, cx);
+                        let title = rt
+                            .get_config("app.window.title")
+                            .and_then(|v| v.as_str().map(|s| s.to_string()))
+                            .unwrap_or_else(|| "Nemo Application".to_string());
+                        let github_url = rt
+                            .get_config("app.window.header_bar.github_url")
+                            .and_then(|v| v.as_str().map(|s| s.to_string()));
+                        let theme_toggle = rt
+                            .get_config("app.window.header_bar.theme_toggle")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        let header_bar = cx.new(|cx| {
+                            HeaderBar::new(title, github_url, theme_toggle, window, cx)
+                        });
+                        let footer_bar_enabled = rt
+                            .get_config("app.window.footer_bar.enabled")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false);
+                        let footer_bar = if footer_bar_enabled {
+                            Some(cx.new(|cx| FooterBar::new(window, cx)))
+                        } else {
+                            None
+                        };
+                        let app_entity =
+                            cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                        cx.set_global(ActiveProject {
+                            runtime: rt,
+                            app_entity,
+                            header_bar,
+                            footer_bar,
+                            settings_view: None,
+                        });
+                        current_route = "/app".to_string();
                     }
                 }
 

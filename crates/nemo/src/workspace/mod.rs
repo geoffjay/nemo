@@ -7,7 +7,7 @@ use gpui_component::Root;
 use gpui_component::WindowExt as _;
 use gpui_router::{use_navigate, Route, Routes};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tracing::info;
 
 pub mod actions;
@@ -46,7 +46,7 @@ pub struct WorkspaceArgs {
 /// The root workspace entity that manages the application state.
 #[allow(dead_code)]
 pub struct Workspace {
-    pub nemo_config: NemoConfig,
+    pub nemo_config: Arc<Mutex<NemoConfig>>,
     pub ws_args: WorkspaceArgs,
     pub current_config_path: Option<PathBuf>,
     pub pending_project_path: Option<PathBuf>,
@@ -288,7 +288,8 @@ impl Workspace {
 
         if needs_create {
             let runtime = cx.global::<ActiveProject>().runtime.clone();
-            let sv = cx.new(|cx| SettingsView::new(runtime, window, cx));
+            let nemo_config = Arc::clone(&self.nemo_config);
+            let sv = cx.new(|cx| SettingsView::new(runtime, nemo_config, window, cx));
             cx.global_mut::<ActiveProject>().settings_view = Some(sv);
         }
 
@@ -333,11 +334,12 @@ impl Workspace {
 
     /// Create a ProjectLoaderView and subscribe to its events.
     pub fn create_loader(
-        nemo_config: &NemoConfig,
+        nemo_config: &Arc<Mutex<NemoConfig>>,
         window: &mut Window,
         cx: &mut Context<'_, Self>,
     ) -> Entity<ProjectLoaderView> {
-        let loader = cx.new(|cx| ProjectLoaderView::new(nemo_config.clone(), window, cx));
+        let config_snapshot = nemo_config.lock().unwrap().clone();
+        let loader = cx.new(|cx| ProjectLoaderView::new(config_snapshot, window, cx));
         cx.subscribe_in(
             &loader,
             window,
