@@ -131,6 +131,12 @@ impl RenderOnce for Button {
             }
         }
 
+        if let Some(bg_str) = props.get("background").and_then(|v| v.as_str()) {
+            if let Some(color) = resolve_color(bg_str, _cx) {
+                btn = btn.bg(color);
+            }
+        }
+
         if let Some(rounded) = props.get("rounded").and_then(|v| v.as_str()) {
             btn = btn.rounded(match rounded {
                 "none" => ButtonRounded::None,

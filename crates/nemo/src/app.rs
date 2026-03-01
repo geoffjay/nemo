@@ -607,6 +607,9 @@ impl App {
         // Decoration
         wrapper = apply_shadow(wrapper, shadow);
         wrapper = apply_rounded(wrapper, rounded);
+        if let Some(bg) = background.and_then(|v| crate::components::resolve_color(v, cx)) {
+            wrapper = wrapper.bg(bg);
+        }
 
         wrapper.child(element).into_any_element()
     }
