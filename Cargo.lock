@@ -4454,12 +4454,14 @@ dependencies = [
  "nemo-plugin-api",
  "nemo-registry",
  "nemo-wasm",
+ "reqwest",
  "rhai",
  "semver",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror 1.0.69",
+ "tokio",
  "tracing",
 ]
 

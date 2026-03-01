@@ -378,6 +378,10 @@ impl NemoRuntime {
                 .expect("extension_manager lock poisoned");
             ext.register_context(Arc::clone(&context));
 
+            // Register HTTP request functions so RHAI scripts can make
+            // GET/POST/PUT/DELETE calls from event handlers.
+            ext.register_http_functions(self.tokio_runtime.handle().clone());
+
             // Initialize native plugins now that the context is available.
             // This must happen before apply_layout_from_config() so that
             // plugin-registered templates are available for layout expansion.

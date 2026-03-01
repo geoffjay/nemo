@@ -250,6 +250,13 @@ impl ExtensionManager {
         self.wasm_host.set_context(Arc::clone(&context));
         self.rhai_engine.register_context(context);
     }
+
+    /// Registers HTTP request functions (`http_get`, `http_post`, `http_put`,
+    /// `http_delete`) with the RHAI engine, using the provided tokio runtime
+    /// handle to execute async requests synchronously.
+    pub fn register_http_functions(&mut self, handle: tokio::runtime::Handle) {
+        self.rhai_engine.register_http_functions(handle);
+    }
 }
 
 impl Default for ExtensionManager {

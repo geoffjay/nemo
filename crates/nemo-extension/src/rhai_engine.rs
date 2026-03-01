@@ -5,6 +5,7 @@ use nemo_plugin_api::{LogLevel, PluginContext, PluginValue};
 use rhai::{Dynamic, Engine, Module, Scope, AST};
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::runtime::Handle as TokioHandle;
 
 /// Configuration for the RHAI engine.
 #[derive(Debug, Clone)]
@@ -401,6 +402,59 @@ impl RhaiEngine {
         );
     }
 
+    /// Registers HTTP request functions (`http_get`, `http_post`, `http_put`,
+    /// `http_delete`) that allow RHAI scripts to make synchronous HTTP calls.
+    ///
+    /// These functions block the calling thread while the request executes on
+    /// the provided tokio runtime. They are intended for use from UI event
+    /// handlers (e.g., `on-click`) which run on the main/GPUI thread, outside
+    /// of any async context.
+    ///
+    /// # Functions registered
+    ///
+    /// - `http_get(url: &str) -> Dynamic` — GET request, returns parsed JSON or string
+    /// - `http_post(url: &str, body: &str) -> Dynamic` — POST with JSON body
+    /// - `http_put(url: &str, body: &str) -> Dynamic` — PUT with JSON body
+    /// - `http_delete(url: &str) -> Dynamic` — DELETE request
+    ///
+    /// All functions return a map with `{status, body, ok}` on success, or
+    /// a map with `{error}` on failure.
+    pub fn register_http_functions(&mut self, handle: TokioHandle) {
+        let client = Arc::new(reqwest::Client::new());
+
+        // http_get(url) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine
+            .register_fn("http_get", move |url: &str| -> Dynamic {
+                execute_http_request(&h, &c, reqwest::Method::GET, url, None)
+            });
+
+        // http_post(url, body) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine
+            .register_fn("http_post", move |url: &str, body: &str| -> Dynamic {
+                execute_http_request(&h, &c, reqwest::Method::POST, url, Some(body))
+            });
+
+        // http_put(url, body) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine
+            .register_fn("http_put", move |url: &str, body: &str| -> Dynamic {
+                execute_http_request(&h, &c, reqwest::Method::PUT, url, Some(body))
+            });
+
+        // http_delete(url) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine
+            .register_fn("http_delete", move |url: &str| -> Dynamic {
+                execute_http_request(&h, &c, reqwest::Method::DELETE, url, None)
+            });
+    }
+
     /// Lists all loaded script IDs.
     pub fn list_scripts(&self) -> Vec<String> {
         self.scripts.keys().cloned().collect()
@@ -477,6 +531,103 @@ fn dynamic_to_plugin_value(value: Dynamic) -> PluginValue {
     } else {
         // Try to convert to string as fallback
         PluginValue::String(value.to_string())
+    }
+}
+
+/// Execute an HTTP request synchronously by blocking on the tokio runtime.
+///
+/// Returns a RHAI map with `{status, body, ok}` on success or `{error}` on failure.
+/// If the response body is valid JSON, `body` is the parsed structure; otherwise
+/// it is the raw response string.
+/// Execute an HTTP request synchronously by blocking on the tokio runtime.
+///
+/// Returns a RHAI map with `{status, body, ok}` on success or `{error}` on failure.
+/// If the response body is valid JSON, `body` is the parsed structure; otherwise
+/// it is the raw response string.
+fn execute_http_request(
+    handle: &TokioHandle,
+    client: &reqwest::Client,
+    method: reqwest::Method,
+    url: &str,
+    body: Option<&str>,
+) -> Dynamic {
+    let url_string = url.to_string();
+    let body = body.map(|s| s.to_string());
+    let client = client.clone();
+    let method_clone = method.clone();
+
+    let result = handle.block_on(async move {
+        let mut builder = client.request(method_clone, &url_string);
+        if let Some(b) = body {
+            builder = builder
+                .header("Content-Type", "application/json")
+                .body(b);
+        }
+        builder.send().await
+    });
+
+    match result {
+        Ok(response) => {
+            let status = response.status().as_u16() as i64;
+            let ok = response.status().is_success();
+
+            let response_body = handle.block_on(async { response.text().await });
+            match response_body {
+                Ok(text) => {
+                    let body_dynamic = match serde_json::from_str::<serde_json::Value>(&text) {
+                        Ok(json) => json_to_dynamic(json),
+                        Err(_) => Dynamic::from(text),
+                    };
+
+                    let mut map = rhai::Map::new();
+                    map.insert("status".into(), Dynamic::from(status));
+                    map.insert("body".into(), body_dynamic);
+                    map.insert("ok".into(), Dynamic::from(ok));
+                    Dynamic::from(map)
+                }
+                Err(e) => {
+                    tracing::warn!("HTTP {} {} - failed to read body: {}", method, url, e);
+                    let mut map = rhai::Map::new();
+                    map.insert("error".into(), Dynamic::from(e.to_string()));
+                    Dynamic::from(map)
+                }
+            }
+        }
+        Err(e) => {
+            tracing::warn!("HTTP {} {} failed: {}", method, url, e);
+            let mut map = rhai::Map::new();
+            map.insert("error".into(), Dynamic::from(e.to_string()));
+            Dynamic::from(map)
+        }
+    }
+}
+
+/// Convert a `serde_json::Value` to a RHAI `Dynamic`.
+fn json_to_dynamic(value: serde_json::Value) -> Dynamic {
+    match value {
+        serde_json::Value::Null => Dynamic::UNIT,
+        serde_json::Value::Bool(b) => Dynamic::from(b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Dynamic::from(i)
+            } else if let Some(f) = n.as_f64() {
+                Dynamic::from(f)
+            } else {
+                Dynamic::UNIT
+            }
+        }
+        serde_json::Value::String(s) => Dynamic::from(s),
+        serde_json::Value::Array(arr) => {
+            let vec: Vec<Dynamic> = arr.into_iter().map(json_to_dynamic).collect();
+            Dynamic::from(vec)
+        }
+        serde_json::Value::Object(obj) => {
+            let map: rhai::Map = obj
+                .into_iter()
+                .map(|(k, v)| (k.into(), json_to_dynamic(v)))
+                .collect();
+            Dynamic::from(map)
+        }
     }
 }
 
