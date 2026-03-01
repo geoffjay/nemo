@@ -65,6 +65,14 @@ nemo --app-config examples/components/app.xml
 nemo --app-config examples/data-binding/app.xml
 ```
 
+Configuations are available in the [examples](examples) directory:
+
+- [basic](examples/basic): A minimal application
+- [calculator](examples/calculator): A calculator application
+- [components](examples/components): A component-based application
+- [data-binding](examples/data-binding): A data-binding application
+- [data-streaming](examples/data-streaming): A data-streaming application
+
 ## Documentation
 
 Full documentation is available at [geoffjay.github.io/nemo][docs] or locally via `zensical serve`.
