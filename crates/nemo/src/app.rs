@@ -16,6 +16,8 @@ use crate::components::table::NemoTableDelegate;
 use crate::components::tree::values_to_tree_items;
 use gpui_component::input::TabSize;
 
+#[cfg(feature = "bevy")]
+use crate::components::{BevyScene, BevySceneState};
 use crate::components::{
     apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge, BarChart, BubbleChart,
     Button, CandlestickChart, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
@@ -337,6 +339,35 @@ impl App {
 
         self.component_states
             .insert(component.id.clone(), ComponentState::Input(state.clone()));
+        state
+    }
+
+    /// Gets or creates a BevySceneState entity for the given component.
+    #[cfg(feature = "bevy")]
+    fn get_or_create_bevy_state(
+        &mut self,
+        component: &BuiltComponent,
+        _window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<BevySceneState> {
+        if let Some(ComponentState::Bevy(state)) = self.component_states.get(&component.id) {
+            return state.clone();
+        }
+
+        let width = component
+            .properties
+            .get("width")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(800) as u32;
+        let height = component
+            .properties
+            .get("height")
+            .and_then(|v| v.as_i64())
+            .unwrap_or(600) as u32;
+
+        let state = cx.new(|_cx| BevySceneState::new(width, height));
+        self.component_states
+            .insert(component.id.clone(), ComponentState::Bevy(state.clone()));
         state
     }
 
@@ -887,6 +918,11 @@ impl App {
                     .runtime(Arc::clone(&self.runtime))
                     .entity_id(entity_id)
                     .into_any_element()
+            }
+            #[cfg(feature = "bevy")]
+            "bevy_scene" => {
+                let bevy_state = self.get_or_create_bevy_state(component, window, cx);
+                BevyScene::new(component.clone(), bevy_state).into_any_element()
             }
             _ => {
                 let children = self.render_children(component, components, entity_id, window, cx);

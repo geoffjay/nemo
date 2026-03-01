@@ -405,6 +405,17 @@ fn register_display_components(registry: &ComponentRegistry) {
             .property("value", PropertySchema::float())
             .property("max", PropertySchema::float().with_default(100.0)),
     );
+
+    reg(
+        registry,
+        "bevy_scene",
+        ComponentCategory::Display,
+        "Bevy Scene",
+        "A 3D scene rendered by Bevy",
+        ConfigSchema::new("bevy_scene")
+            .property("width", PropertySchema::integer().with_default(800i64))
+            .property("height", PropertySchema::integer().with_default(600i64)),
+    );
 }
 
 fn register_data_components(registry: &ComponentRegistry) {
