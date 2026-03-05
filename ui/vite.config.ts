@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { resolve } from 'path'
+import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -10,19 +10,21 @@ export default defineConfig(({ mode }) => {
   const notifyServiceUrl = env.VITE_NOTIFY_SERVICE_URL || 'http://localhost:17004'
   const orchestratorServiceUrl = env.VITE_ORCHESTRATOR_SERVICE_URL || 'http://localhost:17006'
 
+  const src = (path: string) => fileURLToPath(new URL(`./src/${path}`, import.meta.url))
+
   return {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': resolve(__dirname, './src'),
-        '@/components': resolve(__dirname, './src/components'),
-        '@/hooks': resolve(__dirname, './src/hooks'),
-        '@/layouts': resolve(__dirname, './src/layouts'),
-        '@/pages': resolve(__dirname, './src/pages'),
-        '@/services': resolve(__dirname, './src/services'),
-        '@/types': resolve(__dirname, './src/types'),
-        '@/utils': resolve(__dirname, './src/utils'),
-        '@/stores': resolve(__dirname, './src/stores'),
+        '@': src(''),
+        '@/components': src('components'),
+        '@/hooks': src('hooks'),
+        '@/layouts': src('layouts'),
+        '@/pages': src('pages'),
+        '@/services': src('services'),
+        '@/types': src('types'),
+        '@/utils': src('utils'),
+        '@/stores': src('stores'),
       },
     },
     server: {
