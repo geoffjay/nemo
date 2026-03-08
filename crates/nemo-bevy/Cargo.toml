@@ -1,0 +1,20 @@
+[package]
+name = "nemo-bevy"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bevy = { version = "0.15", default-features = false, features = [
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_asset",
+    "bevy_scene",
+    "bevy_winit",
+    "multi_threaded",
+] }
+crossbeam-channel = "0.5"
+image = "0.25"
+smallvec = "1"
+tracing = { workspace = true }
