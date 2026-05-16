@@ -1,0 +1,72 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/geoffjay/agentd/main/schemas/workflow.yml
+
+# PR reviewer workflow — polls pull requests and dispatches reviews when labeled.
+#
+# Triggers when a PR in geoffjay/nemo has the "review-agent" label applied.
+#
+# Usage:
+#   agent apply .agentd/workflows/pull-request-reviewer.yml
+#   agent apply .agentd/  # creates all agents + workflows together
+
+name: nemo-pull-request-reviewer
+agent: nemo-reviewer
+
+source:
+  type: github_pull_requests
+  owner: geoffjay
+  repo: nemo
+  labels:
+    - review-agent
+  state: open
+
+poll_interval: 60
+enabled: true
+
+prompt_template: |
+  Review the following pull request:
+
+  PR #{{source_id}}: {{title}}
+  URL: {{url}}
+  Labels: {{labels}}
+
+  Description:
+  {{body}}
+
+  Step 0 — Gather context from memory:
+  Before starting the review, search shared memory for relevant context:
+  1. Search for memories related to the PR topic and changed areas:
+     agent memory search "{{title}}" --as-actor nemo-reviewer --limit 5 --json
+  2. Search for known issues or patterns in the areas being modified:
+     agent memory search "review findings" --as-actor nemo-reviewer --tags nemo-reviewer --limit 5 --json
+  3. Review results to inform your review — look for recurring issues or past decisions.
+  4. Review memory results to inform your review — look for recurring issues or past decisions.
+
+  Instructions:
+  1. Check the stack position of this PR before reviewing:
+     git-spice log short
+  2. Fetch the full diff: gh pr diff {{source_id}} --repo geoffjay/nemo
+  3. Read the diff carefully, noting each changed file and the nature of the changes
+  4. For any files where you need more context, read the full file
+  5. Check that the changes match what the PR description claims
+  6. Note any stack impact in your review
+  7. Evaluate against your review criteria (correctness, safety, consistency, tests, scope)
+  8. Submit your review and apply the appropriate label transition:
+     - If approved — approve and add merge-queue label:
+         gh pr review {{source_id}} --repo geoffjay/nemo --approve --body "..."
+         gh pr edit {{source_id}} --repo geoffjay/nemo --add-label "merge-queue"
+     - If non-blocking suggestions — comment only:
+         gh pr review {{source_id}} --repo geoffjay/nemo --comment --body "..."
+     - If changes required — request changes and add needs-rework label:
+         gh pr review {{source_id}} --repo geoffjay/nemo --request-changes --body "..."
+         gh pr edit {{source_id}} --repo geoffjay/nemo --add-label "needs-rework"
+     - If branch needs rebasing on its parent — add needs-restack label:
+         gh pr edit {{source_id}} --repo geoffjay/nemo --add-label "needs-restack"
+  9. If you found a recurring pattern or notable issue worth tracking, store it:
+     agent memory remember "<finding>" --created-by nemo-reviewer --type information --tags nemo-reviewer,nemo-pr-{{source_id}} --visibility public
+  10. Remove the "review-agent" label after review:
+      gh pr edit {{source_id}} --repo geoffjay/nemo --remove-label review-agent
+
+  Label reference:
+  - merge-queue   — PR approved; triggers conductor to merge
+  - needs-rework  — changes requested; worker must address feedback and resubmit
+  - needs-restack — branch is behind its parent; worker must run git-spice upstack restack

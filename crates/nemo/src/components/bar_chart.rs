@@ -52,8 +52,8 @@ impl RenderOnce for BarChart {
         let y_field = self.y_field.clone();
 
         let mut chart = GpuiBarChart::new(data)
-            .x(move |item: &Value| get_string_field(item, &x_field))
-            .y(move |item: &Value| get_f64_field(item, &y_field));
+            .band(move |item: &Value| get_string_field(item, &x_field))
+            .value(move |item: &Value| get_f64_field(item, &y_field));
 
         if self.show_label == Some(true) {
             let label_y_field = self.y_field.clone();

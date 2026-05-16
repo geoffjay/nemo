@@ -4,7 +4,7 @@ use gpui_component::plot::{
     shape::Stack,
     AxisText, Grid, PlotAxis, AXIS_GAP,
 };
-use gpui_component::{ActiveTheme, PixelsExt};
+use gpui_component::{ActiveTheme};
 use nemo_config::Value;
 use nemo_macros::NemoComponent;
 

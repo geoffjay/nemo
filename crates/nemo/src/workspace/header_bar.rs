@@ -68,7 +68,7 @@ impl Render for HeaderBar {
 
         if let Some(url) = github_url {
             let github_button = Button::new("github")
-                .icon(IconName::GitHub)
+                .icon(IconName::ExternalLink)
                 .small()
                 .ghost()
                 .on_click(move |_, _, cx| cx.open_url(&url));

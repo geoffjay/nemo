@@ -72,7 +72,6 @@ impl ProjectLoaderView {
                         .child(Label::new("Enter the repository URL:"))
                         .child(Input::new(&input_state)),
                 )
-                .confirm()
                 .on_ok(move |_, _window, cx| {
                     let url = input_for_ok.read(cx).value().to_string();
                     if url.is_empty() {
@@ -249,7 +248,7 @@ impl Render for ProjectLoaderView {
                 .child(
                     Button::new("clone-repo")
                         .label("Clone from Repository")
-                        .icon(IconName::GitHub)
+                        .icon(IconName::ExternalLink)
                         .on_click(cx.listener(Self::clone_from_repo)),
                 ),
         );

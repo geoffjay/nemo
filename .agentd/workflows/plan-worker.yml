@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/geoffjay/agentd/main/schemas/workflow.yml
+
+# Plan worker workflow — polls GitHub issues and dispatches them to the planner agent.
+#
+# Usage:
+#   agent apply .agentd/workflows/plan-worker.yml   # single workflow
+#   agent apply .agentd/                            # agents + workflows together
+
+name: nemo-plan-worker
+agent: nemo-planner
+
+source:
+  type: github_issues
+  owner: geoffjay
+  repo: nemo
+  labels:
+    - plan-agent
+  state: open
+
+poll_interval: 60
+enabled: true
+
+prompt_template: |
+  Work on the following GitHub issue:
+
+  Issue #{{source_id}}: {{title}}
+  URL: {{url}}
+  Labels: {{labels}}
+
+  Description:
+  {{body}}
+
+  Step 0 — Gather context from memory:
+  Before starting planning, search shared memory for relevant context:
+  1. Search for memories related to this planning topic:
+     agent memory search "{{title}}" --as-actor nemo-planner --limit 5 --json
+  2. Search for prior planning decisions and architectural context:
+     agent memory search "architecture decisions" --as-actor nemo-planner --tags nemo-planner --limit 5 --json
+  3. Review results to avoid duplicating past work and build on existing decisions.
+  4. Review memory results to verify assumptions about what already exists before proposing issues.
+
+  Instructions:
+
+  1. Move the issue to "In Progress"
+  2. Review the plan in the issue description
+  3. Analyze the relevant crates for the issue
+  4. Review open issues to avoid duplication:
+     gh issue list --repo geoffjay/nemo --state open
+
+  Then, based on your analysis, propose the issues necessary to implement the plan.
+  Focus on:
+
+  - Missing functionality or incomplete implementations
+  - Documentation gaps
+  - Testing gaps
+  - Integration points between crates that need work
+  - Operational concerns (error handling, logging, configuration)
+
+  Some additional guidance:
+
+  - Never assign the "agent", "work-agent", "plan-agent", or "review-agent" labels
+  - Ideally plans will be focused effort and can be constrained to 5-10 issues,
+    but this IS NOT a hard requirement and larger plans will require more issues
+  - If a planning task has phases, create an epic issue for each phase broken
+    into multiple child issues
+  - Include a "## Stack Base" section in each issue body specifying where to branch from
+  - Use "Blocked by: #NNN" in issue descriptions where sequential dependencies exist
+
+  For each proposed issue, create it using:
+    gh issue create --repo geoffjay/nemo --title "..." --body "..." --label "..."
+
+  After the plan is complete:
+
+  - Store planning decisions and rationale for future reference:
+    agent memory remember "<key decisions and rationale>" --created-by nemo-planner --type information --tags nemo-planner,nemo-issue-{{source_id}} --visibility public
+  - Create a milestone if the plan has enough issues to justify one:
+    gh api repos/geoffjay/nemo/milestones -X POST -f title="..." -f description="..."
+  - Close the issue: gh issue close {{source_id}} --repo geoffjay/nemo

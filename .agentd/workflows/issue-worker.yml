@@ -1,0 +1,77 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/geoffjay/agentd/main/schemas/workflow.yml
+
+# Issue worker workflow — polls GitHub issues and dispatches them to the nemo-worker agent.
+#
+# Usage:
+#   agent apply .agentd/workflows/issue-worker.yml  # single workflow
+#   agent apply .agentd/                            # agents + workflows together
+
+name: nemo-issue-worker
+agent: nemo-worker
+
+source:
+  type: github_issues
+  owner: geoffjay
+  repo: nemo
+  labels:
+    - agent
+  state: open
+
+poll_interval: 60
+enabled: true
+
+prompt_template: |
+  Work on the following GitHub issue:
+
+  Issue #{{source_id}}: {{title}}
+  URL: {{url}}
+  Labels: {{labels}}
+
+  Description:
+  {{body}}
+
+  Step 0 — Gather context from memory:
+  Before starting implementation, search shared memory for relevant context:
+  1. Search for memories related to this issue's topic:
+     agent memory search "{{title}}" --as-actor nemo-worker --limit 5 --json
+  2. Search for known decisions or gotchas in related areas:
+     agent memory search "issue {{source_id}}" --as-actor nemo-worker --limit 3 --json
+  3. Review results and factor relevant findings into your plan.
+  4. Review memory results before planning your approach.
+
+  Instructions:
+  1. Move the issue to "In Progress" by assigning yourself or adding an in-progress label
+  2. Sync with upstream and determine stack base:
+     a. git-spice repo sync
+     b. Check if this issue has blocking dependencies:
+        gh issue view {{source_id}} --repo geoffjay/nemo --json body,labels
+     c. If blocked by another open issue, check out that issue's branch first.
+        Otherwise: git checkout main
+  3. Create a stacked branch:
+     git-spice branch create issue-{{source_id}} -m "feat: <brief description>"
+  4. Implement the changes described in the issue
+  5. Run tests to verify: cargo test --workspace
+  6. Ensure cargo fmt and cargo clippy pass:
+     cargo fmt --all && cargo clippy --workspace -- -D warnings
+  7. Commit with a descriptive message:
+     git-spice commit create -m "feat(<crate>): <description>"
+  8. Submit the branch as a PR with an explicit body so GitHub links the issue:
+     git-spice branch submit --no-prompt --label review-agent \
+       --title "feat: <title>" \
+       --body "<one-sentence summary of what was implemented>
+
+  Closes #{{source_id}}"
+
+  9. Store any significant findings or decisions made during implementation:
+     agent memory remember "<what you learned>" --created-by nemo-worker --type information --tags nemo-worker,nemo-issue-{{source_id}} --visibility public
+  10. Close the issue: gh issue close {{source_id}} --repo geoffjay/nemo
+
+  Handling needs-rework (reviewer requested changes):
+  If this issue's PR has the "needs-rework" label, the reviewer found issues.
+  Fetch the review comments, address the feedback, then:
+    git-spice commit amend -m "feat(<crate>): address review feedback"
+    git-spice branch submit --no-prompt --label review-agent \
+      --title "feat: <title>" \
+      --body "<summary of changes made>
+
+  Closes #{{source_id}}"

@@ -32,6 +32,6 @@ impl RenderOnce for Progress {
         } else {
             0.0
         };
-        GpuiProgress::new().value(percentage)
+        GpuiProgress::new("progress").value(percentage)
     }
 }

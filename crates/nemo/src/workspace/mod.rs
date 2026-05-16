@@ -196,7 +196,6 @@ impl Workspace {
                 .child(Label::new(
                     "Are you sure you want to quit? Any unsaved work will be lost.",
                 ))
-                .confirm()
                 .on_ok(move |_, _window, cx| {
                     if let Some(ws) = entity.upgrade() {
                         ws.update(cx, |ws, cx| {
@@ -223,7 +222,6 @@ impl Workspace {
                 .child(Label::new(
                     "Are you sure you want to close the current project?",
                 ))
-                .confirm()
                 .on_ok(move |_, _window, cx| {
                     if let Some(ws) = entity.upgrade() {
                         ws.update(cx, |ws, cx| {
@@ -379,7 +377,8 @@ impl Render for Workspace {
         // Use the persisted loader entity so event subscriptions remain valid
         let loader = self.loader.clone();
 
-        let mut routes = Routes::new().child(Route::new().index().element(loader));
+        let mut routes = Routes::new()
+            .child(Route::new().index().element(move |_, _| AnyView::from(loader.clone())));
 
         // Add app routes if project is active — nested under AppLayout which
         // provides the shared header bar, with child routes for main and settings.
@@ -389,10 +388,16 @@ impl Render for Workspace {
             let footer_bar = project.footer_bar.clone();
             let settings_view = project.settings_view.clone();
 
-            let mut app_children = vec![Route::new().index().element(app_entity)];
+            let ae = app_entity.clone();
+            let mut app_children =
+                vec![Route::new().index().element(move |_, _| AnyView::from(ae.clone()))];
 
             if let Some(sv) = settings_view {
-                app_children.push(Route::new().path("settings").element(sv));
+                app_children.push(
+                    Route::new()
+                        .path("settings")
+                        .element(move |_, _| AnyView::from(sv.clone())),
+                );
             }
 
             routes = routes.child(

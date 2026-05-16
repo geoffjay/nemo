@@ -1,24 +1,27 @@
+[patch.crates-io]
+gpui = { git = "https://github.com/zed-industries/zed" }
+
 [workspace]
 resolver = "2"
 members = [
-    "crates/nemo",
-    "crates/nemo-config",
-    "crates/nemo-registry",
-    "crates/nemo-layout",
-    "crates/nemo-data",
-    "crates/nemo-extension",
-    "crates/nemo-integration",
-    "crates/nemo-events",
-    "crates/nemo-plugin-api",
-    "crates/nemo-plugin",
-    "crates/nemo-macros",
-    "crates/nemo-wasm",
-    "crates/nemo-wasm-guest",
-    "plugins/mock-data",
-    "plugins/mock-data-wasm",
-    "plugins/pid-control",
-    "plugins/streaming-stats",
-    "plugins/demo-settings",
+  "crates/nemo",
+  "crates/nemo-config",
+  "crates/nemo-registry",
+  "crates/nemo-layout",
+  "crates/nemo-data",
+  "crates/nemo-extension",
+  "crates/nemo-integration",
+  "crates/nemo-events",
+  "crates/nemo-plugin-api",
+  "crates/nemo-plugin",
+  "crates/nemo-macros",
+  "crates/nemo-wasm",
+  "crates/nemo-wasm-guest",
+  "plugins/mock-data",
+  "plugins/mock-data-wasm",
+  "plugins/pid-control",
+  "plugins/streaming-stats",
+  "plugins/demo-settings",
 ]
 
 [workspace.package]
@@ -29,15 +32,18 @@ repository = "https://github.com/geoffjay/nemo"
 
 [workspace.dependencies]
 # GPUI
-gpui = "0.2.2"
-gpui-component = "0.5.1"
-gpui-component-assets = "0.5"
-gpui-router = "0.2"
+gpui = { git = "https://github.com/zed-industries/zed" }
+gpui_platform = { git = "https://github.com/zed-industries/zed", features = [
+  "font-kit",
+] }
+gpui-component = { git = "https://github.com/longbridge/gpui-component" }
+gpui-component-assets = { git = "https://github.com/longbridge/gpui-component" }
+gpui-router = "0.3"
 
 # Async
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"
-futures = "0.3"
+futures = "0.3.32"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }

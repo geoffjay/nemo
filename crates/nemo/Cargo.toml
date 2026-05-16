@@ -19,6 +19,7 @@ nemo-events = { workspace = true }
 nemo-plugin-api = { workspace = true }
 nemo-macros = { workspace = true }
 gpui = { workspace = true }
+gpui_platform = { workspace = true }
 gpui-component = { workspace = true }
 gpui-component-assets = { workspace = true }
 gpui-router = { workspace = true }

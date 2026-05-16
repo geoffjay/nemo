@@ -1,0 +1,202 @@
+# GitHub label definitions for the agentd repository.
+#
+# This file serves as the authoritative source for label configuration.
+# Labels are grouped by purpose.
+#
+# To sync labels from this file, use:
+#   gh label import .github/labels.yml
+
+# ── Default GitHub labels ───────────────────────────────────────────────────
+
+- name: bug
+  description: Something isn't working
+  color: "d73a4a"
+
+- name: documentation
+  description: Improvements or additions to documentation
+  color: "0075ca"
+
+- name: duplicate
+  description: This issue or pull request already exists
+  color: "cfd3d7"
+
+- name: enhancement
+  description: New feature or request
+  color: "a2eeef"
+
+- name: good first issue
+  description: Good for newcomers
+  color: "7057ff"
+
+- name: help wanted
+  description: Extra attention is needed
+  color: "008672"
+
+- name: invalid
+  description: This doesn't seem right
+  color: "e4e669"
+
+- name: question
+  description: Further information is requested
+  color: "d876e3"
+
+- name: wontfix
+  description: This will not be worked on
+  color: "ffffff"
+
+# ── Classification ───────────────────────────────────────────────────────────
+
+- name: agent
+  description: Related to agent definitions or agent behaviour
+  color: "aaaaaa"
+
+- name: architecture
+  description: Cross-service architectural design or review
+  color: "5319e7"
+
+- name: frontend
+  description: React/TypeScript UI code in the frontend application
+  color: "1D76DB"
+
+- name: plan
+  description: Plan issue for future work
+  color: "c5def5"
+
+- name: refactor
+  description: Code improvement without changing behavior
+  color: "fbca04"
+
+- name: release
+  description: Release preparation, changelog, and versioning
+  color: "0e8a16"
+
+- name: research
+  description: Research and investigation tasks
+  color: "0075ca"
+
+- name: security
+  description: Security vulnerability, audit, or hardening
+  color: "ee0701"
+
+- name: ui
+  description: Visual design, styling, and component layout (not application logic)
+  color: "1D76DB"
+
+# ── Pipeline state labels ─────────────────────────────────────────────────────
+#
+# Blue family. These labels encode the current state of an issue or PR in the
+# autonomous pipeline. The conductor agent reads and sets these labels to drive
+# state transitions. See docs/public/pipeline-state-machine.md for the full
+# state machine.
+
+- name: needs-triage
+  description: New issue awaiting triage by the planner agent
+  color: "d93f0b"
+
+- name: triaged
+  description: Issue has been triaged, ready for planning or implementation
+  color: "0ea5e9"
+
+- name: merge-ready
+  description: PR approved and CI passing, ready for conductor to merge
+  color: "2563eb"
+
+- name: merge-queue
+  description: Approved by reviewer, queued for merge by conductor
+  color: "1d4ed8"
+
+# ── Complexity labels ────────────────────────────────────────────────────────
+#
+# Applied by the triage agent during Step 4 of triage. Created imperatively
+# at runtime if absent; listed here so gh label import keeps them in sync.
+
+- name: complexity:small
+  description: "Small scope: <50 lines, single file, clear solution"
+  color: "0e8a16"
+
+- name: complexity:medium
+  description: "Medium scope: <200 lines, 1-2 files, some design required"
+  color: "fbca04"
+
+- name: complexity:large
+  description: "Large scope: >200 lines, multiple files/crates"
+  color: "d93f0b"
+
+# ── Status / warning labels ───────────────────────────────────────────────────
+#
+# Amber/yellow family. Indicate a blocked or degraded state requiring action.
+
+- name: needs context
+  description: More information is required to be able to proceed
+  color: "01a497"
+
+- name: needs decision
+  description: Blocked on a design or architecture decision
+  color: "aaaaaa"
+
+- name: needs-refinement
+  description: Issue needs enrichment and additional context before implementation
+  color: "e4e669"
+
+- name: needs-rework
+  description: PR has review feedback that must be addressed before merging
+  color: "e11d48"
+
+- name: needs-restack
+  description: Branch is behind its stack parent, needs git-spice restack
+  color: "f59e0b"
+
+- name: needs-tests
+  description: Area needs dedicated test coverage
+  color: "bfd4f2"
+
+# ── Agent dispatch labels ─────────────────────────────────────────────────────
+#
+# Each of these labels triggers a workflow that dispatches a specialized agent.
+# The agent removes the label once it has processed the issue or PR.
+#
+# Green family (implementation agents):
+
+- name: docs-agent
+  description: Dispatches the documentation agent to write or update docs
+  color: "b8f652"
+
+- name: enrich-agent
+  description: Dispatches the enricher agent to add context and detail to an issue
+  color: "4ade80"
+
+- name: plan-agent
+  description: Dispatches the planner agent to break down an issue into tasks
+  color: "7bdff6"
+
+- name: refactor-agent
+  description: Dispatches the refactor agent to improve code structure
+  color: "16a34a"
+
+- name: research-agent
+  description: Dispatches the research agent for investigation
+  color: "6366f1"
+
+- name: review-agent
+  description: Dispatches the review agent to review a pull request
+  color: "5bdc3b"
+
+- name: security-agent
+  description: Dispatches the security agent for vulnerability scanning or hardening
+  color: "f97316"
+
+- name: test-agent
+  description: Dispatches the tester agent to write or improve tests
+  color: "22c55e"
+
+- name: work-agent
+  description: Dispatches the worker agent to implement an issue
+  color: "d1f8a4"
+
+# ── Orchestration labels ──────────────────────────────────────────────────────
+#
+# Manual triggers for pipeline orchestration.
+
+- name: conductor-sync
+  description: Manual trigger for the conductor agent to sync and process the pipeline
+  color: "818cf8"

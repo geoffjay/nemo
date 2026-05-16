@@ -80,8 +80,8 @@ impl TableDelegate for NemoTableDelegate {
         self.rows.len()
     }
 
-    fn column(&self, col_ix: usize, _cx: &App) -> &Column {
-        &self.columns[col_ix]
+    fn column(&self, col_ix: usize, _cx: &App) -> Column {
+        self.columns[col_ix].clone()
     }
 
     fn render_td(
@@ -159,7 +159,7 @@ impl RenderOnce for Table {
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
-        let table = gpui_component::table::Table::new(&state)
+        let table = gpui_component::table::DataTable::new(&state)
             .stripe(stripe)
             .bordered(bordered);
 

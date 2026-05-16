@@ -60,7 +60,7 @@ pub(crate) fn map_icon_name(name: &str) -> IconName {
         "folder-open" => IconName::FolderOpen,
         "frame" => IconName::Frame,
         "gallery-vertical-end" => IconName::GalleryVerticalEnd,
-        "github" => IconName::GitHub,
+        "github" => IconName::ExternalLink,
         "globe" => IconName::Globe,
         "heart" => IconName::Heart,
         "heart-off" => IconName::HeartOff,

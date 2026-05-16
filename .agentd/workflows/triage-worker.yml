@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/geoffjay/agentd/main/schemas/workflow.yml
+
+# Triage worker workflow — dispatches triage tasks to the triage agent.
+#
+# Triggered when an issue has the "needs-triage" label applied.
+#
+# Usage:
+#   agent apply .agentd/workflows/triage-worker.yml
+#   agent apply .agentd/  # creates all agents + workflows together
+
+name: nemo-triage-worker
+agent: nemo-triage
+
+source:
+  type: github_issues
+  owner: geoffjay
+  repo: nemo
+  labels:
+    - needs-triage
+  state: open
+
+poll_interval: 60
+enabled: true
+
+prompt_template: |
+  You have been assigned a triage task.
+
+  Issue #{{source_id}}: {{title}}
+  URL: {{url}}
+  Labels: {{labels}}
+
+  Description:
+  {{body}}
+
+  Step 0 — Gather context from memory:
+  Before triaging, search shared memory for relevant context:
+  1. Search for prior triage decisions on similar issues:
+     agent memory search "{{title}}" --as-actor nemo-triage --limit 5 --json
+  2. Search for known triage patterns or label conventions:
+     agent memory search "triage label conventions" --as-actor nemo-triage --limit 3 --json
+  3. Review results and apply labels consistently with past decisions.
+  4. Review memory results to apply labels consistently with past decisions.
+
+  Instructions:
+
+  Work through each step of the triage process defined in your system prompt.
+  Use the issue details provided above as your primary input.
+
+  1. **Read the issue** — review title, body, and any existing labels carefully.
+     Identify the type of change, affected crates, and how well-specified
+     the request is.
+
+  2. **Check for duplicates** — search open and recently closed issues for the
+     same feature or bug. If a likely duplicate is found, comment on the issue,
+     apply the `duplicate` label, remove `needs-triage`, and stop.
+
+  3. **Assign type and area labels** — apply exactly one type label
+     (bug/enhancement/documentation/refactor/research/security) and any
+     relevant area labels (config/layout/data/components/macros/plugins/events/gpui).
+     Apply status labels (needs-refinement/needs-tests/needs-context/needs-decision)
+     as appropriate.
+
+  4. **Estimate complexity** — apply one of:
+     - `complexity:small`  (<50 lines, single crate, clear solution)
+     - `complexity:medium` (<200 lines, 1-2 crates, some design required)
+     - `complexity:large`  (>200 lines, multiple crates, significant design)
+
+     Create the complexity label if it does not yet exist:
+     ```bash
+     gh label create "complexity:small"  --repo geoffjay/nemo \
+       --color "0E8A16" --description "Small scope: <50 lines, single crate" \
+       2>/dev/null || true
+     gh label create "complexity:medium" --repo geoffjay/nemo \
+       --color "FBCA04" --description "Medium scope: <200 lines, 1-2 crates" \
+       2>/dev/null || true
+     gh label create "complexity:large"  --repo geoffjay/nemo \
+       --color "D93F0B" --description "Large scope: >200 lines, multiple crates" \
+       2>/dev/null || true
+     ```
+
+  5. **Suggest a milestone** — read open milestones and assign or comment with
+     the best fit. If unclear, post a comment with your suggestion and rationale.
+
+  6. **Ask clarifying questions** (only if genuinely blocking) — if acceptance
+     criteria are absent or the scope is ambiguous, post targeted questions and
+     apply `needs-context`. Do not ask about implementation approach or style.
+
+  7. **Post a triage summary** — comment on the issue with a brief summary table
+     (type, complexity, milestone, labels applied, any notes).
+
+  8. **Store decisions** — save any label conventions or complexity patterns
+     discovered during triage for future consistency:
+     ```bash
+     agent memory remember "<triage decision or label convention>" \
+       --created-by nemo-triage --type information \
+       --tags nemo-triage,nemo-issue-{{source_id}} --visibility public
+     ```
+
+  9. **Finalize** — remove `needs-triage` and apply `triaged`:
+     ```bash
+     gh issue edit {{source_id}} --repo geoffjay/nemo \
+       --remove-label "needs-triage" --add-label "triaged"
+     ```

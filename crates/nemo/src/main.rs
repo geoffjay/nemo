@@ -84,7 +84,7 @@ fn main() -> Result<()> {
 
     // Launch GPUI application
     info!("Starting GPUI application...");
-    let gpui_app = Application::new().with_assets(gpui_component_assets::Assets);
+    let gpui_app = gpui_platform::application().with_assets(gpui_component_assets::Assets);
 
     let app_config_path = args.app_config.clone();
     let ws_args = WorkspaceArgs {
@@ -124,7 +124,7 @@ fn main() -> Result<()> {
 
         cx.on_window_closed({
             let workspace_entity = workspace_entity.clone();
-            move |cx| {
+            move |cx, _window_id| {
                 if let Some(ws) = workspace_entity.borrow().clone() {
                     ws.update(cx, |ws, cx| {
                         ws.shutdown(cx);
@@ -214,7 +214,7 @@ fn main() -> Result<()> {
                 }
 
                 let focus_handle = cx.focus_handle();
-                focus_handle.focus(window);
+                focus_handle.focus(window, cx);
 
                 let loader = Workspace::create_loader(&nemo_config, window, cx);
 

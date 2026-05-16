@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/geoffjay/agentd/main/schemas/workflow.yml
+
+# Research worker workflow — dispatches research tasks to the research agent.
+#
+# Triggered when an issue has the "research-agent" label applied.
+#
+# Usage:
+#   agent apply .agentd/workflows/research-worker.yml
+#   agent apply .agentd/  # creates all agents + workflows together
+
+name: nemo-research-worker
+agent: nemo-research
+
+source:
+  type: github_issues
+  owner: geoffjay
+  repo: nemo
+  labels:
+    - research-agent
+  state: open
+
+poll_interval: 60
+enabled: true
+
+prompt_template: |
+  You have been assigned a research task.
+
+  Issue #{{source_id}}: {{title}}
+  URL: {{url}}
+  Labels: {{labels}}
+
+  Description:
+  {{body}}
+
+  Step 0 — Gather context from memory:
+  Before starting, search shared memory for any prior research on this topic:
+  1. Search for related prior research:
+     agent memory search "{{title}}" --as-actor nemo-research --limit 5 --json
+  2. Search for research on this specific issue:
+     agent memory search "issue {{source_id}}" --as-actor nemo-research --limit 3 --json
+  3. Review results and build on existing findings rather than re-investigating
+     what is already known.
+  4. Review memory results and build on existing findings before starting research.
+
+  Instructions:
+
+  1. Read the issue body carefully — it describes the research question,
+     scope, and expected output format.
+
+  2. Investigate the topic thoroughly following your research methodology:
+     a. Search memory and existing documentation first
+     b. Read relevant source files in the codebase
+     c. Search external references (docs, RFCs, prior art) as needed
+     d. Synthesize findings into a structured response
+
+  3. Post your findings as a structured comment on the issue:
+     gh issue comment {{source_id}} --repo geoffjay/nemo --body "$(cat <<'BODY'
+     ## Research Findings: {{title}}
+
+     ### Summary
+     <1-3 sentence executive summary>
+
+     ### Findings
+     <detailed findings organized by subtopic>
+
+     ### Recommendations
+     <actionable next steps or design recommendations>
+
+     ### Open Questions
+     <questions that require further investigation or human input>
+
+     ### References
+     <file paths, crate names, external docs, or prior art consulted>
+     BODY
+     )"
+
+  4. If the research warrants a planning document, create one at
+     `docs/planning/<topic>.md` and submit it via a PR:
+     git-spice repo sync && git-spice branch create research/issue-{{source_id}} -m "docs: research findings for {{title}}"
+     # write the document
+     git-spice commit create -m "docs: add research findings for {{title}} (refs #{{source_id}})"
+     git-spice branch submit --no-prompt \
+       --title "docs: add research findings for #{{source_id}}" \
+       --body "Research planning document for issue #{{source_id}}"
+
+  5. Store key discoveries in shared memory for other agents:
+     agent memory remember "<key finding or decision from this research>" \
+       --created-by nemo-research --type information \
+       --tags nemo-research,nemo-issue-{{source_id}} --visibility public
+
+  6. Remove the trigger label:
+     gh issue edit {{source_id}} --repo geoffjay/nemo --remove-label "research-agent"

@@ -1,3 +1,7 @@
 LAYER https://github.com/otter-layers/claude-code-redaction \
   TARGET .claude/ \
   AFTER ["./.claude/scripts/merge-claude-settings.sh"]
+
+LAYER https://github.com/otter-layers/claude-code-destructive \
+  TARGET .claude/ \
+  AFTER ["./.claude/scripts/merge-prevent-destructive-settings.sh"]

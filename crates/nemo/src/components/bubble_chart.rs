@@ -3,7 +3,7 @@ use gpui_component::plot::{
     scale::{Scale, ScaleLinear},
     Grid, AXIS_GAP,
 };
-use gpui_component::{ActiveTheme, PixelsExt};
+use gpui_component::{ActiveTheme};
 use nemo_macros::NemoComponent;
 
 use super::chart_utils::{chart_color, empty_chart_placeholder, extract_data_array, get_f64_field};
