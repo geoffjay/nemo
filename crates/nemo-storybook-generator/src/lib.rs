@@ -462,4 +462,47 @@ mod tests {
         assert!(contents.contains("<nemo>"));
         let _ = std::fs::remove_file(&path);
     }
+
+    #[test]
+    fn test_generated_xml_has_script_section() {
+        let xml = generate_storybook_xml();
+        assert!(
+            xml.contains("<script lang=\"rhai\">"),
+            "Generated XML missing Rhai script section"
+        );
+        assert!(
+            xml.contains("navigate_to"),
+            "Script section missing navigate_to function"
+        );
+        assert!(
+            xml.contains("on_search_change"),
+            "Script section missing on_search_change function"
+        );
+    }
+
+    #[test]
+    fn test_generated_xml_has_app_config() {
+        let xml = generate_storybook_xml();
+        assert!(xml.contains("<app"), "Missing <app> element");
+        assert!(xml.contains("<window"), "Missing <window> element");
+        assert!(xml.contains("Nemo Storybook"), "Missing app title");
+    }
+
+    #[test]
+    fn test_generated_xml_has_layout() {
+        let xml = generate_storybook_xml();
+        assert!(xml.contains("<layout"), "Missing <layout> element");
+        assert!(xml.contains("content_area"), "Missing content_area");
+        assert!(xml.contains("root_row"), "Missing root_row stack");
+    }
+
+    #[test]
+    fn test_xml_snippet_has_required_props() {
+        let xml = generate_storybook_xml();
+        // button requires "label" - its XML snippet should include label="placeholder"
+        assert!(
+            xml.contains("page_button"),
+            "Missing button page"
+        );
+    }
 }
