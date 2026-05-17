@@ -39,12 +39,14 @@ impl RenderOnce for Panel {
             return div().into_any_element();
         }
 
-        let mut el = div()
-            .flex()
-            .flex_col()
-            .bg(cx.theme().colors.secondary);
+        let mut el = div().flex().flex_col().bg(cx.theme().colors.secondary);
 
-        el = match self.source.properties.get("rounded").and_then(|v| v.as_str()) {
+        el = match self
+            .source
+            .properties
+            .get("rounded")
+            .and_then(|v| v.as_str())
+        {
             Some("sm") => el.rounded_sm(),
             Some("lg") => el.rounded_lg(),
             Some("xl") => el.rounded_xl(),

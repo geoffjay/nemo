@@ -38,7 +38,12 @@ impl RenderOnce for Label {
             _ => label,
         };
 
-        match self.source.properties.get("rounded").and_then(|v| v.as_str()) {
+        match self
+            .source
+            .properties
+            .get("rounded")
+            .and_then(|v| v.as_str())
+        {
             Some("sm") => label.rounded_sm(),
             Some("md") => label.rounded_md(),
             Some("lg") => label.rounded_lg(),

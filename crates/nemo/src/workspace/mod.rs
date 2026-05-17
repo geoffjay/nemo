@@ -377,8 +377,11 @@ impl Render for Workspace {
         // Use the persisted loader entity so event subscriptions remain valid
         let loader = self.loader.clone();
 
-        let mut routes = Routes::new()
-            .child(Route::new().index().element(move |_, _| AnyView::from(loader.clone())));
+        let mut routes = Routes::new().child(
+            Route::new()
+                .index()
+                .element(move |_, _| AnyView::from(loader.clone())),
+        );
 
         // Add app routes if project is active — nested under AppLayout which
         // provides the shared header bar, with child routes for main and settings.
@@ -389,8 +392,9 @@ impl Render for Workspace {
             let settings_view = project.settings_view.clone();
 
             let ae = app_entity.clone();
-            let mut app_children =
-                vec![Route::new().index().element(move |_, _| AnyView::from(ae.clone()))];
+            let mut app_children = vec![Route::new()
+                .index()
+                .element(move |_, _| AnyView::from(ae.clone()))];
 
             if let Some(sv) = settings_view {
                 app_children.push(

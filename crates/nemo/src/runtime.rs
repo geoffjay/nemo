@@ -191,10 +191,8 @@ impl NemoRuntime {
                             .filter_map(|plugin| {
                                 let obj = plugin.as_object()?;
                                 // Skip if load is explicitly false
-                                let load = obj
-                                    .get("load")
-                                    .and_then(|v| v.as_bool())
-                                    .unwrap_or(true);
+                                let load =
+                                    obj.get("load").and_then(|v| v.as_bool()).unwrap_or(true);
                                 if !load {
                                     return None;
                                 }
@@ -234,10 +232,7 @@ impl NemoRuntime {
                             .trim_end_matches("-plugin")
                             .to_string();
                         if !allowed_plugins.contains(&normalized_id) {
-                            debug!(
-                                "Skipping plugin {:?} (not in app.plugins)",
-                                manifest.id
-                            );
+                            debug!("Skipping plugin {:?} (not in app.plugins)", manifest.id);
                             continue;
                         }
                         let result = match manifest.extension_type {
@@ -250,11 +245,7 @@ impl NemoRuntime {
                             _ => unreachable!(),
                         };
                         if let Err(e) = result {
-                            tracing::warn!(
-                                "Failed to load plugin {:?}: {}",
-                                manifest.path,
-                                e
-                            );
+                            tracing::warn!("Failed to load plugin {:?}: {}", manifest.path, e);
                         }
                     }
                 }

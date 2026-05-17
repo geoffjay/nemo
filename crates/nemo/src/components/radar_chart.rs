@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use gpui::*;
-use gpui_component::{ActiveTheme};
+use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 use super::chart_utils::{

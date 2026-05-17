@@ -3,7 +3,7 @@ use gpui_component::plot::{
     scale::{Scale, ScaleBand},
     AxisText, PlotAxis, AXIS_GAP,
 };
-use gpui_component::{ActiveTheme};
+use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 use super::chart_utils::{

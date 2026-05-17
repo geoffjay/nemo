@@ -148,10 +148,18 @@ fn main() -> Result<()> {
 
         // Read window dimensions from runtime config (if available)
         let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
-            let w = rt.get_config("app.window.width").and_then(|v| v.as_i64().map(|n| n as u32));
-            let h = rt.get_config("app.window.height").and_then(|v| v.as_i64().map(|n| n as u32));
-            let mw = rt.get_config("app.window.min_width").and_then(|v| v.as_i64().map(|n| n as u32));
-            let mh = rt.get_config("app.window.min_height").and_then(|v| v.as_i64().map(|n| n as u32));
+            let w = rt
+                .get_config("app.window.width")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
+            let h = rt
+                .get_config("app.window.height")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
+            let mw = rt
+                .get_config("app.window.min_width")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
+            let mh = rt
+                .get_config("app.window.min_height")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
             (w, h, mw, mh)
         } else {
             (None, None, None, None)
@@ -188,9 +196,8 @@ fn main() -> Result<()> {
                             .get_config("app.window.header_bar.theme_toggle")
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
-                        let header_bar = cx.new(|cx| {
-                            HeaderBar::new(title, github_url, theme_toggle, window, cx)
-                        });
+                        let header_bar = cx
+                            .new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx));
                         let footer_bar_enabled = rt
                             .get_config("app.window.footer_bar.enabled")
                             .and_then(|v| v.as_bool())
@@ -200,8 +207,7 @@ fn main() -> Result<()> {
                         } else {
                             None
                         };
-                        let app_entity =
-                            cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                        let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                         cx.set_global(ActiveProject {
                             runtime: rt,
                             app_entity,

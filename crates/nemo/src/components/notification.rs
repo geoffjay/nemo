@@ -46,7 +46,12 @@ impl RenderOnce for Notification {
             .border_l_4()
             .border_color(border_color);
 
-        el = match self.source.properties.get("rounded").and_then(|v| v.as_str()) {
+        el = match self
+            .source
+            .properties
+            .get("rounded")
+            .and_then(|v| v.as_str())
+        {
             Some("sm") => el.rounded_sm(),
             Some("lg") => el.rounded_lg(),
             Some("xl") => el.rounded_xl(),

@@ -65,37 +65,43 @@ impl SettingsView {
         // Subscribe to font input events (blur and enter) to apply + persist
         {
             let nemo_config = Arc::clone(&nemo_config);
-            cx.subscribe_in(&font_input_state, window, move |_this, font_state, event, window, cx| {
-                let should_apply = matches!(event, InputEvent::Blur | InputEvent::PressEnter { .. });
-                if !should_apply {
-                    return;
-                }
+            cx.subscribe_in(
+                &font_input_state,
+                window,
+                move |_this, font_state, event, window, cx| {
+                    let should_apply =
+                        matches!(event, InputEvent::Blur | InputEvent::PressEnter { .. });
+                    if !should_apply {
+                        return;
+                    }
 
-                let value = font_state.read(cx).value().to_string();
-                let trimmed = value.trim().to_string();
+                    let value = font_state.read(cx).value().to_string();
+                    let trimmed = value.trim().to_string();
 
-                if trimmed.is_empty() {
-                    let default_font: SharedString = if cfg!(target_os = "macos") {
-                        ".SystemUIFont".into()
+                    if trimmed.is_empty() {
+                        let default_font: SharedString = if cfg!(target_os = "macos") {
+                            ".SystemUIFont".into()
+                        } else {
+                            "sans-serif".into()
+                        };
+                        gpui_component::Theme::global_mut(cx).font_family = default_font;
+                        if let Ok(mut cfg) = nemo_config.lock() {
+                            cfg.app.font_family = None;
+                            let _ = cfg.save();
+                        }
                     } else {
-                        "sans-serif".into()
-                    };
-                    gpui_component::Theme::global_mut(cx).font_family = default_font;
-                    if let Ok(mut cfg) = nemo_config.lock() {
-                        cfg.app.font_family = None;
-                        let _ = cfg.save();
+                        let family: SharedString = trimmed.clone().into();
+                        gpui_component::Theme::global_mut(cx).font_family = family;
+                        if let Ok(mut cfg) = nemo_config.lock() {
+                            cfg.app.font_family = Some(trimmed);
+                            let _ = cfg.save();
+                        }
                     }
-                } else {
-                    let family: SharedString = trimmed.clone().into();
-                    gpui_component::Theme::global_mut(cx).font_family = family;
-                    if let Ok(mut cfg) = nemo_config.lock() {
-                        cfg.app.font_family = Some(trimmed);
-                        let _ = cfg.save();
-                    }
-                }
-                window.refresh();
-                cx.notify();
-            }).detach();
+                    window.refresh();
+                    cx.notify();
+                },
+            )
+            .detach();
         }
 
         Self {

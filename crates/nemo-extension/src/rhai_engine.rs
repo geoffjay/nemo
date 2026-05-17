@@ -559,9 +559,7 @@ fn execute_http_request(
     let result = handle.block_on(async move {
         let mut builder = client.request(method_clone, &url_string);
         if let Some(b) = body {
-            builder = builder
-                .header("Content-Type", "application/json")
-                .body(b);
+            builder = builder.header("Content-Type", "application/json").body(b);
         }
         builder.send().await
     });
