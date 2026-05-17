@@ -22,6 +22,7 @@ mod components;
 pub mod config;
 mod project;
 mod runtime;
+mod storybook;
 mod theme;
 mod window;
 mod workspace;
