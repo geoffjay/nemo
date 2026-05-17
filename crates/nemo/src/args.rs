@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
 
@@ -7,6 +7,9 @@ use tracing::Level;
 #[command(name = "nemo")]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    #[command(subcommand)]
+    pub command: Option<Commands>,
+
     /// Path to the project configuration file (app.xml).
     /// When not provided, shows the project loader screen.
     #[arg(long, env = "NEMO_APP_CONFIG")]
@@ -36,6 +39,25 @@ pub struct Args {
     /// Validate configuration and exit
     #[arg(long)]
     pub validate_only: bool,
+}
+
+/// Subcommands for the Nemo CLI.
+#[derive(Subcommand, Debug)]
+pub enum Commands {
+    /// Launch the Nemo component storybook
+    Storybook(StorybookArgs),
+}
+
+/// Arguments for the `storybook` subcommand.
+#[derive(Parser, Debug)]
+pub struct StorybookArgs {
+    /// Deep-link to a specific component page on launch (e.g. `button`)
+    #[arg(long)]
+    pub component: Option<String>,
+
+    /// Pre-fill the sidebar search filter on launch
+    #[arg(long)]
+    pub search: Option<String>,
 }
 
 impl Args {
