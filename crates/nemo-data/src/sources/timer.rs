@@ -71,19 +71,27 @@ impl TimerSource {
         }
     }
 
-    fn create_tick_payload(&self, tick: u64) -> Value {
+    fn tick_value(tick: u64) -> Value {
+        Value::Integer(i64::try_from(tick).unwrap_or(i64::MAX))
+    }
+
+    fn create_tick_payload_for(config: &TimerSourceConfig, tick: u64) -> Value {
         let mut obj = indexmap::IndexMap::new();
-        obj.insert("tick".to_string(), Value::Integer(tick as i64));
+        obj.insert("tick".to_string(), Self::tick_value(tick));
         obj.insert(
             "timestamp".to_string(),
             Value::String(Utc::now().to_rfc3339()),
         );
 
-        if let Some(payload) = &self.config.payload {
+        if let Some(payload) = &config.payload {
             obj.insert("payload".to_string(), payload.clone());
         }
 
         Value::Object(obj)
+    }
+
+    fn create_tick_payload(&self, tick: u64) -> Value {
+        Self::create_tick_payload_for(&self.config, tick)
     }
 }
 
@@ -136,18 +144,7 @@ impl DataSource for TimerSource {
                     current
                 };
 
-                let mut obj = indexmap::IndexMap::new();
-                obj.insert("tick".to_string(), Value::Integer(tick as i64));
-                obj.insert(
-                    "timestamp".to_string(),
-                    Value::String(Utc::now().to_rfc3339()),
-                );
-
-                if let Some(payload) = &config.payload {
-                    obj.insert("payload".to_string(), payload.clone());
-                }
-
-                let data = Value::Object(obj);
+                let data = TimerSource::create_tick_payload_for(&config, tick);
                 let update = DataUpdate::full(&config.id, data);
 
                 if sender.send(update).is_err() {
@@ -227,6 +224,18 @@ mod tests {
             assert_eq!(obj.get("tick"), Some(&Value::Integer(5)));
             assert!(obj.contains_key("timestamp"));
             assert!(obj.contains_key("payload"));
+        } else {
+            panic!("Expected object");
+        }
+    }
+
+    #[test]
+    fn test_tick_payload_saturates_overflowing_tick() {
+        let source = TimerSource::new(TimerSourceConfig::default());
+        let payload = source.create_tick_payload(u64::MAX);
+
+        if let Value::Object(obj) = payload {
+            assert_eq!(obj.get("tick"), Some(&Value::Integer(i64::MAX)));
         } else {
             panic!("Expected object");
         }
