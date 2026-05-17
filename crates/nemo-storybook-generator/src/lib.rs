@@ -298,7 +298,49 @@ pub fn generate_storybook_xml() -> String {
 
     out.push_str("      </stack>\n");
     out.push_str("    </stack>\n");
-    out.push_str("  </layout>\n");
+    out.push_str("  </layout>\n\n");
+
+    // Collect all component names for the script section
+    let all_names: Vec<String> = {
+        let mut names = Vec::new();
+        for cat in CATEGORIES {
+            let mut comps = registry.list_by_category(cat.clone());
+            comps.sort_by(|a, b| a.name.cmp(&b.name));
+            for comp in comps {
+                names.push(comp.name.clone());
+            }
+        }
+        names
+    };
+
+    let page_ids_json = all_names
+        .iter()
+        .map(|n| format!("\"page_{}\"", n))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let comp_names_json = all_names
+        .iter()
+        .map(|n| format!("\"{}\"", n))
+        .collect::<Vec<_>>()
+        .join(", ");
+
+    out.push_str("  <script lang=\"rhai\"><![CDATA[\n");
+    out.push_str(&format!("    let PAGE_IDS = [{}];\n", page_ids_json));
+    out.push_str(&format!("    let COMPONENT_NAMES = [{}];\n\n", comp_names_json));
+    out.push_str("    fn navigate_to(component_name) {\n");
+    out.push_str("        for id in PAGE_IDS {\n");
+    out.push_str("            set_component_property(id, \"visible\", id == \"page_\" + component_name);\n");
+    out.push_str("        }\n");
+    out.push_str("    }\n\n");
+    out.push_str("    fn on_search_change(value) {\n");
+    out.push_str("        for name in COMPONENT_NAMES {\n");
+    out.push_str("            let btn_id = \"nav_\" + name;\n");
+    out.push_str("            let visible = value == \"\" || name.contains(value);\n");
+    out.push_str("            set_component_property(btn_id, \"visible\", visible);\n");
+    out.push_str("        }\n");
+    out.push_str("    }\n");
+    out.push_str("  ]]></script>\n");
+
     out.push_str("</nemo>\n");
     out
 }
