@@ -13,7 +13,6 @@
 name: nemo-triage
 working_dir: "."
 shell: /bin/zsh
-user: cap
 worktree: false
 model: "deepseek-v4-pro:cloud"
 
