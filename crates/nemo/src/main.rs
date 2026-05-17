@@ -286,9 +286,12 @@ fn launch_storybook(sb_args: &args::StorybookArgs, args: &Args) -> Result<()> {
     let initial_component = sb_args.component.clone();
     let initial_search = sb_args.search.clone();
 
-    // Store search term for workspace to pick up
+    // Store component and search terms as env vars for the runtime to pick up
     if let Some(ref search) = initial_search {
         env::set_var("NEMO_STORYBOOK_SEARCH", search);
+    }
+    if let Some(ref comp) = initial_component {
+        env::set_var("NEMO_STORYBOOK_COMPONENT", comp);
     }
 
     // Launch the app with the storybook config
