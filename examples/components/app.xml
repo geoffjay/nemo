@@ -669,7 +669,7 @@
 
           <!-- Padding -->
           <label id="styling_padding_title" text="Padding" size="sm" />
-          <tabs id="styling_padding_tabs" tabs='["Preview","HCL"]'>
+          <tabs id="styling_padding_tabs" tabs='["Preview","XML"]'>
             <stack id="styling_padding_preview" direction="vertical" spacing="8">
               <label id="styling_pad_uniform" text="padding = 16" padding="16" border="1" border-color="theme.border" />
               <stack id="styling_pad_xy_row" direction="horizontal" spacing="8">
@@ -683,14 +683,14 @@
                 <label id="styling_pad_bottom" text="padding_bottom = 32" padding-bottom="32" border="1" border-color="theme.border" />
               </stack>
             </stack>
-            <panel id="styling_padding_hcl">
-              <code-editor id="styling_padding_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform padding on all sides&#10;padding = 16&#10;&#10;# Axis padding (horizontal / vertical)&#10;padding_x = 24&#10;padding_y = 24&#10;&#10;# Directional padding&#10;padding_left   = 32&#10;padding_right  = 32&#10;padding_top    = 32&#10;padding_bottom = 32" />
+            <panel id="styling_padding_xml">
+              <code-editor id="styling_padding_code" language="xml" line-number="false" searchable="false" default-value="&lt;!-- Uniform padding on all sides --&gt;&#10;&lt;label padding=&quot;16&quot; text=&quot;...&quot; /&gt;&#10;&#10;&lt;!-- Axis padding (horizontal / vertical) --&gt;&#10;&lt;label padding-x=&quot;24&quot; text=&quot;...&quot; /&gt;&#10;&lt;label padding-y=&quot;24&quot; text=&quot;...&quot; /&gt;&#10;&#10;&lt;!-- Directional padding --&gt;&#10;&lt;label padding-left=&quot;32&quot; text=&quot;...&quot; /&gt;&#10;&lt;label padding-right=&quot;32&quot; text=&quot;...&quot; /&gt;&#10;&lt;label padding-top=&quot;32&quot; text=&quot;...&quot; /&gt;&#10;&lt;label padding-bottom=&quot;32&quot; text=&quot;...&quot; /&gt;" />
             </panel>
           </tabs>
 
           <!-- Margin -->
           <label id="styling_margin_title" text="Margin" size="sm" />
-          <tabs id="styling_margin_tabs" tabs='["Preview","HCL"]'>
+          <tabs id="styling_margin_tabs" tabs='["Preview","XML"]'>
             <stack id="styling_margin_preview" direction="vertical" spacing="12">
               <stack id="styling_margin_uniform_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
                 <label id="styling_margin_box1" text="margin = 4" margin="4" border="1" border-color="theme.primary" padding="8" />
@@ -708,14 +708,14 @@
                 <label id="styling_margin_bottom" text="margin_bottom = 16" margin-bottom="16" border="1" border-color="theme.primary" padding="8" />
               </stack>
             </stack>
-            <panel id="styling_margin_hcl">
-              <code-editor id="styling_margin_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform margin on all sides&#10;margin = 12&#10;&#10;# Axis margin (horizontal / vertical)&#10;margin_x = 20&#10;margin_y = 20&#10;&#10;# Directional margin&#10;margin_left   = 24&#10;margin_right  = 24&#10;margin_top    = 16&#10;margin_bottom = 16" />
+            <panel id="styling_margin_xml">
+              <code-editor id="styling_margin_code" language="xml" line-number="false" searchable="false" default-value="&lt;!-- Uniform margin on all sides --&gt;&#10;&lt;label margin=&quot;12&quot; text=&quot;...&quot; /&gt;&#10;&#10;&lt;!-- Axis margin (horizontal / vertical) --&gt;&#10;&lt;label margin-x=&quot;20&quot; text=&quot;...&quot; /&gt;&#10;&lt;label margin-y=&quot;20&quot; text=&quot;...&quot; /&gt;&#10;&#10;&lt;!-- Directional margin --&gt;&#10;&lt;label margin-left=&quot;24&quot; text=&quot;...&quot; /&gt;&#10;&lt;label margin-right=&quot;24&quot; text=&quot;...&quot; /&gt;&#10;&lt;label margin-top=&quot;16&quot; text=&quot;...&quot; /&gt;&#10;&lt;label margin-bottom=&quot;16&quot; text=&quot;...&quot; /&gt;" />
             </panel>
           </tabs>
 
           <!-- Border -->
           <label id="styling_border_title" text="Border" size="sm" />
-          <tabs id="styling_border_tabs" tabs='["Preview","HCL"]'>
+          <tabs id="styling_border_tabs" tabs='["Preview","XML"]'>
             <stack id="styling_border_preview" direction="vertical" spacing="12">
               <stack id="styling_border_uniform_row" direction="horizontal" spacing="12">
                 <label id="styling_border_1" text="border = 1" border="1" border-color="theme.border" padding="12" />
@@ -734,14 +734,14 @@
                 <label id="styling_border_bottom" text="border_bottom = 3" border-bottom="3" border-color="theme.primary" padding="12" />
               </stack>
             </stack>
-            <panel id="styling_border_hcl">
-              <code-editor id="styling_border_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform border on all sides&#10;border = 1&#10;border = 2&#10;&#10;# Axis border (horizontal / vertical)&#10;border_x = 2&#10;border_y = 2&#10;&#10;# Directional border&#10;border_left   = 3&#10;border_right  = 3&#10;border_top    = 3&#10;border_bottom = 3&#10;&#10;# Border color (theme references or hex)&#10;border_color = &quot;theme.border&quot;&#10;border_color = &quot;theme.primary&quot;&#10;border_color = &quot;#FF6600&quot;" />
+            <panel id="styling_border_xml">
+              <code-editor id="styling_border_code" language="xml" line-number="false" searchable="false" default-value="&lt;!-- Uniform border on all sides --&gt;&#10;&lt;label border=&quot;1&quot; text=&quot;...&quot; /&gt;&#10;&lt;label border=&quot;2&quot; text=&quot;...&quot; /&gt;&#10;&#10;&lt;!-- Axis border (horizontal / vertical) --&gt;&#10;&lt;label border-x=&quot;2&quot; text=&quot;...&quot; /&gt;&#10;&lt;label border-y=&quot;2&quot; text=&quot;...&quot; /&gt;&#10;&#10;&lt;!-- Directional border --&gt;&#10;&lt;label border-left=&quot;3&quot; text=&quot;...&quot; /&gt;&#10;&lt;label border-right=&quot;3&quot; text=&quot;...&quot; /&gt;&#10;&lt;label border-top=&quot;3&quot; text=&quot;...&quot; /&gt;&#10;&lt;label border-bottom=&quot;3&quot; text=&quot;...&quot; /&gt;&#10;&#10;&lt;!-- Border color (theme references or hex) --&gt;&#10;&lt;label border-color=&quot;theme.border&quot; text=&quot;...&quot; /&gt;&#10;&lt;label border-color=&quot;theme.primary&quot; text=&quot;...&quot; /&gt;&#10;&lt;label border-color=&quot;#FF6600&quot; text=&quot;...&quot; /&gt;" />
             </panel>
           </tabs>
 
           <!-- Shadow -->
           <label id="styling_shadow_title" text="Shadow" size="sm" />
-          <tabs id="styling_shadow_tabs" tabs='["Preview","HCL"]'>
+          <tabs id="styling_shadow_tabs" tabs='["Preview","XML"]'>
             <stack id="styling_shadow_preview" direction="horizontal" spacing="20">
               <label id="styling_shadow_sm" text="sm" shadow="sm" padding="16" rounded="md" />
               <label id="styling_shadow_md" text="md" shadow="md" padding="16" rounded="md" />
@@ -749,14 +749,14 @@
               <label id="styling_shadow_xl" text="xl" shadow="xl" padding="16" rounded="md" />
               <label id="styling_shadow_2xl" text="2xl" shadow="2xl" padding="16" rounded="md" />
             </stack>
-            <panel id="styling_shadow_hcl">
-              <code-editor id="styling_shadow_code" language="hcl" line-number="false" searchable="false" default-value="# Shadow sizes: sm, md, lg, xl, 2xl&#10;shadow = &quot;sm&quot;&#10;shadow = &quot;md&quot;&#10;shadow = &quot;lg&quot;&#10;shadow = &quot;xl&quot;&#10;shadow = &quot;2xl&quot;" />
+            <panel id="styling_shadow_xml">
+              <code-editor id="styling_shadow_code" language="xml" line-number="false" searchable="false" default-value="&lt;!-- Shadow sizes: sm, md, lg, xl, 2xl --&gt;&#10;&lt;label shadow=&quot;sm&quot; text=&quot;sm&quot; /&gt;&#10;&lt;label shadow=&quot;md&quot; text=&quot;md&quot; /&gt;&#10;&lt;label shadow=&quot;lg&quot; text=&quot;lg&quot; /&gt;&#10;&lt;label shadow=&quot;xl&quot; text=&quot;xl&quot; /&gt;&#10;&lt;label shadow=&quot;2xl&quot; text=&quot;2xl&quot; /&gt;" />
             </panel>
           </tabs>
 
           <!-- Rounded -->
           <label id="styling_rounded_title" text="Rounded" size="sm" />
-          <tabs id="styling_rounded_tabs" tabs='["Preview","HCL"]'>
+          <tabs id="styling_rounded_tabs" tabs='["Preview","XML"]'>
             <stack id="styling_rounded_preview" direction="horizontal" spacing="12">
               <label id="styling_rounded_sm" text="sm" rounded="sm" border="2" border-color="theme.border" padding="16" />
               <label id="styling_rounded_md" text="md" rounded="md" border="2" border-color="theme.border" padding="16" />
@@ -764,14 +764,14 @@
               <label id="styling_rounded_xl" text="xl" rounded="xl" border="2" border-color="theme.border" padding="16" />
               <label id="styling_rounded_full" text="full" rounded="full" border="2" border-color="theme.border" padding="16" />
             </stack>
-            <panel id="styling_rounded_hcl">
-              <code-editor id="styling_rounded_code" language="hcl" line-number="false" searchable="false" default-value="# Rounded sizes: sm, md, lg, xl, full&#10;rounded = &quot;sm&quot;&#10;rounded = &quot;md&quot;&#10;rounded = &quot;lg&quot;&#10;rounded = &quot;xl&quot;&#10;rounded = &quot;full&quot;" />
+            <panel id="styling_rounded_xml">
+              <code-editor id="styling_rounded_code" language="xml" line-number="false" searchable="false" default-value="&lt;!-- Rounded sizes: sm, md, lg, xl, full --&gt;&#10;&lt;label rounded=&quot;sm&quot; text=&quot;sm&quot; /&gt;&#10;&lt;label rounded=&quot;md&quot; text=&quot;md&quot; /&gt;&#10;&lt;label rounded=&quot;lg&quot; text=&quot;lg&quot; /&gt;&#10;&lt;label rounded=&quot;xl&quot; text=&quot;xl&quot; /&gt;&#10;&lt;label rounded=&quot;full&quot; text=&quot;full&quot; /&gt;" />
             </panel>
           </tabs>
 
           <!-- Combined -->
           <label id="styling_combined_title" text="Combined" size="sm" />
-          <tabs id="styling_combined_tabs" tabs='["Preview","HCL"]'>
+          <tabs id="styling_combined_tabs" tabs='["Preview","XML"]'>
             <stack id="styling_combined_preview" direction="horizontal" spacing="16">
               <stack id="styling_card1" direction="vertical" spacing="8" padding="24" border="1" border-color="theme.border" shadow="md" rounded="lg">
                 <label id="styling_card1_title" text="Styled Card" size="md" />
@@ -782,8 +782,8 @@
                 <text id="styling_card2_body" content="An accent-bordered card with a larger shadow and rounder corners." />
               </stack>
             </stack>
-            <panel id="styling_combined_hcl">
-              <code-editor id="styling_combined_code" language="hcl" line-number="false" searchable="false" default-value="component &quot;styled_card&quot; {&#10;  type         = &quot;stack&quot;&#10;  direction    = &quot;vertical&quot;&#10;  spacing      = 8&#10;  padding      = 24&#10;  border       = 1&#10;  border_color = &quot;theme.border&quot;&#10;  shadow       = &quot;md&quot;&#10;  rounded      = &quot;lg&quot;&#10;&#10;  component &quot;title&quot; {&#10;    type = &quot;label&quot;&#10;    text = &quot;Styled Card&quot;&#10;  }&#10;&#10;  component &quot;body&quot; {&#10;    type    = &quot;text&quot;&#10;    content = &quot;Card content here.&quot;&#10;  }&#10;}" />
+            <panel id="styling_combined_xml">
+              <code-editor id="styling_combined_code" language="xml" line-number="false" searchable="false" default-value="&lt;stack direction=&quot;vertical&quot; spacing=&quot;8&quot;&#10;       padding=&quot;24&quot; border=&quot;1&quot;&#10;       border-color=&quot;theme.border&quot;&#10;       shadow=&quot;md&quot; rounded=&quot;lg&quot;&gt;&#10;  &lt;label text=&quot;Styled Card&quot; size=&quot;md&quot; /&gt;&#10;  &lt;text content=&quot;Card content here.&quot; /&gt;&#10;&lt;/stack&gt;" />
             </panel>
           </tabs>
         </panel>
