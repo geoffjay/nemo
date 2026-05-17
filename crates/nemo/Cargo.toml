@@ -11,6 +11,7 @@ path = "src/main.rs"
 [dependencies]
 nemo-config = { workspace = true }
 nemo-registry = { workspace = true }
+nemo-storybook-generator = { workspace = true }
 nemo-layout = { workspace = true }
 nemo-data = { workspace = true }
 nemo-extension = { workspace = true, features = ["wasm"] }

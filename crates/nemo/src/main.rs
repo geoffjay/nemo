@@ -26,7 +26,7 @@ mod theme;
 mod window;
 mod workspace;
 
-use args::Args;
+use args::{Args, Commands};
 use config::NemoConfig;
 use project::ActiveProject;
 use window::get_window_options;
@@ -50,6 +50,11 @@ fn main() -> Result<()> {
         .context("Failed to set tracing subscriber")?;
 
     info!("Nemo v{} starting...", env!("CARGO_PKG_VERSION"));
+
+    // Handle storybook subcommand: generate config and launch
+    if let Some(Commands::Storybook(ref sb_args)) = args.command {
+        return launch_storybook(sb_args, &args);
+    }
 
     // Load NemoConfig (config.toml)
     let nemo_config = NemoConfig::load_from(args.config.as_ref());
@@ -255,5 +260,156 @@ fn main() -> Result<()> {
     });
 
     info!("Nemo shutdown complete");
+    Ok(())
+}
+
+fn launch_storybook(sb_args: &args::StorybookArgs, args: &Args) -> Result<()> {
+    use std::env;
+
+    // Determine storybook config output path
+    let storybook_config = if let Some(data_dir) = dirs::data_dir() {
+        data_dir.join("nemo").join("storybook.xml")
+    } else {
+        std::env::temp_dir().join("nemo-storybook.xml")
+    };
+
+    // Generate the storybook XML config
+    info!("Generating storybook config at: {:?}", storybook_config);
+    if let Some(parent) = storybook_config.parent() {
+        std::fs::create_dir_all(parent).context("Failed to create storybook config directory")?;
+    }
+    let xml = nemo_storybook_generator::generate_storybook_xml();
+    std::fs::write(&storybook_config, xml)
+        .context("Failed to write storybook config")?;
+
+    // Build the initial route based on --component flag
+    let initial_component = sb_args.component.clone();
+    let initial_search = sb_args.search.clone();
+
+    // Store search term for workspace to pick up
+    if let Some(ref search) = initial_search {
+        env::set_var("NEMO_STORYBOOK_SEARCH", search);
+    }
+
+    // Launch the app with the storybook config
+    let nemo_config = config::NemoConfig::load_from(args.config.as_ref());
+    info!("Starting storybook application...");
+    let gpui_app = gpui_platform::application().with_assets(gpui_component_assets::Assets);
+
+    let ws_args = WorkspaceArgs {
+        extension_dirs: args.extension_dirs.clone(),
+    };
+
+    gpui_app.run(move |cx| {
+        gpui_component::init(cx);
+        router_init(cx);
+
+        if nemo_config.app.theme_name != "default" {
+            theme::apply_configured_theme(&nemo_config.app.theme_name, "system", None, cx);
+        }
+        if let Some(ref font_family) = nemo_config.app.font_family {
+            gpui_component::Theme::global_mut(cx).font_family = font_family.clone().into();
+        }
+
+        let nemo_config = Arc::new(Mutex::new(nemo_config));
+
+        cx.bind_keys([
+            KeyBinding::new("ctrl-shift-r", workspace::actions::ReloadConfig, None),
+            KeyBinding::new("ctrl-q", workspace::actions::QuitApp, None),
+            KeyBinding::new("ctrl-w", workspace::actions::CloseProject, None),
+            KeyBinding::new("ctrl-shift-t", workspace::actions::ToggleTheme, None),
+            KeyBinding::new("ctrl-p", workspace::actions::OpenSettings, None),
+            KeyBinding::new("escape", workspace::actions::CloseSettings, None),
+        ]);
+
+        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
+
+        cx.on_window_closed({
+            let workspace_entity = workspace_entity.clone();
+            move |cx, _window_id| {
+                if let Some(ws) = workspace_entity.borrow().clone() {
+                    ws.update(cx, |ws, cx| { ws.shutdown(cx); });
+                }
+                cx.quit();
+            }
+        }).detach();
+
+        let early_runtime = workspace::utils::create_runtime(&storybook_config, &ws_args.extension_dirs).ok();
+
+        let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
+            let w = rt.get_config("app.window.width").and_then(|v| v.as_i64().map(|n| n as u32));
+            let h = rt.get_config("app.window.height").and_then(|v| v.as_i64().map(|n| n as u32));
+            let mw = rt.get_config("app.window.min_width").and_then(|v| v.as_i64().map(|n| n as u32));
+            let mh = rt.get_config("app.window.min_height").and_then(|v| v.as_i64().map(|n| n as u32));
+            (w, h, mw, mh)
+        } else {
+            (None, None, None, None)
+        };
+
+        let window_options = window::get_window_options(cx, win_w, win_h, win_min_w, win_min_h);
+
+        cx.open_window(window_options, |window, cx| {
+            let nemo_config = nemo_config.clone();
+            let ws_args = ws_args.clone();
+            let storybook_config = storybook_config.clone();
+            let initial_component = initial_component.clone();
+
+            let ws = cx.new(|cx| {
+                let mut current_route = if let Some(ref comp) = initial_component {
+                    format!("/component/{}", comp)
+                } else {
+                    "/app".to_string()
+                };
+
+                if let Some(rt) = early_runtime {
+                    apply_theme_from_runtime(&rt, cx);
+                    let title = rt.get_config("app.window.title")
+                        .and_then(|v| v.as_str().map(|s| s.to_string()))
+                        .unwrap_or_else(|| "Nemo Storybook".to_string());
+                    let github_url = rt.get_config("app.window.header_bar.github_url")
+                        .and_then(|v| v.as_str().map(|s| s.to_string()));
+                    let theme_toggle = rt.get_config("app.window.header_bar.theme_toggle")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(true);
+                    let header_bar = cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx));
+                    let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                    cx.set_global(project::ActiveProject {
+                        runtime: rt,
+                        app_entity,
+                        header_bar,
+                        footer_bar: None,
+                        settings_view: None,
+                    });
+                } else {
+                    current_route = "/".to_string();
+                }
+
+                let focus_handle = cx.focus_handle();
+                focus_handle.focus(window, cx);
+                let loader = Workspace::create_loader(&nemo_config, window, cx);
+
+                Workspace {
+                    nemo_config,
+                    ws_args,
+                    current_config_path: Some(storybook_config),
+                    pending_project_path: None,
+                    pending_close_project: false,
+                    focus_handle,
+                    current_route,
+                    loader,
+                }
+            });
+
+            let route = ws.read(cx).current_route.clone();
+            let needs_refresh = route != "/";
+            use_navigate(cx)(route.into());
+            if needs_refresh { window.refresh(); }
+
+            *workspace_entity.borrow_mut() = Some(ws.clone());
+            cx.new(|_cx| Root::new(ws, window, _cx))
+        }).expect("Failed to open storybook window");
+    });
+
+    info!("Nemo storybook shutdown complete");
     Ok(())
 }
