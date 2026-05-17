@@ -1,0 +1,18 @@
+[package]
+name = "nemo-storybook-generator"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "nemo_storybook_generator"
+
+[[bin]]
+name = "nemo-storybook-generator"
+path = "src/main.rs"
+
+[dependencies]
+nemo-registry = { workspace = true }
+nemo-config = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
