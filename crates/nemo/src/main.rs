@@ -54,6 +54,32 @@ fn main() -> Result<()> {
     // Load NemoConfig (config.toml)
     let nemo_config = NemoConfig::load_from(args.config.as_ref());
 
+    // Validate app_config path early so we fail fast with a clear message
+    // before any subsystem (runtime, recent-projects, etc.) tries to use it.
+    if let Some(ref app_config) = args.app_config {
+        // For relative paths, resolution against the current directory is
+        // implicit in Path::exists/is_file. If current_dir() fails we can
+        // still check the path as supplied; either way the error message
+        // shows the original path the user passed.
+        let resolved = if app_config.is_relative() {
+            match std::env::current_dir() {
+                Ok(cwd) => cwd.join(app_config),
+                Err(_) => app_config.clone(),
+            }
+        } else {
+            app_config.clone()
+        };
+
+        if !resolved.exists() {
+            eprintln!("Error: config file not found: {}", app_config.display());
+            std::process::exit(1);
+        }
+        if !resolved.is_file() {
+            eprintln!("Error: config path is not a file: {}", app_config.display());
+            std::process::exit(1);
+        }
+    }
+
     // If app_config is provided via CLI/env, handle headless/validate modes
     if let Some(ref app_config) = args.app_config {
         if args.headless || args.validate_only {
