@@ -280,8 +280,7 @@ fn launch_storybook(sb_args: &args::StorybookArgs, args: &Args) -> Result<()> {
         std::fs::create_dir_all(parent).context("Failed to create storybook config directory")?;
     }
     let xml = nemo_storybook_generator::generate_storybook_xml();
-    std::fs::write(&storybook_config, xml)
-        .context("Failed to write storybook config")?;
+    std::fs::write(&storybook_config, xml).context("Failed to write storybook config")?;
 
     // Build the initial route based on --component flag
     let initial_component = sb_args.component.clone();
@@ -332,19 +331,31 @@ fn launch_storybook(sb_args: &args::StorybookArgs, args: &Args) -> Result<()> {
             let workspace_entity = workspace_entity.clone();
             move |cx, _window_id| {
                 if let Some(ws) = workspace_entity.borrow().clone() {
-                    ws.update(cx, |ws, cx| { ws.shutdown(cx); });
+                    ws.update(cx, |ws, cx| {
+                        ws.shutdown(cx);
+                    });
                 }
                 cx.quit();
             }
-        }).detach();
+        })
+        .detach();
 
-        let early_runtime = workspace::utils::create_runtime(&storybook_config, &ws_args.extension_dirs).ok();
+        let early_runtime =
+            workspace::utils::create_runtime(&storybook_config, &ws_args.extension_dirs).ok();
 
         let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
-            let w = rt.get_config("app.window.width").and_then(|v| v.as_i64().map(|n| n as u32));
-            let h = rt.get_config("app.window.height").and_then(|v| v.as_i64().map(|n| n as u32));
-            let mw = rt.get_config("app.window.min_width").and_then(|v| v.as_i64().map(|n| n as u32));
-            let mh = rt.get_config("app.window.min_height").and_then(|v| v.as_i64().map(|n| n as u32));
+            let w = rt
+                .get_config("app.window.width")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
+            let h = rt
+                .get_config("app.window.height")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
+            let mw = rt
+                .get_config("app.window.min_width")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
+            let mh = rt
+                .get_config("app.window.min_height")
+                .and_then(|v| v.as_i64().map(|n| n as u32));
             (w, h, mw, mh)
         } else {
             (None, None, None, None)
@@ -367,15 +378,19 @@ fn launch_storybook(sb_args: &args::StorybookArgs, args: &Args) -> Result<()> {
 
                 if let Some(rt) = early_runtime {
                     apply_theme_from_runtime(&rt, cx);
-                    let title = rt.get_config("app.window.title")
+                    let title = rt
+                        .get_config("app.window.title")
                         .and_then(|v| v.as_str().map(|s| s.to_string()))
                         .unwrap_or_else(|| "Nemo Storybook".to_string());
-                    let github_url = rt.get_config("app.window.header_bar.github_url")
+                    let github_url = rt
+                        .get_config("app.window.header_bar.github_url")
                         .and_then(|v| v.as_str().map(|s| s.to_string()));
-                    let theme_toggle = rt.get_config("app.window.header_bar.theme_toggle")
+                    let theme_toggle = rt
+                        .get_config("app.window.header_bar.theme_toggle")
                         .and_then(|v| v.as_bool())
                         .unwrap_or(true);
-                    let header_bar = cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx));
+                    let header_bar =
+                        cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx));
                     let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
                     cx.set_global(project::ActiveProject {
                         runtime: rt,
@@ -407,11 +422,14 @@ fn launch_storybook(sb_args: &args::StorybookArgs, args: &Args) -> Result<()> {
             let route = ws.read(cx).current_route.clone();
             let needs_refresh = route != "/";
             use_navigate(cx)(route.into());
-            if needs_refresh { window.refresh(); }
+            if needs_refresh {
+                window.refresh();
+            }
 
             *workspace_entity.borrow_mut() = Some(ws.clone());
             cx.new(|_cx| Root::new(ws, window, _cx))
-        }).expect("Failed to open storybook window");
+        })
+        .expect("Failed to open storybook window");
     });
 
     info!("Nemo storybook shutdown complete");

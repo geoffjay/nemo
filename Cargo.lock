@@ -4550,6 +4550,7 @@ dependencies = [
  "nemo-macros",
  "nemo-plugin-api",
  "nemo-registry",
+ "nemo-storybook-generator",
  "proptest",
  "serde",
  "serde_json",
@@ -4712,6 +4713,16 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tracing",
+]
+
+[[package]]
+name = "nemo-storybook-generator"
+version = "0.6.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "nemo-config",
+ "nemo-registry",
 ]
 
 [[package]]

@@ -4,7 +4,9 @@
 //! introspecting the built-in component registry.
 
 use nemo_config::ValueType;
-use nemo_registry::{ComponentCategory, ComponentDescriptor, ComponentRegistry, register_builtin_components};
+use nemo_registry::{
+    register_builtin_components, ComponentCategory, ComponentDescriptor, ComponentRegistry,
+};
 
 /// The ordered list of categories displayed in the sidebar.
 const CATEGORIES: &[ComponentCategory] = &[
@@ -62,7 +64,7 @@ fn generate_xml_snippet(comp: &ComponentDescriptor) -> String {
     for prop_name in &schema.required {
         let value = if let Some(prop) = schema.properties.get(prop_name) {
             match &prop.value_type {
-                ValueType::String => format!("\"placeholder\""),
+                ValueType::String => "\"placeholder\"".to_string(),
                 ValueType::Integer => "\"0\"".to_string(),
                 ValueType::Float => "\"0.0\"".to_string(),
                 ValueType::Boolean => "\"false\"".to_string(),
@@ -105,14 +107,22 @@ fn generate_property_table_data(comp: &ComponentDescriptor) -> String {
     let mut rows: Vec<String> = Vec::new();
     for (prop_name, prop) in &schema.properties {
         let type_str = prop.value_type.to_string();
-        let default_str = prop.default.as_ref().map(|v| match v {
-            nemo_config::Value::String(s) => format!("\"{}\"", s),
-            nemo_config::Value::Integer(i) => i.to_string(),
-            nemo_config::Value::Float(f) => f.to_string(),
-            nemo_config::Value::Bool(b) => b.to_string(),
-            _ => "-".to_string(),
-        }).unwrap_or_else(|| "-".to_string());
-        let req_str = if required.contains(prop_name.as_str()) { "yes" } else { "no" };
+        let default_str = prop
+            .default
+            .as_ref()
+            .map(|v| match v {
+                nemo_config::Value::String(s) => format!("\"{}\"", s),
+                nemo_config::Value::Integer(i) => i.to_string(),
+                nemo_config::Value::Float(f) => f.to_string(),
+                nemo_config::Value::Bool(b) => b.to_string(),
+                _ => "-".to_string(),
+            })
+            .unwrap_or_else(|| "-".to_string());
+        let req_str = if required.contains(prop_name.as_str()) {
+            "yes"
+        } else {
+            "no"
+        };
         rows.push(format!(
             "{{\"name\":\"{}\",\"type\":\"{}\",\"default\":\"{}\",\"required\":\"{}\"}}",
             prop_name, type_str, default_str, req_str
@@ -192,8 +202,7 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
     let escaped_data = xml_escape(&prop_data);
     out.push_str(&format!(
         "            <table id=\"{}_props_table\" data='{}' />\n",
-        name,
-        escaped_data
+        name, escaped_data
     ));
 
     // Example section
@@ -206,20 +215,11 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         name
     ));
     // Preview tab
-    out.push_str(&format!(
-        "              <panel id=\"{}_preview\">\n",
-        name
-    ));
-    out.push_str(&format!(
-        "                <{} />\n",
-        name
-    ));
+    out.push_str(&format!("              <panel id=\"{}_preview\">\n", name));
+    out.push_str(&format!("                <{} />\n", name));
     out.push_str("              </panel>\n");
     // XML tab
-    out.push_str(&format!(
-        "              <panel id=\"{}_xml\">\n",
-        name
-    ));
+    out.push_str(&format!("              <panel id=\"{}_xml\">\n", name));
     out.push_str(&format!(
         "                <code-editor id=\"{}_code\" language=\"xml\" line-number=\"false\" searchable=\"false\" default-value=\"{}\" />\n",
         name,
@@ -241,7 +241,9 @@ fn generate_home_page(registry: &ComponentRegistry) -> String {
     let mut out = String::new();
     out.push_str("        <panel id=\"page_home\">\n");
     out.push_str("          <stack id=\"home_inner\" direction=\"vertical\" spacing=\"16\" padding=\"32\">\n");
-    out.push_str("            <label id=\"home_title\" text=\"Nemo Component Storybook\" size=\"xl\" />\n");
+    out.push_str(
+        "            <label id=\"home_title\" text=\"Nemo Component Storybook\" size=\"xl\" />\n",
+    );
     out.push_str("            <text id=\"home_desc\" content=\"Select a component from the sidebar to view its documentation, properties, and live examples.\" />\n");
     out.push_str(&format!(
         "            <label id=\"home_count\" text=\"{} components available\" size=\"sm\" />\n",
@@ -273,7 +275,9 @@ pub fn generate_storybook_xml() -> String {
 
     // Layout
     out.push_str("  <layout type=\"stack\">\n");
-    out.push_str("    <stack id=\"root_row\" direction=\"horizontal\" spacing=\"0\" width=\"1200\">\n\n");
+    out.push_str(
+        "    <stack id=\"root_row\" direction=\"horizontal\" spacing=\"0\" width=\"1200\">\n\n",
+    );
 
     // Sidebar
     out.push_str(&generate_sidebar(&registry));
@@ -326,10 +330,15 @@ pub fn generate_storybook_xml() -> String {
 
     out.push_str("  <script lang=\"rhai\"><![CDATA[\n");
     out.push_str(&format!("    let PAGE_IDS = [{}];\n", page_ids_json));
-    out.push_str(&format!("    let COMPONENT_NAMES = [{}];\n\n", comp_names_json));
+    out.push_str(&format!(
+        "    let COMPONENT_NAMES = [{}];\n\n",
+        comp_names_json
+    ));
     out.push_str("    fn navigate_to(component_name) {\n");
     out.push_str("        for id in PAGE_IDS {\n");
-    out.push_str("            set_component_property(id, \"visible\", id == \"page_\" + component_name);\n");
+    out.push_str(
+        "            set_component_property(id, \"visible\", id == \"page_\" + component_name);\n",
+    );
     out.push_str("        }\n");
     out.push_str("    }\n\n");
     out.push_str("    fn on_search_change(value) {\n");
@@ -358,7 +367,7 @@ pub fn generate_storybook_xml_to_file(path: &std::path::Path) -> anyhow::Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nemo_registry::{ComponentCategory, ComponentRegistry, register_builtin_components};
+    use nemo_registry::{register_builtin_components, ComponentCategory, ComponentRegistry};
 
     #[test]
     fn test_generate_storybook_xml_is_valid_xml() {
@@ -500,9 +509,6 @@ mod tests {
     fn test_xml_snippet_has_required_props() {
         let xml = generate_storybook_xml();
         // button requires "label" - its XML snippet should include label="placeholder"
-        assert!(
-            xml.contains("page_button"),
-            "Missing button page"
-        );
+        assert!(xml.contains("page_button"), "Missing button page");
     }
 }
