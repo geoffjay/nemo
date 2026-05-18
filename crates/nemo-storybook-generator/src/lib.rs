@@ -115,12 +115,9 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         schema.required.iter().map(|s| s.as_str()).collect();
 
     let mut out = String::new();
+    out.push_str(&format!("        <panel id=\"page_{}\">\n", name));
     out.push_str(&format!(
-        "        <panel id=\"page_{}\" border=\"1\" border-color=\"theme.border\" margin=\"8\" rounded=\"sm\">\n",
-        name
-    ));
-    out.push_str(&format!(
-        "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"12\" padding=\"24\">\n",
+        "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"12\" padding=\"24\" margin=\"8\" border=\"1\" border-color=\"theme.border\" rounded=\"sm\">\n",
         name
     ));
 
