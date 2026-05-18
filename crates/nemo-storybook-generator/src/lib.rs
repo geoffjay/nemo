@@ -46,7 +46,8 @@ fn generate_preview_element(comp: &ComponentDescriptor) -> String {
     let name = &comp.name;
     let schema = &comp.schema;
 
-    let mut attrs = String::new();
+    // Explicit id prevents __anon_N collisions across pages in the flat component map
+    let mut attrs = format!(" id=\"{}_preview_ex\"", name);
     for prop_name in &schema.required {
         let value = if let Some(prop) = schema.properties.get(prop_name) {
             match &prop.value_type {
@@ -111,7 +112,8 @@ fn generate_sidebar(registry: &ComponentRegistry) -> String {
     for cat in CATEGORIES {
         let cat_label = category_label(cat);
         out.push_str(&format!(
-            "          <label text=\"{}\" size=\"sm\" padding=\"8\" />\n",
+            "          <label id=\"cat_{}\" text=\"{}\" size=\"sm\" padding=\"8\" />\n",
+            cat_label.to_lowercase(),
             cat_label
         ));
         let mut comps = registry.list_by_category(cat.clone());
