@@ -115,7 +115,10 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         schema.required.iter().map(|s| s.as_str()).collect();
 
     let mut out = String::new();
-    out.push_str(&format!("        <panel id=\"page_{}\">\n", name));
+    out.push_str(&format!(
+        "        <panel id=\"page_{}\" border=\"1\" border-color=\"theme.border\" margin=\"8\" rounded=\"sm\">\n",
+        name
+    ));
     out.push_str(&format!(
         "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"12\" padding=\"24\">\n",
         name
@@ -177,15 +180,25 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         }
     }
 
-    // Live preview — component instance with required props filled in
+    // Live preview — skip data-dependent components that show "No data" without a source
     out.push_str(&format!(
         "            <label id=\"{}_preview_label\" text=\"Preview\" size=\"md\" />\n",
         name
     ));
-    out.push_str(&format!(
-        "            {}\n",
-        generate_preview_element(comp)
-    ));
+    match comp.category {
+        ComponentCategory::Charts | ComponentCategory::Data => {
+            out.push_str(&format!(
+                "            <label id=\"{}_preview_note\" text=\"Connect a data source at runtime to preview this component.\" size=\"sm\" />\n",
+                name
+            ));
+        }
+        _ => {
+            out.push_str(&format!(
+                "            {}\n",
+                generate_preview_element(comp)
+            ));
+        }
+    }
 
     out.push_str("          </stack>\n");
     out.push_str("        </panel>\n");
@@ -243,7 +256,7 @@ pub fn generate_storybook_xml() -> String {
     out.push('\n');
 
     // Content area
-    out.push_str("      <stack id=\"content_area\" direction=\"vertical\" spacing=\"0\" flex=\"1.0\" scroll=\"true\">\n\n");
+    out.push_str("      <stack id=\"content_area\" direction=\"vertical\" spacing=\"0\" flex=\"1.0\" scroll=\"true\" padding=\"8\">\n\n");
 
     // Home page
     out.push_str(&generate_home_page(&registry));
