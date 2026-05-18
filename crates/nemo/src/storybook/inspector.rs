@@ -4,16 +4,14 @@
 //! derived from a component's ConfigSchema. A future extension can wire the
 //! controls to `set_component_property()` on a live runtime.
 
-use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::{
-    h_flex, label::Label, v_flex, ActiveTheme,
-};
+use gpui_component::{h_flex, label::Label, v_flex, ActiveTheme};
 use nemo_config::ValueType;
 use nemo_registry::ComponentRegistry;
 use std::sync::Arc;
 
 /// Displays a property table for a selected component.
+#[allow(dead_code)]
 pub struct PropertyInspector {
     component_name: Option<String>,
     target_component_id: Option<String>,
@@ -21,6 +19,7 @@ pub struct PropertyInspector {
     focus_handle: FocusHandle,
 }
 
+#[allow(dead_code)]
 impl PropertyInspector {
     pub fn new(
         registry: Arc<ComponentRegistry>,
@@ -37,12 +36,7 @@ impl PropertyInspector {
 
     /// Set which component to inspect. `component_id` is the ID of the live
     /// preview instance to update when properties change.
-    pub fn inspect(
-        &mut self,
-        component_name: &str,
-        component_id: &str,
-        cx: &mut Context<Self>,
-    ) {
+    pub fn inspect(&mut self, component_name: &str, component_id: &str, cx: &mut Context<Self>) {
         self.component_name = Some(component_name.to_string());
         self.target_component_id = Some(component_id.to_string());
         cx.notify();
@@ -117,11 +111,7 @@ impl Render for PropertyInspector {
                     .border_b_1()
                     .border_color(cx.theme().border)
                     .child(div().w_32().child(Label::new(name_display).text_sm()))
-                    .child(
-                        div()
-                            .w_16()
-                            .child(Label::new(type_str).text_sm()),
-                    )
+                    .child(div().w_16().child(Label::new(type_str).text_sm()))
                     .child(div().flex_1().child(Label::new(default_str).text_sm()))
                     .child(div().w_16().child(Label::new(req_str).text_sm()))
                     .into_any()
@@ -136,4 +126,3 @@ impl Render for PropertyInspector {
             .into_any()
     }
 }
-
