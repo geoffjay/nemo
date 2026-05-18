@@ -40,17 +40,6 @@ fn xml_escape(s: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-/// Escape a string for use inside an XML attribute value that is itself
-/// already inside a double-quoted attribute (e.g. default-value="...").
-/// We encode `<`, `>`, `"`, `&` as XML entities, and newlines as `&#10;`.
-fn attr_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\n', "&#10;")
-}
-
 /// Generate an actual XML element for the live preview panel, with required
 /// properties filled in so the layout builder's `MissingProperty` check passes.
 fn generate_preview_element(comp: &ComponentDescriptor) -> String {
@@ -78,85 +67,6 @@ fn generate_preview_element(comp: &ComponentDescriptor) -> String {
     format!("<{}{} />", name, attrs)
 }
 
-/// Generate a minimal XML snippet for a component's default usage.
-fn generate_xml_snippet(comp: &ComponentDescriptor) -> String {
-    let name = &comp.name;
-    let schema = &comp.schema;
-    let required: std::collections::HashSet<&str> =
-        schema.required.iter().map(|s| s.as_str()).collect();
-
-    let mut attrs = String::new();
-
-    // For required properties, use placeholder values
-    for prop_name in &schema.required {
-        let value = if let Some(prop) = schema.properties.get(prop_name) {
-            match &prop.value_type {
-                ValueType::String => "\"placeholder\"".to_string(),
-                ValueType::Integer => "\"0\"".to_string(),
-                ValueType::Float => "\"0.0\"".to_string(),
-                ValueType::Boolean => "\"false\"".to_string(),
-                ValueType::Array => "\"[]\"".to_string(),
-                ValueType::Object => "\"{}\"".to_string(),
-                ValueType::Any => "\"\"".to_string(),
-            }
-        } else {
-            "\"placeholder\"".to_string()
-        };
-        attrs.push_str(&format!(" {}={}", prop_name, value));
-    }
-
-    // For optional properties with defaults, include them
-    for (prop_name, prop) in &schema.properties {
-        if required.contains(prop_name.as_str()) {
-            continue;
-        }
-        if let Some(ref default_val) = prop.default {
-            let val_str = match default_val {
-                nemo_config::Value::String(s) => format!("\"{}\"", xml_escape(s)),
-                nemo_config::Value::Integer(i) => format!("\"{}\"", i),
-                nemo_config::Value::Float(f) => format!("\"{}\"", f),
-                nemo_config::Value::Bool(b) => format!("\"{}\"", b),
-                _ => continue,
-            };
-            attrs.push_str(&format!(" {}={}", prop_name, val_str));
-        }
-    }
-
-    format!("<{}{} />", name, attrs)
-}
-
-/// Build the JSON data array string for the property table.
-fn generate_property_table_data(comp: &ComponentDescriptor) -> String {
-    let schema = &comp.schema;
-    let required: std::collections::HashSet<&str> =
-        schema.required.iter().map(|s| s.as_str()).collect();
-
-    let mut rows: Vec<String> = Vec::new();
-    for (prop_name, prop) in &schema.properties {
-        let type_str = prop.value_type.to_string();
-        let default_str = prop
-            .default
-            .as_ref()
-            .map(|v| match v {
-                nemo_config::Value::String(s) => format!("\"{}\"", s),
-                nemo_config::Value::Integer(i) => i.to_string(),
-                nemo_config::Value::Float(f) => f.to_string(),
-                nemo_config::Value::Bool(b) => b.to_string(),
-                _ => "-".to_string(),
-            })
-            .unwrap_or_else(|| "-".to_string());
-        let req_str = if required.contains(prop_name.as_str()) {
-            "yes"
-        } else {
-            "no"
-        };
-        rows.push(format!(
-            "{{\"name\":\"{}\",\"type\":\"{}\",\"default\":\"{}\",\"required\":\"{}\"}}",
-            prop_name, type_str, default_str, req_str
-        ));
-    }
-    format!("[{}]", rows.join(","))
-}
 
 fn generate_sidebar(registry: &ComponentRegistry) -> String {
     let mut out = String::new();
@@ -200,63 +110,82 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         comp.metadata.display_name.clone()
     };
     let description = &comp.metadata.description;
-    let prop_data = generate_property_table_data(comp);
-    let xml_snippet = generate_xml_snippet(comp);
-    let escaped_snippet = attr_escape(&xml_snippet);
+    let schema = &comp.schema;
+    let required: std::collections::HashSet<&str> =
+        schema.required.iter().map(|s| s.as_str()).collect();
 
     let mut out = String::new();
     out.push_str(&format!("        <panel id=\"page_{}\">\n", name));
     out.push_str(&format!(
-        "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"16\" padding=\"32\">\n",
+        "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"12\" padding=\"24\">\n",
         name
     ));
+
+    // Title and description
     out.push_str(&format!(
         "            <label id=\"{}_title\" text=\"{}\" size=\"xl\" />\n",
         name,
         xml_escape(&display_name)
     ));
-    out.push_str(&format!(
-        "            <text id=\"{}_desc\" content=\"{}\" />\n",
-        name,
-        xml_escape(description)
-    ));
+    if !description.is_empty() {
+        out.push_str(&format!(
+            "            <text id=\"{}_desc\" content=\"{}\" />\n",
+            name,
+            xml_escape(description)
+        ));
+    }
 
-    // Properties section
-    out.push_str(&format!(
-        "            <label id=\"{}_props_label\" text=\"Properties\" size=\"md\" />\n",
-        name
-    ));
-    let escaped_data = xml_escape(&prop_data);
-    out.push_str(&format!(
-        "            <table id=\"{}_props_table\" data='{}' />\n",
-        name, escaped_data
-    ));
+    // Properties — one label per property, no table/code-editor
+    if !schema.properties.is_empty() {
+        out.push_str(&format!(
+            "            <label id=\"{}_props_label\" text=\"Properties\" size=\"md\" />\n",
+            name
+        ));
+        for (i, (prop_name, prop)) in schema.properties.iter().enumerate() {
+            let req = if required.contains(prop_name.as_str()) {
+                " *"
+            } else {
+                ""
+            };
+            let type_str = match &prop.value_type {
+                ValueType::String => "string",
+                ValueType::Integer => "integer",
+                ValueType::Float => "float",
+                ValueType::Boolean => "boolean",
+                ValueType::Array => "array",
+                ValueType::Object => "object",
+                ValueType::Any => "any",
+            };
+            let default_str = prop
+                .default
+                .as_ref()
+                .map(|v| match v {
+                    nemo_config::Value::String(s) => format!(" = \"{}\"", s),
+                    nemo_config::Value::Integer(n) => format!(" = {}", n),
+                    nemo_config::Value::Float(f) => format!(" = {}", f),
+                    nemo_config::Value::Bool(b) => format!(" = {}", b),
+                    _ => String::new(),
+                })
+                .unwrap_or_default();
+            let row = format!("{}{}: {}{}", prop_name, req, type_str, default_str);
+            out.push_str(&format!(
+                "            <label id=\"{}_prop_{}\" text=\"{}\" size=\"sm\" />\n",
+                name,
+                i,
+                xml_escape(&row)
+            ));
+        }
+    }
 
-    // Example section
+    // Live preview — component instance with required props filled in
     out.push_str(&format!(
-        "            <label id=\"{}_example_label\" text=\"Example\" size=\"md\" />\n",
+        "            <label id=\"{}_preview_label\" text=\"Preview\" size=\"md\" />\n",
         name
     ));
     out.push_str(&format!(
-        "            <tabs id=\"{}_example_tabs\" tabs='[\"Preview\",\"XML\"]'>\n",
-        name
-    ));
-    // Preview tab
-    out.push_str(&format!("              <panel id=\"{}_preview\">\n", name));
-    out.push_str(&format!(
-        "                {}\n",
+        "            {}\n",
         generate_preview_element(comp)
     ));
-    out.push_str("              </panel>\n");
-    // XML tab
-    out.push_str(&format!("              <panel id=\"{}_xml\">\n", name));
-    out.push_str(&format!(
-        "                <code-editor id=\"{}_code\" language=\"xml\" line-number=\"false\" searchable=\"false\" default-value=\"{}\" />\n",
-        name,
-        escaped_snippet
-    ));
-    out.push_str("              </panel>\n");
-    out.push_str("            </tabs>\n");
 
     out.push_str("          </stack>\n");
     out.push_str("        </panel>\n");
@@ -465,12 +394,11 @@ mod tests {
     }
 
     #[test]
-    fn test_generated_xml_has_property_table_data_for_button() {
+    fn test_generated_xml_has_property_rows_for_button() {
         let xml = generate_storybook_xml();
-        // Button page should have property table data
-        assert!(xml.contains("page_button"));
-        // Should contain button properties like "label", "variant"
-        assert!(xml.contains("\"label\"") || xml.contains("label"));
+        assert!(xml.contains("page_button"), "Missing button page");
+        // Button has a required "label" property — should appear as a label row
+        assert!(xml.contains("label *: string"), "Missing label property row for button");
     }
 
     #[test]
@@ -536,9 +464,13 @@ mod tests {
     }
 
     #[test]
-    fn test_xml_snippet_has_required_props() {
+    fn test_preview_element_has_required_props() {
         let xml = generate_storybook_xml();
-        // button requires "label" - its XML snippet should include label="placeholder"
+        // button requires "label" — the preview element must include label="placeholder"
         assert!(xml.contains("page_button"), "Missing button page");
+        assert!(
+            xml.contains("label=\"placeholder\""),
+            "Preview element missing required label prop"
+        );
     }
 }
