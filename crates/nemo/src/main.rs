@@ -341,7 +341,13 @@ fn launch_storybook(sb_args: &args::StorybookArgs, args: &Args) -> Result<()> {
         .detach();
 
         let early_runtime =
-            workspace::utils::create_runtime(&storybook_config, &ws_args.extension_dirs).ok();
+            match workspace::utils::create_runtime(&storybook_config, &ws_args.extension_dirs) {
+                Ok(rt) => Some(rt),
+                Err(e) => {
+                    tracing::error!("Failed to load storybook config: {:#}", e);
+                    None
+                }
+            };
 
         let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
             let w = rt

@@ -51,6 +51,33 @@ fn attr_escape(s: &str) -> String {
         .replace('\n', "&#10;")
 }
 
+/// Generate an actual XML element for the live preview panel, with required
+/// properties filled in so the layout builder's `MissingProperty` check passes.
+fn generate_preview_element(comp: &ComponentDescriptor) -> String {
+    let name = &comp.name;
+    let schema = &comp.schema;
+
+    let mut attrs = String::new();
+    for prop_name in &schema.required {
+        let value = if let Some(prop) = schema.properties.get(prop_name) {
+            match &prop.value_type {
+                ValueType::String => "placeholder",
+                ValueType::Integer => "0",
+                ValueType::Float => "0.0",
+                ValueType::Boolean => "false",
+                ValueType::Array => "[]",
+                ValueType::Object => "{}",
+                ValueType::Any => "",
+            }
+        } else {
+            "placeholder"
+        };
+        attrs.push_str(&format!(" {}=\"{}\"", prop_name, xml_escape(value)));
+    }
+
+    format!("<{}{} />", name, attrs)
+}
+
 /// Generate a minimal XML snippet for a component's default usage.
 fn generate_xml_snippet(comp: &ComponentDescriptor) -> String {
     let name = &comp.name;
@@ -216,7 +243,10 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
     ));
     // Preview tab
     out.push_str(&format!("              <panel id=\"{}_preview\">\n", name));
-    out.push_str(&format!("                <{} />\n", name));
+    out.push_str(&format!(
+        "                {}\n",
+        generate_preview_element(comp)
+    ));
     out.push_str("              </panel>\n");
     // XML tab
     out.push_str(&format!("              <panel id=\"{}_xml\">\n", name));
