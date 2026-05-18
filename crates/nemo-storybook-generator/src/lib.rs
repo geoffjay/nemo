@@ -71,7 +71,7 @@ fn generate_preview_element(comp: &ComponentDescriptor) -> String {
 fn generate_sidebar(registry: &ComponentRegistry) -> String {
     let mut out = String::new();
     out.push_str("      <panel id=\"sidebar\" width=\"240\">\n");
-    out.push_str("        <stack id=\"sidebar_inner\" direction=\"vertical\" spacing=\"0\">\n");
+    out.push_str("        <stack id=\"sidebar_inner\" direction=\"vertical\" spacing=\"0\" scroll=\"true\">\n");
     out.push_str("          <label id=\"sidebar_title\" text=\"Nemo Storybook\" size=\"lg\" padding=\"16\" />\n");
     out.push_str("          <input id=\"sidebar_search\" placeholder=\"Search components...\" padding-x=\"8\" />\n");
 
@@ -90,7 +90,7 @@ fn generate_sidebar(registry: &ComponentRegistry) -> String {
                 &comp.metadata.display_name
             };
             out.push_str(&format!(
-                "          <button id=\"nav_{}\" label=\"{}\" variant=\"ghost\" />\n",
+                "          <button id=\"nav_{}\" label=\"{}\" variant=\"ghost\" on-click=\"navigate_to\" />\n",
                 comp.name,
                 xml_escape(display_name)
             ));
@@ -115,7 +115,10 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         schema.required.iter().map(|s| s.as_str()).collect();
 
     let mut out = String::new();
-    out.push_str(&format!("        <panel id=\"page_{}\">\n", name));
+    out.push_str(&format!(
+        "        <panel id=\"page_{}\" visible=\"false\">\n",
+        name
+    ));
     out.push_str(&format!(
         "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"12\" padding=\"24\" margin=\"8\" border=\"1\" border-color=\"theme.border\" rounded=\"sm\">\n",
         name
@@ -183,7 +186,7 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         name
     ));
     match comp.category {
-        ComponentCategory::Charts | ComponentCategory::Data => {
+        ComponentCategory::Charts | ComponentCategory::Data | ComponentCategory::Layout => {
             out.push_str(&format!(
                 "            <label id=\"{}_preview_note\" text=\"Connect a data source at runtime to preview this component.\" size=\"sm\" />\n",
                 name
@@ -286,36 +289,23 @@ pub fn generate_storybook_xml() -> String {
         names
     };
 
-    let page_ids_json = all_names
-        .iter()
-        .map(|n| format!("\"page_{}\"", n))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let comp_names_json = all_names
+    // Button on-click handler: call_handler passes (component_id, event_data).
+    // component_id for a nav button is "nav_{name}"; derive the page from "page_{name}".
+    let names_rhai = all_names
         .iter()
         .map(|n| format!("\"{}\"", n))
         .collect::<Vec<_>>()
         .join(", ");
 
     out.push_str("  <script lang=\"rhai\"><![CDATA[\n");
-    out.push_str(&format!("    let PAGE_IDS = [{}];\n", page_ids_json));
-    out.push_str(&format!(
-        "    let COMPONENT_NAMES = [{}];\n\n",
-        comp_names_json
-    ));
-    out.push_str("    fn navigate_to(component_name) {\n");
-    out.push_str("        for id in PAGE_IDS {\n");
+    out.push_str("    fn navigate_to(component_id, event_data) {\n");
+    out.push_str("      set_component_property(\"page_home\", \"visible\", false);\n");
+    out.push_str(&format!("      let names = [{}];\n", names_rhai));
+    out.push_str("      for name in names {\n");
     out.push_str(
-        "            set_component_property(id, \"visible\", id == \"page_\" + component_name);\n",
+        "        set_component_property(\"page_\" + name, \"visible\", \"nav_\" + name == component_id);\n",
     );
-    out.push_str("        }\n");
-    out.push_str("    }\n\n");
-    out.push_str("    fn on_search_change(value) {\n");
-    out.push_str("        for name in COMPONENT_NAMES {\n");
-    out.push_str("            let btn_id = \"nav_\" + name;\n");
-    out.push_str("            let visible = value == \"\" || name.contains(value);\n");
-    out.push_str("            set_component_property(btn_id, \"visible\", visible);\n");
-    out.push_str("        }\n");
+    out.push_str("      }\n");
     out.push_str("    }\n");
     out.push_str("  ]]></script>\n");
 
@@ -448,12 +438,31 @@ mod tests {
             "Generated XML missing Rhai script section"
         );
         assert!(
-            xml.contains("navigate_to"),
-            "Script section missing navigate_to function"
+            xml.contains("fn navigate_to(component_id, event_data)"),
+            "Script section missing navigate_to function with correct signature"
         );
+    }
+
+    #[test]
+    fn test_nav_buttons_have_on_click() {
+        let xml = generate_storybook_xml();
         assert!(
-            xml.contains("on_search_change"),
-            "Script section missing on_search_change function"
+            xml.contains("on-click=\"navigate_to\""),
+            "Nav buttons missing on-click handler"
+        );
+    }
+
+    #[test]
+    fn test_component_pages_initially_hidden() {
+        let xml = generate_storybook_xml();
+        assert!(
+            xml.contains("visible=\"false\""),
+            "Component pages should start hidden"
+        );
+        // Home page must NOT be hidden
+        assert!(
+            !xml.contains("id=\"page_home\" visible=\"false\""),
+            "Home page must not be hidden initially"
         );
     }
 
