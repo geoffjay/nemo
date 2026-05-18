@@ -67,6 +67,39 @@ fn generate_preview_element(comp: &ComponentDescriptor) -> String {
     format!("<{}{} />", name, attrs)
 }
 
+/// Returns inline XML showing a Layout component with placeholder children.
+fn generate_layout_preview(name: &str) -> String {
+    match name {
+        "stack" => concat!(
+            "<stack id=\"stack_preview_ex\" direction=\"vertical\" spacing=\"8\"",
+            " padding=\"8\" border=\"1\" border-color=\"theme.border\">\n",
+            "              <label id=\"stack_item1\" text=\"Item 1\" />\n",
+            "              <label id=\"stack_item2\" text=\"Item 2\" />\n",
+            "              <label id=\"stack_item3\" text=\"Item 3\" />\n",
+            "            </stack>",
+        )
+        .to_string(),
+        "panel" => concat!(
+            "<panel id=\"panel_preview_ex\" padding=\"16\"",
+            " border=\"1\" border-color=\"theme.border\">\n",
+            "              <label id=\"panel_content\" text=\"Panel content\" />\n",
+            "            </panel>",
+        )
+        .to_string(),
+        "tabs" => concat!(
+            "<tabs id=\"tabs_preview_ex\" tabs='[\"Tab A\",\"Tab B\"]'>\n",
+            "              <panel id=\"tabs_tab1_ex\">\n",
+            "                <label id=\"tabs_tab1_label\" text=\"Tab A content\" />\n",
+            "              </panel>\n",
+            "              <panel id=\"tabs_tab2_ex\">\n",
+            "                <label id=\"tabs_tab2_label\" text=\"Tab B content\" />\n",
+            "              </panel>\n",
+            "            </tabs>",
+        )
+        .to_string(),
+        _ => "<label text=\"Container — add children in XML\" size=\"sm\" />".to_string(),
+    }
+}
 
 fn generate_sidebar(registry: &ComponentRegistry) -> String {
     let mut out = String::new();
@@ -186,10 +219,16 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         name
     ));
     match comp.category {
-        ComponentCategory::Charts | ComponentCategory::Data | ComponentCategory::Layout => {
+        ComponentCategory::Charts | ComponentCategory::Data => {
             out.push_str(&format!(
                 "            <label id=\"{}_preview_note\" text=\"Connect a data source at runtime to preview this component.\" size=\"sm\" />\n",
                 name
+            ));
+        }
+        ComponentCategory::Layout => {
+            out.push_str(&format!(
+                "            {}\n",
+                generate_layout_preview(name)
             ));
         }
         _ => {
