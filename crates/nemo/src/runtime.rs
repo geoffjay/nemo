@@ -351,6 +351,39 @@ impl NemoRuntime {
             }
         }
 
+        // Handle inline scripts (from <script lang="rhai"><![CDATA[...]]>)
+        // Loaded as script id "handlers" so call_handler("fn_name", ...) finds them.
+        if let Some(scripts) = {
+            let config = self.config.read().expect("config lock poisoned");
+            config.get("scripts").cloned()
+        } {
+            if let Some(inline_arr) = scripts.get("inline").and_then(|v| v.as_array()) {
+                for (idx, script_value) in inline_arr.iter().enumerate() {
+                    if let Some(source) = script_value.as_str() {
+                        if !source.trim().is_empty() {
+                            let id = if idx == 0 {
+                                "handlers".to_string()
+                            } else {
+                                format!("handlers_{}", idx)
+                            };
+                            let mut ext = self
+                                .extension_manager
+                                .write()
+                                .expect("extension_manager lock poisoned");
+                            match ext.load_script_from_source(&id, source) {
+                                Ok(_) => info!("Loaded inline script as '{}'", id),
+                                Err(e) => tracing::warn!(
+                                    "Failed to load inline script '{}': {}",
+                                    id,
+                                    e
+                                ),
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Register the runtime context with the extension manager for API access
         let context: Arc<dyn PluginContext> = Arc::new(RuntimeContext::new(
             Arc::clone(&self.config),

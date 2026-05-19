@@ -102,6 +102,12 @@ impl ExtensionManager {
         self.loader.discover()
     }
 
+    /// Loads a script from an in-memory source string.
+    /// The script is registered under `id` and is callable via `call_script`.
+    pub fn load_script_from_source(&mut self, id: &str, source: &str) -> Result<(), ExtensionError> {
+        self.rhai_engine.load_script(id, source)
+    }
+
     /// Loads a script by path.
     pub fn load_script(&mut self, path: &std::path::Path) -> Result<String, ExtensionError> {
         let source = std::fs::read_to_string(path).map_err(|e| ExtensionError::LoadError {

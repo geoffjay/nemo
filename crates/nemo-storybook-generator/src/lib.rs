@@ -4,7 +4,9 @@
 //! introspecting the built-in component registry.
 
 use nemo_config::ValueType;
-use nemo_registry::{ComponentCategory, ComponentDescriptor, ComponentRegistry, register_builtin_components};
+use nemo_registry::{
+    register_builtin_components, ComponentCategory, ComponentDescriptor, ComponentRegistry,
+};
 
 /// The ordered list of categories displayed in the sidebar.
 const CATEGORIES: &[ComponentCategory] = &[
@@ -38,100 +40,187 @@ fn xml_escape(s: &str) -> String {
         .replace('\'', "&apos;")
 }
 
-/// Escape a string for use inside an XML attribute value that is itself
-/// already inside a double-quoted attribute (e.g. default-value="...").
-/// We encode `<`, `>`, `"`, `&` as XML entities, and newlines as `&#10;`.
-fn attr_escape(s: &str) -> String {
-    s.replace('&', "&amp;")
-        .replace('<', "&lt;")
-        .replace('>', "&gt;")
-        .replace('"', "&quot;")
-        .replace('\n', "&#10;")
-}
-
-/// Generate a minimal XML snippet for a component's default usage.
-fn generate_xml_snippet(comp: &ComponentDescriptor) -> String {
-    let name = &comp.name;
-    let schema = &comp.schema;
-    let required: std::collections::HashSet<&str> =
-        schema.required.iter().map(|s| s.as_str()).collect();
-
-    let mut attrs = String::new();
-
-    // For required properties, use placeholder values
-    for prop_name in &schema.required {
-        let value = if let Some(prop) = schema.properties.get(prop_name) {
-            match &prop.value_type {
-                ValueType::String => format!("\"placeholder\""),
-                ValueType::Integer => "\"0\"".to_string(),
-                ValueType::Float => "\"0.0\"".to_string(),
-                ValueType::Boolean => "\"false\"".to_string(),
-                ValueType::Array => "\"[]\"".to_string(),
-                ValueType::Object => "\"{}\"".to_string(),
-                ValueType::Any => "\"\"".to_string(),
+/// Generate an actual XML element for the live preview panel, with required
+/// properties filled in so the layout builder's `MissingProperty` check passes.
+/// Charts and Data components also receive inline sample data so they render
+/// immediately without needing a runtime data source.
+fn generate_preview_element(comp: &ComponentDescriptor) -> String {
+    match comp.category {
+        ComponentCategory::Data => generate_data_preview(&comp.name),
+        ComponentCategory::Charts => generate_chart_preview(&comp.name),
+        _ => {
+            let name = &comp.name;
+            let schema = &comp.schema;
+            let mut attrs = format!(" id=\"{}_preview_ex\"", name);
+            for prop_name in &schema.required {
+                let value = if let Some(prop) = schema.properties.get(prop_name) {
+                    match &prop.value_type {
+                        ValueType::String => "placeholder",
+                        ValueType::Integer => "0",
+                        ValueType::Float => "0.0",
+                        ValueType::Boolean => "false",
+                        ValueType::Array => "[]",
+                        ValueType::Object => "{}",
+                        ValueType::Any => "",
+                    }
+                } else {
+                    "placeholder"
+                };
+                attrs.push_str(&format!(" {}=\"{}\"", prop_name, xml_escape(value)));
             }
-        } else {
-            "\"placeholder\"".to_string()
-        };
-        attrs.push_str(&format!(" {}={}", prop_name, value));
-    }
-
-    // For optional properties with defaults, include them
-    for (prop_name, prop) in &schema.properties {
-        if required.contains(prop_name.as_str()) {
-            continue;
-        }
-        if let Some(ref default_val) = prop.default {
-            let val_str = match default_val {
-                nemo_config::Value::String(s) => format!("\"{}\"", xml_escape(s)),
-                nemo_config::Value::Integer(i) => format!("\"{}\"", i),
-                nemo_config::Value::Float(f) => format!("\"{}\"", f),
-                nemo_config::Value::Bool(b) => format!("\"{}\"", b),
-                _ => continue,
-            };
-            attrs.push_str(&format!(" {}={}", prop_name, val_str));
+            format!("<{}{} />", name, attrs)
         }
     }
-
-    format!("<{}{} />", name, attrs)
 }
 
-/// Build the JSON data array string for the property table.
-fn generate_property_table_data(comp: &ComponentDescriptor) -> String {
-    let schema = &comp.schema;
-    let required: std::collections::HashSet<&str> =
-        schema.required.iter().map(|s| s.as_str()).collect();
-
-    let mut rows: Vec<String> = Vec::new();
-    for (prop_name, prop) in &schema.properties {
-        let type_str = prop.value_type.to_string();
-        let default_str = prop.default.as_ref().map(|v| match v {
-            nemo_config::Value::String(s) => format!("\"{}\"", s),
-            nemo_config::Value::Integer(i) => i.to_string(),
-            nemo_config::Value::Float(f) => f.to_string(),
-            nemo_config::Value::Bool(b) => b.to_string(),
-            _ => "-".to_string(),
-        }).unwrap_or_else(|| "-".to_string());
-        let req_str = if required.contains(prop_name.as_str()) { "yes" } else { "no" };
-        rows.push(format!(
-            "{{\"name\":\"{}\",\"type\":\"{}\",\"default\":\"{}\",\"required\":\"{}\"}}",
-            prop_name, type_str, default_str, req_str
-        ));
+fn generate_data_preview(name: &str) -> String {
+    match name {
+        "table" => concat!(
+            "<table id=\"table_preview_ex\"",
+            " columns='[{\"key\":\"name\",\"label\":\"Name\"},{\"key\":\"score\",\"label\":\"Score\"}]'",
+            " data='[{\"name\":\"Alice\",\"score\":\"95\"},{\"name\":\"Bob\",\"score\":\"87\"},{\"name\":\"Carol\",\"score\":\"92\"}]'",
+            " />",
+        )
+        .to_string(),
+        "list" => concat!(
+            "<list id=\"list_preview_ex\"",
+            " items='[\"Item One\",\"Item Two\",\"Item Three\"]'",
+            " />",
+        )
+        .to_string(),
+        "tree" => concat!(
+            "<tree id=\"tree_preview_ex\"",
+            " items='[{\"label\":\"Root\",\"children\":[{\"label\":\"Child A\"},{\"label\":\"Child B\"}]}]'",
+            " />",
+        )
+        .to_string(),
+        _ => format!(
+            "<label id=\"{}_preview_note\" text=\"No sample data available.\" size=\"sm\" />",
+            name
+        ),
     }
-    format!("[{}]", rows.join(","))
+}
+
+fn generate_chart_preview(name: &str) -> String {
+    // Sample series data with x/y keys used by most charts
+    let xy = "[{&quot;x&quot;:1,&quot;y&quot;:10},{&quot;x&quot;:2,&quot;y&quot;:30},{&quot;x&quot;:3,&quot;y&quot;:20},{&quot;x&quot;:4,&quot;y&quot;:40},{&quot;x&quot;:5,&quot;y&quot;:25}]";
+    let xy2 = "[{&quot;x&quot;:1,&quot;a&quot;:10,&quot;b&quot;:20},{&quot;x&quot;:2,&quot;a&quot;:25,&quot;b&quot;:15},{&quot;x&quot;:3,&quot;a&quot;:18,&quot;b&quot;:30}]";
+
+    match name {
+        "line_chart" | "bar_chart" | "column_chart" | "scatter_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" x_field=\"x\" y_field=\"y\" data=\"{d}\" />",
+            n = name,
+            d = xy
+        ),
+        "realtime_chart" => format!(
+            "<realtime_chart id=\"realtime_chart_preview_ex\" x_field=\"x\" y_fields='[\"y\"]' data=\"{d}\" />",
+            d = xy
+        ),
+        "area_chart" => format!(
+            "<area_chart id=\"area_chart_preview_ex\" x_field=\"x\" y_fields='[\"a\",\"b\"]' data=\"{d}\" />",
+            d = xy2
+        ),
+        // Vertical multi-series: x_field + y_fields
+        "stacked_column_chart" | "clustered_column_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" x_field=\"x\" y_fields='[\"a\",\"b\"]' data=\"{d}\" />",
+            n = name,
+            d = xy2
+        ),
+        // Horizontal multi-series: y_field (category axis) + x_fields (value series)
+        "stacked_bar_chart" | "clustered_bar_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" y_field=\"cat\" x_fields='[\"a\",\"b\"]' data='[{{\"cat\":\"P\",\"a\":10,\"b\":20}},{{\"cat\":\"Q\",\"a\":15,\"b\":25}}]' />",
+            n = name
+        ),
+        "pie_chart" => concat!(
+            "<pie_chart id=\"pie_chart_preview_ex\" value_field=\"value\"",
+            " data='[{\"label\":\"Alpha\",\"value\":40},{\"label\":\"Beta\",\"value\":35},{\"label\":\"Gamma\",\"value\":25}]'",
+            " />",
+        )
+        .to_string(),
+        "candlestick_chart" => concat!(
+            "<candlestick_chart id=\"candlestick_chart_preview_ex\"",
+            " x_field=\"t\" open_field=\"o\" high_field=\"h\" low_field=\"l\" close_field=\"c\"",
+            " data='[{\"t\":\"Jan\",\"o\":100,\"h\":120,\"l\":90,\"c\":110},{\"t\":\"Feb\",\"o\":110,\"h\":130,\"l\":100,\"c\":105}]'",
+            " />",
+        )
+        .to_string(),
+        "bubble_chart" => concat!(
+            "<bubble_chart id=\"bubble_chart_preview_ex\" x_field=\"x\" y_field=\"y\" size_field=\"r\"",
+            " data='[{\"x\":1,\"y\":10,\"r\":5},{\"x\":2,\"y\":20,\"r\":10},{\"x\":3,\"y\":15,\"r\":8}]'",
+            " />",
+        )
+        .to_string(),
+        "heatmap_chart" => concat!(
+            "<heatmap_chart id=\"heatmap_chart_preview_ex\" x_field=\"col\" y_field=\"row\" value_field=\"val\"",
+            " data='[{\"col\":\"A\",\"row\":\"X\",\"val\":10},{\"col\":\"B\",\"row\":\"X\",\"val\":30},{\"col\":\"A\",\"row\":\"Y\",\"val\":20},{\"col\":\"B\",\"row\":\"Y\",\"val\":40}]'",
+            " />",
+        )
+        .to_string(),
+        "radar_chart" => concat!(
+            "<radar_chart id=\"radar_chart_preview_ex\"",
+            " categories='[\"Speed\",\"Power\",\"Agility\"]'",
+            " y_fields='[\"val\"]'",
+            " data='[{\"Speed\":80,\"Power\":70,\"Agility\":90,\"val\":80}]'",
+            " />",
+        )
+        .to_string(),
+        "pyramid_chart" | "funnel_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" label_field=\"stage\" value_field=\"count\" data='[{{\"stage\":\"Top\",\"count\":100}},{{\"stage\":\"Mid\",\"count\":60}},{{\"stage\":\"Bottom\",\"count\":30}}]' />",
+            n = name
+        ),
+        _ => format!(
+            "<label id=\"{n}_preview_note\" text=\"Sample data preview not available.\" size=\"sm\" />",
+            n = name
+        ),
+    }
+}
+
+/// Returns inline XML showing a Layout component with placeholder children.
+fn generate_layout_preview(name: &str) -> String {
+    match name {
+        "stack" => concat!(
+            "<stack id=\"stack_preview_ex\" direction=\"vertical\" spacing=\"8\"",
+            " padding=\"8\" border=\"1\" border-color=\"theme.border\">\n",
+            "              <label id=\"stack_item1\" text=\"Item 1\" />\n",
+            "              <label id=\"stack_item2\" text=\"Item 2\" />\n",
+            "              <label id=\"stack_item3\" text=\"Item 3\" />\n",
+            "            </stack>",
+        )
+        .to_string(),
+        "panel" => concat!(
+            "<panel id=\"panel_preview_ex\" padding=\"16\"",
+            " border=\"1\" border-color=\"theme.border\">\n",
+            "              <label id=\"panel_content\" text=\"Panel content\" />\n",
+            "            </panel>",
+        )
+        .to_string(),
+        "tabs" => concat!(
+            "<tabs id=\"tabs_preview_ex\" tabs='[\"Tab A\",\"Tab B\"]'>\n",
+            "              <panel id=\"tabs_tab1_ex\">\n",
+            "                <label id=\"tabs_tab1_label\" text=\"Tab A content\" />\n",
+            "              </panel>\n",
+            "              <panel id=\"tabs_tab2_ex\">\n",
+            "                <label id=\"tabs_tab2_label\" text=\"Tab B content\" />\n",
+            "              </panel>\n",
+            "            </tabs>",
+        )
+        .to_string(),
+        _ => "<label text=\"Container — add children in XML\" size=\"sm\" />".to_string(),
+    }
 }
 
 fn generate_sidebar(registry: &ComponentRegistry) -> String {
     let mut out = String::new();
     out.push_str("      <panel id=\"sidebar\" width=\"240\">\n");
-    out.push_str("        <stack id=\"sidebar_inner\" direction=\"vertical\" spacing=\"0\">\n");
+    out.push_str("        <stack id=\"sidebar_inner\" direction=\"vertical\" spacing=\"0\" scroll=\"true\">\n");
     out.push_str("          <label id=\"sidebar_title\" text=\"Nemo Storybook\" size=\"lg\" padding=\"16\" />\n");
     out.push_str("          <input id=\"sidebar_search\" placeholder=\"Search components...\" padding-x=\"8\" />\n");
 
     for cat in CATEGORIES {
         let cat_label = category_label(cat);
         out.push_str(&format!(
-            "          <label text=\"{}\" size=\"sm\" padding=\"8\" />\n",
+            "          <label id=\"cat_{}\" text=\"{}\" size=\"sm\" padding=\"8\" />\n",
+            cat_label.to_lowercase(),
             cat_label
         ));
         let mut comps = registry.list_by_category(cat.clone());
@@ -143,7 +232,7 @@ fn generate_sidebar(registry: &ComponentRegistry) -> String {
                 &comp.metadata.display_name
             };
             out.push_str(&format!(
-                "          <button id=\"nav_{}\" label=\"{}\" variant=\"ghost\" />\n",
+                "          <button id=\"nav_{}\" label=\"{}\" variant=\"ghost\" on-click=\"navigate_to\" />\n",
                 comp.name,
                 xml_escape(display_name)
             ));
@@ -163,70 +252,89 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         comp.metadata.display_name.clone()
     };
     let description = &comp.metadata.description;
-    let prop_data = generate_property_table_data(comp);
-    let xml_snippet = generate_xml_snippet(comp);
-    let escaped_snippet = attr_escape(&xml_snippet);
+    let schema = &comp.schema;
+    let required: std::collections::HashSet<&str> =
+        schema.required.iter().map(|s| s.as_str()).collect();
 
     let mut out = String::new();
-    out.push_str(&format!("        <panel id=\"page_{}\">\n", name));
     out.push_str(&format!(
-        "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"16\" padding=\"32\">\n",
+        "        <panel id=\"page_{}\" visible=\"false\">\n",
         name
     ));
+    out.push_str(&format!(
+        "          <stack id=\"{}_inner\" direction=\"vertical\" spacing=\"12\" padding=\"24\" margin=\"8\" border=\"1\" border-color=\"theme.border\" rounded=\"sm\">\n",
+        name
+    ));
+
+    // Title and description
     out.push_str(&format!(
         "            <label id=\"{}_title\" text=\"{}\" size=\"xl\" />\n",
         name,
         xml_escape(&display_name)
     ));
-    out.push_str(&format!(
-        "            <text id=\"{}_desc\" content=\"{}\" />\n",
-        name,
-        xml_escape(description)
-    ));
+    if !description.is_empty() {
+        out.push_str(&format!(
+            "            <text id=\"{}_desc\" content=\"{}\" />\n",
+            name,
+            xml_escape(description)
+        ));
+    }
 
-    // Properties section
-    out.push_str(&format!(
-        "            <label id=\"{}_props_label\" text=\"Properties\" size=\"md\" />\n",
-        name
-    ));
-    let escaped_data = xml_escape(&prop_data);
-    out.push_str(&format!(
-        "            <table id=\"{}_props_table\" data='{}' />\n",
-        name,
-        escaped_data
-    ));
+    // Properties — one label per property, no table/code-editor
+    if !schema.properties.is_empty() {
+        out.push_str(&format!(
+            "            <label id=\"{}_props_label\" text=\"Properties\" size=\"md\" />\n",
+            name
+        ));
+        for (i, (prop_name, prop)) in schema.properties.iter().enumerate() {
+            let req = if required.contains(prop_name.as_str()) {
+                " *"
+            } else {
+                ""
+            };
+            let type_str = match &prop.value_type {
+                ValueType::String => "string",
+                ValueType::Integer => "integer",
+                ValueType::Float => "float",
+                ValueType::Boolean => "boolean",
+                ValueType::Array => "array",
+                ValueType::Object => "object",
+                ValueType::Any => "any",
+            };
+            let default_str = prop
+                .default
+                .as_ref()
+                .map(|v| match v {
+                    nemo_config::Value::String(s) => format!(" = \"{}\"", s),
+                    nemo_config::Value::Integer(n) => format!(" = {}", n),
+                    nemo_config::Value::Float(f) => format!(" = {}", f),
+                    nemo_config::Value::Bool(b) => format!(" = {}", b),
+                    _ => String::new(),
+                })
+                .unwrap_or_default();
+            let row = format!("{}{}: {}{}", prop_name, req, type_str, default_str);
+            out.push_str(&format!(
+                "            <label id=\"{}_prop_{}\" text=\"{}\" size=\"sm\" />\n",
+                name,
+                i,
+                xml_escape(&row)
+            ));
+        }
+    }
 
-    // Example section
+    // Live preview — skip data-dependent components that show "No data" without a source
     out.push_str(&format!(
-        "            <label id=\"{}_example_label\" text=\"Example\" size=\"md\" />\n",
+        "            <label id=\"{}_preview_label\" text=\"Preview\" size=\"md\" />\n",
         name
     ));
-    out.push_str(&format!(
-        "            <tabs id=\"{}_example_tabs\" tabs='[\"Preview\",\"XML\"]'>\n",
-        name
-    ));
-    // Preview tab
-    out.push_str(&format!(
-        "              <panel id=\"{}_preview\">\n",
-        name
-    ));
-    out.push_str(&format!(
-        "                <{} />\n",
-        name
-    ));
-    out.push_str("              </panel>\n");
-    // XML tab
-    out.push_str(&format!(
-        "              <panel id=\"{}_xml\">\n",
-        name
-    ));
-    out.push_str(&format!(
-        "                <code-editor id=\"{}_code\" language=\"xml\" line-number=\"false\" searchable=\"false\" default-value=\"{}\" />\n",
-        name,
-        escaped_snippet
-    ));
-    out.push_str("              </panel>\n");
-    out.push_str("            </tabs>\n");
+    match comp.category {
+        ComponentCategory::Layout => {
+            out.push_str(&format!("            {}\n", generate_layout_preview(name)));
+        }
+        _ => {
+            out.push_str(&format!("            {}\n", generate_preview_element(comp)));
+        }
+    }
 
     out.push_str("          </stack>\n");
     out.push_str("        </panel>\n");
@@ -241,7 +349,9 @@ fn generate_home_page(registry: &ComponentRegistry) -> String {
     let mut out = String::new();
     out.push_str("        <panel id=\"page_home\">\n");
     out.push_str("          <stack id=\"home_inner\" direction=\"vertical\" spacing=\"16\" padding=\"32\">\n");
-    out.push_str("            <label id=\"home_title\" text=\"Nemo Component Storybook\" size=\"xl\" />\n");
+    out.push_str(
+        "            <label id=\"home_title\" text=\"Nemo Component Storybook\" size=\"xl\" />\n",
+    );
     out.push_str("            <text id=\"home_desc\" content=\"Select a component from the sidebar to view its documentation, properties, and live examples.\" />\n");
     out.push_str(&format!(
         "            <label id=\"home_count\" text=\"{} components available\" size=\"sm\" />\n",
@@ -273,14 +383,16 @@ pub fn generate_storybook_xml() -> String {
 
     // Layout
     out.push_str("  <layout type=\"stack\">\n");
-    out.push_str("    <stack id=\"root_row\" direction=\"horizontal\" spacing=\"0\" width=\"1200\">\n\n");
+    out.push_str(
+        "    <stack id=\"root_row\" direction=\"horizontal\" spacing=\"0\" width=\"1200\">\n\n",
+    );
 
     // Sidebar
     out.push_str(&generate_sidebar(&registry));
     out.push('\n');
 
     // Content area
-    out.push_str("      <stack id=\"content_area\" direction=\"vertical\" spacing=\"0\" flex=\"1.0\" scroll=\"true\">\n\n");
+    out.push_str("      <stack id=\"content_area\" direction=\"vertical\" spacing=\"0\" flex=\"1.0\" scroll=\"true\" padding=\"8\">\n\n");
 
     // Home page
     out.push_str(&generate_home_page(&registry));
@@ -313,31 +425,23 @@ pub fn generate_storybook_xml() -> String {
         names
     };
 
-    let page_ids_json = all_names
-        .iter()
-        .map(|n| format!("\"page_{}\"", n))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let comp_names_json = all_names
+    // Button on-click handler: call_handler passes (component_id, event_data).
+    // component_id for a nav button is "nav_{name}"; derive the page from "page_{name}".
+    let names_rhai = all_names
         .iter()
         .map(|n| format!("\"{}\"", n))
         .collect::<Vec<_>>()
         .join(", ");
 
     out.push_str("  <script lang=\"rhai\"><![CDATA[\n");
-    out.push_str(&format!("    let PAGE_IDS = [{}];\n", page_ids_json));
-    out.push_str(&format!("    let COMPONENT_NAMES = [{}];\n\n", comp_names_json));
-    out.push_str("    fn navigate_to(component_name) {\n");
-    out.push_str("        for id in PAGE_IDS {\n");
-    out.push_str("            set_component_property(id, \"visible\", id == \"page_\" + component_name);\n");
-    out.push_str("        }\n");
-    out.push_str("    }\n\n");
-    out.push_str("    fn on_search_change(value) {\n");
-    out.push_str("        for name in COMPONENT_NAMES {\n");
-    out.push_str("            let btn_id = \"nav_\" + name;\n");
-    out.push_str("            let visible = value == \"\" || name.contains(value);\n");
-    out.push_str("            set_component_property(btn_id, \"visible\", visible);\n");
-    out.push_str("        }\n");
+    out.push_str("    fn navigate_to(component_id, event_data) {\n");
+    out.push_str("      set_component_property(\"page_home\", \"visible\", false);\n");
+    out.push_str(&format!("      let names = [{}];\n", names_rhai));
+    out.push_str("      for name in names {\n");
+    out.push_str(
+        "        set_component_property(\"page_\" + name, \"visible\", \"nav_\" + name == component_id);\n",
+    );
+    out.push_str("      }\n");
     out.push_str("    }\n");
     out.push_str("  ]]></script>\n");
 
@@ -358,7 +462,7 @@ pub fn generate_storybook_xml_to_file(path: &std::path::Path) -> anyhow::Result<
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nemo_registry::{ComponentCategory, ComponentRegistry, register_builtin_components};
+    use nemo_registry::{register_builtin_components, ComponentCategory, ComponentRegistry};
 
     #[test]
     fn test_generate_storybook_xml_is_valid_xml() {
@@ -426,12 +530,11 @@ mod tests {
     }
 
     #[test]
-    fn test_generated_xml_has_property_table_data_for_button() {
+    fn test_generated_xml_has_property_rows_for_button() {
         let xml = generate_storybook_xml();
-        // Button page should have property table data
-        assert!(xml.contains("page_button"));
-        // Should contain button properties like "label", "variant"
-        assert!(xml.contains("\"label\"") || xml.contains("label"));
+        assert!(xml.contains("page_button"), "Missing button page");
+        // Button has a required "label" property — should appear as a label row
+        assert!(xml.contains("label *: string"), "Missing label property row for button");
     }
 
     #[test]
@@ -461,5 +564,68 @@ mod tests {
         let contents = std::fs::read_to_string(&path).unwrap();
         assert!(contents.contains("<nemo>"));
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn test_generated_xml_has_script_section() {
+        let xml = generate_storybook_xml();
+        assert!(
+            xml.contains("<script lang=\"rhai\">"),
+            "Generated XML missing Rhai script section"
+        );
+        assert!(
+            xml.contains("fn navigate_to(component_id, event_data)"),
+            "Script section missing navigate_to function with correct signature"
+        );
+    }
+
+    #[test]
+    fn test_nav_buttons_have_on_click() {
+        let xml = generate_storybook_xml();
+        assert!(
+            xml.contains("on-click=\"navigate_to\""),
+            "Nav buttons missing on-click handler"
+        );
+    }
+
+    #[test]
+    fn test_component_pages_initially_hidden() {
+        let xml = generate_storybook_xml();
+        assert!(
+            xml.contains("visible=\"false\""),
+            "Component pages should start hidden"
+        );
+        // Home page must NOT be hidden
+        assert!(
+            !xml.contains("id=\"page_home\" visible=\"false\""),
+            "Home page must not be hidden initially"
+        );
+    }
+
+    #[test]
+    fn test_generated_xml_has_app_config() {
+        let xml = generate_storybook_xml();
+        assert!(xml.contains("<app"), "Missing <app> element");
+        assert!(xml.contains("<window"), "Missing <window> element");
+        assert!(xml.contains("Nemo Storybook"), "Missing app title");
+    }
+
+    #[test]
+    fn test_generated_xml_has_layout() {
+        let xml = generate_storybook_xml();
+        assert!(xml.contains("<layout"), "Missing <layout> element");
+        assert!(xml.contains("content_area"), "Missing content_area");
+        assert!(xml.contains("root_row"), "Missing root_row stack");
+    }
+
+    #[test]
+    fn test_preview_element_has_required_props() {
+        let xml = generate_storybook_xml();
+        // button requires "label" — the preview element must include label="placeholder"
+        assert!(xml.contains("page_button"), "Missing button page");
+        assert!(
+            xml.contains("label=\"placeholder\""),
+            "Preview element missing required label prop"
+        );
     }
 }
