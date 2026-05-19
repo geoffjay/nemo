@@ -140,7 +140,7 @@ fn generate_chart_preview(name: &str) -> String {
         )
         .to_string(),
         "bubble_chart" => concat!(
-            "<bubble_chart id=\"bubble_chart_preview_ex\" x_field=\"x\" y_field=\"y\"",
+            "<bubble_chart id=\"bubble_chart_preview_ex\" x_field=\"x\" y_field=\"y\" size_field=\"r\"",
             " data='[{\"x\":1,\"y\":10,\"r\":5},{\"x\":2,\"y\":20,\"r\":10},{\"x\":3,\"y\":15,\"r\":8}]'",
             " />",
         )
