@@ -42,30 +42,114 @@ fn xml_escape(s: &str) -> String {
 
 /// Generate an actual XML element for the live preview panel, with required
 /// properties filled in so the layout builder's `MissingProperty` check passes.
+/// Charts and Data components also receive inline sample data so they render
+/// immediately without needing a runtime data source.
 fn generate_preview_element(comp: &ComponentDescriptor) -> String {
-    let name = &comp.name;
-    let schema = &comp.schema;
-
-    // Explicit id prevents __anon_N collisions across pages in the flat component map
-    let mut attrs = format!(" id=\"{}_preview_ex\"", name);
-    for prop_name in &schema.required {
-        let value = if let Some(prop) = schema.properties.get(prop_name) {
-            match &prop.value_type {
-                ValueType::String => "placeholder",
-                ValueType::Integer => "0",
-                ValueType::Float => "0.0",
-                ValueType::Boolean => "false",
-                ValueType::Array => "[]",
-                ValueType::Object => "{}",
-                ValueType::Any => "",
+    match comp.category {
+        ComponentCategory::Data => generate_data_preview(&comp.name),
+        ComponentCategory::Charts => generate_chart_preview(&comp.name),
+        _ => {
+            let name = &comp.name;
+            let schema = &comp.schema;
+            let mut attrs = format!(" id=\"{}_preview_ex\"", name);
+            for prop_name in &schema.required {
+                let value = if let Some(prop) = schema.properties.get(prop_name) {
+                    match &prop.value_type {
+                        ValueType::String => "placeholder",
+                        ValueType::Integer => "0",
+                        ValueType::Float => "0.0",
+                        ValueType::Boolean => "false",
+                        ValueType::Array => "[]",
+                        ValueType::Object => "{}",
+                        ValueType::Any => "",
+                    }
+                } else {
+                    "placeholder"
+                };
+                attrs.push_str(&format!(" {}=\"{}\"", prop_name, xml_escape(value)));
             }
-        } else {
-            "placeholder"
-        };
-        attrs.push_str(&format!(" {}=\"{}\"", prop_name, xml_escape(value)));
+            format!("<{}{} />", name, attrs)
+        }
     }
+}
 
-    format!("<{}{} />", name, attrs)
+fn generate_data_preview(name: &str) -> String {
+    match name {
+        "table" => concat!(
+            "<table id=\"table_preview_ex\"",
+            " columns='[{\"key\":\"name\",\"label\":\"Name\"},{\"key\":\"score\",\"label\":\"Score\"}]'",
+            " data='[{\"name\":\"Alice\",\"score\":\"95\"},{\"name\":\"Bob\",\"score\":\"87\"},{\"name\":\"Carol\",\"score\":\"92\"}]'",
+            " />",
+        )
+        .to_string(),
+        "list" => concat!(
+            "<list id=\"list_preview_ex\"",
+            " items='[\"Item One\",\"Item Two\",\"Item Three\"]'",
+            " />",
+        )
+        .to_string(),
+        "tree" => concat!(
+            "<tree id=\"tree_preview_ex\"",
+            " items='[{\"label\":\"Root\",\"children\":[{\"label\":\"Child A\"},{\"label\":\"Child B\"}]}]'",
+            " />",
+        )
+        .to_string(),
+        _ => format!(
+            "<label id=\"{}_preview_note\" text=\"No sample data available.\" size=\"sm\" />",
+            name
+        ),
+    }
+}
+
+fn generate_chart_preview(name: &str) -> String {
+    // Sample series data with x/y keys used by most charts
+    let xy = "[{&quot;x&quot;:1,&quot;y&quot;:10},{&quot;x&quot;:2,&quot;y&quot;:30},{&quot;x&quot;:3,&quot;y&quot;:20},{&quot;x&quot;:4,&quot;y&quot;:40},{&quot;x&quot;:5,&quot;y&quot;:25}]";
+    let xy2 = "[{&quot;x&quot;:1,&quot;a&quot;:10,&quot;b&quot;:20},{&quot;x&quot;:2,&quot;a&quot;:25,&quot;b&quot;:15},{&quot;x&quot;:3,&quot;a&quot;:18,&quot;b&quot;:30}]";
+
+    match name {
+        "line_chart" | "bar_chart" | "column_chart" | "scatter_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" x_field=\"x\" y_field=\"y\" data=\"{d}\" />",
+            n = name,
+            d = xy
+        ),
+        "realtime_chart" => format!(
+            "<realtime_chart id=\"realtime_chart_preview_ex\" x_field=\"x\" y_fields='[\"y\"]' data=\"{d}\" />",
+            d = xy
+        ),
+        "area_chart" => format!(
+            "<area_chart id=\"area_chart_preview_ex\" x_field=\"x\" y_fields='[\"a\",\"b\"]' data=\"{d}\" />",
+            d = xy2
+        ),
+        "stacked_column_chart" | "clustered_column_chart" | "stacked_bar_chart"
+        | "clustered_bar_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" x_field=\"x\" y_fields='[\"a\",\"b\"]' data=\"{d}\" />",
+            n = name,
+            d = xy2
+        ),
+        "pie_chart" => concat!(
+            "<pie_chart id=\"pie_chart_preview_ex\" value_field=\"value\"",
+            " data='[{\"label\":\"Alpha\",\"value\":40},{\"label\":\"Beta\",\"value\":35},{\"label\":\"Gamma\",\"value\":25}]'",
+            " />",
+        )
+        .to_string(),
+        "candlestick_chart" => concat!(
+            "<candlestick_chart id=\"candlestick_chart_preview_ex\"",
+            " x_field=\"t\" open_field=\"o\" high_field=\"h\" low_field=\"l\" close_field=\"c\"",
+            " data='[{\"t\":\"Jan\",\"o\":100,\"h\":120,\"l\":90,\"c\":110},{\"t\":\"Feb\",\"o\":110,\"h\":130,\"l\":100,\"c\":105}]'",
+            " />",
+        )
+        .to_string(),
+        "bubble_chart" => concat!(
+            "<bubble_chart id=\"bubble_chart_preview_ex\" x_field=\"x\" y_field=\"y\"",
+            " data='[{\"x\":1,\"y\":10,\"r\":5},{\"x\":2,\"y\":20,\"r\":10},{\"x\":3,\"y\":15,\"r\":8}]'",
+            " />",
+        )
+        .to_string(),
+        _ => format!(
+            "<label id=\"{n}_preview_note\" text=\"Sample data preview not available.\" size=\"sm\" />",
+            n = name
+        ),
+    }
 }
 
 /// Returns inline XML showing a Layout component with placeholder children.
@@ -221,23 +305,11 @@ fn generate_component_page(comp: &ComponentDescriptor) -> String {
         name
     ));
     match comp.category {
-        ComponentCategory::Charts | ComponentCategory::Data => {
-            out.push_str(&format!(
-                "            <label id=\"{}_preview_note\" text=\"Connect a data source at runtime to preview this component.\" size=\"sm\" />\n",
-                name
-            ));
-        }
         ComponentCategory::Layout => {
-            out.push_str(&format!(
-                "            {}\n",
-                generate_layout_preview(name)
-            ));
+            out.push_str(&format!("            {}\n", generate_layout_preview(name)));
         }
         _ => {
-            out.push_str(&format!(
-                "            {}\n",
-                generate_preview_element(comp)
-            ));
+            out.push_str(&format!("            {}\n", generate_preview_element(comp)));
         }
     }
 
