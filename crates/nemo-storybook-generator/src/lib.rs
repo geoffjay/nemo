@@ -120,11 +120,16 @@ fn generate_chart_preview(name: &str) -> String {
             "<area_chart id=\"area_chart_preview_ex\" x_field=\"x\" y_fields='[\"a\",\"b\"]' data=\"{d}\" />",
             d = xy2
         ),
-        "stacked_column_chart" | "clustered_column_chart" | "stacked_bar_chart"
-        | "clustered_bar_chart" => format!(
+        // Vertical multi-series: x_field + y_fields
+        "stacked_column_chart" | "clustered_column_chart" => format!(
             "<{n} id=\"{n}_preview_ex\" x_field=\"x\" y_fields='[\"a\",\"b\"]' data=\"{d}\" />",
             n = name,
             d = xy2
+        ),
+        // Horizontal multi-series: y_field (category axis) + x_fields (value series)
+        "stacked_bar_chart" | "clustered_bar_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" y_field=\"cat\" x_fields='[\"a\",\"b\"]' data='[{{\"cat\":\"P\",\"a\":10,\"b\":20}},{{\"cat\":\"Q\",\"a\":15,\"b\":25}}]' />",
+            n = name
         ),
         "pie_chart" => concat!(
             "<pie_chart id=\"pie_chart_preview_ex\" value_field=\"value\"",
@@ -145,6 +150,24 @@ fn generate_chart_preview(name: &str) -> String {
             " />",
         )
         .to_string(),
+        "heatmap_chart" => concat!(
+            "<heatmap_chart id=\"heatmap_chart_preview_ex\" x_field=\"col\" y_field=\"row\" value_field=\"val\"",
+            " data='[{\"col\":\"A\",\"row\":\"X\",\"val\":10},{\"col\":\"B\",\"row\":\"X\",\"val\":30},{\"col\":\"A\",\"row\":\"Y\",\"val\":20},{\"col\":\"B\",\"row\":\"Y\",\"val\":40}]'",
+            " />",
+        )
+        .to_string(),
+        "radar_chart" => concat!(
+            "<radar_chart id=\"radar_chart_preview_ex\"",
+            " categories='[\"Speed\",\"Power\",\"Agility\"]'",
+            " y_fields='[\"val\"]'",
+            " data='[{\"Speed\":80,\"Power\":70,\"Agility\":90,\"val\":80}]'",
+            " />",
+        )
+        .to_string(),
+        "pyramid_chart" | "funnel_chart" => format!(
+            "<{n} id=\"{n}_preview_ex\" label_field=\"stage\" value_field=\"count\" data='[{{\"stage\":\"Top\",\"count\":100}},{{\"stage\":\"Mid\",\"count\":60}},{{\"stage\":\"Bottom\",\"count\":30}}]' />",
+            n = name
+        ),
         _ => format!(
             "<label id=\"{n}_preview_note\" text=\"Sample data preview not available.\" size=\"sm\" />",
             n = name
