@@ -70,6 +70,13 @@ The two biggest corrections versus the roadmap:
 
 ## 3. Foundational Workstream A — CLI Subcommand Architecture
 
+> **Status: ✅ Implemented (2026-07-10).** `Args` now carries an optional
+> `command` (`crates/nemo/src/args.rs`); `main` dispatches to
+> `crate::commands::{new,dev,validate}` with the default (no-subcommand) path
+> preserved in `run_app`. `new`/`dev`/`validate` are wired with `--help` and
+> honest not-yet-implemented stubs for Workstreams B/C/D. Covered by 8 unit
+> tests (incl. the no-subcommand default guard); `cargo fmt`/`clippy` clean.
+
 **Why first:** `nemo new`, `nemo dev`, `nemo validate` (and later `nemo storybook`,
 `nemo screenshot`) all require subcommands. Today the CLI is a flat flag parser
 (`crates/nemo/src/args.rs`, `#[derive(Parser)]` with no subcommands). This is the

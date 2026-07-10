@@ -18,6 +18,7 @@ use tracing_subscriber::FmtSubscriber;
 
 mod app;
 mod args;
+mod commands;
 mod components;
 pub mod config;
 mod project;
@@ -26,7 +27,7 @@ mod theme;
 mod window;
 mod workspace;
 
-use args::Args;
+use args::{Args, Command};
 use config::NemoConfig;
 use project::ActiveProject;
 use window::get_window_options;
@@ -49,6 +50,19 @@ fn main() -> Result<()> {
     tracing::subscriber::set_global_default(subscriber)
         .context("Failed to set tracing subscriber")?;
 
+    match args.command {
+        Some(Command::New(new_args)) => commands::new::run(new_args),
+        Some(Command::Dev(dev_args)) => commands::dev::run(dev_args),
+        Some(Command::Validate(validate_args)) => commands::validate::run(validate_args),
+        None => run_app(args),
+    }
+}
+
+/// Runs the Nemo application (the default, no-subcommand path).
+///
+/// Handles headless/validate modes when `--app-config` is provided, otherwise
+/// launches the GPUI window with router-based navigation.
+fn run_app(args: Args) -> Result<()> {
     info!("Nemo v{} starting...", env!("CARGO_PKG_VERSION"));
 
     // Load NemoConfig (config.toml)
