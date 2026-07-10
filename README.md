@@ -26,10 +26,54 @@ A configuration-driven desktop application framework. Define UI, data sources, a
 
 Built on [GPUI](https://gpui.rs).
 
-## Quick Start
+## Installation
+
+### Install script (macOS / Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/geoffjay/nemo/main/scripts/install.sh | sh
+```
+
+Installs the latest release binary to `~/.local/bin` (override with `NEMO_INSTALL_DIR`,
+or pin a version with `NEMO_VERSION=v0.6.0`).
+
+### Homebrew (macOS / Linux)
+
+```bash
+brew install geoffjay/nemo/nemo
+```
+
+### Prebuilt binaries
+
+Download the archive for your platform from the [latest release][release-latest]
+and verify it against `checksums.txt`.
+
+- **macOS:** the app and binary are **not code-signed or notarized**, so Gatekeeper
+  blocks them on first launch. Remove the quarantine attribute after downloading:
+
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/Nemo.app   # app bundle
+  xattr -d  com.apple.quarantine ./nemo                   # CLI binary
+  ```
+
+- **Linux:** the `.tar.gz` binary is dynamically linked. Either install the `.deb`
+  (which pulls in its dependencies automatically) or install the runtime libraries:
+
+  ```bash
+  sudo apt-get install -y libfontconfig1 libfreetype6 libvulkan1 \
+    libxcb1 libxkbcommon0 libxkbcommon-x11-0 libwayland-client0
+  ```
+
+### Build from source
 
 ```bash
 cargo build --release
+# binary at target/release/nemo
+```
+
+## Quick Start
+
+```bash
 nemo --app-config app.xml
 ```
 
@@ -87,6 +131,7 @@ MIT OR Apache-2.0
 <!-- links -->
 
 [logo]: docs/assets/nemo.png
+[release-latest]: https://github.com/geoffjay/nemo/releases/latest
 [docs]: https://geoffjay.github.io/nemo
 [docs-nemo-plugin]: https://docs.rs/nemo-plugin
 [docs-nemo-plugin-api]: https://docs.rs/nemo-plugin-api

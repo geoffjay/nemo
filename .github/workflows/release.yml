@@ -17,8 +17,14 @@ env:
   APP_NAME: Nemo
 
 jobs:
+  ci:
+    name: CI
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
   build:
     name: Build (${{ matrix.target }})
+    needs: ci
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -160,6 +166,26 @@ jobs:
           name: ${{ env.APP_NAME }}-${{ matrix.target }}
           path: ${{ env.APP_NAME }}-${{ matrix.target }}.zip
 
+      - name: Install cargo-deb (Linux)
+        if: runner.os == 'Linux'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deb
+
+      - name: Build Debian package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # --no-build reuses the release binary already built above.
+          # cargo-deb rewrites target/release -> target/<triple>/release for --target.
+          cargo deb -p nemo --no-build --target ${{ matrix.target }} --output "${{ env.BINARY_NAME }}-${{ matrix.target }}.deb"
+
+      - name: Upload Debian package artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}-deb
+          path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.deb
+
   release:
     name: Create Release
     needs: build
@@ -196,10 +222,13 @@ jobs:
       - name: Generate checksums
         run: |
           cd artifacts
-          sha256sum *.tar.gz *.zip > checksums.txt
+          sha256sum *.tar.gz *.zip *.deb > checksums.txt
           cat checksums.txt
 
+      # Re-running a tag build should not silently clobber a published release.
+      # Only allow the manual (workflow_dispatch) path to replace an existing one.
       - name: Delete existing release (if any)
+        if: github.event_name == 'workflow_dispatch'
         run: gh release delete "${{ steps.version.outputs.version }}" --yes || true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -214,7 +243,58 @@ jobs:
           prerelease: ${{ contains(steps.version.outputs.version, '-') }}
           generate_release_notes: true
           fail_on_unmatched_files: true
+          # Prepended above the auto-generated notes.
+          body: |
+            ## Installation
+
+            **Install script (macOS / Linux):**
+
+            ```sh
+            curl -fsSL https://raw.githubusercontent.com/geoffjay/nemo/main/scripts/install.sh | sh
+            ```
+
+            **Homebrew (macOS / Linux):**
+
+            ```sh
+            brew install geoffjay/nemo/nemo
+            ```
+
+            **Prebuilt binaries:** download the archive for your platform from the
+            assets below and verify it against `checksums.txt`.
+
+            ### macOS
+
+            The app and binary are **not code-signed or notarized**, so Gatekeeper
+            will block them on first launch. After downloading, remove the
+            quarantine attribute:
+
+            ```sh
+            # App bundle (Nemo-*.zip), once moved to /Applications
+            xattr -dr com.apple.quarantine /Applications/Nemo.app
+
+            # CLI binary (nemo-*.tar.gz)
+            xattr -d com.apple.quarantine ./nemo
+            ```
+
+            ### Linux
+
+            The `.tar.gz` binary is dynamically linked. Install the runtime
+            libraries (Debian/Ubuntu package names):
+
+            ```sh
+            sudo apt-get install -y libfontconfig1 libfreetype6 libvulkan1 \
+              libxcb1 libxkbcommon0 libxkbcommon-x11-0 libwayland-client0
+            ```
+
+            Or install the `.deb`, which pulls these in automatically:
+
+            ```sh
+            sudo apt install ./nemo-*.deb
+            ```
+
+            ---
           files: |
             artifacts/*.tar.gz
             artifacts/*.zip
+            artifacts/*.deb
             artifacts/checksums.txt
