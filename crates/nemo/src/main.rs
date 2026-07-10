@@ -11,8 +11,10 @@ use gpui::*;
 use gpui_component::Root;
 use gpui_router::{init as router_init, use_navigate};
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tracing::info;
 use tracing_subscriber::FmtSubscriber;
 
@@ -38,8 +40,11 @@ use workspace::actions::{
 use workspace::utils::{apply_theme_from_runtime, create_runtime};
 use workspace::{FooterBar, HeaderBar, Workspace, WorkspaceArgs};
 
+/// Default debounce for `--watch` on the default run path (`nemo dev` sets its own).
+const DEFAULT_WATCH_DEBOUNCE_MS: u64 = 200;
+
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let mut args = Args::parse();
 
     let subscriber = FmtSubscriber::builder()
         .with_max_level(args.log_level())
@@ -50,19 +55,26 @@ fn main() -> Result<()> {
     tracing::subscriber::set_global_default(subscriber)
         .context("Failed to set tracing subscriber")?;
 
-    match args.command {
+    // Take the command out so `args` stays whole for the arms that reuse it.
+    match args.command.take() {
         Some(Command::New(new_args)) => commands::new::run(new_args),
-        Some(Command::Dev(dev_args)) => commands::dev::run(dev_args),
+        Some(Command::Dev(dev_args)) => commands::dev::run(args, dev_args),
         Some(Command::Validate(validate_args)) => commands::validate::run(validate_args),
-        None => run_app(args),
+        None => {
+            let watch = args
+                .watch
+                .then(|| Duration::from_millis(DEFAULT_WATCH_DEBOUNCE_MS));
+            run_app(args, watch)
+        }
     }
 }
 
 /// Runs the Nemo application (the default, no-subcommand path).
 ///
 /// Handles headless/validate modes when `--app-config` is provided, otherwise
-/// launches the GPUI window with router-based navigation.
-fn run_app(args: Args) -> Result<()> {
+/// launches the GPUI window with router-based navigation. When `watch` is
+/// `Some(debounce)`, a file watcher hot-reloads the app on config changes.
+pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
     info!("Nemo v{} starting...", env!("CARGO_PKG_VERSION"));
 
     // Load NemoConfig (config.toml)
@@ -185,6 +197,10 @@ fn run_app(args: Args) -> Result<()> {
             let nemo_config = nemo_config.clone();
             let ws_args = ws_args.clone();
             let app_config_path = app_config_path.clone();
+            // Captured for hot-reload watching before the values below are moved
+            // into the workspace constructor.
+            let watch_cfg = app_config_path.clone();
+            let watch_exts = ws_args.extension_dirs.clone();
 
             let ws = cx.new(|cx| {
                 let mut current_route = "/".to_string();
@@ -251,6 +267,8 @@ fn run_app(args: Args) -> Result<()> {
                     focus_handle,
                     current_route,
                     loader,
+                    pending_reload: false,
+                    _watcher: None,
                 }
             });
 
@@ -260,6 +278,21 @@ fn run_app(args: Args) -> Result<()> {
             use_navigate(cx)(route.into());
             if needs_refresh {
                 window.refresh();
+            }
+
+            // Start hot-reload file watching when requested (nemo dev / --watch).
+            if let Some(debounce) = watch {
+                if let Some(cfg) = watch_cfg.as_ref() {
+                    let mut watch_paths: Vec<PathBuf> = Vec::new();
+                    match cfg.parent() {
+                        Some(parent) if !parent.as_os_str().is_empty() => {
+                            watch_paths.push(parent.to_path_buf());
+                        }
+                        _ => watch_paths.push(PathBuf::from(".")),
+                    }
+                    watch_paths.extend(watch_exts.iter().cloned());
+                    ws.update(cx, |ws, cx| ws.start_watching(watch_paths, debounce, cx));
+                }
             }
 
             *workspace_entity.borrow_mut() = Some(ws.clone());

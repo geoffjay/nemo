@@ -36,7 +36,7 @@ The two biggest corrections versus the roadmap:
 |--------------|--------|-------|
 | §2.1 Fix `futures` conflict | ✅ Done | Resolved in the workspace; no longer reproduces. |
 | §2.2 `nemo new` scaffold | ❌ Not started | Needs CLI subcommand support first. |
-| §2.3 Hot-reload dev mode | 🟡 90% infra exists | Full rebuild path present; needs a watcher + trigger. |
+| §2.3 Hot-reload dev mode | ✅ Done | `nemo dev` + `--watch`; watcher drives the existing full-rebuild path. See §5. |
 | §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app`, Linux `.deb`, Windows `.zip`. Gaps: `.dmg`, AppImage, `.rpm`, `.msi`, signing. |
 | §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew formula + generator, binstall metadata, GitHub Releases + checksums. Gaps: create the tap repo, auto-push formula. |
 | §2.6 `validate` subcommand | 🟡 Flag exists | `--validate-only` works (`args.rs:38`); promote to a subcommand with strict mode. |
@@ -185,6 +185,16 @@ with `examples/` by generating from them, not copying by hand.
 ---
 
 ## 5. Workstream C — Hot-Reload Dev Mode (§2.3)
+
+> **Status: ✅ Implemented (2026-07-10).** `nemo dev --app-config app.xml` (and a
+> `--watch` flag on the default path) launches the app and hot-reloads it on
+> config/script changes. A `notify` watcher (`Workspace::start_watching`) polls a
+> debounced channel and sets a `pending_reload` flag processed in `render`, which
+> calls the extracted `Workspace::perform_reload` (shared with `ctrl-shift-r`).
+> Changes are filtered by `path_is_watchable` (`.xml`/`.rhai`/`.toml`, skipping
+> temp/hidden files and `target`/`.git`/`node_modules`). Verified end-to-end: a
+> `touch` of `app.xml` reloaded the running app in ~0.7 s. Covered by 4 filter
+> unit tests; `cargo fmt`/`clippy` clean; full `nemo` suite (162 tests) green.
 
 **Objective:** `nemo dev --app-config app.xml` runs the app and reloads on change.
 

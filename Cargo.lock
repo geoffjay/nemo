@@ -4550,6 +4550,7 @@ dependencies = [
  "nemo-macros",
  "nemo-plugin-api",
  "nemo-registry",
+ "notify 6.1.1",
  "proptest",
  "serde",
  "serde_json",

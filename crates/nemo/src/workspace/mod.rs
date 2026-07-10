@@ -6,8 +6,10 @@ use gpui_component::ActiveTheme;
 use gpui_component::Root;
 use gpui_component::WindowExt as _;
 use gpui_router::{use_navigate, Route, Routes};
-use std::path::PathBuf;
+use notify::{Event, EventKind, RecursiveMode, Watcher};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tracing::info;
 
 pub mod actions;
@@ -56,6 +58,11 @@ pub struct Workspace {
     pub current_route: String,
     /// The project loader view entity (persists across renders).
     pub loader: Entity<ProjectLoaderView>,
+    /// Deferred hot-reload request, set by the `nemo dev` file watcher and
+    /// processed in `render` (where `Window` access is available).
+    pub pending_reload: bool,
+    /// File watcher kept alive for the app's lifetime; not read directly.
+    pub(crate) _watcher: Option<notify::RecommendedWatcher>,
 }
 
 impl Workspace {
@@ -148,6 +155,12 @@ impl Workspace {
     }
 
     fn reload_config(&mut self, _: &ReloadConfig, window: &mut Window, cx: &mut Context<Self>) {
+        self.perform_reload(window, cx);
+    }
+
+    /// Rebuild the entire app from the current config path. Shared by the
+    /// `ReloadConfig` action (ctrl-shift-r) and the `nemo dev` file watcher.
+    fn perform_reload(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let Some(config_path) = self.current_config_path.clone() else {
             return;
         };
@@ -185,6 +198,76 @@ impl Workspace {
                 );
             }
         }
+    }
+
+    /// Watch `paths` and request a hot-reload when a relevant file (`.xml`,
+    /// `.rhai`, `.toml`) changes. Directories are watched recursively. Used by
+    /// `nemo dev` and the `--watch` flag.
+    pub fn start_watching(
+        &mut self,
+        paths: Vec<PathBuf>,
+        debounce: Duration,
+        cx: &mut Context<Self>,
+    ) {
+        let (tx, rx) = std::sync::mpsc::channel::<notify::Result<Event>>();
+        let mut watcher = match notify::recommended_watcher(move |res| {
+            let _ = tx.send(res);
+        }) {
+            Ok(w) => w,
+            Err(e) => {
+                tracing::error!("Failed to create file watcher: {}", e);
+                return;
+            }
+        };
+
+        for path in &paths {
+            let mode = if path.is_dir() {
+                RecursiveMode::Recursive
+            } else {
+                RecursiveMode::NonRecursive
+            };
+            match watcher.watch(path, mode) {
+                Ok(()) => tracing::info!("Watching {:?} for changes", path),
+                Err(e) => tracing::warn!("Failed to watch {:?}: {}", path, e),
+            }
+        }
+        // Keep the watcher alive for the lifetime of the workspace.
+        self._watcher = Some(watcher);
+
+        let poll = Duration::from_millis(120);
+        cx.spawn(
+            async move |this: WeakEntity<Self>, cx: &mut AsyncApp| loop {
+                cx.background_executor().timer(poll).await;
+
+                // Collect events since the last poll; decide whether to reload.
+                let mut changed = false;
+                while let Ok(res) = rx.try_recv() {
+                    if let Ok(event) = res {
+                        if reload_relevant(&event) {
+                            changed = true;
+                        }
+                    }
+                }
+                if !changed {
+                    continue;
+                }
+
+                // Let a burst of edits settle, then drain anything that arrived.
+                cx.background_executor().timer(debounce).await;
+                while rx.try_recv().is_ok() {}
+
+                let alive = this
+                    .update(cx, |ws, cx| {
+                        ws.pending_reload = true;
+                        cx.notify();
+                    })
+                    .is_ok();
+                if !alive {
+                    break;
+                }
+            },
+        )
+        .detach();
     }
 
     fn quit_app(&mut self, _: &QuitApp, window: &mut Window, cx: &mut Context<Self>) {
@@ -350,6 +433,43 @@ impl Workspace {
     }
 }
 
+/// Whether a filesystem event should trigger a hot-reload.
+fn reload_relevant(event: &Event) -> bool {
+    if !matches!(
+        event.kind,
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
+    ) {
+        return false;
+    }
+    event.paths.iter().any(|path| path_is_watchable(path))
+}
+
+/// Whether a changed path is one we care about: a `.xml`/`.rhai`/`.toml` source
+/// file that is not an editor temp/hidden file or under a build/VCS directory.
+fn path_is_watchable(path: &Path) -> bool {
+    let name = path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or_default();
+    // Skip editor temp files and hidden files.
+    if name.is_empty() || name.starts_with('.') || name.ends_with('~') {
+        return false;
+    }
+    // Skip build artifacts and VCS directories.
+    if path.components().any(|c| {
+        matches!(
+            c.as_os_str().to_str(),
+            Some("target") | Some(".git") | Some("node_modules")
+        )
+    }) {
+        return false;
+    }
+    matches!(
+        path.extension().and_then(|e| e.to_str()),
+        Some("xml") | Some("rhai") | Some("toml")
+    )
+}
+
 impl Render for Workspace {
     fn render(&mut self, window: &mut Window, cx: &mut Context<'_, Self>) -> impl IntoElement {
         // Process deferred actions that need Window access
@@ -369,6 +489,10 @@ impl Render for Workspace {
             use_navigate(cx)("/".into());
             window.refresh();
             window.push_notification("Project closed", cx);
+        }
+        if self.pending_reload {
+            self.pending_reload = false;
+            self.perform_reload(window, cx);
         }
 
         let bg_color = cx.theme().colors.background;
@@ -435,5 +559,42 @@ impl Render for Workspace {
         }
 
         container
+    }
+}
+
+#[cfg(test)]
+mod watch_tests {
+    use super::path_is_watchable;
+    use std::path::Path;
+
+    #[test]
+    fn watches_config_and_script_sources() {
+        assert!(path_is_watchable(Path::new("/proj/app.xml")));
+        assert!(path_is_watchable(Path::new("/proj/scripts/handlers.rhai")));
+        assert!(path_is_watchable(Path::new("/proj/config.toml")));
+        assert!(path_is_watchable(Path::new("app.xml")));
+    }
+
+    #[test]
+    fn ignores_irrelevant_extensions() {
+        assert!(!path_is_watchable(Path::new("/proj/README.md")));
+        assert!(!path_is_watchable(Path::new("/proj/data.json")));
+        assert!(!path_is_watchable(Path::new("/proj/noext")));
+    }
+
+    #[test]
+    fn ignores_editor_temp_and_hidden_files() {
+        assert!(!path_is_watchable(Path::new("/proj/app.xml~")));
+        assert!(!path_is_watchable(Path::new("/proj/.app.xml.swp")));
+        assert!(!path_is_watchable(Path::new("/proj/.hidden.xml")));
+    }
+
+    #[test]
+    fn ignores_build_and_vcs_dirs() {
+        assert!(!path_is_watchable(Path::new("/proj/target/debug/app.xml")));
+        assert!(!path_is_watchable(Path::new("/proj/.git/config.toml")));
+        assert!(!path_is_watchable(Path::new(
+            "/proj/node_modules/pkg/thing.xml"
+        )));
     }
 }

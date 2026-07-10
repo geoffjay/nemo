@@ -38,6 +38,11 @@ pub struct Args {
     #[arg(long)]
     pub headless: bool,
 
+    /// Watch the config directory and hot-reload on changes.
+    /// Equivalent to running `nemo dev` for the current app.
+    #[arg(long)]
+    pub watch: bool,
+
     /// Validate configuration and exit.
     ///
     /// Deprecated: prefer `nemo validate <app.xml>`. Kept for backward
@@ -233,6 +238,13 @@ mod tests {
             }
             other => panic!("expected Validate, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn watch_flag_parses_on_default_path() {
+        let args = Args::try_parse_from(["nemo", "--app-config", "app.xml", "--watch"]).unwrap();
+        assert!(args.command.is_none());
+        assert!(args.watch);
     }
 
     #[test]

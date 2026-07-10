@@ -22,9 +22,9 @@ Run `nemo <command> --help` for per-command options.
 | `nemo dev` | Run an application with hot-reload on configuration changes |
 | `nemo validate <file>` | Validate a configuration file and exit |
 
-> **Rollout status:** the subcommand interface is landing incrementally. Until each
-> command is implemented it reports that the feature is not yet available and exits
-> non-zero. The default (no-command) run path below is fully supported.
+> **Rollout status:** `nemo dev` is available. `nemo new` and `nemo validate` are
+> not yet implemented and exit non-zero until their workstreams land. The default
+> (no-command) run path below is fully supported.
 
 ## Options
 
@@ -37,6 +37,7 @@ These options apply to the default run path (no command).
 | `--app-config-dirs <DIR>` | `-d` | | Additional configuration directories to scan (repeatable) |
 | `--extension-dirs <DIR>` | `-e` | `NEMO_EXTENSION_DIRS` | Extension/plugin directories, `:`-separated (repeatable) |
 | `--verbose` | `-v` | | Enable debug-level logging (global; also works with commands) |
+| `--watch` | | | Watch the config directory and hot-reload on changes (like `nemo dev`) |
 | `--headless` | | | Run without opening a window |
 | `--validate-only` | | | Deprecated — prefer `nemo validate`. Parse and validate config, then exit |
 | `--help` | `-h` | | Print help information |
@@ -54,6 +55,22 @@ nemo --app-config app.xml
 
 ```bash
 nemo --app-config app.xml --verbose
+```
+
+### Develop with hot-reload
+
+```bash
+nemo dev --app-config app.xml
+```
+
+Runs the app and reloads it automatically when `app.xml`, files under its
+directory (including `.rhai` handlers), or extension directories change.
+`--debounce-ms` tunes the settle window (default 200 ms). An invalid edit shows
+an error and leaves the last working UI running. The same behavior is available
+on the default run path via `--watch`:
+
+```bash
+nemo --app-config app.xml --watch
 ```
 
 ### Validate configuration without launching
