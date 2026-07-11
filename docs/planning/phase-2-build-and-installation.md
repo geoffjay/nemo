@@ -40,7 +40,7 @@ The two biggest corrections versus the roadmap:
 | §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app` + `.dmg`, Linux `.deb` + `.rpm`, Windows `.zip`. Gaps: AppImage, `.msi`, signing. See §7. |
 | §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew tap auto-push (gated), binstall metadata, Releases + checksums. See §8. |
 | §2.6 `validate` subcommand | ✅ Done | `nemo validate [--strict] [--format]`; `--validate-only` forwards to it. See §6. |
-| **NEW** Headless renderer / screenshots | 🟡 Spiked | Feasible (lavapipe works); blocked on a Linux GPUI feature fix that also affects all Linux runs. See §9. |
+| **NEW** Headless renderer / screenshots | 🟡 Spiked | Linux launch panic FIXED (`be2afa0`); screenshots feasible but capture path needs a compositor/offscreen iteration. See §9. |
 
 ---
 
@@ -431,13 +431,29 @@ to exist; gate it.
 >   artifacts from §7 (`.deb`/`.rpm`/tarball) therefore ship a binary that panics
 >   on launch. macOS/Windows are unaffected.
 >
-> **Fix (prerequisite for both Linux runtime *and* screenshots):** enable the
-> features on the workspace `gpui_platform` dep —
-> `features = ["font-kit", "x11", "wayland"]`. This is entangled with the
-> git-dep drift issue (§11): flipping features forces a re-resolve that pulls new
-> x11/wayland crates and can drift the rev-less `gpui` to HEAD, so it must be
-> done together with proper rev-pinning (vendor/fork `gpui-component`). After the
-> fix, re-run the spike to confirm a non-blank capture end-to-end.
+> **Fix applied (commit `be2afa0`):** added `x11` + `wayland` to the workspace
+> `gpui_platform` features (+ a `[patch.crates-io] gpui` `version = "=0.2.2"` to
+> disambiguate the two gpui candidates the linux backend surfaces). Done WITHOUT
+> rev-pinning: adding a `rev` splits the git source vs `gpui-component`'s rev-less
+> refs into two incompatible `gpui` instances (298 type errors), and
+> `cargo generate-lockfile` drifts everything to HEAD. The working recipe is:
+> keep specs rev-less, restore the good `Cargo.lock`, and run a plain
+> `cargo build` — it adds only the new x11 crates (lock diff: +282/-0, no rev
+> change). See [[gpui-git-dep-drift]].
+>
+> **Retest (run 29166629333): panic FIXED.** nemo now runs fully on Linux —
+> `Runtime initialization complete` → project loaded → theme applied, no panic,
+> stable for ~11 s. **This also fixes the Linux release binaries** (they launch
+> now). **However, the screenshot capture is still blank:** nemo reaches full
+> render state, but `import -window root` / `xwd -root` under a compositor-less
+> Xvfb capture black — GPUI's Vulkan swapchain present (lavapipe WSI) isn't
+> landing in the root pixmap the capture tools read.
+>
+> **Verdict: screenshots FEASIBLE; capture path needs one more iteration** — run
+> under a minimal compositor (nested `weston`/`mutter --headless`, or a WM +
+> backing store), capture the window id directly, or pursue Option 2 (true
+> offscreen render-to-texture). The render fundamentals (Vulkan, window, paint)
+> all work; only the present→capture plumbing on bare Xvfb remains.
 
 > **User-requested; feasibility-gated.** The payoff: automated and AI-assisted
 > workflows (e.g. the `/verify` and `/run` skills, Claude Code's vision) could
