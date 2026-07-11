@@ -169,9 +169,18 @@ jobs:
       - name: Create DMG (macOS)
         if: runner.os == 'macOS'
         run: |
-          hdiutil create -volname "${{ env.APP_NAME }}" \
-            -srcfolder "target/${{ matrix.target }}/release/${{ env.APP_NAME }}.app" \
-            -ov -format UDZO "${{ env.APP_NAME }}-${{ matrix.target }}.dmg"
+          # hdiutil intermittently reports "Resource busy" on CI runners; retry.
+          ok=0
+          for i in 1 2 3; do
+            if hdiutil create -volname "${{ env.APP_NAME }}" \
+                 -srcfolder "target/${{ matrix.target }}/release/${{ env.APP_NAME }}.app" \
+                 -nospotlight -ov -format UDZO \
+                 "${{ env.APP_NAME }}-${{ matrix.target }}.dmg"; then
+              ok=1; break
+            fi
+            echo "hdiutil attempt $i failed; retrying in 5s..."; sleep 5
+          done
+          [ "$ok" = 1 ] || { echo "DMG creation failed after 3 attempts"; exit 1; }
 
       - name: Upload DMG artifact (macOS)
         if: runner.os == 'macOS'
@@ -209,8 +218,9 @@ jobs:
       - name: Build RPM package (Linux)
         if: runner.os == 'Linux'
         run: |
-          # Reuses the release binary; --target rewrites target/release paths.
-          cargo generate-rpm -p nemo --target ${{ matrix.target }} --output "${{ env.BINARY_NAME }}-${{ matrix.target }}.rpm"
+          # cargo-generate-rpm's -p is the package *directory*, not the crate
+          # name. --target rewrites the target/release asset path.
+          cargo generate-rpm -p crates/nemo --target ${{ matrix.target }} --output "${{ env.BINARY_NAME }}-${{ matrix.target }}.rpm"
 
       - name: Upload RPM package artifact (Linux)
         if: runner.os == 'Linux'
