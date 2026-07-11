@@ -6,6 +6,12 @@
 //! - Initializes all subsystems
 //! - Launches the GPUI window with router-based navigation
 
+// In the binary's `--test` build the test harness replaces `main`, so all the
+// GUI code only reachable from `fn main` (layout, action handlers, project
+// globals, ...) looks dead to rustc 1.97+. The normal bin target (also checked
+// by `--all-targets`) still enforces dead_code, so real dead code is caught.
+#![cfg_attr(test, allow(dead_code))]
+
 use anyhow::{Context as _, Result};
 use gpui::*;
 use gpui_component::Root;
