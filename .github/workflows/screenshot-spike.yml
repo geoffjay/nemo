@@ -5,10 +5,10 @@ name: Screenshot Spike
 # screenshot can be captured for AI/vision workflows? Manual-dispatch only.
 
 on:
-  # Dispatch-only. Note: workflow_dispatch is only selectable once this file is
-  # on the default branch; to re-run from a feature branch, temporarily add
-  #   push:
-  #     branches: [<branch>]
+  # Temporary: run on push to the spike branch to re-test after the x11 fix.
+  # Revert to dispatch-only once confirmed.
+  push:
+    branches: [improvements]
   workflow_dispatch:
     inputs:
       config:
