@@ -67,3 +67,12 @@ assets = [
   ["../../examples/**/*", "usr/share/nemo/examples/", "644"],
   ["../../README.md", "usr/share/doc/nemo/README.md", "644"],
 ]
+
+# cargo-generate-rpm: build an RPM package for x86_64/aarch64 Linux.
+# Runtime library dependencies are auto-detected from the binary's ELF
+# (cargo-generate-rpm's default auto-req), which maps the needed .so names to
+# the providing packages on the build distro.
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/nemo", dest = "/usr/bin/nemo", mode = "755" },
+]

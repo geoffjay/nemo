@@ -37,8 +37,8 @@ The two biggest corrections versus the roadmap:
 | §2.1 Fix `futures` conflict | ✅ Done | Resolved in the workspace; no longer reproduces. |
 | §2.2 `nemo new` scaffold | ✅ Done | 4 templates embedded via `include_str!`; scaffolds validate. See §4. |
 | §2.3 Hot-reload dev mode | ✅ Done | `nemo dev` + `--watch`; watcher drives the existing full-rebuild path. See §5. |
-| §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app`, Linux `.deb`, Windows `.zip`. Gaps: `.dmg`, AppImage, `.rpm`, `.msi`, signing. |
-| §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew formula + generator, binstall metadata, GitHub Releases + checksums. Gaps: create the tap repo, auto-push formula. |
+| §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app` + `.dmg`, Linux `.deb` + `.rpm`, Windows `.zip`. Gaps: AppImage, `.msi`, signing. See §7. |
+| §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew tap auto-push (gated), binstall metadata, Releases + checksums. See §8. |
 | §2.6 `validate` subcommand | ✅ Done | `nemo validate [--strict] [--format]`; `--validate-only` forwards to it. See §6. |
 | **NEW** Headless renderer / screenshots | ❌ Exploratory | Not in roadmap; see §9. |
 
@@ -332,10 +332,17 @@ validation logic in `crates/nemo-config` / `crates/nemo-registry`.
 
 ## 7. Workstream E — Packaging Gaps (§2.4)
 
-**Already shipped:** 5-target release matrix, macOS `.app` bundle, Linux `.deb`
-(`crates/nemo/Cargo.toml` `[package.metadata.deb]`), Windows portable `.zip`,
-per-release `checksums.txt`, generated release notes with install + `xattr`
-instructions (`.github/workflows/release.yml`).
+> **Status: 🟢 Advanced (2026-07-11).** Added macOS `.dmg` (`hdiutil`, wrapping
+> the existing `.app`) and Linux `.rpm` (`cargo-generate-rpm` +
+> `[package.metadata.generate-rpm]`, auto-detecting runtime `Requires`) to the
+> release matrix, both added to `checksums.txt` and the release assets. **Not yet
+> validated by a real release run** (CI-only steps; same caveat as the existing
+> `.deb`). **Remaining:** Linux AppImage and Windows `.msi` (see below), plus
+> code signing (blocked on certs).
+
+**Already shipped:** 5-target release matrix, macOS `.app` + `.dmg`, Linux `.deb`
++ `.rpm`, Windows portable `.zip`, per-release `checksums.txt`, generated release
+notes with install + `xattr` instructions (`.github/workflows/release.yml`).
 
 ### Remaining, in priority order
 
@@ -369,9 +376,20 @@ the AppImage runs on a clean distro in CI.
 
 ## 8. Workstream F — Distribution Completion (§2.5)
 
+> **Status: ✅ Implemented (2026-07-11).** The `homebrew` job in `release.yml`
+> renders the formula from the release's `checksums.txt` and pushes
+> `Formula/nemo.rb` to the existing **`geoffjay/homebrew-tap`** repo, gated on a
+> `HOMEBREW_TAP_TOKEN` secret (skips with a notice if absent, so releases don't
+> fail). Install command is `brew install geoffjay/tap/nemo` (corrected from the
+> earlier `geoffjay/nemo/nemo`) — fixed in the release notes, README, and
+> `packaging.md`. Pending a real tagged release to populate the tap. The
+> `binstall` limitation (git form required) is documented. **Remaining
+> (optional):** AUR, Scoop/Winget manifests.
+
 **Already shipped:** `scripts/install.sh` (detect → download → checksum-verify →
 install), Homebrew formula template + generator (`packaging/homebrew/nemo.rb.tpl`,
-`scripts/gen-homebrew-formula.sh`), `[package.metadata.binstall]`, GitHub Releases.
+`scripts/gen-homebrew-formula.sh`), `[package.metadata.binstall]`, GitHub
+Releases, and the gated tap auto-push job.
 
 ### Remaining
 

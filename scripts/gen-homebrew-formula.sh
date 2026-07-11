@@ -10,8 +10,8 @@
 #                   (default: downloaded from the GitHub release for <version>)
 #
 # The rendered formula is written to stdout so the caller decides where it
-# lands (e.g. the geoffjay/homebrew-nemo tap checkout). The checked-in
-# template packaging/homebrew/nemo.rb.tpl is never modified.
+# lands (e.g. Formula/nemo.rb in the geoffjay/homebrew-tap checkout). The
+# checked-in template packaging/homebrew/nemo.rb.tpl is never modified.
 #
 # The checksums file is the `sha256sum *.tar.gz *.zip *.deb` output produced by
 # the release workflow, with lines of the form "<sha256>  <filename>".

@@ -166,6 +166,20 @@ jobs:
           name: ${{ env.APP_NAME }}-${{ matrix.target }}
           path: ${{ env.APP_NAME }}-${{ matrix.target }}.zip
 
+      - name: Create DMG (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          hdiutil create -volname "${{ env.APP_NAME }}" \
+            -srcfolder "target/${{ matrix.target }}/release/${{ env.APP_NAME }}.app" \
+            -ov -format UDZO "${{ env.APP_NAME }}-${{ matrix.target }}.dmg"
+
+      - name: Upload DMG artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-${{ matrix.target }}-dmg
+          path: ${{ env.APP_NAME }}-${{ matrix.target }}.dmg
+
       - name: Install cargo-deb (Linux)
         if: runner.os == 'Linux'
         uses: taiki-e/install-action@v2
@@ -185,6 +199,25 @@ jobs:
         with:
           name: ${{ env.BINARY_NAME }}-${{ matrix.target }}-deb
           path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.deb
+
+      - name: Install cargo-generate-rpm (Linux)
+        if: runner.os == 'Linux'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-generate-rpm
+
+      - name: Build RPM package (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          # Reuses the release binary; --target rewrites target/release paths.
+          cargo generate-rpm -p nemo --target ${{ matrix.target }} --output "${{ env.BINARY_NAME }}-${{ matrix.target }}.rpm"
+
+      - name: Upload RPM package artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}-rpm
+          path: ${{ env.BINARY_NAME }}-${{ matrix.target }}.rpm
 
   release:
     name: Create Release
@@ -222,7 +255,7 @@ jobs:
       - name: Generate checksums
         run: |
           cd artifacts
-          sha256sum *.tar.gz *.zip *.deb > checksums.txt
+          sha256sum *.tar.gz *.zip *.deb *.rpm *.dmg > checksums.txt
           cat checksums.txt
 
       # Re-running a tag build should not silently clobber a published release.
@@ -256,7 +289,7 @@ jobs:
             **Homebrew (macOS / Linux):**
 
             ```sh
-            brew install geoffjay/nemo/nemo
+            brew install geoffjay/tap/nemo
             ```
 
             **Prebuilt binaries:** download the archive for your platform from the
@@ -269,7 +302,7 @@ jobs:
             quarantine attribute:
 
             ```sh
-            # App bundle (Nemo-*.zip), once moved to /Applications
+            # App bundle (Nemo-*.zip or Nemo-*.dmg), once in /Applications
             xattr -dr com.apple.quarantine /Applications/Nemo.app
 
             # CLI binary (nemo-*.tar.gz)
@@ -286,10 +319,11 @@ jobs:
               libxcb1 libxkbcommon0 libxkbcommon-x11-0 libwayland-client0
             ```
 
-            Or install the `.deb`, which pulls these in automatically:
+            Or install the `.deb` / `.rpm`, which pull these in automatically:
 
             ```sh
-            sudo apt install ./nemo-*.deb
+            sudo apt install ./nemo-*.deb   # Debian/Ubuntu
+            sudo dnf install ./nemo-*.rpm   # Fedora/RHEL
             ```
 
             ---
@@ -297,4 +331,77 @@ jobs:
             artifacts/*.tar.gz
             artifacts/*.zip
             artifacts/*.deb
+            artifacts/*.rpm
+            artifacts/*.dmg
             artifacts/checksums.txt
+
+  homebrew:
+    name: Update Homebrew tap
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for tap token
+        id: check
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -n "$TAP_TOKEN" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::HOMEBREW_TAP_TOKEN not set; skipping tap update"
+          fi
+
+      - name: Checkout nemo
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        if: steps.check.outputs.enabled == 'true'
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download release checksums
+        if: steps.check.outputs.enabled == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ steps.version.outputs.version }}" \
+            --repo "${{ github.repository }}" --pattern checksums.txt --dir .
+
+      - name: Render formula
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          chmod +x scripts/gen-homebrew-formula.sh
+          scripts/gen-homebrew-formula.sh "${{ steps.version.outputs.version }}" checksums.txt > nemo.rb
+          cat nemo.rb
+
+      - name: Checkout tap
+        if: steps.check.outputs.enabled == 'true'
+        uses: actions/checkout@v4
+        with:
+          repository: geoffjay/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Commit and push formula
+        if: steps.check.outputs.enabled == 'true'
+        run: |
+          mkdir -p tap/Formula
+          cp nemo.rb tap/Formula/nemo.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/nemo.rb
+          # --cached so a brand-new (untracked) formula is detected too.
+          if git diff --cached --quiet; then
+            echo "Formula unchanged; nothing to push"
+            exit 0
+          fi
+          git commit -m "nemo ${{ steps.version.outputs.version }}"
+          git push

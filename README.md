@@ -40,7 +40,7 @@ or pin a version with `NEMO_VERSION=v0.6.0`).
 ### Homebrew (macOS / Linux)
 
 ```bash
-brew install geoffjay/nemo/nemo
+brew install geoffjay/tap/nemo
 ```
 
 ### Prebuilt binaries
