@@ -40,7 +40,7 @@ The two biggest corrections versus the roadmap:
 | §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app` + `.dmg`, Linux `.deb` + `.rpm`, Windows `.zip`. Gaps: AppImage, `.msi`, signing. See §7. |
 | §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew tap auto-push (gated), binstall metadata, Releases + checksums. See §8. |
 | §2.6 `validate` subcommand | ✅ Done | `nemo validate [--strict] [--format]`; `--validate-only` forwards to it. See §6. |
-| **NEW** Headless renderer / screenshots | ❌ Exploratory | Not in roadmap; see §9. |
+| **NEW** Headless renderer / screenshots | 🟡 Spiked | Feasible (lavapipe works); blocked on a Linux GPUI feature fix that also affects all Linux runs. See §9. |
 
 ---
 
@@ -415,6 +415,29 @@ to exist; gate it.
 ---
 
 ## 9. Workstream G (Exploratory) — Headless Renderer & Screenshots
+
+> **Spike result (2026-07-11): FEASIBLE, but gated on a Linux GPUI-feature fix.**
+> Ran `.github/workflows/screenshot-spike.yml` on `ubuntu-latest`. Findings:
+> - **The render environment works.** Mesa `lavapipe` provides a software Vulkan
+>   1.4 device under Xvfb with `VK_KHR_xcb_surface` — so headless GPU rendering
+>   is available with no real GPU.
+> - **nemo panics on startup**, before any paint, at `gpui_linux::current_platform`
+>   (`_ => unreachable!()`): `gpui` is built with its default `x11`/`wayland`
+>   features (so `guess_compositor()` returns `"X11"`), but `gpui_platform` is
+>   pulled with only `["font-kit"]`, so `gpui_linux` is compiled **without**
+>   x11/wayland and the `"X11"` arm is `#[cfg]`-ed out. Capture was blank (1 color).
+> - **Broader impact:** this fires whenever `DISPLAY`/`WAYLAND_DISPLAY` is set —
+>   i.e. **on any real Linux desktop**, not just headless. The Linux release
+>   artifacts from §7 (`.deb`/`.rpm`/tarball) therefore ship a binary that panics
+>   on launch. macOS/Windows are unaffected.
+>
+> **Fix (prerequisite for both Linux runtime *and* screenshots):** enable the
+> features on the workspace `gpui_platform` dep —
+> `features = ["font-kit", "x11", "wayland"]`. This is entangled with the
+> git-dep drift issue (§11): flipping features forces a re-resolve that pulls new
+> x11/wayland crates and can drift the rev-less `gpui` to HEAD, so it must be
+> done together with proper rev-pinning (vendor/fork `gpui-component`). After the
+> fix, re-run the spike to confirm a non-blank capture end-to-end.
 
 > **User-requested; feasibility-gated.** The payoff: automated and AI-assisted
 > workflows (e.g. the `/verify` and `/run` skills, Claude Code's vision) could
