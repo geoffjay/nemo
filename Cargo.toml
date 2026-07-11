@@ -1,5 +1,7 @@
 [patch.crates-io]
-gpui = { git = "https://github.com/zed-industries/zed" }
+# version pin disambiguates the patch (the zed git workspace exposes gpui as
+# both 0.0.0 and 0.2.2 once the x11/wayland linux backend is pulled in).
+gpui = { git = "https://github.com/zed-industries/zed", version = "=0.2.2" }
 
 [workspace]
 resolver = "2"
@@ -31,10 +33,15 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/geoffjay/nemo"
 
 [workspace.dependencies]
-# GPUI
+# GPUI. NOTE: rev-less by necessity — gpui-component references these git repos
+# without a rev, and adding a rev here splits the git source into two crate
+# instances (type mismatches). The exact commits are pinned by Cargo.lock, which
+# is therefore load-bearing; avoid `cargo update`.
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = [
   "font-kit",
+  "x11",
+  "wayland",
 ] }
 gpui-component = { git = "https://github.com/longbridge/gpui-component" }
 gpui-component-assets = { git = "https://github.com/longbridge/gpui-component" }
