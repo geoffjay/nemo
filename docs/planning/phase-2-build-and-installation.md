@@ -35,7 +35,7 @@ The two biggest corrections versus the roadmap:
 | Roadmap item | Status | Notes |
 |--------------|--------|-------|
 | §2.1 Fix `futures` conflict | ✅ Done | Resolved in the workspace; no longer reproduces. |
-| §2.2 `nemo new` scaffold | ❌ Not started | Needs CLI subcommand support first. |
+| §2.2 `nemo new` scaffold | ✅ Done | 4 templates embedded via `include_str!`; scaffolds validate. See §4. |
 | §2.3 Hot-reload dev mode | ✅ Done | `nemo dev` + `--watch`; watcher drives the existing full-rebuild path. See §5. |
 | §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app`, Linux `.deb`, Windows `.zip`. Gaps: `.dmg`, AppImage, `.rpm`, `.msi`, signing. |
 | §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew formula + generator, binstall metadata, GitHub Releases + checksums. Gaps: create the tap repo, auto-push formula. |
@@ -141,6 +141,24 @@ touch every entry path; cover the no-subcommand default with a test).
 ---
 
 ## 4. Workstream B — `nemo new` Scaffold (§2.2)
+
+> **Status: ✅ Implemented (2026-07-11).** `nemo new <name> [--template <t>]
+> [--force] [--list]` scaffolds a ready-to-run project (`app.xml`, `scripts/`,
+> `plugins/.gitkeep`, generated `README.md`, `.gitignore`). Four templates —
+> `basic`, `calculator`, `data-binding`, `complete` — live in
+> `crates/nemo/templates/` and are embedded via **`include_str!`** (see the note
+> below); `{{PROJECT_NAME}}` is substituted from the target dir name. Refuses a
+> non-empty target without `--force`. Verified end-to-end (each scaffold parses
+> under `nemo validate`); 3 unit tests; full suite (170) green.
+>
+> **Deviation from the plan:** the plan suggested `include_dir`. Adding *any* new
+> crate dependency forced a Cargo re-resolve that drifted the **rev-less**
+> `zed`/`gpui` git dependency from its locked commit to HEAD, breaking the
+> `gpui`/`gpui-component` API contract (see §11). A workspace rev-pin didn't help
+> because `gpui-component` itself depends on `gpui` rev-less and `[patch.crates-io]`
+> can't patch a git dep. So templates are embedded with `include_str!` (a
+> compile-time builtin, zero new dependencies) — no manifest/lock change, no
+> drift.
 
 **Objective:** `nemo new my-app [--template <t>]` generates a ready-to-run project.
 
@@ -473,6 +491,17 @@ F (distribution)     ── independent; benefits from one successful release
 
 ## 11. Risks & Open Questions
 
+- **⚠️ Rev-less git deps drift on any re-resolve (latent build-breaker).** The
+  workspace depends on `zed`/`gpui` and `longbridge/gpui-component` by git URL
+  with **no `rev`**, so the exact commit is pinned only by `Cargo.lock`. Adding
+  *any* new dependency (or running `cargo update`) triggers a re-resolve that
+  moves these to the default-branch HEAD, breaking the `gpui`/`gpui-component`
+  API contract — this bit Workstream B (worked around with `include_str!`). A
+  workspace rev-pin is insufficient because `gpui-component` depends on `gpui`
+  rev-less and `[patch.crates-io]` can't patch a git dep. **Follow-up:** vendor
+  or fork `gpui-component` to pin its `gpui` rev, or track a `gpui-component`
+  release that pins upstream, so the tree survives dependency changes. Until
+  then, treat `Cargo.lock` as load-bearing and avoid `cargo update`.
 - **A touches every entry path.** Guard the no-subcommand default with a test so
   the refactor can't silently break `nemo --app-config`.
 - **C's reload scope.** Confirm `create_runtime` re-reads `<include>`s and

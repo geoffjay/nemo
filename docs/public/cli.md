@@ -22,9 +22,8 @@ Run `nemo <command> --help` for per-command options.
 | `nemo dev` | Run an application with hot-reload on configuration changes |
 | `nemo validate <file>` | Validate a configuration file and exit |
 
-> **Rollout status:** `nemo dev` and `nemo validate` are available. `nemo new` is
-> not yet implemented and exits non-zero until its workstream lands. The default
-> (no-command) run path below is fully supported.
+> **Rollout status:** all subcommands (`nemo new`, `nemo dev`, `nemo validate`)
+> are available, alongside the default (no-command) run path documented below.
 
 ## Options
 
@@ -44,6 +43,18 @@ These options apply to the default run path (no command).
 | `--version` | `-V` | | Print version |
 
 ## Examples
+
+### Scaffold a new project
+
+```bash
+nemo new my-app                       # basic template
+nemo new my-dashboard --template complete
+nemo new --list                       # list available templates
+```
+
+Creates a ready-to-run project directory (`app.xml`, `scripts/`, `plugins/`,
+`README.md`, `.gitignore`). Available templates: `basic`, `calculator`,
+`data-binding`, `complete`. Refuses a non-empty target unless `--force` is given.
 
 ### Run an application
 
