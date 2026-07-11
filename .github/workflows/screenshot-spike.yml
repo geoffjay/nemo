@@ -5,6 +5,10 @@ name: Screenshot Spike
 # screenshot can be captured for AI/vision workflows? Manual-dispatch only.
 
 on:
+  # Temporary: run on push to the spike branch, because workflow_dispatch is only
+  # available for workflows on the default branch. Remove once the spike is done.
+  push:
+    branches: [improvements]
   workflow_dispatch:
     inputs:
       config:
@@ -20,6 +24,9 @@ jobs:
   spike:
     name: Headless render + capture
     runs-on: ubuntu-latest
+    env:
+      CONFIG: ${{ inputs.config || 'examples/calculator/app.xml' }}
+      SETTLE: ${{ inputs.settle_seconds || '12' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,9 +78,9 @@ jobs:
           set -x
           xvfb-run -a --server-args="-screen 0 1280x800x24 +extension GLX +extension RANDR +render" \
             bash -euxc '
-              target/debug/nemo --app-config "${{ inputs.config }}" --verbose > nemo.log 2>&1 &
+              target/debug/nemo --app-config "$CONFIG" --verbose > nemo.log 2>&1 &
               NPID=$!
-              sleep "${{ inputs.settle_seconds }}"
+              sleep "$SETTLE"
               # Capture the whole virtual root window.
               import -window root shot.png || xwd -root -silent -out root.xwd || true
               [ -f root.xwd ] && convert root.xwd shot.png || true
