@@ -39,7 +39,7 @@ The two biggest corrections versus the roadmap:
 | §2.3 Hot-reload dev mode | ✅ Done | `nemo dev` + `--watch`; watcher drives the existing full-rebuild path. See §5. |
 | §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app`, Linux `.deb`, Windows `.zip`. Gaps: `.dmg`, AppImage, `.rpm`, `.msi`, signing. |
 | §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew formula + generator, binstall metadata, GitHub Releases + checksums. Gaps: create the tap repo, auto-push formula. |
-| §2.6 `validate` subcommand | 🟡 Flag exists | `--validate-only` works (`args.rs:38`); promote to a subcommand with strict mode. |
+| §2.6 `validate` subcommand | ✅ Done | `nemo validate [--strict] [--format]`; `--validate-only` forwards to it. See §6. |
 | **NEW** Headless renderer / screenshots | ❌ Exploratory | Not in roadmap; see §9. |
 
 ---
@@ -253,6 +253,28 @@ watch include-path changes, not just the root file.
 ---
 
 ## 6. Workstream D — `nemo validate` Subcommand (§2.6)
+
+> **Status: ✅ Implemented (2026-07-11).** `nemo validate <file> [--strict]
+> [--format human|json]` runs the app's parse+resolve path
+> (`ConfigurationLoader::load`), turns the structured `ConfigError` into located
+> diagnostics (file:line:col + source context for parse errors), and exits
+> non-zero on error. `--validate-only` forwards to it. `--strict` adds five
+> component lints: `unknown-component` + `missing-required` (errors),
+> `unknown-attribute` + `missing-id` + `unused-template` (warnings).
+>
+> **Deviation:** the roadmap's "deprecated properties" lint is not implementable
+> — no schema carries a `deprecated` flag (would need a schema change), so it was
+> replaced with `unknown-component` and `unused-template`. **`missing-required`
+> and `unknown-attribute` are gated on `schema.additional_properties == false`**:
+> builtin schemas are permissive and omit universal/styling attributes and
+> props supplied via bindings/children/template-expansion, so enforcing them
+> against builtins produced ~172 false positives on `examples/components`
+> (including a template body flagged for a `label` its references provide).
+> Gating makes them correct-by-construction and quiet on builtins while still
+> serving plugin/opt-in strict schemas. **Follow-up:** tighten builtin schemas
+> (add `.strict()` + enumerate styling props) or add a universal-attribute
+> allowlist to make attribute/required linting useful on builtins. Verified
+> end-to-end (valid/broken/JSON/strict); 5 unit tests; full suite (167) green.
 
 **Objective:** promote the existing `--validate-only` flag to a discoverable
 subcommand with actionable, non-zero-exit diagnostics and an optional strict mode.

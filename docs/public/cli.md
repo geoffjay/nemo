@@ -22,8 +22,8 @@ Run `nemo <command> --help` for per-command options.
 | `nemo dev` | Run an application with hot-reload on configuration changes |
 | `nemo validate <file>` | Validate a configuration file and exit |
 
-> **Rollout status:** `nemo dev` is available. `nemo new` and `nemo validate` are
-> not yet implemented and exit non-zero until their workstreams land. The default
+> **Rollout status:** `nemo dev` and `nemo validate` are available. `nemo new` is
+> not yet implemented and exits non-zero until its workstream lands. The default
 > (no-command) run path below is fully supported.
 
 ## Options
@@ -79,9 +79,23 @@ nemo --app-config app.xml --watch
 nemo validate app.xml
 ```
 
-This parses the XML file, checks for syntax errors and schema violations, then exits.
-Useful in CI pipelines or before deploying configuration changes. The legacy
-`nemo --app-config app.xml --validate-only` form remains supported.
+Parses and resolves the config, reporting located diagnostics and exiting
+non-zero on error. Useful in CI pipelines or before deploying changes. The
+legacy `nemo --app-config app.xml --validate-only` form remains supported.
+
+Add `--strict` for component-level lints (unknown component types, unused
+templates, anonymous components wired to handlers/bindings, and — for schemas
+that opt into strict validation — unknown or missing properties):
+
+```bash
+nemo validate app.xml --strict
+```
+
+Use `--format json` for machine-readable output (editors, CI):
+
+```bash
+nemo validate app.xml --format json
+```
 
 ### Run in headless mode
 

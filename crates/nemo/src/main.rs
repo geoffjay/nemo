@@ -80,9 +80,18 @@ pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
     // Load NemoConfig (config.toml)
     let nemo_config = NemoConfig::load_from(args.config.as_ref());
 
-    // If app_config is provided via CLI/env, handle headless/validate modes
+    // If app_config is provided via CLI/env, handle validate/headless modes.
     if let Some(ref app_config) = args.app_config {
-        if args.headless || args.validate_only {
+        // `--validate-only` is a compatibility alias for `nemo validate`.
+        if args.validate_only {
+            return commands::validate::run(args::ValidateArgs {
+                app_config: app_config.clone(),
+                strict: false,
+                format: args::ValidateFormat::Human,
+            });
+        }
+
+        if args.headless {
             let rt = runtime::NemoRuntime::new(app_config)?;
 
             for dir in &args.extension_dirs {
@@ -91,11 +100,6 @@ pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
 
             info!("Loading configuration from: {:?}", app_config);
             rt.load_config()?;
-
-            if args.validate_only {
-                info!("Configuration validation successful");
-                return Ok(());
-            }
 
             info!("Initializing subsystems...");
             rt.initialize()?;
