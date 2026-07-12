@@ -93,8 +93,19 @@ fn register_layout_components(registry: &ComponentRegistry) {
         "tabs",
         ComponentCategory::Layout,
         "Tabs",
-        "Tabbed container",
-        ConfigSchema::new("tabs"),
+        "Tabbed container holding tab-item children",
+        ConfigSchema::new("tabs")
+            .property("variant", PropertySchema::string())
+            .property("active_tab", PropertySchema::integer().with_default(0i64)),
+    );
+
+    reg(
+        registry,
+        "tab_item",
+        ComponentCategory::Layout,
+        "Tab Item",
+        "A titled tab panel for use inside Tabs; its children are the panel body",
+        ConfigSchema::new("tab_item").property("label", PropertySchema::string()),
     );
 }
 
@@ -104,11 +115,21 @@ fn register_basic_components(registry: &ComponentRegistry) {
         "accordion",
         ComponentCategory::Display,
         "Accordion",
-        "A collapsible accordion with multiple items",
+        "A collapsible accordion containing accordion-item children",
         ConfigSchema::new("accordion")
-            .property("items", PropertySchema::any())
             .property("multiple", PropertySchema::boolean().with_default(false))
             .property("bordered", PropertySchema::boolean().with_default(true)),
+    );
+
+    reg(
+        registry,
+        "accordion_item",
+        ComponentCategory::Display,
+        "Accordion Item",
+        "A titled, collapsible section for use inside an Accordion; its children are the panel body",
+        ConfigSchema::new("accordion_item")
+            .property("title", PropertySchema::string())
+            .property("open", PropertySchema::boolean().with_default(false)),
     );
 
     reg(
@@ -160,10 +181,19 @@ fn register_basic_components(registry: &ComponentRegistry) {
         "dropdown_button",
         ComponentCategory::Display,
         "Dropdown Button",
-        "A button with a dropdown menu indicator",
+        "A button with a dropdown menu built from menu-item children",
         ConfigSchema::new("dropdown_button")
             .property("label", PropertySchema::string().with_default("Action"))
             .property("variant", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "menu_item",
+        ComponentCategory::Display,
+        "Menu Item",
+        "A menu entry for use inside a DropdownButton",
+        ConfigSchema::new("menu_item").property("label", PropertySchema::string()),
     );
 
     reg(
@@ -288,10 +318,19 @@ fn register_input_components(registry: &ComponentRegistry) {
         "select",
         ComponentCategory::Input,
         "Select",
-        "A dropdown select input",
-        ConfigSchema::new("select")
-            .property("options", PropertySchema::array(PropertySchema::string()))
-            .property("value", PropertySchema::string()),
+        "A select input built from option children",
+        ConfigSchema::new("select").property("value", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "option",
+        ComponentCategory::Input,
+        "Option",
+        "A selectable option for use inside a Select or Radio",
+        ConfigSchema::new("option")
+            .property("value", PropertySchema::string())
+            .property("label", PropertySchema::string()),
     );
 
     reg(
@@ -299,9 +338,8 @@ fn register_input_components(registry: &ComponentRegistry) {
         "radio",
         ComponentCategory::Input,
         "Radio",
-        "A radio button group",
+        "A radio button group built from option children",
         ConfigSchema::new("radio")
-            .property("options", PropertySchema::array(PropertySchema::string()))
             .property("value", PropertySchema::string())
             .property(
                 "direction",
@@ -434,8 +472,17 @@ fn register_data_components(registry: &ComponentRegistry) {
         "list",
         ComponentCategory::Data,
         "List",
-        "A data list",
-        ConfigSchema::new("list").property("items", PropertySchema::array(PropertySchema::any())),
+        "A list built from list-item children",
+        ConfigSchema::new("list"),
+    );
+
+    reg(
+        registry,
+        "list_item",
+        ComponentCategory::Data,
+        "List Item",
+        "A row for use inside a List; its children are the row content",
+        ConfigSchema::new("list_item"),
     );
 
     reg(

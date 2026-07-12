@@ -157,27 +157,20 @@ impl ComponentStates {
     }
 
     /// Gets or creates shared accordion open-indices state.
+    ///
+    /// `initial_open` is the set of item indices that should start expanded,
+    /// computed by the caller from the `open` attribute of each
+    /// `<accordion-item>` child.
     pub fn get_or_create_accordion_state(
         &mut self,
         id: &str,
-        items: Option<&Value>,
+        initial_open: HashSet<usize>,
     ) -> Arc<Mutex<HashSet<usize>>> {
         if let Some(ComponentState::Accordion(state)) = self.0.get(id) {
             return Arc::clone(state);
         }
 
-        let mut initial = HashSet::new();
-        if let Some(Value::Array(items)) = items {
-            for (ix, item_val) in items.iter().enumerate() {
-                if let Some(obj) = item_val.as_object() {
-                    if obj.get("open").and_then(|v| v.as_bool()).unwrap_or(false) {
-                        initial.insert(ix);
-                    }
-                }
-            }
-        }
-
-        let state = Arc::new(Mutex::new(initial));
+        let state = Arc::new(Mutex::new(initial_open));
         self.0.insert(
             id.to_string(),
             ComponentState::Accordion(Arc::clone(&state)),

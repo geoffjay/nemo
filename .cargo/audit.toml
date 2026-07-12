@@ -1,0 +1,63 @@
+# cargo-audit configuration.
+#
+# Every advisory ignored below is in a *transitive* dependency that this
+# workspace cannot upgrade on its own — each is pulled in through a pinned git
+# dependency (the zed/gpui stack, its zed-reqwest fork) or a version pin
+# (`wasmtime` 29 in nemo-wasm). Bumping any of them re-resolves the rev-less
+# gpui git dependency and breaks the build (Cargo.lock is load-bearing here).
+#
+# These are NOT "won't fix" — they are "cannot fix without a coordinated
+# upstream/dependency upgrade". Re-audit and prune this list whenever the gpui
+# stack or the wasmtime pin is bumped. See
+# docs/knowledgebase/decisions/audit-ignore-transitive-advisories.md.
+#
+# Warnings (unmaintained/unsound: async-std, fxhash, instant, paste,
+# proc-macro-error2, rustls-pemfile, rustybuzz, ttf-parser, rand, memmap2,
+# anyhow, core2) are intentionally left un-ignored: cargo-audit does not fail
+# the build on them, and keeping them visible is useful triage signal.
+
+[advisories]
+ignore = [
+    # --- wasmtime / wasmtime-wasi: pinned at 29.0.1 by nemo-wasm. Fix requires
+    # upgrading to 36+/42+, a major host-API port. TRACKED as a follow-up
+    # (nemo runs untrusted WASM plugins, so this matters — see the KB decision).
+    "RUSTSEC-2025-0046",
+    "RUSTSEC-2025-0118",
+    "RUSTSEC-2026-0006",
+    "RUSTSEC-2026-0020",
+    "RUSTSEC-2026-0021",
+    "RUSTSEC-2026-0085",
+    "RUSTSEC-2026-0086",
+    "RUSTSEC-2026-0087",
+    "RUSTSEC-2026-0088",
+    "RUSTSEC-2026-0089",
+    "RUSTSEC-2026-0091",
+    "RUSTSEC-2026-0092",
+    "RUSTSEC-2026-0093",
+    "RUSTSEC-2026-0094",
+    "RUSTSEC-2026-0095",
+    "RUSTSEC-2026-0096",
+    "RUSTSEC-2026-0149",
+    "RUSTSEC-2026-0182",
+    "RUSTSEC-2026-0188",
+
+    # --- rustls-webpki / quinn-proto: via the `zed-reqwest` fork behind
+    # gpui-component-assets. No upgrade path without forking upstream.
+    "RUSTSEC-2026-0037",
+    "RUSTSEC-2026-0185",
+    "RUSTSEC-2026-0049",
+    "RUSTSEC-2026-0098",
+    "RUSTSEC-2026-0099",
+    "RUSTSEC-2026-0104",
+
+    # --- crossbeam-epoch, thin-vec: via gpui.
+    "RUSTSEC-2026-0204",
+    "RUSTSEC-2026-0103",
+
+    # --- quick-xml: our direct dep is 0.37; 0.30/0.39 instances are transitive.
+    # Upgrading our own to >=0.41 is possible in isolation code-wise, but the
+    # `cargo update` it requires re-resolves the rev-less gpui git dep and
+    # drifts the load-bearing pins, so it is deferred to a coordinated bump.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+]

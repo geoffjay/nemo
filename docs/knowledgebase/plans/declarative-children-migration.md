@@ -88,6 +88,48 @@ schema as part of this work.
 
 # Status
 
-Proposed — not yet started. When adopted, record the outcome as a decision and
-update [Components](../concepts/components.md) and
-[Configuration](../concepts/configuration.md).
+**Accordion pilot landed** (2026-07-11). `accordion` now takes `<accordion-item>`
+children (nested-component bodies, hard switch — `items` removed):
+
+* Registry: `accordion` schema drops `items`; new `accordion_item` type
+  (`title`, `open`) — `crates/nemo-registry/src/builtins.rs`.
+* Dispatch: the `"accordion"` arm collects `accordion_item` children, renders
+  each item's children as its body, and derives initial-open from each item's
+  `open` attribute; added an `"accordion_item"` standalone-fallback arm —
+  `crates/nemo/src/app.rs`.
+* Component: `Accordion` carries `Vec<AccordionItemData>` instead of reading the
+  `items` property — `crates/nemo/src/components/accordion.rs`.
+* State: `get_or_create_accordion_state` now takes a precomputed
+  `HashSet<usize>` of open indices — `crates/nemo/src/components/state.rs`.
+* Example migrated: `examples/components/app.xml`.
+
+Confirmed working in the running GPUI app.
+
+**Fan-out landed** (2026-07-12). The same hard switch applied to the remaining
+collection components:
+
+* `tabs` → `<tab-item label="…">…</tab-item>` (unifies the former
+  labels-from-JSON / panels-from-children split; `tabs` prop removed).
+* `select` / `radio` → shared `<option value label>` children (`options` prop
+  removed; `value` on the parent still selects the initial choice). `OptionData`
+  lives in `components/select.rs`.
+* `dropdown-button` → `<menu-item label>` children (`items` prop removed).
+* `list` → `<list-item>` children whose own children are the row content
+  (`items` prop removed).
+* Registry: added `tab_item`, `option`, `menu_item`, `list_item` types; dropped
+  the JSON-array props from the five parents.
+* Dispatch (`app.rs`): each parent collects its typed children; added a combined
+  standalone-fallback arm and a `collect_options` helper.
+* Example fully migrated: all 39 `<tabs>` blocks plus the select/radio/list/
+  dropdown demos and their Code-panel doc strings in
+  `examples/components/app.xml`.
+
+Verified: `nemo`/`nemo-registry` build clean; `nemo`, `nemo-config`, and
+`nemo-registry` test suites pass; and `nemo validate
+examples/components/app.xml` passes. Not yet exercised in a live GPUI window.
+
+**Remaining (out of scope):** `table` (`columns`/`data`) and `tree` (recursive
+`items`) still use JSON-string properties — see
+[collection properties as JSON-string attributes](../patterns/json-string-collection-properties.md).
+`tree`'s recursive shape would need a nesting-capable `<tree-item>`; `table`'s
+data is typically data-bound. Neither is migrated.

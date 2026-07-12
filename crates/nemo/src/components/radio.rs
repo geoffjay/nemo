@@ -1,9 +1,9 @@
 use gpui::*;
 use gpui_component::radio::{Radio as GpuiRadio, RadioGroup};
-use nemo_config::Value;
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
+use super::select::OptionData;
 use crate::runtime::NemoRuntime;
 
 /// A radio button group component.
@@ -11,21 +11,27 @@ use crate::runtime::NemoRuntime;
 /// # XML Configuration
 ///
 /// ```xml
-/// <radio id="size" options='["Small","Medium","Large"]' direction="vertical" value="Medium" on-change="handleSize" />
+/// <radio id="size" direction="vertical" value="Medium" on-change="handleSize">
+///   <option value="Small" />
+///   <option value="Medium" />
+///   <option value="Large" />
+/// </radio>
 /// ```
 ///
 /// # Properties
 ///
 /// | Property | Type | Description |
 /// |----------|------|-------------|
-/// | `options` | JSON array | Array of option strings |
 /// | `direction` | string | Layout direction: `"horizontal"` or `"vertical"` |
-/// | `value` | string | Currently selected option |
+/// | `value` | string | Currently selected option value |
 /// | `on-change` | string | Event handler invoked when selection changes |
+///
+/// Options are declared as `<option>` children (`value`, optional `label`).
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Radio {
     source: BuiltComponent,
+    options: Vec<OptionData>,
     selected_index: Arc<Mutex<Option<usize>>>,
     runtime: Option<Arc<NemoRuntime>>,
     entity_id: Option<EntityId>,
@@ -35,10 +41,16 @@ impl Radio {
     pub fn new(source: BuiltComponent) -> Self {
         Self {
             source,
+            options: Vec::new(),
             selected_index: Arc::new(Mutex::new(None)),
             runtime: None,
             entity_id: None,
         }
+    }
+
+    pub fn options(mut self, options: Vec<OptionData>) -> Self {
+        self.options = options;
+        self
     }
 
     pub fn selected_index(mut self, state: Arc<Mutex<Option<usize>>>) -> Self {
@@ -66,14 +78,6 @@ impl RenderOnce for Radio {
             .unwrap_or("vertical")
             == "horizontal";
 
-        let options: Vec<String> = match props.get("options") {
-            Some(Value::Array(arr)) => arr
-                .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect(),
-            _ => Vec::new(),
-        };
-
         let current_index = *self.selected_index.lock().unwrap();
 
         let id = SharedString::from(self.source.id.clone());
@@ -85,9 +89,9 @@ impl RenderOnce for Radio {
 
         group = group.selected_index(current_index);
 
-        for (i, option) in options.iter().enumerate() {
+        for (i, option) in self.options.iter().enumerate() {
             let radio_id = SharedString::from(format!("{}-{}", self.source.id, i));
-            group = group.child(GpuiRadio::new(radio_id).label(option.clone()));
+            group = group.child(GpuiRadio::new(radio_id).label(option.label.clone()));
         }
 
         let shared_state = Arc::clone(&self.selected_index);
@@ -95,13 +99,13 @@ impl RenderOnce for Radio {
         let component_id = self.source.id.clone();
         let entity_id = self.entity_id;
         let runtime = self.runtime;
-        let opts = options.clone();
+        let values: Vec<String> = self.options.iter().map(|o| o.value.clone()).collect();
 
         group = group.on_click(move |selected_ix, _window, cx| {
             *shared_state.lock().unwrap() = Some(*selected_ix);
             if let Some(ref handler) = change_handler {
                 if let Some(ref rt) = runtime {
-                    let value = opts.get(*selected_ix).map(|s| s.as_str()).unwrap_or("");
+                    let value = values.get(*selected_ix).map(|s| s.as_str()).unwrap_or("");
                     rt.call_handler(handler, &component_id, value);
                 }
             }

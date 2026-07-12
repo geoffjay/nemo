@@ -1,34 +1,47 @@
 use gpui::*;
 use gpui_component::accordion::{Accordion as GpuiAccordion, AccordionItem};
-use nemo_config::Value;
 use nemo_layout::BuiltComponent;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
+
+/// A single accordion section, built by the render dispatch from an
+/// `<accordion-item>` child component. `body` holds the item's rendered
+/// children (the panel content).
+pub struct AccordionItemData {
+    pub title: String,
+    pub body: Vec<AnyElement>,
+}
 
 /// An expandable accordion component.
 ///
 /// # XML Configuration
 ///
 /// ```xml
-/// <accordion
-///   id="faq"
-///   multiple="true"
-///   bordered="true"
-///   items='[{"title":"Question 1","content":"Answer 1"},{"title":"Question 2","content":"Answer 2"}]'
-/// />
+/// <accordion id="faq" multiple="true" bordered="true">
+///   <accordion-item title="Question 1">
+///     <label text="Answer 1" />
+///   </accordion-item>
+///   <accordion-item title="Question 2" open="true">
+///     <button label="Do it" on-click="go" />
+///   </accordion-item>
+/// </accordion>
 /// ```
 ///
 /// # Properties
 ///
 /// | Property | Type | Description |
 /// |----------|------|-------------|
-/// | `items` | JSON array | Array of accordion items with `title` and `content` |
 /// | `multiple` | bool | Allow multiple sections open simultaneously |
 /// | `bordered` | bool | Show borders around sections |
+///
+/// Sections are declared as `<accordion-item>` children. Each item takes a
+/// `title` (string) and an optional `open` (bool); its own children form the
+/// panel body.
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct Accordion {
     source: BuiltComponent,
+    items: Vec<AccordionItemData>,
     open_indices: Arc<Mutex<HashSet<usize>>>,
     entity_id: Option<EntityId>,
 }
@@ -37,9 +50,15 @@ impl Accordion {
     pub fn new(source: BuiltComponent) -> Self {
         Self {
             source,
+            items: Vec::new(),
             open_indices: Arc::new(Mutex::new(HashSet::new())),
             entity_id: None,
         }
+    }
+
+    pub fn items(mut self, items: Vec<AccordionItemData>) -> Self {
+        self.items = items;
+        self
     }
 
     pub fn open_indices(mut self, indices: Arc<Mutex<HashSet<usize>>>) -> Self {
@@ -71,29 +90,16 @@ impl RenderOnce for Accordion {
             .multiple(multiple)
             .bordered(bordered);
 
-        if let Some(Value::Array(items)) = props.get("items") {
-            for (ix, item_val) in items.iter().enumerate() {
-                if let Some(obj) = item_val.as_object() {
-                    let title = obj
-                        .get("title")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    let content = obj
-                        .get("content")
-                        .and_then(|v| v.as_str())
-                        .unwrap_or("")
-                        .to_string();
+        for (ix, item_data) in self.items.into_iter().enumerate() {
+            let title = item_data.title;
+            let body = item_data.body;
+            let open = current_open.contains(&ix);
 
-                    let open = current_open.contains(&ix);
-
-                    accordion = accordion.item(move |item: AccordionItem| {
-                        item.title(title)
-                            .open(open)
-                            .child(div().p_2().child(content))
-                    });
-                }
-            }
+            accordion = accordion.item(move |item: AccordionItem| {
+                item.title(title)
+                    .open(open)
+                    .child(div().p_2().children(body))
+            });
         }
 
         let shared_state = Arc::clone(&self.open_indices);
