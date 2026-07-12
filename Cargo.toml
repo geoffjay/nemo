@@ -1,5 +1,7 @@
 [patch.crates-io]
-gpui = { git = "https://github.com/zed-industries/zed" }
+# version pin disambiguates the patch (the zed git workspace exposes gpui as
+# both 0.0.0 and 0.2.2 once the x11/wayland linux backend is pulled in).
+gpui = { git = "https://github.com/zed-industries/zed", version = "=0.2.2" }
 
 [workspace]
 resolver = "2"
@@ -25,16 +27,21 @@ members = [
 ]
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/geoffjay/nemo"
 
 [workspace.dependencies]
-# GPUI
+# GPUI. NOTE: rev-less by necessity — gpui-component references these git repos
+# without a rev, and adding a rev here splits the git source into two crate
+# instances (type mismatches). The exact commits are pinned by Cargo.lock, which
+# is therefore load-bearing; avoid `cargo update`.
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = [
   "font-kit",
+  "x11",
+  "wayland",
 ] }
 gpui-component = { git = "https://github.com/longbridge/gpui-component" }
 gpui-component-assets = { git = "https://github.com/longbridge/gpui-component" }
@@ -99,7 +106,7 @@ nemo-data = { path = "crates/nemo-data" }
 nemo-extension = { path = "crates/nemo-extension" }
 nemo-integration = { path = "crates/nemo-integration" }
 nemo-events = { path = "crates/nemo-events" }
-nemo-plugin-api = { version = "0.6.0", path = "crates/nemo-plugin-api" }
-nemo-plugin = { version = "0.6.0", path = "crates/nemo-plugin" }
+nemo-plugin-api = { version = "0.7.0", path = "crates/nemo-plugin-api" }
+nemo-plugin = { version = "0.7.0", path = "crates/nemo-plugin" }
 nemo-macros = { path = "crates/nemo-macros" }
 nemo-wasm = { path = "crates/nemo-wasm" }

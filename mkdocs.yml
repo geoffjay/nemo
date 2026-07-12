@@ -88,6 +88,7 @@ nav:
   - Plugins: public/plugins.md
   - Architecture: public/architecture.md
   - Development: public/develop.md
+  - Packaging & Distribution: public/packaging.md
 
 extra:
   social:

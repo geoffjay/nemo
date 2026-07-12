@@ -1,0 +1,118 @@
+name: Screenshot Spike
+
+# Feasibility spike (Workstream G): can GPUI render a Nemo window headlessly on
+# Linux using a virtual X display (Xvfb) + software Vulkan (Mesa lavapipe), so a
+# screenshot can be captured for AI/vision workflows? Manual-dispatch only.
+
+on:
+  # Dispatch-only. Note: workflow_dispatch is only selectable once this file is
+  # on the default branch; to re-run from a feature branch, temporarily add
+  #   push:
+  #     branches: [<branch>]
+  workflow_dispatch:
+    inputs:
+      config:
+        description: "App config to render"
+        required: false
+        default: "examples/calculator/app.xml"
+      settle_seconds:
+        description: "Seconds to wait for first paint before capture"
+        required: false
+        default: "12"
+
+jobs:
+  spike:
+    name: Headless render + capture
+    runs-on: ubuntu-latest
+    env:
+      CONFIG: ${{ inputs.config || 'examples/calculator/app.xml' }}
+      SETTLE: ${{ inputs.settle_seconds || '12' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: screenshot-spike
+
+      - name: Install build + headless render deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config cmake build-essential \
+            libxcb1-dev libx11-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev libfontconfig1-dev libfreetype6-dev libvulkan-dev \
+            xvfb mesa-vulkan-drivers vulkan-tools libgl1-mesa-dri imagemagick \
+            fonts-dejavu
+
+      - name: Build nemo (debug)
+        run: cargo build -p nemo
+
+      - name: Locate lavapipe ICD
+        id: icd
+        run: |
+          ICD="$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1 || true)"
+          echo "path=$ICD" >> "$GITHUB_OUTPUT"
+          echo "lavapipe ICD: ${ICD:-<none found>}"
+
+      - name: Vulkan diagnostics (lavapipe)
+        env:
+          VK_ICD_FILENAMES: ${{ steps.icd.outputs.path }}
+          VK_DRIVER_FILES: ${{ steps.icd.outputs.path }}
+        run: |
+          echo "== vulkaninfo --summary =="
+          vulkaninfo --summary 2>&1 | head -40 || echo "vulkaninfo failed"
+
+      - name: Render under Xvfb + lavapipe and capture
+        id: render
+        env:
+          VK_ICD_FILENAMES: ${{ steps.icd.outputs.path }}
+          VK_DRIVER_FILES: ${{ steps.icd.outputs.path }}
+          LIBGL_ALWAYS_SOFTWARE: "1"
+          RUST_BACKTRACE: "1"
+        run: |
+          set -x
+          xvfb-run -a --server-args="-screen 0 1280x800x24 +extension GLX +extension RANDR +render" \
+            bash -euxc '
+              target/debug/nemo --app-config "$CONFIG" --verbose > nemo.log 2>&1 &
+              NPID=$!
+              sleep "$SETTLE"
+              # Capture the whole virtual root window.
+              import -window root shot.png || xwd -root -silent -out root.xwd || true
+              [ -f root.xwd ] && convert root.xwd shot.png || true
+              kill "$NPID" 2>/dev/null || true
+              wait "$NPID" 2>/dev/null || true
+            ' || true
+
+      - name: Analyze capture
+        id: analyze
+        run: |
+          echo "== nemo.log (tail) =="
+          tail -40 nemo.log 2>/dev/null || echo "(no log)"
+          echo "== capture =="
+          if [ -f shot.png ]; then
+            COLORS="$(identify -format '%k' shot.png 2>/dev/null || echo 0)"
+            SIZE="$(stat -c '%s' shot.png 2>/dev/null || echo 0)"
+            echo "shot.png: ${COLORS} unique colors, ${SIZE} bytes"
+            if [ "${COLORS:-0}" -gt 3 ]; then
+              echo "SPIKE RESULT: RENDERED (non-blank, ${COLORS} colors)"
+            else
+              echo "SPIKE RESULT: BLANK/FAILED (${COLORS} colors) — see nemo.log"
+            fi
+          else
+            echo "SPIKE RESULT: NO CAPTURE — window/render likely failed; see nemo.log"
+          fi
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-spike
+          path: |
+            shot.png
+            nemo.log
+          if-no-files-found: warn

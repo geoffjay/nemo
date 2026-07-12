@@ -3,7 +3,7 @@ use gpui_component::button::{Button, ButtonVariants as _};
 use gpui_component::input::{Input, InputState};
 use gpui_component::label::Label;
 use gpui_component::{h_flex, v_flex, ActiveTheme, IconName, WindowExt as _};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 use crate::config::recent::RecentProjects;
@@ -14,6 +14,21 @@ use crate::config::NemoConfig;
 pub struct ProjectSelected(pub PathBuf);
 
 impl EventEmitter<ProjectSelected> for ProjectLoaderView {}
+
+/// Relative locations, in precedence order, where a project's `app.xml` may
+/// live within a repository. A root-level `app.xml` wins over `.nemo/app.xml`
+/// so existing repositories keep working unchanged; when the config lives in
+/// `.nemo/`, that directory becomes the project root for all relative paths.
+const CONFIG_CANDIDATES: [&str; 2] = ["app.xml", ".nemo/app.xml"];
+
+/// Resolve the project configuration file within a cloned repository, trying
+/// each candidate location in precedence order. Returns the first that exists.
+fn resolve_project_config(repo_root: &Path) -> Option<PathBuf> {
+    CONFIG_CANDIDATES
+        .iter()
+        .map(|rel| repo_root.join(rel))
+        .find(|p| p.exists())
+}
 
 pub struct ProjectLoaderView {
     nemo_config: NemoConfig,
@@ -98,19 +113,22 @@ impl ProjectLoaderView {
 
                         match output {
                             Ok(result) if result.status.success() => {
-                                let app_xml = target.join("app.xml");
-                                if app_xml.exists() {
-                                    let _ = entity.update(cx, |_view, cx| {
-                                        cx.emit(ProjectSelected(app_xml));
-                                    });
-                                } else {
-                                    let _ = entity.update(cx, |view, cx| {
-                                        view.clone_error = Some(format!(
-                                            "Cloned successfully but no app.xml found in {}",
-                                            target.display()
-                                        ));
-                                        cx.notify();
-                                    });
+                                match resolve_project_config(&target) {
+                                    Some(app_xml) => {
+                                        let _ = entity.update(cx, |_view, cx| {
+                                            cx.emit(ProjectSelected(app_xml));
+                                        });
+                                    }
+                                    None => {
+                                        let _ = entity.update(cx, |view, cx| {
+                                            view.clone_error = Some(format!(
+                                                "Cloned successfully but no app.xml found at the \
+                                                 repo root or in .nemo/ ({})",
+                                                target.display()
+                                            ));
+                                            cx.notify();
+                                        });
+                                    }
                                 }
                             }
                             Ok(result) => {
@@ -258,5 +276,57 @@ impl Render for ProjectLoaderView {
             .items_center()
             .justify_center()
             .child(content)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_project_config;
+    use std::path::Path;
+    use tempfile::TempDir;
+
+    fn touch(path: &Path) {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).expect("create parent dir");
+        }
+        std::fs::write(path, "<app></app>").expect("write config");
+    }
+
+    #[test]
+    fn resolves_root_config() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        touch(&root.join("app.xml"));
+
+        assert_eq!(resolve_project_config(root), Some(root.join("app.xml")));
+    }
+
+    #[test]
+    fn resolves_dot_nemo_config() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        touch(&root.join(".nemo/app.xml"));
+
+        assert_eq!(
+            resolve_project_config(root),
+            Some(root.join(".nemo/app.xml"))
+        );
+    }
+
+    #[test]
+    fn root_config_takes_precedence_over_dot_nemo() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        touch(&root.join("app.xml"));
+        touch(&root.join(".nemo/app.xml"));
+
+        assert_eq!(resolve_project_config(root), Some(root.join("app.xml")));
+    }
+
+    #[test]
+    fn returns_none_when_no_config_present() {
+        let dir = TempDir::new().unwrap();
+
+        assert_eq!(resolve_project_config(dir.path()), None);
     }
 }

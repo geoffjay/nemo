@@ -56,3 +56,4 @@ my-app/
 - [Plugins](public/plugins.md) -- Extending Nemo with native plugins
 - [Architecture](public/architecture.md) -- System design and internal diagrams
 - [Development](public/develop.md) -- Extending Nemo with scripts and plugins
+- [Packaging & Distribution](public/packaging.md) -- How Nemo is built, packaged, and released

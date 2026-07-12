@@ -3,6 +3,8 @@ name = "nemo"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "Configuration-driven, GPU-accelerated desktop application framework"
+repository.workspace = true
 
 [[bin]]
 name = "nemo"
@@ -33,9 +35,44 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 clap = { workspace = true }
 dirs = { workspace = true }
+notify = { workspace = true }
 toml = { workspace = true }
 chrono = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
 proptest = "1"
+
+# cargo-binstall: resolve prebuilt binaries from GitHub Releases.
+# The `nemo` binary is not published to crates.io (it depends on a git build of
+# gpui), so this is used via `cargo binstall --git https://github.com/geoffjay/nemo nemo`.
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/v{ version }/{ name }-{ target }.{ archive-format }"
+bin-dir = "{ bin }{ binary-ext }"
+
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+pkg-fmt = "zip"
+
+# cargo-deb: build a Debian package for x86_64/aarch64 Linux.
+# Depends on the same system libraries GPUI links against at build time.
+[package.metadata.deb]
+maintainer = "Geoff Johnson <geoffjay@users.noreply.github.com>"
+license-file = ["../../LICENSE-MIT", "0"]
+extended-description = "Nemo is a configuration-driven desktop application framework. Define UI, data sources, and event handlers in XML and Nemo renders a native, GPU-accelerated application."
+section = "utils"
+priority = "optional"
+depends = "$auto, libfontconfig1, libfreetype6, libvulkan1, libxcb1, libxkbcommon0, libxkbcommon-x11-0, libwayland-client0"
+assets = [
+  ["target/release/nemo", "usr/bin/", "755"],
+  ["../../examples/**/*", "usr/share/nemo/examples/", "644"],
+  ["../../README.md", "usr/share/doc/nemo/README.md", "644"],
+]
+
+# cargo-generate-rpm: build an RPM package for x86_64/aarch64 Linux.
+# Runtime library dependencies are auto-detected from the binary's ELF
+# (cargo-generate-rpm's default auto-req), which maps the needed .so names to
+# the providing packages on the build distro.
+[package.metadata.generate-rpm]
+assets = [
+  { source = "target/release/nemo", dest = "/usr/bin/nemo", mode = "755" },
+]
