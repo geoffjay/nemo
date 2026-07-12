@@ -29,3 +29,9 @@ build.
   `Cargo.lock` first.
 * Local macOS builds also require `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`
   (the Metal shader compiler).
+* **Adding any new crate dependency** can trigger a re-resolve that drifts the
+  rev-less gpui/gpui-component pins. This bit the `nemo new` scaffold: the plan
+  called for `include_dir`, but adding it drifted the pins and broke the build.
+  The workaround is to embed templates via `include_str!` (a compile-time
+  builtin, zero new dependencies) instead of `include_dir`. See
+  `crates/nemo/src/commands/new.rs`.

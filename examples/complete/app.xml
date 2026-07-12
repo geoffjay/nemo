@@ -138,8 +138,10 @@
 
           <label id="settings_theme_title" text="Theme" size="md" />
           <panel id="settings_theme_panel" padding="16" border="1" border-color="theme.border" rounded="md">
-            <radio id="settings_theme_mode" options='["Dark","Light"]' value="Dark"
-                   direction="horizontal" />
+            <radio id="settings_theme_mode" value="Dark" direction="horizontal">
+              <option value="Dark" />
+              <option value="Light" />
+            </radio>
           </panel>
         </panel>
 

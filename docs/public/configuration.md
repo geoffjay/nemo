@@ -19,6 +19,8 @@ A Nemo configuration file contains up to six top-level elements, all wrapped in 
 
 All elements are optional. A minimal valid configuration is `<nemo></nemo>`, though it will produce a blank window.
 
+An `<include src="..." />` directive can appear anywhere a top-level element does; its target file is parsed and merged in place, letting you split a large configuration across multiple files.
+
 ---
 
 ## `variable` Element
@@ -112,9 +114,17 @@ Configure where RHAI scripts are loaded from.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
-| `path` | string | Directory containing `.rhai` script files |
+| `src` | string | Directory containing `.rhai` script files |
 
 All `.rhai` files in the directory are loaded at startup. Scripts are identified by their filename without the extension (e.g., `handlers.rhai` becomes script ID `"handlers"`).
+
+Alternatively, a script can be defined inline with a CDATA block instead of `src`:
+
+```xml
+<script><![CDATA[
+  fn on_click() { print("clicked"); }
+]]></script>
+```
 
 ---
 
@@ -417,6 +427,18 @@ These properties are available on all components:
 
 Directional properties override their generic counterpart. For example, `margin_left = 8` takes effect alongside `margin = 16` for the left side only, with the other three sides using `16`.
 
+### `dock`
+
+A dockable layout container that hosts panels along an edge or in the center.
+
+```xml
+<dock id="main_dock" position="center" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `position` | string | `"center"` | Dock position: `"center"`, `"left"`, `"right"`, `"top"`, `"bottom"` |
+
 ### `stack`
 
 Arranges children in a vertical or horizontal flex layout.
@@ -428,8 +450,9 @@ Arranges children in a vertical or horizontal flex layout.
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `direction` | string | `"vertical"` | `"vertical"` or `"horizontal"` |
-| `spacing` | int | `4` | Gap between children in pixels |
+| `spacing` | int | `0` | Gap between children in pixels |
 | `padding` | int | | Inner padding in pixels |
+| `scroll` | bool | `false` | Make the stack scrollable when content overflows |
 | `border` | int | | Border width in pixels |
 | `border_color` | string | | Border color (theme ref or hex) |
 | `shadow` | string | | Shadow size: `"sm"`, `"md"`, `"lg"` |
@@ -485,8 +508,8 @@ A clickable button with style variants.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `label` | string | `"Button"` | Button text |
-| `variant` | string | `"secondary"` | Visual style (see below) |
+| `label` | string | (required) | Button text |
+| `variant` | string | `"primary"` | Visual style (see below) |
 | `disabled` | bool | `false` | Disable interaction |
 | `on_click` | string | | Handler function name |
 
@@ -506,6 +529,58 @@ A text input field.
 | `value` | string | | Initial value |
 | `disabled` | bool | `false` | Disable input |
 
+### `textarea`
+
+A multi-line text input area.
+
+```xml
+<textarea id="notes" placeholder="Enter notes..." rows="4" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `placeholder` | string | | Placeholder text |
+| `default_value` | string | | Initial content |
+| `rows` | int | | Number of visible rows |
+| `auto_grow_min` | int | | Minimum rows when auto-growing |
+| `auto_grow_max` | int | | Maximum rows when auto-growing |
+| `disabled` | bool | `false` | Disable input |
+
+### `code_editor`
+
+A code editor with syntax highlighting and line numbers.
+
+```xml
+<code_editor id="editor" language="rust" line-number="true" default-value="fn main() {}" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `language` | string | `"plain"` | Syntax highlighting language |
+| `line_number` | bool | `true` | Show line numbers |
+| `searchable` | bool | `true` | Enable in-editor search |
+| `default_value` | string | | Initial content |
+| `multi_line` | bool | `true` | Allow multiple lines |
+| `tab_size` | int | `4` | Spaces per tab |
+| `hard_tabs` | bool | `false` | Insert tab characters instead of spaces |
+| `rows` | int | | Number of visible rows |
+| `disabled` | bool | `false` | Disable editing |
+
+### `text_editor`
+
+A rich text editor with a formatting toolbar.
+
+```xml
+<text_editor id="body" placeholder="Compose..." rows="8" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `placeholder` | string | | Placeholder text |
+| `default_value` | string | | Initial content |
+| `rows` | int | | Number of visible rows |
+| `disabled` | bool | `false` | Disable editing |
+
 ### `checkbox`
 
 A toggleable checkbox with optional label.
@@ -518,22 +593,33 @@ A toggleable checkbox with optional label.
 |----------|------|---------|-------------|
 | `label` | string | `""` | Checkbox label text |
 | `checked` | bool | `false` | Initial checked state |
-| `disabled` | bool | `false` | Disable interaction |
 
 The change handler receives `"true"` or `"false"` as event data.
 
 ### `select`
 
-A dropdown selection component.
+A dropdown selection component. Options are declared as `option` child elements.
 
 ```xml
-<select id="color_picker" options='["Red", "Green", "Blue"]' value="Red" />
+<select id="color_picker" value="Cherry">
+  <option value="Apple" />
+  <option value="Banana" />
+  <option value="Cherry" />
+</select>
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `options` | array | | List of option strings |
 | `value` | string | | Currently selected value |
+
+### `option`
+
+A selectable entry for use inside a `select` or `radio`.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `value` | string | (required) | The option's value |
+| `label` | string | | Display text (defaults to `value`) |
 
 ### `icon`
 
@@ -545,8 +631,8 @@ Displays a named icon.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `name` | string | | Icon name |
-| `size` | string | `"md"` | Icon size |
+| `name` | string | (required) | Icon name |
+| `size` | int | `16` | Icon size in pixels |
 
 ### `image`
 
@@ -566,24 +652,27 @@ Displays an image.
 A progress bar.
 
 ```xml
-<progress id="upload_progress" value="75" />
+<progress id="upload_progress" value="75" max="100" />
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `value` | int | `0` | Progress value (0-100) |
+| `value` | float | | Current progress value |
+| `max` | float | `100` | Value corresponding to a full bar |
 
 ### `list`
 
-A vertical list of items.
+A vertical list. Each row is a `list-item` child whose own children are the row content.
 
 ```xml
-<list id="task_list" items='["Task 1", "Task 2", "Task 3"]' />
+<list id="task_list">
+  <list-item><text id="t1" content="Task 1" /></list-item>
+  <list-item><text id="t2" content="Task 2" /></list-item>
+  <list-item><text id="t3" content="Task 3" /></list-item>
+</list>
 ```
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `items` | array | `[]` | List of string items |
+The `list` and `list-item` elements take no properties of their own beyond the [common properties](#common-properties).
 
 ### `notification`
 
@@ -629,28 +718,52 @@ Wraps child content with a tooltip.
 
 ### `tabs`
 
-A tabbed container.
+A tabbed container. Each tab is a `tab-item` child; the tab label comes from the item's `label` property and its children form the tab body.
 
 ```xml
-<tabs id="view_tabs">
-  <label id="tab1" text="Tab 1 Content" />
-  <label id="tab2" text="Tab 2 Content" />
+<tabs id="view_tabs" active-tab="0">
+  <tab-item id="tab1" label="Overview">
+    <text id="tab1_body" content="Tab 1 content" />
+  </tab-item>
+  <tab-item id="tab2" label="Details">
+    <text id="tab2_body" content="Tab 2 content" />
+  </tab-item>
 </tabs>
-```
-
-### `accordion`
-
-Collapsible content sections. Each item has a title and expandable content.
-
-```xml
-<accordion id="faq" items='[{"title": "Question 1", "content": "Answer 1", "open": true}, {"title": "Question 2", "content": "Answer 2"}, {"title": "Question 3", "content": "Answer 3"}]' multiple="true" bordered="false" />
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `items` | array | `[]` | Array of objects with `title`, `content`, and optional `open` (bool) |
+| `variant` | string | | Visual style of the tab strip |
+| `active_tab` | int | `0` | Index of the initially selected tab |
+
+Each `tab-item` takes a `label` property for its tab strip text.
+
+### `accordion`
+
+Collapsible content sections. Each section is an `accordion-item` child with a title; the item's own children are its expandable body.
+
+```xml
+<accordion id="faq" multiple="true" bordered="false">
+  <accordion-item id="q1" title="Question 1" open="true">
+    <text id="a1" content="Answer 1" />
+  </accordion-item>
+  <accordion-item id="q2" title="Question 2">
+    <text id="a2" content="Answer 2" />
+  </accordion-item>
+</accordion>
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
 | `multiple` | bool | `false` | Allow multiple items open simultaneously |
 | `bordered` | bool | `true` | Show borders between items |
+
+#### `accordion-item`
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `title` | string | | Section header text |
+| `open` | bool | `false` | Whether the section starts expanded |
 
 ### `alert`
 
@@ -707,34 +820,44 @@ A single expandable/collapsible section with a clickable title bar.
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `title` | string | `""` | Clickable header text |
+| `title` | string | `"Details"` | Clickable header text |
 | `open` | bool | `false` | Initial expanded state |
 
 ### `dropdown_button`
 
-A button that opens a dropdown menu with selectable items.
+A button that opens a dropdown menu. Menu entries are declared as `menu-item` children.
 
 ```xml
-<dropdown_button id="actions" label="Actions" variant="primary" items='["Copy", "Paste", "Cut"]' />
+<dropdown_button id="actions" label="Actions" variant="primary">
+  <menu-item label="Copy" />
+  <menu-item label="Paste" />
+  <menu-item label="Cut" />
+</dropdown_button>
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `label` | string | `"Action"` | Button text |
-| `variant` | string | `"secondary"` | Button variant: `"primary"`, `"secondary"`, `"danger"`, etc. |
-| `items` | array | `[]` | List of menu item strings |
+| `variant` | string | | Button variant: `"primary"`, `"secondary"`, `"danger"`, etc. |
+
+Each `menu-item` takes a single `label` property.
 
 ### `radio`
 
 A group of mutually exclusive options.
 
+Options are declared as `option` child elements (the same element used by `select`).
+
 ```xml
-<radio id="size_picker" options='["Small", "Medium", "Large"]' value="Medium" direction="horizontal" />
+<radio id="size_picker" value="Medium" direction="horizontal">
+  <option value="Small" />
+  <option value="Medium" />
+  <option value="Large" />
+</radio>
 ```
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
-| `options` | array | `[]` | List of option strings |
 | `value` | string | | Initially selected option |
 | `direction` | string | `"vertical"` | Layout: `"vertical"` or `"horizontal"` |
 
@@ -860,6 +983,7 @@ Tabular data display with columns, sorting, and striped rows.
 | `columns` | array | `[]` | Array of column objects with `key`, `label`, and optional `width` (int) |
 | `data` | array | `[]` | Array of row objects keyed by column `key` values |
 | `stripe` | bool | `false` | Alternate row background colors |
+| `bordered` | bool | `true` | Draw borders around cells |
 | `height` | int | `300` | Container height in pixels (required for scrollable content) |
 
 !!! note
@@ -890,7 +1014,9 @@ Hierarchical tree view with expand/collapse and keyboard navigation.
 
 ### Charts
 
-Nemo includes five chart types for data visualization. All charts read data from a `data` array property and map fields via axis properties.
+Nemo includes seventeen chart types for data visualization. All charts read data from a `data` array property and map fields via axis properties.
+
+Charts that plot against a category axis also accept an optional `tick_margin` (int) property controlling the gap between axis ticks and labels. Chart height is set via the common `height` property (default 300px); like `table` and `tree`, charts need a definite height to render.
 
 #### `line_chart`
 
@@ -981,6 +1107,97 @@ Financial OHLC (Open-High-Low-Close) chart.
 | `height` | int | `300` | Chart height in pixels |
 | `data` | array | `[]` | Array of OHLC data objects |
 
+#### `column_chart`
+
+A vertical column chart. Behaves as an alias of `bar_chart` with the same properties: `x_field` (required), `y_field` (required), `show_label`, and `data`.
+
+#### `scatter_chart`
+
+A scatter plot of data points on a numeric plane.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field for x values |
+| `y_field` | string | (required) | Field for y values |
+| `dot_size` | float | | Point size |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `bubble_chart`
+
+A scatter chart with variable-size bubbles.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field for x values |
+| `y_field` | string | (required) | Field for y values |
+| `size_field` | string | (required) | Field driving bubble radius |
+| `min_radius` | float | | Smallest bubble radius |
+| `max_radius` | float | | Largest bubble radius |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `stacked_column_chart` / `clustered_column_chart`
+
+Vertical multi-series column charts — stacked one atop another, or grouped side by side.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field for x-axis labels |
+| `y_fields` | array | (required) | List of field names, one per series |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `stacked_bar_chart` / `clustered_bar_chart`
+
+Horizontal multi-series bar charts — stacked or grouped side by side.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `y_field` | string | (required) | Field for y-axis labels |
+| `x_fields` | array | (required) | List of field names, one per series |
+| `data` | array | `[]` | Array of data point objects |
+
+#### `heatmap_chart`
+
+A grid of colored cells representing values across two categories.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field for the column category |
+| `y_field` | string | (required) | Field for the row category |
+| `value_field` | string | (required) | Field for the cell value |
+| `data` | array | `[]` | Array of cell objects |
+
+#### `radar_chart`
+
+A radar (spider/web) chart with polygonal data series.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `categories` | array | (required) | Axis category labels |
+| `y_fields` | array | (required) | List of field names, one per series |
+| `max_value` | float | | Upper bound of the radial axis |
+| `data` | array | `[]` | Array of data objects |
+
+#### `pyramid_chart` / `funnel_chart`
+
+A pyramid of centered horizontal bars sorted by value, or a funnel of narrowing segments.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label_field` | string | (required) | Field for segment labels |
+| `value_field` | string | (required) | Field for segment values |
+| `data` | array | `[]` | Array of segment objects |
+
+#### `realtime_chart`
+
+A multi-line chart for live time-series data with multiple traces.
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `x_field` | string | (required) | Field for x-axis labels |
+| `y_fields` | array | | List of trace field names |
+| `linear` | bool | `false` | Use linear interpolation (vs. smooth curves) |
+| `data` | array | `[]` | Array of data point objects |
+
 ---
 
 ## Data Binding
@@ -1000,7 +1217,7 @@ Connect data sources to component properties so that components update automatic
 | `source` | string | (required) | Data path (e.g., `"data.source_name"`) |
 | `target` | string | (required) | Component property to update |
 | `transform` | string | | Field name to extract from the data |
-| `mode` | string | `"one_way"` | Binding mode: `"one_way"` or `"two_way"` |
+| `mode` | string | `"one_way"` | Binding mode: `"one_way"`, `"two_way"`, or `"one_time"` (set once at init) |
 
 ### Shorthand Binding
 

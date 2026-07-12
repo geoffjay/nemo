@@ -401,7 +401,8 @@ Tests are embedded as `#[cfg(test)]` modules in each crate:
 | File | Content |
 |------|---------|
 | `docs/public/plugins.md` (~316 lines) | Plugin authoring guide — step-by-step creation, API reference, build instructions |
-| `docs/planning/subsystems/extension-manager.md` (~740 lines) | System design — architecture, component specs, security, error handling |
+| `docs/knowledgebase/concepts/extensions.md` | KB concept doc — the three-tier model (Rhai, native, WASM), PluginContext API, discovery |
+| `docs/knowledgebase/decisions/three-tier-extensions.md` | KB decision — rationale for the unified PluginContext across tiers |
 
 ---
 

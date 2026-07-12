@@ -128,6 +128,13 @@ Verified: `nemo`/`nemo-registry` build clean; `nemo`, `nemo-config`, and
 `nemo-registry` test suites pass; and `nemo validate
 examples/components/app.xml` passes. Not yet exercised in a live GPUI window.
 
+**Follow-up (2026-07-12).** The fan-out missed two configs that still used
+`radio options='[…]'`: `examples/complete/app.xml` and the `nemo new` scaffolding
+template `crates/nemo/templates/complete/app.xml`. Both were migrated to `<option>`
+children and re-checked with `nemo validate --strict`. The public config reference
+(`docs/public/configuration.md`) was also re-synced to the child-element form for
+all migrated components (it still documented the old JSON-string API).
+
 **Remaining (out of scope):** `table` (`columns`/`data`) and `tree` (recursive
 `items`) still use JSON-string properties — see
 [collection properties as JSON-string attributes](../patterns/json-string-collection-properties.md).

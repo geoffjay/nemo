@@ -799,6 +799,5 @@ graph TB
 ## References
 
 - **Code Location:** `~/Projects/nemo/`
-- **Architecture Doc:** `docs/planning/nemo-system-architecture.md`
-- **Code Review:** `personas/kb/systems-designer/nemo-code-review.md`
-- **Subsystem Docs:** `docs/planning/subsystems/`
+- **Knowledge Base:** `docs/knowledgebase/` — see `concepts/architecture.md`, `concepts/configuration.md`, `concepts/data-flow.md`, `concepts/components.md`, and `concepts/extensions.md`
+- **Planning Docs:** `docs/planning/nemo-improvement-roadmap.md` and `docs/planning/phase-2-build-and-installation.md`
