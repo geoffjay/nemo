@@ -37,8 +37,8 @@ The two biggest corrections versus the roadmap:
 | §2.1 Fix `futures` conflict | ✅ Done | Resolved in the workspace; no longer reproduces. |
 | §2.2 `nemo new` scaffold | ✅ Done | 4 templates embedded via `include_str!`; scaffolds validate. See §4. |
 | §2.3 Hot-reload dev mode | ✅ Done | `nemo dev` + `--watch`; watcher drives the existing full-rebuild path. See §5. |
-| §2.4 Cross-platform packaging | 🟢 Mostly done | 5-target matrix, macOS `.app` + `.dmg`, Linux `.deb` + `.rpm`, Windows `.zip`. Gaps: AppImage, `.msi`, signing. See §7. |
-| §2.5 Distribution | 🟢 Mostly done | `install.sh`, Homebrew tap auto-push (gated), binstall metadata, Releases + checksums. See §8. |
+| §2.4 Cross-platform packaging | ✅ Validated | `v0.7.0-rc.1` produced all 14 assets across 5 targets (`.tar.gz`/`.zip`/`.app`/`.dmg`/`.deb`/`.rpm` + checksums). Gaps: AppImage, `.msi`, signing. See §7. |
+| §2.5 Distribution | ✅ Validated | `install.sh` verified end-to-end against the rc release; Homebrew tap auto-push wired (skips until `HOMEBREW_TAP_TOKEN` is set). See §8. |
 | §2.6 `validate` subcommand | ✅ Done | `nemo validate [--strict] [--format]`; `--validate-only` forwards to it. See §6. |
 | **NEW** Headless renderer / screenshots | 🟡 Spiked | Linux launch panic FIXED (`be2afa0`); screenshots feasible but capture path needs a compositor/offscreen iteration. See §9. |
 
@@ -332,13 +332,16 @@ validation logic in `crates/nemo-config` / `crates/nemo-registry`.
 
 ## 7. Workstream E — Packaging Gaps (§2.4)
 
-> **Status: 🟢 Advanced (2026-07-11).** Added macOS `.dmg` (`hdiutil`, wrapping
-> the existing `.app`) and Linux `.rpm` (`cargo-generate-rpm` +
-> `[package.metadata.generate-rpm]`, auto-detecting runtime `Requires`) to the
-> release matrix, both added to `checksums.txt` and the release assets. **Not yet
-> validated by a real release run** (CI-only steps; same caveat as the existing
-> `.deb`). **Remaining:** Linux AppImage and Windows `.msi` (see below), plus
-> code signing (blocked on certs).
+> **Status: ✅ Validated by `v0.7.0-rc.1` (2026-07-11).** A full prerelease run
+> built all 5 targets and produced 14 assets — 4×`.tar.gz` + Windows `.zip`,
+> 2×`.app` `.zip`, 2×`.dmg`, 2×`.deb`, 2×`.rpm`, and `checksums.txt` covering all.
+> Two bugs the RC surfaced and fixed en route: (1) `ci.yml` lacked the Linux
+> system libs (`libfontconfig1-dev` etc.) that the x11 build now needs; (2) the
+> `.rpm` step used `-p nemo` (cargo-generate-rpm's `-p` is a *directory*, so
+> `-p crates/nemo`) and `hdiutil` intermittently returned "Resource busy" (added
+> a retry). Also a `rustc 1.97` dead-code cascade in the bin's test build
+> (`#![cfg_attr(test, allow(dead_code))]`). **Remaining:** Linux AppImage and
+> Windows `.msi` (see below), plus code signing (blocked on certs).
 
 **Already shipped:** 5-target release matrix, macOS `.app` + `.dmg`, Linux `.deb`
 + `.rpm`, Windows portable `.zip`, per-release `checksums.txt`, generated release
@@ -382,8 +385,13 @@ the AppImage runs on a clean distro in CI.
 > `HOMEBREW_TAP_TOKEN` secret (skips with a notice if absent, so releases don't
 > fail). Install command is `brew install geoffjay/tap/nemo` (corrected from the
 > earlier `geoffjay/nemo/nemo`) — fixed in the release notes, README, and
-> `packaging.md`. Pending a real tagged release to populate the tap. The
-> `binstall` limitation (git form required) is documented. **Remaining
+> `packaging.md`. The `binstall` limitation (git form required) is documented.
+>
+> **Validated by `v0.7.0-rc.1`:** `install.sh` end-to-end works — downloaded the
+> published tarball, verified the checksum, installed, and the binary ran
+> (`nemo 0.7.0`) and validated a config. The `homebrew` job ran but **skipped**
+> (notice: `HOMEBREW_TAP_TOKEN not set`) — the one outstanding action is adding
+> that secret; then the tap auto-updates on the next release. **Remaining
 > (optional):** AUR, Scoop/Winget manifests.
 
 **Already shipped:** `scripts/install.sh` (detect → download → checksum-verify →
