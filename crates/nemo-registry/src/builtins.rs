@@ -104,11 +104,21 @@ fn register_basic_components(registry: &ComponentRegistry) {
         "accordion",
         ComponentCategory::Display,
         "Accordion",
-        "A collapsible accordion with multiple items",
+        "A collapsible accordion containing accordion-item children",
         ConfigSchema::new("accordion")
-            .property("items", PropertySchema::any())
             .property("multiple", PropertySchema::boolean().with_default(false))
             .property("bordered", PropertySchema::boolean().with_default(true)),
+    );
+
+    reg(
+        registry,
+        "accordion_item",
+        ComponentCategory::Display,
+        "Accordion Item",
+        "A titled, collapsible section for use inside an Accordion; its children are the panel body",
+        ConfigSchema::new("accordion_item")
+            .property("title", PropertySchema::string())
+            .property("open", PropertySchema::boolean().with_default(false)),
     );
 
     reg(

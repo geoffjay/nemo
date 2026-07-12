@@ -88,6 +88,25 @@ schema as part of this work.
 
 # Status
 
-Proposed — not yet started. When adopted, record the outcome as a decision and
-update [Components](../concepts/components.md) and
+**Accordion pilot landed** (2026-07-11). `accordion` now takes `<accordion-item>`
+children (nested-component bodies, hard switch — `items` removed):
+
+* Registry: `accordion` schema drops `items`; new `accordion_item` type
+  (`title`, `open`) — `crates/nemo-registry/src/builtins.rs`.
+* Dispatch: the `"accordion"` arm collects `accordion_item` children, renders
+  each item's children as its body, and derives initial-open from each item's
+  `open` attribute; added an `"accordion_item"` standalone-fallback arm —
+  `crates/nemo/src/app.rs`.
+* Component: `Accordion` carries `Vec<AccordionItemData>` instead of reading the
+  `items` property — `crates/nemo/src/components/accordion.rs`.
+* State: `get_or_create_accordion_state` now takes a precomputed
+  `HashSet<usize>` of open indices — `crates/nemo/src/components/state.rs`.
+* Example migrated: `examples/components/app.xml`.
+
+Verified: builds, component + parser tests pass, and `nemo validate
+examples/components/app.xml` passes. Not yet exercised in a live GPUI window.
+
+The generalization to `tabs`/`select`/`radio`/`dropdown-button`/`list` remains
+**not started**. When those land (or the pilot is confirmed in the app), record
+a decision and update [Components](../concepts/components.md) and
 [Configuration](../concepts/configuration.md).

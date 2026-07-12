@@ -164,7 +164,7 @@ pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>) -> Div {
     }
 }
 
-pub use accordion::Accordion;
+pub use accordion::{Accordion, AccordionItemData};
 pub use alert::Alert;
 pub use area_chart::AreaChart;
 pub use avatar::Avatar;

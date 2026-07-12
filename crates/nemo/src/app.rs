@@ -8,7 +8,7 @@ use gpui_component::tree::TreeState;
 use gpui_component::v_flex;
 use gpui_component::ActiveTheme;
 use nemo_config::Value;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::components::state::{ComponentState, ComponentStates};
@@ -17,13 +17,13 @@ use crate::components::tree::values_to_tree_items;
 use gpui_component::input::TabSize;
 
 use crate::components::{
-    apply_rounded, apply_shadow, Accordion, Alert, AreaChart, Avatar, Badge, BarChart, BubbleChart,
-    Button, CandlestickChart, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
-    Collapsible, ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Label,
-    LineChart, List, Modal, Notification, Panel, PieChart, Progress, PyramidChart, RadarChart,
-    Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Slider, Spinner, Stack,
-    StackedBarChart, StackedColumnChart, Switch, Table, Tabs, Tag, Text, TextEditor, Textarea,
-    Toggle, Tooltip, Tree,
+    apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
+    BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
+    ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
+    HeatmapChart, Icon, Image, Label, LineChart, List, Modal, Notification, Panel, PieChart,
+    Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select, SidenavBar,
+    Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch, Table, Tabs, Tag, Text,
+    TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
 use nemo_layout::BuiltComponent;
@@ -760,14 +760,56 @@ impl App {
             "pyramid_chart" => PyramidChart::new(component.clone()).into_any_element(),
             "funnel_chart" => FunnelChart::new(component.clone()).into_any_element(),
             "accordion" => {
-                let acc_state = self.component_states.get_or_create_accordion_state(
-                    &component.id,
-                    component.properties.get("items"),
-                );
+                // Each <accordion-item> child becomes one section; the item's
+                // own children are rendered as that section's panel body.
+                let item_ids: Vec<String> = component
+                    .children
+                    .iter()
+                    .filter(|id| {
+                        components
+                            .get(*id)
+                            .map(|c| c.component_type == "accordion_item")
+                            .unwrap_or(false)
+                    })
+                    .cloned()
+                    .collect();
+
+                let mut items = Vec::new();
+                let mut initial_open = HashSet::new();
+                for (ix, item_id) in item_ids.iter().enumerate() {
+                    let Some(item) = components.get(item_id) else {
+                        continue;
+                    };
+                    let title = item
+                        .properties
+                        .get("title")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    if item
+                        .properties
+                        .get("open")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+                    {
+                        initial_open.insert(ix);
+                    }
+                    let body = self.render_children(item, components, entity_id, window, cx);
+                    items.push(AccordionItemData { title, body });
+                }
+
+                let acc_state = self
+                    .component_states
+                    .get_or_create_accordion_state(&component.id, initial_open);
                 Accordion::new(component.clone())
+                    .items(items)
                     .open_indices(acc_state)
                     .entity_id(entity_id)
                     .into_any_element()
+            }
+            "accordion_item" => {
+                // Items are rendered by their parent Accordion; standalone fallback.
+                div().into_any_element()
             }
             "alert" => Alert::new(component.clone()).into_any_element(),
             "avatar" => Avatar::new(component.clone()).into_any_element(),

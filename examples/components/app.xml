@@ -471,12 +471,51 @@
           <text id="accordion_desc" content="Accordions show collapsible content sections. Supports multiple open items and bordered styles." />
 
           <label id="accordion_section_basic" text="Basic Accordion" size="sm" />
-          <accordion id="accordion_demo"
-            items='[{"title":"What is Nemo?","content":"Nemo is a GPUI desktop application framework configured with HCL.","open":true},{"title":"How do I get started?","content":"Create an app.hcl file and define your layout with components."},{"title":"Can I use custom themes?","content":"Yes, Nemo supports theme configuration via the app.theme block."}]' />
+          <accordion id="accordion_demo">
+            <accordion-item id="acc_q1" title="What is Nemo?" open="true">
+              <text id="acc_a1" content="Nemo is a GPUI desktop application framework configured with XML." />
+            </accordion-item>
+            <accordion-item id="acc_q2" title="How do I get started?">
+              <text id="acc_a2" content="Create an app.xml file and define your layout with components." />
+            </accordion-item>
+            <accordion-item id="acc_q3" title="Can I use custom themes?">
+              <text id="acc_a3" content="Yes, Nemo supports theme configuration via the app.theme block." />
+            </accordion-item>
+          </accordion>
 
           <label id="accordion_section_multi" text="Multiple Open (no border)" size="sm" />
-          <accordion id="accordion_multi" multiple="true" bordered="false"
-            items='[{"title":"Section A","content":"Content for section A.","open":true},{"title":"Section B","content":"Content for section B.","open":true},{"title":"Section C","content":"Content for section C."}]' />
+          <accordion id="accordion_multi" multiple="true" bordered="false">
+            <accordion-item id="acc_sa" title="Section A" open="true">
+              <text id="acc_sa_body" content="Content for section A." />
+            </accordion-item>
+            <accordion-item id="acc_sb" title="Section B" open="true">
+              <text id="acc_sb_body" content="Content for section B." />
+            </accordion-item>
+            <accordion-item id="acc_sc" title="Section C">
+              <text id="acc_sc_body" content="Content for section C." />
+            </accordion-item>
+          </accordion>
+
+          <label id="accordion_section_rich" text="Rich Content" size="sm" />
+          <text id="accordion_rich_desc" content="An accordion item's children can be any components, not just text." />
+          <accordion id="accordion_rich">
+            <accordion-item id="acc_rich_actions" title="Item with actions" open="true">
+              <stack id="acc_rich_actions_body" direction="vertical" spacing="8">
+                <text id="acc_rich_actions_text" content="This item's body holds a row of buttons." />
+                <stack id="acc_rich_actions_row" direction="horizontal" spacing="8">
+                  <button id="acc_rich_btn_save" label="Save" variant="primary" />
+                  <button id="acc_rich_btn_cancel" label="Cancel" variant="ghost" />
+                </stack>
+              </stack>
+            </accordion-item>
+            <accordion-item id="acc_rich_mixed" title="Item with mixed content">
+              <stack id="acc_rich_mixed_body" direction="vertical" spacing="12">
+                <alert id="acc_rich_alert" title="Heads up" message="This panel composes several components." variant="info" />
+                <input id="acc_rich_input" placeholder="Enter a value..." />
+                <progress id="acc_rich_progress" value="60" />
+              </stack>
+            </accordion-item>
+          </accordion>
         </panel>
 
         <!-- Alert page -->
