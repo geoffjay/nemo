@@ -10,8 +10,12 @@ use std::sync::{Arc, Mutex};
 /// # XML Configuration
 ///
 /// ```xml
-/// <accordion id="faq" multiple="true" bordered="true"
-///   items='[{"title":"Question 1","content":"Answer 1"},{"title":"Question 2","content":"Answer 2"}]' />
+/// <accordion
+///   id="faq"
+///   multiple="true"
+///   bordered="true"
+///   items='[{"title":"Question 1","content":"Answer 1"},{"title":"Question 2","content":"Answer 2"}]'
+/// />
 /// ```
 ///
 /// # Properties

@@ -51,7 +51,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -238,7 +238,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -364,7 +364,7 @@ jobs:
 
       - name: Checkout nemo
         if: steps.check.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Determine version
         if: steps.check.outputs.enabled == 'true'
@@ -393,7 +393,7 @@ jobs:
 
       - name: Checkout tap
         if: steps.check.outputs.enabled == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: geoffjay/homebrew-tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
