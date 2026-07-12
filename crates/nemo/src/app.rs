@@ -20,10 +20,10 @@ use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
     ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
-    HeatmapChart, Icon, Image, Label, LineChart, List, Modal, Notification, Panel, PieChart,
-    Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select, SidenavBar,
-    Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch, Table, Tabs, Tag, Text,
-    TextEditor, Textarea, Toggle, Tooltip, Tree,
+    HeatmapChart, Icon, Image, Label, LineChart, List, Modal, Notification, OptionData, Panel,
+    PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select,
+    SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch, TabItemData,
+    Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::runtime::NemoRuntime;
 use nemo_layout::BuiltComponent;
@@ -680,6 +680,7 @@ impl App {
                     .into_any_element()
             }
             "select" => {
+                let options = collect_options(component, components);
                 let initial = component
                     .properties
                     .get("value")
@@ -690,6 +691,7 @@ impl App {
                     .component_states
                     .get_or_create_selected_value(&component.id, initial);
                 Select::new(component.clone())
+                    .options(options)
                     .selected_value(sel_state)
                     .runtime(Arc::clone(&self.runtime))
                     .entity_id(entity_id)
@@ -699,7 +701,35 @@ impl App {
             "image" => Image::new(component.clone()).into_any_element(),
             "notification" => Notification::new(component.clone()).into_any_element(),
             "tabs" => {
-                let children = self.render_children(component, components, entity_id, window, cx);
+                // Each <tab-item> child becomes one tab; its label comes from the
+                // `label` attribute and its own children form the panel body.
+                let item_ids: Vec<String> = component
+                    .children
+                    .iter()
+                    .filter(|id| {
+                        components
+                            .get(*id)
+                            .map(|c| c.component_type == "tab_item")
+                            .unwrap_or(false)
+                    })
+                    .cloned()
+                    .collect();
+
+                let mut items = Vec::new();
+                for item_id in &item_ids {
+                    let Some(item) = components.get(item_id) else {
+                        continue;
+                    };
+                    let label = item
+                        .properties
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let body = self.render_children(item, components, entity_id, window, cx);
+                    items.push(TabItemData { label, body });
+                }
+
                 let initial = component
                     .properties
                     .get("active_tab")
@@ -710,8 +740,8 @@ impl App {
                     .component_states
                     .get_or_create_selected_index(&component.id, initial);
                 Tabs::new(component.clone())
+                    .items(items)
                     .selected_index(tab_state)
-                    .children(children)
                     .entity_id(entity_id)
                     .into_any_element()
             }
@@ -733,7 +763,30 @@ impl App {
                     .table_state(table_state)
                     .into_any_element()
             }
-            "list" => List::new(component.clone()).into_any_element(),
+            "list" => {
+                // Each <list-item> child is a row; its own children are the content.
+                let item_ids: Vec<String> = component
+                    .children
+                    .iter()
+                    .filter(|id| {
+                        components
+                            .get(*id)
+                            .map(|c| c.component_type == "list_item")
+                            .unwrap_or(false)
+                    })
+                    .cloned()
+                    .collect();
+
+                let mut items = Vec::new();
+                for item_id in &item_ids {
+                    let Some(item) = components.get(item_id) else {
+                        continue;
+                    };
+                    items.push(self.render_children(item, components, entity_id, window, cx));
+                }
+
+                List::new(component.clone()).items(items).into_any_element()
+            }
             "tree" => {
                 let tree_state = self.get_or_create_tree_state(component, window, cx);
                 Tree::new(component.clone())
@@ -807,8 +860,8 @@ impl App {
                     .entity_id(entity_id)
                     .into_any_element()
             }
-            "accordion_item" => {
-                // Items are rendered by their parent Accordion; standalone fallback.
+            "accordion_item" | "tab_item" | "option" | "menu_item" | "list_item" => {
+                // These are rendered by their parent container; standalone fallback.
                 div().into_any_element()
             }
             "alert" => Alert::new(component.clone()).into_any_element(),
@@ -835,24 +888,34 @@ impl App {
                     .entity_id(entity_id)
                     .into_any_element()
             }
-            "dropdown_button" => DropdownButton::new(component.clone()).into_any_element(),
-            "radio" => {
-                let options: Vec<String> = component
-                    .properties
-                    .get("options")
-                    .and_then(|v| v.as_array())
-                    .map(|arr| {
-                        arr.iter()
-                            .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                            .collect()
+            "dropdown_button" => {
+                let items: Vec<String> = component
+                    .children
+                    .iter()
+                    .filter_map(|id| components.get(id))
+                    .filter(|c| c.component_type == "menu_item")
+                    .map(|c| {
+                        c.properties
+                            .get("label")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string()
                     })
-                    .unwrap_or_default();
+                    .collect();
+                DropdownButton::new(component.clone())
+                    .items(items)
+                    .into_any_element()
+            }
+            "radio" => {
+                let options = collect_options(component, components);
                 let initial_val = component.properties.get("value").and_then(|v| v.as_str());
-                let initial_ix = initial_val.and_then(|val| options.iter().position(|o| o == val));
+                let initial_ix =
+                    initial_val.and_then(|val| options.iter().position(|o| o.value == val));
                 let radio_state = self
                     .component_states
                     .get_or_create_selected_index(&component.id, initial_ix);
                 Radio::new(component.clone())
+                    .options(options)
                     .selected_index(radio_state)
                     .runtime(Arc::clone(&self.runtime))
                     .entity_id(entity_id)
@@ -946,6 +1009,35 @@ impl App {
         };
         Self::apply_layout_styles(element, component, cx)
     }
+}
+
+/// Collects `<option>` children of a Select/Radio into `OptionData`
+/// (`value`, with `label` defaulting to `value`).
+fn collect_options(
+    component: &BuiltComponent,
+    components: &HashMap<String, BuiltComponent>,
+) -> Vec<OptionData> {
+    component
+        .children
+        .iter()
+        .filter_map(|id| components.get(id))
+        .filter(|c| c.component_type == "option")
+        .map(|c| {
+            let value = c
+                .properties
+                .get("value")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let label = c
+                .properties
+                .get("label")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| value.clone());
+            OptionData { value, label }
+        })
+        .collect()
 }
 
 impl Render for App {

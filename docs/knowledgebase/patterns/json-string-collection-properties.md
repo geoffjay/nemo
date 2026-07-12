@@ -39,26 +39,26 @@ Key consequences:
 
 # Inventory of JSON-string collection properties
 
-The shape column describes what the component's `render()` actually reads (which
-can differ from the shape in a component's doc example — verify against the code
-before relying on object fields):
+Most collection components have **migrated to child elements** (see
+[declarative children migration](../plans/declarative-children-migration.md));
+these no longer take a JSON-string property: `accordion` (`<accordion-item>`),
+`tabs` (`<tab-item>`), `select`/`radio` (`<option>`), `dropdown-button`
+(`<menu-item>`), and `list` (`<list-item>`).
+
+The remaining JSON-string collection properties are:
 
 | Component | Property | Shape the code reads |
 |---|---|---|
-| `accordion` | `items` | array of `{title, content, open?}` objects |
-| `tabs` | `tabs` | array of **strings** (used as tab labels) |
 | `table` | `columns` | array of `{key, label, width?}` objects |
 | `table` | `data` | array of row objects (usually data-bound) |
 | `tree` | `items` | array of `{id, label, expanded?, disabled?, children[]}` (recursive) |
-| `list` | `items` | array of strings |
-| `select` | `options` | array of strings |
-| `radio` | `options` | array of strings |
-| `dropdown-button` | `items` | array of **strings** (menu labels) |
 | charts | `data` | array of row objects (via `chart_utils::extract_data_array`) |
 | stacked/clustered charts | `x_fields` etc. | array of strings (via `chart_utils::get_string_array`) |
 
 Charts’ `data` is the case where JSON-in-attribute is least awkward, since it is
-normally bound to a data source rather than hand-authored.
+normally bound to a data source rather than hand-authored. `tree`'s recursive
+shape and `table`'s data are the main remaining candidates, but both are out of
+scope for the initial migration.
 
 # Extraction idioms (not yet unified)
 

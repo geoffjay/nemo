@@ -109,24 +109,35 @@
           <label id="btn_title" text="Button" size="lg" />
           <text id="btn_desc" content="Buttons trigger actions. Available variants: primary, secondary, danger, ghost, warning, success, info." />
 
-          <!-- Variants row -->
-          <label id="btn_section_variants" text="Variants" size="sm" />
-          <stack id="btn_variants_row" direction="horizontal" spacing="8">
-            <button id="btn_primary" label="Primary" variant="primary" />
-            <button id="btn_secondary" label="Secondary" variant="secondary" />
-            <button id="btn_danger" label="Danger" variant="danger" />
-            <button id="btn_ghost" label="Ghost" variant="ghost" />
-            <button id="btn_warning" label="Warning" variant="warning" />
-            <button id="btn_success" label="Success" variant="success" />
-            <button id="btn_info" label="Info" variant="info" />
-          </stack>
-
-          <!-- Disabled state -->
-          <label id="btn_section_disabled" text="Disabled" size="sm" />
-          <stack id="btn_disabled_row" direction="horizontal" spacing="8">
-            <button id="btn_disabled_1" label="Disabled Primary" variant="primary" disabled="true" />
-            <button id="btn_disabled_2" label="Disabled Secondary" disabled="true" />
-          </stack>
+          <tabs id="btn_tabs">
+            <tab-item id="btn_tabs_preview" label="Preview">
+              <stack id="btn_preview" direction="vertical" spacing="12">
+                <!-- Variants row -->
+                <label id="btn_section_variants" text="Variants" size="sm" />
+                <stack id="btn_variants_row" direction="horizontal" spacing="8">
+                  <button id="btn_primary" label="Primary" variant="primary" />
+                  <button id="btn_secondary" label="Secondary" variant="secondary" />
+                  <button id="btn_danger" label="Danger" variant="danger" />
+                  <button id="btn_ghost" label="Ghost" variant="ghost" />
+                  <button id="btn_warning" label="Warning" variant="warning" />
+                  <button id="btn_success" label="Success" variant="success" />
+                  <button id="btn_info" label="Info" variant="info" />
+                </stack>
+  
+                <!-- Disabled state -->
+                <label id="btn_section_disabled" text="Disabled" size="sm" />
+                <stack id="btn_disabled_row" direction="horizontal" spacing="8">
+                  <button id="btn_disabled_1" label="Disabled Primary" variant="primary" disabled="true" />
+                  <button id="btn_disabled_2" label="Disabled Secondary" disabled="true" />
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="btn_tabs_code" label="Code">
+              <panel id="btn_code_panel">
+                <code-editor id="btn_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;button label=&quot;Primary&quot; variant=&quot;primary&quot; /&gt;&#10;&lt;button label=&quot;Secondary&quot; variant=&quot;secondary&quot; /&gt;&#10;&lt;button label=&quot;Danger&quot; variant=&quot;danger&quot; /&gt;&#10;&lt;button label=&quot;Ghost&quot; variant=&quot;ghost&quot; /&gt;&#10;&lt;button label=&quot;Warning&quot; variant=&quot;warning&quot; /&gt;&#10;&lt;button label=&quot;Success&quot; variant=&quot;success&quot; /&gt;&#10;&lt;button label=&quot;Info&quot; variant=&quot;info&quot; /&gt;&#10;&#10;&lt;!-- Disabled --&gt;&#10;&lt;button label=&quot;Disabled&quot; variant=&quot;primary&quot; disabled=&quot;true&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Label page -->
@@ -134,12 +145,23 @@
           <label id="lbl_title" text="Label" size="lg" />
           <text id="lbl_desc" content="Labels display text at various sizes: xs, sm, md (default), lg, xl." />
 
-          <label id="lbl_section_sizes" text="Sizes" size="sm" />
-          <label id="lbl_xs" text="Extra small label (xs)" size="xs" />
-          <label id="lbl_sm" text="Small label (sm)" size="sm" />
-          <label id="lbl_md" text="Medium label (md) — default" size="md" />
-          <label id="lbl_lg" text="Large label (lg)" size="lg" />
-          <label id="lbl_xl" text="Extra large label (xl)" size="xl" />
+          <tabs id="lbl_tabs">
+            <tab-item id="lbl_tabs_preview" label="Preview">
+              <stack id="lbl_preview" direction="vertical" spacing="8">
+                <label id="lbl_section_sizes" text="Sizes" size="sm" />
+                <label id="lbl_xs" text="Extra small label (xs)" size="xs" />
+                <label id="lbl_sm" text="Small label (sm)" size="sm" />
+                <label id="lbl_md" text="Medium label (md) — default" size="md" />
+                <label id="lbl_lg" text="Large label (lg)" size="lg" />
+                <label id="lbl_xl" text="Extra large label (xl)" size="xl" />
+              </stack>
+            </tab-item>
+            <tab-item id="lbl_tabs_code" label="Code">
+              <panel id="lbl_code_panel">
+                <code-editor id="lbl_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;label text=&quot;Extra small&quot; size=&quot;xs&quot; /&gt;&#10;&lt;label text=&quot;Small&quot; size=&quot;sm&quot; /&gt;&#10;&lt;label text=&quot;Medium&quot; size=&quot;md&quot; /&gt;&#10;&lt;label text=&quot;Large&quot; size=&quot;lg&quot; /&gt;&#10;&lt;label text=&quot;Extra large&quot; size=&quot;xl&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Icon page -->
@@ -147,34 +169,45 @@
           <label id="icon_title" text="Icon" size="lg" />
           <text id="icon_desc" content="Icons render named vector icons from the gpui-component icon set." />
 
-          <label id="icon_section_grid" text="Available Icons" size="sm" />
-          <stack id="icon_row1" direction="horizontal" spacing="16">
-            <icon id="icon_search" name="search" />
-            <icon id="icon_settings" name="settings" />
-            <icon id="icon_bell" name="bell" />
-            <icon id="icon_check" name="check" />
-            <icon id="icon_close" name="close" />
-            <icon id="icon_file" name="file" />
-            <icon id="icon_folder" name="folder" />
-          </stack>
-          <stack id="icon_row2" direction="horizontal" spacing="16">
-            <icon id="icon_github" name="github" />
-            <icon id="icon_globe" name="globe" />
-            <icon id="icon_user" name="user" />
-            <icon id="icon_heart" name="heart" />
-            <icon id="icon_star" name="star" />
-            <icon id="icon_plus" name="plus" />
-            <icon id="icon_minus" name="minus" />
-          </stack>
-          <stack id="icon_row3" direction="horizontal" spacing="16">
-            <icon id="icon_sun" name="sun" />
-            <icon id="icon_moon" name="moon" />
-            <icon id="icon_inbox" name="inbox" />
-            <icon id="icon_copy" name="copy" />
-            <icon id="icon_trash" name="trash" />
-            <icon id="icon_eye" name="eye" />
-            <icon id="icon_menu" name="menu" />
-          </stack>
+          <tabs id="icon_tabs">
+            <tab-item id="icon_tabs_preview" label="Preview">
+              <stack id="icon_preview" direction="vertical" spacing="12">
+                <label id="icon_section_grid" text="Available Icons" size="sm" />
+                <stack id="icon_row1" direction="horizontal" spacing="16">
+                  <icon id="icon_search" name="search" />
+                  <icon id="icon_settings" name="settings" />
+                  <icon id="icon_bell" name="bell" />
+                  <icon id="icon_check" name="check" />
+                  <icon id="icon_close" name="close" />
+                  <icon id="icon_file" name="file" />
+                  <icon id="icon_folder" name="folder" />
+                </stack>
+                <stack id="icon_row2" direction="horizontal" spacing="16">
+                  <icon id="icon_github" name="github" />
+                  <icon id="icon_globe" name="globe" />
+                  <icon id="icon_user" name="user" />
+                  <icon id="icon_heart" name="heart" />
+                  <icon id="icon_star" name="star" />
+                  <icon id="icon_plus" name="plus" />
+                  <icon id="icon_minus" name="minus" />
+                </stack>
+                <stack id="icon_row3" direction="horizontal" spacing="16">
+                  <icon id="icon_sun" name="sun" />
+                  <icon id="icon_moon" name="moon" />
+                  <icon id="icon_inbox" name="inbox" />
+                  <icon id="icon_copy" name="copy" />
+                  <icon id="icon_trash" name="trash" />
+                  <icon id="icon_eye" name="eye" />
+                  <icon id="icon_menu" name="menu" />
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="icon_tabs_code" label="Code">
+              <panel id="icon_code_panel">
+                <code-editor id="icon_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;icon name=&quot;search&quot; /&gt;&#10;&lt;icon name=&quot;settings&quot; /&gt;&#10;&lt;icon name=&quot;bell&quot; /&gt;&#10;&lt;icon name=&quot;check&quot; /&gt;&#10;&lt;icon name=&quot;close&quot; /&gt;&#10;&lt;icon name=&quot;github&quot; /&gt;&#10;&lt;icon name=&quot;globe&quot; /&gt;&#10;&lt;icon name=&quot;user&quot; /&gt;&#10;&lt;icon name=&quot;heart&quot; /&gt;&#10;&lt;icon name=&quot;star&quot; /&gt;&#10;&lt;icon name=&quot;plus&quot; /&gt;&#10;&lt;icon name=&quot;minus&quot; /&gt;&#10;&lt;icon name=&quot;sun&quot; /&gt;&#10;&lt;icon name=&quot;moon&quot; /&gt;&#10;&lt;icon name=&quot;trash&quot; /&gt;&#10;&lt;icon name=&quot;eye&quot; /&gt;&#10;&lt;icon name=&quot;menu&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Checkbox page -->
@@ -182,11 +215,22 @@
           <label id="cb_title" text="Checkbox" size="lg" />
           <text id="cb_desc" content="Checkboxes toggle boolean state. Support labels and disabled state." />
 
-          <label id="cb_section_states" text="States" size="sm" />
-          <checkbox id="cb_unchecked" label="Unchecked" checked="false" />
-          <checkbox id="cb_checked" label="Checked" checked="true" />
-          <checkbox id="cb_disabled" label="Disabled checkbox" checked="false" disabled="true" />
-          <checkbox id="cb_disabled_checked" label="Disabled checked" checked="true" disabled="true" />
+          <tabs id="cb_tabs">
+            <tab-item id="cb_tabs_preview" label="Preview">
+              <stack id="cb_preview" direction="vertical" spacing="8">
+                <label id="cb_section_states" text="States" size="sm" />
+                <checkbox id="cb_unchecked" label="Unchecked" checked="false" />
+                <checkbox id="cb_checked" label="Checked" checked="true" />
+                <checkbox id="cb_disabled" label="Disabled checkbox" checked="false" disabled="true" />
+                <checkbox id="cb_disabled_checked" label="Disabled checked" checked="true" disabled="true" />
+              </stack>
+            </tab-item>
+            <tab-item id="cb_tabs_code" label="Code">
+              <panel id="cb_code_panel">
+                <code-editor id="cb_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;checkbox label=&quot;Unchecked&quot; checked=&quot;false&quot; /&gt;&#10;&lt;checkbox label=&quot;Checked&quot; checked=&quot;true&quot; /&gt;&#10;&lt;checkbox label=&quot;Disabled&quot; checked=&quot;false&quot; disabled=&quot;true&quot; /&gt;&#10;&lt;checkbox label=&quot;Disabled checked&quot; checked=&quot;true&quot; disabled=&quot;true&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Input page -->
@@ -194,11 +238,22 @@
           <label id="inp_title" text="Input" size="lg" />
           <text id="inp_desc" content="Text inputs for user data entry. Support placeholder text and disabled state." />
 
-          <label id="inp_section_basic" text="Basic Input" size="sm" />
-          <input id="inp_basic" placeholder="Type something..." />
-
-          <label id="inp_section_disabled" text="Disabled Input" size="sm" />
-          <input id="inp_disabled" placeholder="Cannot edit" disabled="true" />
+          <tabs id="inp_tabs">
+            <tab-item id="inp_tabs_preview" label="Preview">
+              <stack id="inp_preview" direction="vertical" spacing="8">
+                <label id="inp_section_basic" text="Basic Input" size="sm" />
+                <input id="inp_basic" placeholder="Type something..." />
+  
+                <label id="inp_section_disabled" text="Disabled Input" size="sm" />
+                <input id="inp_disabled" placeholder="Cannot edit" disabled="true" />
+              </stack>
+            </tab-item>
+            <tab-item id="inp_tabs_code" label="Code">
+              <panel id="inp_code_panel">
+                <code-editor id="inp_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;input placeholder=&quot;Type something...&quot; /&gt;&#10;&#10;&lt;input placeholder=&quot;Cannot edit&quot; disabled=&quot;true&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Textarea page -->
@@ -206,17 +261,28 @@
           <label id="textarea_title" text="Textarea" size="lg" />
           <text id="textarea_desc" content="Textarea is a multi-line text input. Supports configurable rows, placeholder text, auto-grow, and default values." />
 
-          <label id="textarea_section_basic" text="Basic Textarea" size="sm" />
-          <textarea id="textarea_basic" placeholder="Enter your message..." rows="4" />
-
-          <label id="textarea_section_autogrow" text="Auto-grow (1-6 rows)" size="sm" />
-          <textarea id="textarea_autogrow" placeholder="Start typing and the textarea will grow..." auto-grow-min="1" auto-grow-max="6" />
-
-          <label id="textarea_section_default" text="With Default Value" size="sm" />
-          <textarea id="textarea_default" rows="3" default-value="This textarea has a default value.&#10;It supports multiple lines of text." />
-
-          <label id="textarea_section_disabled" text="Disabled" size="sm" />
-          <textarea id="textarea_disabled" placeholder="Cannot edit" rows="3" disabled="true" />
+          <tabs id="textarea_tabs">
+            <tab-item id="textarea_tabs_preview" label="Preview">
+              <stack id="textarea_preview" direction="vertical" spacing="8">
+                <label id="textarea_section_basic" text="Basic Textarea" size="sm" />
+                <textarea id="textarea_basic" placeholder="Enter your message..." rows="4" />
+  
+                <label id="textarea_section_autogrow" text="Auto-grow (1-6 rows)" size="sm" />
+                <textarea id="textarea_autogrow" placeholder="Start typing and the textarea will grow..." auto-grow-min="1" auto-grow-max="6" />
+  
+                <label id="textarea_section_default" text="With Default Value" size="sm" />
+                <textarea id="textarea_default" rows="3" default-value="This textarea has a default value.&#10;It supports multiple lines of text." />
+  
+                <label id="textarea_section_disabled" text="Disabled" size="sm" />
+                <textarea id="textarea_disabled" placeholder="Cannot edit" rows="3" disabled="true" />
+              </stack>
+            </tab-item>
+            <tab-item id="textarea_tabs_code" label="Code">
+              <panel id="textarea_code_panel">
+                <code-editor id="textarea_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;textarea placeholder=&quot;Enter your message...&quot; rows=&quot;4&quot; /&gt;&#10;&#10;&lt;textarea placeholder=&quot;Start typing...&quot;&#10;          auto-grow-min=&quot;1&quot; auto-grow-max=&quot;6&quot; /&gt;&#10;&#10;&lt;textarea rows=&quot;3&quot; default-value=&quot;Pre-filled text.&quot; /&gt;&#10;&#10;&lt;textarea placeholder=&quot;Cannot edit&quot; rows=&quot;3&quot; disabled=&quot;true&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Code Editor page -->
@@ -224,17 +290,28 @@
           <label id="code_editor_title" text="Code Editor" size="lg" />
           <text id="code_editor_desc" content="Code Editor provides syntax-highlighted code editing with line numbers, search, and configurable indentation." />
 
-          <label id="code_editor_section_rust" text="Rust" size="sm" />
-          <code-editor id="code_editor_rust" language="rust" line-number="true" searchable="true" tab-size="4" default-value="fn main() {&#10;    println!(&quot;Hello, world!&quot;);&#10;}&#10;&#10;struct App {&#10;    name: String,&#10;    version: u32,&#10;}" />
-
-          <label id="code_editor_section_js" text="JavaScript" size="sm" />
-          <code-editor id="code_editor_js" language="javascript" line-number="true" tab-size="2" default-value="function greet(name) {&#10;  return 'Hello, ' + name + '!';&#10;}&#10;&#10;const result = greet('World');&#10;console.log(result);" />
-
-          <label id="code_editor_section_noline" text="No Line Numbers" size="sm" />
-          <code-editor id="code_editor_noline" language="python" line-number="false" searchable="false" tab-size="4" default-value="def hello():&#10;    print(&quot;Hello from Python!&quot;)&#10;&#10;hello()" />
-
-          <label id="code_editor_section_tabs" text="Hard Tabs" size="sm" />
-          <code-editor id="code_editor_hard_tabs" language="go" line-number="true" hard-tabs="true" default-value="package main&#10;&#10;import &quot;fmt&quot;&#10;&#10;func main() {&#10;&#9;fmt.Println(&quot;Hello, Go!&quot;)&#10;}" />
+          <tabs id="code_editor_tabs">
+            <tab-item id="code_editor_tabs_preview" label="Preview">
+              <stack id="code_editor_preview" direction="vertical" spacing="8">
+                <label id="code_editor_section_rust" text="Rust" size="sm" />
+                <code-editor id="code_editor_rust" language="rust" line-number="true" searchable="true" tab-size="4" default-value="fn main() {&#10;    println!(&quot;Hello, world!&quot;);&#10;}&#10;&#10;struct App {&#10;    name: String,&#10;    version: u32,&#10;}" />
+  
+                <label id="code_editor_section_js" text="JavaScript" size="sm" />
+                <code-editor id="code_editor_js" language="javascript" line-number="true" tab-size="2" default-value="function greet(name) {&#10;  return 'Hello, ' + name + '!';&#10;}&#10;&#10;const result = greet('World');&#10;console.log(result);" />
+  
+                <label id="code_editor_section_noline" text="No Line Numbers" size="sm" />
+                <code-editor id="code_editor_noline" language="python" line-number="false" searchable="false" tab-size="4" default-value="def hello():&#10;    print(&quot;Hello from Python!&quot;)&#10;&#10;hello()" />
+  
+                <label id="code_editor_section_tabs" text="Hard Tabs" size="sm" />
+                <code-editor id="code_editor_hard_tabs" language="go" line-number="true" hard-tabs="true" default-value="package main&#10;&#10;import &quot;fmt&quot;&#10;&#10;func main() {&#10;&#9;fmt.Println(&quot;Hello, Go!&quot;)&#10;}" />
+              </stack>
+            </tab-item>
+            <tab-item id="code_editor_tabs_code" label="Code">
+              <panel id="code_editor_code_panel">
+                <code-editor id="code_editor_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;code-editor language=&quot;rust&quot; line-number=&quot;true&quot;&#10;            searchable=&quot;true&quot; tab-size=&quot;4&quot; /&gt;&#10;&#10;&lt;code-editor language=&quot;javascript&quot; line-number=&quot;true&quot;&#10;            tab-size=&quot;2&quot; /&gt;&#10;&#10;&lt;code-editor language=&quot;python&quot; line-number=&quot;false&quot;&#10;            searchable=&quot;false&quot; tab-size=&quot;4&quot; /&gt;&#10;&#10;&lt;code-editor language=&quot;go&quot; line-number=&quot;true&quot;&#10;            hard-tabs=&quot;true&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Text Editor page -->
@@ -242,11 +319,22 @@
           <label id="text_editor_title" text="Text Editor" size="lg" />
           <text id="text_editor_desc" content="Text Editor is a rich-text editing area with a toolbar for basic formatting: Bold, Italic, and Underline. Uses markdown-style markers." />
 
-          <label id="text_editor_section_basic" text="Basic Text Editor" size="sm" />
-          <text-editor id="text_editor_basic" placeholder="Start writing..." rows="6" />
-
-          <label id="text_editor_section_default" text="With Default Value" size="sm" />
-          <text-editor id="text_editor_default" rows="8" default-value="# Welcome to the Text Editor&#10;&#10;Use the toolbar above to insert **bold**, _italic_, or __underline__ markers.&#10;&#10;This is a simple rich-text editing experience." />
+          <tabs id="text_editor_tabs">
+            <tab-item id="text_editor_tabs_preview" label="Preview">
+              <stack id="text_editor_preview" direction="vertical" spacing="8">
+                <label id="text_editor_section_basic" text="Basic Text Editor" size="sm" />
+                <text-editor id="text_editor_basic" placeholder="Start writing..." rows="6" />
+  
+                <label id="text_editor_section_default" text="With Default Value" size="sm" />
+                <text-editor id="text_editor_default" rows="8" default-value="# Welcome to the Text Editor&#10;&#10;Use the toolbar above to insert **bold**, _italic_, or __underline__ markers.&#10;&#10;This is a simple rich-text editing experience." />
+              </stack>
+            </tab-item>
+            <tab-item id="text_editor_tabs_code" label="Code">
+              <panel id="text_editor_code_panel">
+                <code-editor id="text_editor_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;text-editor placeholder=&quot;Start writing...&quot; rows=&quot;6&quot; /&gt;&#10;&#10;&lt;text-editor rows=&quot;8&quot;&#10;             default-value=&quot;# Welcome&#10;**bold** _italic_ __underline__&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Select page -->
@@ -254,8 +342,25 @@
           <label id="sel_title" text="Select" size="lg" />
           <text id="sel_desc" content="Select presents a list of options for the user to choose from." />
 
-          <label id="sel_section_basic" text="Basic Select" size="sm" />
-          <select id="sel_basic" options='["Apple","Banana","Cherry","Date","Elderberry"]' value="Cherry" />
+          <tabs id="sel_tabs">
+            <tab-item id="sel_tabs_preview" label="Preview">
+              <stack id="sel_preview" direction="vertical" spacing="8">
+                <label id="sel_section_basic" text="Basic Select" size="sm" />
+                <select id="sel_basic" value="Cherry">
+                  <option value="Apple" />
+                  <option value="Banana" />
+                  <option value="Cherry" />
+                  <option value="Date" />
+                  <option value="Elderberry" />
+                </select>
+              </stack>
+            </tab-item>
+            <tab-item id="sel_tabs_code" label="Code">
+              <panel id="sel_code_panel">
+                <code-editor id="sel_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;select value=&quot;Cherry&quot;&gt;&#10;  &lt;option value=&quot;Apple&quot; /&gt;&#10;  &lt;option value=&quot;Banana&quot; /&gt;&#10;  &lt;option value=&quot;Cherry&quot; /&gt;&#10;  &lt;option value=&quot;Date&quot; /&gt;&#10;  &lt;option value=&quot;Elderberry&quot; /&gt;&#10;&lt;/select&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Progress page -->
@@ -263,17 +368,28 @@
           <label id="prog_title" text="Progress" size="lg" />
           <text id="prog_desc" content="Progress bars show completion percentage. Set value (0-100) and optional max." />
 
-          <label id="prog_section_values" text="Various Values" size="sm" />
-          <label id="prog_label_0" text="0%" size="xs" />
-          <progress id="prog_0" value="0" />
-          <label id="prog_label_25" text="25%" size="xs" />
-          <progress id="prog_25" value="25" />
-          <label id="prog_label_50" text="50%" size="xs" />
-          <progress id="prog_50" value="50" />
-          <label id="prog_label_75" text="75%" size="xs" />
-          <progress id="prog_75" value="75" />
-          <label id="prog_label_100" text="100%" size="xs" />
-          <progress id="prog_100" value="100" />
+          <tabs id="prog_tabs">
+            <tab-item id="prog_tabs_preview" label="Preview">
+              <stack id="prog_preview" direction="vertical" spacing="8">
+                <label id="prog_section_values" text="Various Values" size="sm" />
+                <label id="prog_label_0" text="0%" size="xs" />
+                <progress id="prog_0" value="0" />
+                <label id="prog_label_25" text="25%" size="xs" />
+                <progress id="prog_25" value="25" />
+                <label id="prog_label_50" text="50%" size="xs" />
+                <progress id="prog_50" value="50" />
+                <label id="prog_label_75" text="75%" size="xs" />
+                <progress id="prog_75" value="75" />
+                <label id="prog_label_100" text="100%" size="xs" />
+                <progress id="prog_100" value="100" />
+              </stack>
+            </tab-item>
+            <tab-item id="prog_tabs_code" label="Code">
+              <panel id="prog_code_panel">
+                <code-editor id="prog_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;progress value=&quot;0&quot; /&gt;&#10;&lt;progress value=&quot;25&quot; /&gt;&#10;&lt;progress value=&quot;50&quot; /&gt;&#10;&lt;progress value=&quot;75&quot; /&gt;&#10;&lt;progress value=&quot;100&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Notification page -->
@@ -281,11 +397,22 @@
           <label id="notif_title" text="Notification" size="lg" />
           <text id="notif_desc" content="Notifications display status messages. Types: info, success, warning, error." />
 
-          <label id="notif_section_types" text="Notification Types" size="sm" />
-          <notification id="notif_info" message="This is an informational message." kind="info" />
-          <notification id="notif_success" message="Operation completed successfully!" kind="success" />
-          <notification id="notif_warning" message="Warning: please review before proceeding." kind="warning" />
-          <notification id="notif_error" message="Error: something went wrong." kind="error" />
+          <tabs id="notif_tabs">
+            <tab-item id="notif_tabs_preview" label="Preview">
+              <stack id="notif_preview" direction="vertical" spacing="8">
+                <label id="notif_section_types" text="Notification Types" size="sm" />
+                <notification id="notif_info" message="This is an informational message." kind="info" />
+                <notification id="notif_success" message="Operation completed successfully!" kind="success" />
+                <notification id="notif_warning" message="Warning: please review before proceeding." kind="warning" />
+                <notification id="notif_error" message="Error: something went wrong." kind="error" />
+              </stack>
+            </tab-item>
+            <tab-item id="notif_tabs_code" label="Code">
+              <panel id="notif_code_panel">
+                <code-editor id="notif_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;notification message=&quot;Informational message.&quot; kind=&quot;info&quot; /&gt;&#10;&lt;notification message=&quot;Operation completed!&quot; kind=&quot;success&quot; /&gt;&#10;&lt;notification message=&quot;Please review before proceeding.&quot; kind=&quot;warning&quot; /&gt;&#10;&lt;notification message=&quot;Something went wrong.&quot; kind=&quot;error&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Modal page -->
@@ -293,11 +420,22 @@
           <label id="modal_title" text="Modal" size="lg" />
           <text id="modal_desc" content="Modals display overlay dialogs. Toggle the open property to show or hide." />
 
-          <button id="modal_toggle_btn" label="Open Modal" variant="primary" on-click="on_toggle_modal" />
-          <modal id="demo_modal" title="Example Modal" open="false">
-            <text id="modal_content_text" content="This is the modal content. Click the button again to close." />
-            <button id="modal_close_btn" label="Close" variant="danger" on-click="on_toggle_modal" />
-          </modal>
+          <tabs id="modal_tabs">
+            <tab-item id="modal_tabs_preview" label="Preview">
+              <stack id="modal_preview" direction="vertical" spacing="8">
+                <button id="modal_toggle_btn" label="Open Modal" variant="primary" on-click="on_toggle_modal" />
+                <modal id="demo_modal" title="Example Modal" open="false">
+                  <text id="modal_content_text" content="This is the modal content. Click the button again to close." />
+                  <button id="modal_close_btn" label="Close" variant="danger" on-click="on_toggle_modal" />
+                </modal>
+              </stack>
+            </tab-item>
+            <tab-item id="modal_tabs_code" label="Code">
+              <panel id="modal_code_panel">
+                <code-editor id="modal_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;button label=&quot;Open Modal&quot; variant=&quot;primary&quot; on-click=&quot;on_toggle_modal&quot; /&gt;&#10;&#10;&lt;modal title=&quot;Example Modal&quot; open=&quot;false&quot;&gt;&#10;  &lt;text content=&quot;Modal content here.&quot; /&gt;&#10;  &lt;button label=&quot;Close&quot; variant=&quot;danger&quot; on-click=&quot;on_toggle_modal&quot; /&gt;&#10;&lt;/modal&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Text page -->
@@ -305,9 +443,20 @@
           <label id="text_title" text="Text" size="lg" />
           <text id="text_desc" content="Text displays plain content blocks. Use for paragraphs or descriptions." />
 
-          <label id="text_section_examples" text="Examples" size="sm" />
-          <text id="text_example_1" content="This is a simple text block. It renders plain content without any special formatting." />
-          <text id="text_example_2" content="Text components are useful for displaying descriptions, help text, and other informational content within your application layout." />
+          <tabs id="text_tabs">
+            <tab-item id="text_tabs_preview" label="Preview">
+              <stack id="text_preview" direction="vertical" spacing="8">
+                <label id="text_section_examples" text="Examples" size="sm" />
+                <text id="text_example_1" content="This is a simple text block. It renders plain content without any special formatting." />
+                <text id="text_example_2" content="Text components are useful for displaying descriptions, help text, and other informational content within your application layout." />
+              </stack>
+            </tab-item>
+            <tab-item id="text_tabs_code" label="Code">
+              <panel id="text_code_panel">
+                <code-editor id="text_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;text content=&quot;This is a simple text block. It renders&#10;plain content without any special formatting.&quot; /&gt;&#10;&#10;&lt;text content=&quot;Text components are useful for displaying&#10;descriptions, help text, and other content.&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- List page -->
@@ -315,8 +464,25 @@
           <label id="list_title" text="List" size="lg" />
           <text id="list_desc" content="Lists render arrays of items as a vertical list with hover highlighting." />
 
-          <label id="list_section_basic" text="Basic List" size="sm" />
-          <list id="list_basic" items='["First item","Second item","Third item","Fourth item","Fifth item"]' />
+          <tabs id="list_tabs">
+            <tab-item id="list_tabs_preview" label="Preview">
+              <stack id="list_preview" direction="vertical" spacing="8">
+                <label id="list_section_basic" text="Basic List" size="sm" />
+                <list id="list_basic">
+                  <list-item><text content="First item" /></list-item>
+                  <list-item><text content="Second item" /></list-item>
+                  <list-item><text content="Third item" /></list-item>
+                  <list-item><text content="Fourth item" /></list-item>
+                  <list-item><text content="Fifth item" /></list-item>
+                </list>
+              </stack>
+            </tab-item>
+            <tab-item id="list_tabs_code" label="Code">
+              <panel id="list_code_panel">
+                <code-editor id="list_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;list&gt;&#10;  &lt;list-item&gt;&lt;text content=&quot;First item&quot; /&gt;&lt;/list-item&gt;&#10;  &lt;list-item&gt;&lt;text content=&quot;Second item&quot; /&gt;&lt;/list-item&gt;&#10;  &lt;list-item&gt;&lt;text content=&quot;Third item&quot; /&gt;&lt;/list-item&gt;&#10;&lt;/list&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Panel & Stack page -->
@@ -324,26 +490,37 @@
           <label id="panel_title" text="Panel &amp; Stack" size="lg" />
           <text id="panel_desc" content="Panels are containers with padding and background. Stacks arrange children vertically or horizontally with configurable spacing." />
 
-          <label id="panel_section_nested" text="Nested Panels" size="sm" />
-          <panel id="panel_outer">
-            <label id="panel_outer_label" text="Outer panel" />
-            <panel id="panel_inner">
-              <label id="panel_inner_label" text="Inner nested panel" />
-            </panel>
-          </panel>
-
-          <label id="panel_section_stacks" text="Horizontal Stack" size="sm" />
-          <stack id="panel_h_stack" direction="horizontal" spacing="8">
-            <panel id="panel_h_item1">
-              <label id="panel_h_item1_label" text="Column 1" />
-            </panel>
-            <panel id="panel_h_item2">
-              <label id="panel_h_item2_label" text="Column 2" />
-            </panel>
-            <panel id="panel_h_item3">
-              <label id="panel_h_item3_label" text="Column 3" />
-            </panel>
-          </stack>
+          <tabs id="panel_tabs">
+            <tab-item id="panel_tabs_preview" label="Preview">
+              <stack id="panel_preview" direction="vertical" spacing="12">
+                <label id="panel_section_nested" text="Nested Panels" size="sm" />
+                <panel id="panel_outer">
+                  <label id="panel_outer_label" text="Outer panel" />
+                  <panel id="panel_inner">
+                    <label id="panel_inner_label" text="Inner nested panel" />
+                  </panel>
+                </panel>
+  
+                <label id="panel_section_stacks" text="Horizontal Stack" size="sm" />
+                <stack id="panel_h_stack" direction="horizontal" spacing="8">
+                  <panel id="panel_h_item1">
+                    <label id="panel_h_item1_label" text="Column 1" />
+                  </panel>
+                  <panel id="panel_h_item2">
+                    <label id="panel_h_item2_label" text="Column 2" />
+                  </panel>
+                  <panel id="panel_h_item3">
+                    <label id="panel_h_item3_label" text="Column 3" />
+                  </panel>
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="panel_tabs_code" label="Code">
+              <panel id="panel_code_panel">
+                <code-editor id="panel_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;panel&gt;&#10;  &lt;label text=&quot;Outer panel&quot; /&gt;&#10;  &lt;panel&gt;&#10;    &lt;label text=&quot;Inner nested panel&quot; /&gt;&#10;  &lt;/panel&gt;&#10;&lt;/panel&gt;&#10;&#10;&lt;stack direction=&quot;horizontal&quot; spacing=&quot;8&quot;&gt;&#10;  &lt;panel&gt;&lt;label text=&quot;Column 1&quot; /&gt;&lt;/panel&gt;&#10;  &lt;panel&gt;&lt;label text=&quot;Column 2&quot; /&gt;&lt;/panel&gt;&#10;  &lt;panel&gt;&lt;label text=&quot;Column 3&quot; /&gt;&lt;/panel&gt;&#10;&lt;/stack&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Table page -->
@@ -351,9 +528,20 @@
           <label id="table_title" text="Table" size="lg" />
           <text id="table_desc" content="Table displays tabular data with columns, sorting, and row selection." />
 
-          <table id="table_demo" stripe="true"
-            columns='[{"key":"name","label":"Name","width":150},{"key":"email","label":"Email","width":220},{"key":"role","label":"Role","width":120},{"key":"status","label":"Status","width":100}]'
-            data='[{"name":"Alice Johnson","email":"alice@example.com","role":"Admin","status":"Active"},{"name":"Bob Smith","email":"bob@example.com","role":"Editor","status":"Active"},{"name":"Carol White","email":"carol@example.com","role":"Viewer","status":"Inactive"},{"name":"Dave Brown","email":"dave@example.com","role":"Editor","status":"Active"},{"name":"Eve Davis","email":"eve@example.com","role":"Admin","status":"Active"}]' />
+          <tabs id="table_tabs">
+            <tab-item id="table_tabs_preview" label="Preview">
+              <stack id="table_preview" direction="vertical" spacing="8">
+                <table id="table_demo" stripe="true"
+                  columns='[{"key":"name","label":"Name","width":150},{"key":"email","label":"Email","width":220},{"key":"role","label":"Role","width":120},{"key":"status","label":"Status","width":100}]'
+                  data='[{"name":"Alice Johnson","email":"alice@example.com","role":"Admin","status":"Active"},{"name":"Bob Smith","email":"bob@example.com","role":"Editor","status":"Active"},{"name":"Carol White","email":"carol@example.com","role":"Viewer","status":"Inactive"},{"name":"Dave Brown","email":"dave@example.com","role":"Editor","status":"Active"},{"name":"Eve Davis","email":"eve@example.com","role":"Admin","status":"Active"}]' />
+              </stack>
+            </tab-item>
+            <tab-item id="table_tabs_code" label="Code">
+              <panel id="table_code_panel">
+                <code-editor id="table_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;table stripe=&quot;true&quot;&#10;       columns='[{&quot;key&quot;:&quot;name&quot;,&quot;label&quot;:&quot;Name&quot;,&quot;width&quot;:150},&#10;                {&quot;key&quot;:&quot;email&quot;,&quot;label&quot;:&quot;Email&quot;,&quot;width&quot;:220},&#10;                {&quot;key&quot;:&quot;role&quot;,&quot;label&quot;:&quot;Role&quot;,&quot;width&quot;:120},&#10;                {&quot;key&quot;:&quot;status&quot;,&quot;label&quot;:&quot;Status&quot;,&quot;width&quot;:100}]'&#10;       data='[{&quot;name&quot;:&quot;Alice Johnson&quot;,&quot;email&quot;:&quot;alice@example.com&quot;,&quot;role&quot;:&quot;Admin&quot;,&quot;status&quot;:&quot;Active&quot;},&#10;             {&quot;name&quot;:&quot;Bob Smith&quot;,&quot;email&quot;:&quot;bob@example.com&quot;,&quot;role&quot;:&quot;Editor&quot;,&quot;status&quot;:&quot;Active&quot;}]' /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Tree page -->
@@ -361,7 +549,18 @@
           <label id="tree_title" text="Tree" size="lg" />
           <text id="tree_desc" content="Tree displays hierarchical data with expand/collapse and keyboard navigation." />
 
-          <tree id="tree_demo" items='[{"id":"src","label":"src","expanded":true,"children":[{"id":"src/main.rs","label":"main.rs"},{"id":"src/lib.rs","label":"lib.rs"},{"id":"src/components","label":"components","expanded":true,"children":[{"id":"src/components/mod.rs","label":"mod.rs"},{"id":"src/components/table.rs","label":"table.rs"},{"id":"src/components/tree.rs","label":"tree.rs"}]}]},{"id":"Cargo.toml","label":"Cargo.toml"},{"id":"README.md","label":"README.md"}]' />
+          <tabs id="tree_tabs">
+            <tab-item id="tree_tabs_preview" label="Preview">
+              <stack id="tree_preview" direction="vertical" spacing="8">
+                <tree id="tree_demo" items='[{"id":"src","label":"src","expanded":true,"children":[{"id":"src/main.rs","label":"main.rs"},{"id":"src/lib.rs","label":"lib.rs"},{"id":"src/components","label":"components","expanded":true,"children":[{"id":"src/components/mod.rs","label":"mod.rs"},{"id":"src/components/table.rs","label":"table.rs"},{"id":"src/components/tree.rs","label":"tree.rs"}]}]},{"id":"Cargo.toml","label":"Cargo.toml"},{"id":"README.md","label":"README.md"}]' />
+              </stack>
+            </tab-item>
+            <tab-item id="tree_tabs_code" label="Code">
+              <panel id="tree_code_panel">
+                <code-editor id="tree_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;tree items='[{&quot;id&quot;:&quot;src&quot;,&quot;label&quot;:&quot;src&quot;,&quot;expanded&quot;:true,&#10;  &quot;children&quot;:[&#10;    {&quot;id&quot;:&quot;src/main.rs&quot;,&quot;label&quot;:&quot;main.rs&quot;},&#10;    {&quot;id&quot;:&quot;src/lib.rs&quot;,&quot;label&quot;:&quot;lib.rs&quot;},&#10;    {&quot;id&quot;:&quot;src/components&quot;,&quot;label&quot;:&quot;components&quot;,&quot;expanded&quot;:true,&#10;     &quot;children&quot;:[&#10;       {&quot;id&quot;:&quot;src/components/mod.rs&quot;,&quot;label&quot;:&quot;mod.rs&quot;},&#10;       {&quot;id&quot;:&quot;src/components/table.rs&quot;,&quot;label&quot;:&quot;table.rs&quot;},&#10;       {&quot;id&quot;:&quot;src/components/tree.rs&quot;,&quot;label&quot;:&quot;tree.rs&quot;}&#10;     ]}&#10;  ]&#10;},{&quot;id&quot;:&quot;Cargo.toml&quot;,&quot;label&quot;:&quot;Cargo.toml&quot;},&#10; {&quot;id&quot;:&quot;README.md&quot;,&quot;label&quot;:&quot;README.md&quot;}]' /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Image page -->
@@ -369,9 +568,20 @@
           <label id="image_title" text="Image" size="lg" />
           <text id="image_desc" content="Image displays an image from a source path. Falls back to alt text when no source is provided." />
 
-          <label id="image_section_fallback" text="Alt Text Fallback" size="sm" />
-          <image id="image_no_src" alt="Placeholder: no image source provided" />
-          <image id="image_another" alt="Another image placeholder with alt text" />
+          <tabs id="image_tabs">
+            <tab-item id="image_tabs_preview" label="Preview">
+              <stack id="image_preview" direction="vertical" spacing="8">
+                <label id="image_section_fallback" text="Alt Text Fallback" size="sm" />
+                <image id="image_no_src" alt="Placeholder: no image source provided" />
+                <image id="image_another" alt="Another image placeholder with alt text" />
+              </stack>
+            </tab-item>
+            <tab-item id="image_tabs_code" label="Code">
+              <panel id="image_code_panel">
+                <code-editor id="image_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;image alt=&quot;Placeholder: no image source provided&quot; /&gt;&#10;&#10;&lt;image src=&quot;https://example.com/logo.png&quot; alt=&quot;Logo&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Charts page -->
@@ -379,90 +589,101 @@
           <label id="charts_title" text="Charts" size="lg" />
           <text id="charts_desc" content="Chart components for data visualization. Supports line, bar, area, pie, candlestick, column, stacked, clustered, scatter, bubble, heatmap, radar, pyramid, and funnel charts." />
 
-          <!-- Line Chart -->
-          <label id="chart_section_line" text="Line Chart" size="sm" />
-          <line-chart id="line_chart_demo" x-field="month" y-field="revenue" dot="true" height="300"
-            data='[{"month":"Jan","revenue":186},{"month":"Feb","revenue":305},{"month":"Mar","revenue":237},{"month":"Apr","revenue":73},{"month":"May","revenue":209},{"month":"Jun","revenue":214}]' />
-
-          <!-- Bar Chart -->
-          <label id="chart_section_bar" text="Bar Chart" size="sm" />
-          <bar-chart id="bar_chart_demo" x-field="month" y-field="visitors" show-label="true" height="300"
-            data='[{"month":"Jan","visitors":275},{"month":"Feb","visitors":200},{"month":"Mar","visitors":187},{"month":"Apr","visitors":173},{"month":"May","visitors":90},{"month":"Jun","visitors":301}]' />
-
-          <!-- Area Chart -->
-          <label id="chart_section_area" text="Area Chart (Multi-Series)" size="sm" />
-          <area-chart id="area_chart_demo" x-field="month" y-fields='["desktop","mobile"]' height="300"
-            data='[{"month":"Jan","desktop":186,"mobile":80},{"month":"Feb","desktop":305,"mobile":200},{"month":"Mar","desktop":237,"mobile":120},{"month":"Apr","desktop":73,"mobile":190},{"month":"May","desktop":209,"mobile":130},{"month":"Jun","desktop":214,"mobile":140}]' />
-
-          <!-- Pie Chart -->
-          <label id="chart_section_pie" text="Pie Chart" size="sm" />
-          <pie-chart id="pie_chart_demo" value-field="amount" height="300"
-            data='[{"label":"Chrome","amount":275},{"label":"Safari","amount":200},{"label":"Firefox","amount":187},{"label":"Edge","amount":173},{"label":"Other","amount":90}]' />
-
-          <!-- Donut Chart -->
-          <label id="chart_section_donut" text="Donut Chart (Pie with inner radius)" size="sm" />
-          <pie-chart id="donut_chart_demo" value-field="value" inner-radius="60.0" height="300"
-            data='[{"name":"Rent","value":1200},{"name":"Food","value":450},{"name":"Transport","value":200},{"name":"Utilities","value":150}]' />
-
-          <!-- Candlestick Chart -->
-          <label id="chart_section_candlestick" text="Candlestick Chart" size="sm" />
-          <candlestick-chart id="candlestick_chart_demo" x-field="date" open-field="open" high-field="high" low-field="low" close-field="close" height="300"
-            data='[{"date":"Mon","open":100.0,"high":110.0,"low":95.0,"close":108.0},{"date":"Tue","open":108.0,"high":115.0,"low":102.0,"close":104.0},{"date":"Wed","open":104.0,"high":112.0,"low":100.0,"close":111.0},{"date":"Thu","open":111.0,"high":120.0,"low":108.0,"close":118.0},{"date":"Fri","open":118.0,"high":122.0,"low":110.0,"close":112.0}]' />
-
-          <!-- Column Chart -->
-          <label id="chart_section_column" text="Column Chart" size="sm" />
-          <column-chart id="column_chart_demo" x-field="month" y-field="sales" show-label="true" height="300"
-            data='[{"month":"Jan","sales":320},{"month":"Feb","sales":410},{"month":"Mar","sales":280},{"month":"Apr","sales":390},{"month":"May","sales":450},{"month":"Jun","sales":370}]' />
-
-          <!-- Stacked Column Chart -->
-          <label id="chart_section_stacked_column" text="Stacked Column Chart" size="sm" />
-          <stacked-column-chart id="stacked_column_chart_demo" x-field="quarter" y-fields='["product_a","product_b","product_c"]' height="300"
-            data='[{"quarter":"Q1","product_a":120,"product_b":90,"product_c":60},{"quarter":"Q2","product_a":150,"product_b":110,"product_c":80},{"quarter":"Q3","product_a":130,"product_b":100,"product_c":95},{"quarter":"Q4","product_a":170,"product_b":120,"product_c":70}]' />
-
-          <!-- Clustered Column Chart -->
-          <label id="chart_section_clustered_column" text="Clustered Column Chart" size="sm" />
-          <clustered-column-chart id="clustered_column_chart_demo" x-field="region" y-fields='["sales","returns"]' height="300"
-            data='[{"region":"North","sales":420,"returns":30},{"region":"South","sales":380,"returns":45},{"region":"East","sales":510,"returns":25},{"region":"West","sales":290,"returns":50}]' />
-
-          <!-- Stacked Bar Chart -->
-          <label id="chart_section_stacked_bar" text="Stacked Bar Chart (Horizontal)" size="sm" />
-          <stacked-bar-chart id="stacked_bar_chart_demo" y-field="department" x-fields='["budget","spent"]' height="300"
-            data='[{"department":"Engineering","budget":500,"spent":420},{"department":"Marketing","budget":300,"spent":280},{"department":"Sales","budget":400,"spent":350},{"department":"Support","budget":200,"spent":180}]' />
-
-          <!-- Clustered Bar Chart -->
-          <label id="chart_section_clustered_bar" text="Clustered Bar Chart (Horizontal)" size="sm" />
-          <clustered-bar-chart id="clustered_bar_chart_demo" y-field="language" x-fields='["stars","forks"]' height="300"
-            data='[{"language":"Rust","stars":850,"forks":120},{"language":"Go","stars":720,"forks":190},{"language":"Python","stars":950,"forks":310},{"language":"TypeScript","stars":680,"forks":150}]' />
-
-          <!-- Scatter Chart -->
-          <label id="chart_section_scatter" text="Scatter Chart" size="sm" />
-          <scatter-chart id="scatter_chart_demo" x-field="weight" y-field="height" dot-size="5.0" height="300"
-            data='[{"weight":60,"height":165},{"weight":72,"height":178},{"weight":55,"height":160},{"weight":85,"height":185},{"weight":68,"height":172},{"weight":90,"height":190},{"weight":63,"height":168},{"weight":78,"height":180},{"weight":50,"height":155},{"weight":95,"height":188}]' />
-
-          <!-- Bubble Chart -->
-          <label id="chart_section_bubble" text="Bubble Chart" size="sm" />
-          <bubble-chart id="bubble_chart_demo" x-field="gdp" y-field="life_expectancy" size-field="population" min-radius="5.0" max-radius="35.0" height="300"
-            data='[{"gdp":10,"life_expectancy":72,"population":50},{"gdp":35,"life_expectancy":78,"population":120},{"gdp":50,"life_expectancy":82,"population":30},{"gdp":25,"life_expectancy":75,"population":200},{"gdp":45,"life_expectancy":80,"population":80},{"gdp":15,"life_expectancy":68,"population":150}]' />
-
-          <!-- Heatmap Chart -->
-          <label id="chart_section_heatmap" text="Heatmap Chart" size="sm" />
-          <heatmap-chart id="heatmap_chart_demo" x-field="day" y-field="hour" value-field="count" height="300"
-            data='[{"day":"Mon","hour":"9am","count":12},{"day":"Mon","hour":"12pm","count":25},{"day":"Mon","hour":"3pm","count":18},{"day":"Tue","hour":"9am","count":8},{"day":"Tue","hour":"12pm","count":30},{"day":"Tue","hour":"3pm","count":22},{"day":"Wed","hour":"9am","count":15},{"day":"Wed","hour":"12pm","count":20},{"day":"Wed","hour":"3pm","count":28},{"day":"Thu","hour":"9am","count":10},{"day":"Thu","hour":"12pm","count":35},{"day":"Thu","hour":"3pm","count":16},{"day":"Fri","hour":"9am","count":5},{"day":"Fri","hour":"12pm","count":18},{"day":"Fri","hour":"3pm","count":10}]' />
-
-          <!-- Radar Chart -->
-          <label id="chart_section_radar" text="Radar Chart" size="sm" />
-          <radar-chart id="radar_chart_demo" categories='["Speed","Strength","Defense","Magic","Stamina","Luck"]' y-fields='["warrior","mage"]' max-value="100.0" height="300"
-            data='[{"Speed":80,"Strength":90,"Defense":70,"Magic":30,"Stamina":85,"Luck":50},{"Speed":60,"Strength":40,"Defense":50,"Magic":95,"Stamina":55,"Luck":75}]' />
-
-          <!-- Pyramid Chart -->
-          <label id="chart_section_pyramid" text="Pyramid Chart" size="sm" />
-          <pyramid-chart id="pyramid_chart_demo" label-field="stage" value-field="count" height="300"
-            data='[{"stage":"Awareness","count":10000},{"stage":"Interest","count":6500},{"stage":"Consideration","count":3200},{"stage":"Intent","count":1800},{"stage":"Purchase","count":900}]' />
-
-          <!-- Funnel Chart -->
-          <label id="chart_section_funnel" text="Funnel Chart" size="sm" />
-          <funnel-chart id="funnel_chart_demo" label-field="step" value-field="users" height="300"
-            data='[{"step":"Visited","users":5000},{"step":"Signed Up","users":3200},{"step":"Activated","users":2100},{"step":"Subscribed","users":1400},{"step":"Retained","users":800}]' />
+          <tabs id="charts_tabs">
+            <tab-item id="charts_tabs_preview" label="Preview">
+              <stack id="charts_preview" direction="vertical" spacing="8">
+                <!-- Line Chart -->
+                <label id="chart_section_line" text="Line Chart" size="sm" />
+                <line-chart id="line_chart_demo" x-field="month" y-field="revenue" dot="true" height="300"
+                  data='[{"month":"Jan","revenue":186},{"month":"Feb","revenue":305},{"month":"Mar","revenue":237},{"month":"Apr","revenue":73},{"month":"May","revenue":209},{"month":"Jun","revenue":214}]' />
+  
+                <!-- Bar Chart -->
+                <label id="chart_section_bar" text="Bar Chart" size="sm" />
+                <bar-chart id="bar_chart_demo" x-field="month" y-field="visitors" show-label="true" height="300"
+                  data='[{"month":"Jan","visitors":275},{"month":"Feb","visitors":200},{"month":"Mar","visitors":187},{"month":"Apr","visitors":173},{"month":"May","visitors":90},{"month":"Jun","visitors":301}]' />
+  
+                <!-- Area Chart -->
+                <label id="chart_section_area" text="Area Chart (Multi-Series)" size="sm" />
+                <area-chart id="area_chart_demo" x-field="month" y-fields='["desktop","mobile"]' height="300"
+                  data='[{"month":"Jan","desktop":186,"mobile":80},{"month":"Feb","desktop":305,"mobile":200},{"month":"Mar","desktop":237,"mobile":120},{"month":"Apr","desktop":73,"mobile":190},{"month":"May","desktop":209,"mobile":130},{"month":"Jun","desktop":214,"mobile":140}]' />
+  
+                <!-- Pie Chart -->
+                <label id="chart_section_pie" text="Pie Chart" size="sm" />
+                <pie-chart id="pie_chart_demo" value-field="amount" height="300"
+                  data='[{"label":"Chrome","amount":275},{"label":"Safari","amount":200},{"label":"Firefox","amount":187},{"label":"Edge","amount":173},{"label":"Other","amount":90}]' />
+  
+                <!-- Donut Chart -->
+                <label id="chart_section_donut" text="Donut Chart (Pie with inner radius)" size="sm" />
+                <pie-chart id="donut_chart_demo" value-field="value" inner-radius="60.0" height="300"
+                  data='[{"name":"Rent","value":1200},{"name":"Food","value":450},{"name":"Transport","value":200},{"name":"Utilities","value":150}]' />
+  
+                <!-- Candlestick Chart -->
+                <label id="chart_section_candlestick" text="Candlestick Chart" size="sm" />
+                <candlestick-chart id="candlestick_chart_demo" x-field="date" open-field="open" high-field="high" low-field="low" close-field="close" height="300"
+                  data='[{"date":"Mon","open":100.0,"high":110.0,"low":95.0,"close":108.0},{"date":"Tue","open":108.0,"high":115.0,"low":102.0,"close":104.0},{"date":"Wed","open":104.0,"high":112.0,"low":100.0,"close":111.0},{"date":"Thu","open":111.0,"high":120.0,"low":108.0,"close":118.0},{"date":"Fri","open":118.0,"high":122.0,"low":110.0,"close":112.0}]' />
+  
+                <!-- Column Chart -->
+                <label id="chart_section_column" text="Column Chart" size="sm" />
+                <column-chart id="column_chart_demo" x-field="month" y-field="sales" show-label="true" height="300"
+                  data='[{"month":"Jan","sales":320},{"month":"Feb","sales":410},{"month":"Mar","sales":280},{"month":"Apr","sales":390},{"month":"May","sales":450},{"month":"Jun","sales":370}]' />
+  
+                <!-- Stacked Column Chart -->
+                <label id="chart_section_stacked_column" text="Stacked Column Chart" size="sm" />
+                <stacked-column-chart id="stacked_column_chart_demo" x-field="quarter" y-fields='["product_a","product_b","product_c"]' height="300"
+                  data='[{"quarter":"Q1","product_a":120,"product_b":90,"product_c":60},{"quarter":"Q2","product_a":150,"product_b":110,"product_c":80},{"quarter":"Q3","product_a":130,"product_b":100,"product_c":95},{"quarter":"Q4","product_a":170,"product_b":120,"product_c":70}]' />
+  
+                <!-- Clustered Column Chart -->
+                <label id="chart_section_clustered_column" text="Clustered Column Chart" size="sm" />
+                <clustered-column-chart id="clustered_column_chart_demo" x-field="region" y-fields='["sales","returns"]' height="300"
+                  data='[{"region":"North","sales":420,"returns":30},{"region":"South","sales":380,"returns":45},{"region":"East","sales":510,"returns":25},{"region":"West","sales":290,"returns":50}]' />
+  
+                <!-- Stacked Bar Chart -->
+                <label id="chart_section_stacked_bar" text="Stacked Bar Chart (Horizontal)" size="sm" />
+                <stacked-bar-chart id="stacked_bar_chart_demo" y-field="department" x-fields='["budget","spent"]' height="300"
+                  data='[{"department":"Engineering","budget":500,"spent":420},{"department":"Marketing","budget":300,"spent":280},{"department":"Sales","budget":400,"spent":350},{"department":"Support","budget":200,"spent":180}]' />
+  
+                <!-- Clustered Bar Chart -->
+                <label id="chart_section_clustered_bar" text="Clustered Bar Chart (Horizontal)" size="sm" />
+                <clustered-bar-chart id="clustered_bar_chart_demo" y-field="language" x-fields='["stars","forks"]' height="300"
+                  data='[{"language":"Rust","stars":850,"forks":120},{"language":"Go","stars":720,"forks":190},{"language":"Python","stars":950,"forks":310},{"language":"TypeScript","stars":680,"forks":150}]' />
+  
+                <!-- Scatter Chart -->
+                <label id="chart_section_scatter" text="Scatter Chart" size="sm" />
+                <scatter-chart id="scatter_chart_demo" x-field="weight" y-field="height" dot-size="5.0" height="300"
+                  data='[{"weight":60,"height":165},{"weight":72,"height":178},{"weight":55,"height":160},{"weight":85,"height":185},{"weight":68,"height":172},{"weight":90,"height":190},{"weight":63,"height":168},{"weight":78,"height":180},{"weight":50,"height":155},{"weight":95,"height":188}]' />
+  
+                <!-- Bubble Chart -->
+                <label id="chart_section_bubble" text="Bubble Chart" size="sm" />
+                <bubble-chart id="bubble_chart_demo" x-field="gdp" y-field="life_expectancy" size-field="population" min-radius="5.0" max-radius="35.0" height="300"
+                  data='[{"gdp":10,"life_expectancy":72,"population":50},{"gdp":35,"life_expectancy":78,"population":120},{"gdp":50,"life_expectancy":82,"population":30},{"gdp":25,"life_expectancy":75,"population":200},{"gdp":45,"life_expectancy":80,"population":80},{"gdp":15,"life_expectancy":68,"population":150}]' />
+  
+                <!-- Heatmap Chart -->
+                <label id="chart_section_heatmap" text="Heatmap Chart" size="sm" />
+                <heatmap-chart id="heatmap_chart_demo" x-field="day" y-field="hour" value-field="count" height="300"
+                  data='[{"day":"Mon","hour":"9am","count":12},{"day":"Mon","hour":"12pm","count":25},{"day":"Mon","hour":"3pm","count":18},{"day":"Tue","hour":"9am","count":8},{"day":"Tue","hour":"12pm","count":30},{"day":"Tue","hour":"3pm","count":22},{"day":"Wed","hour":"9am","count":15},{"day":"Wed","hour":"12pm","count":20},{"day":"Wed","hour":"3pm","count":28},{"day":"Thu","hour":"9am","count":10},{"day":"Thu","hour":"12pm","count":35},{"day":"Thu","hour":"3pm","count":16},{"day":"Fri","hour":"9am","count":5},{"day":"Fri","hour":"12pm","count":18},{"day":"Fri","hour":"3pm","count":10}]' />
+  
+                <!-- Radar Chart -->
+                <label id="chart_section_radar" text="Radar Chart" size="sm" />
+                <radar-chart id="radar_chart_demo" categories='["Speed","Strength","Defense","Magic","Stamina","Luck"]' y-fields='["warrior","mage"]' max-value="100.0" height="300"
+                  data='[{"Speed":80,"Strength":90,"Defense":70,"Magic":30,"Stamina":85,"Luck":50},{"Speed":60,"Strength":40,"Defense":50,"Magic":95,"Stamina":55,"Luck":75}]' />
+  
+                <!-- Pyramid Chart -->
+                <label id="chart_section_pyramid" text="Pyramid Chart" size="sm" />
+                <pyramid-chart id="pyramid_chart_demo" label-field="stage" value-field="count" height="300"
+                  data='[{"stage":"Awareness","count":10000},{"stage":"Interest","count":6500},{"stage":"Consideration","count":3200},{"stage":"Intent","count":1800},{"stage":"Purchase","count":900}]' />
+  
+                <!-- Funnel Chart -->
+                <label id="chart_section_funnel" text="Funnel Chart" size="sm" />
+                <funnel-chart id="funnel_chart_demo" label-field="step" value-field="users" height="300"
+                  data='[{"step":"Visited","users":5000},{"step":"Signed Up","users":3200},{"step":"Activated","users":2100},{"step":"Subscribed","users":1400},{"step":"Retained","users":800}]' />
+              </stack>
+            </tab-item>
+            <tab-item id="charts_tabs_code" label="Code">
+              <panel id="charts_code_panel">
+                <code-editor id="charts_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Line Chart --&gt;&#10;&lt;line-chart x-field=&quot;month&quot; y-field=&quot;revenue&quot; dot=&quot;true&quot; height=&quot;300&quot;&#10;             data='[{&quot;month&quot;:&quot;Jan&quot;,&quot;revenue&quot;:186},...]' /&gt;&#10;&#10;&lt;!-- Bar Chart --&gt;&#10;&lt;bar-chart x-field=&quot;month&quot; y-field=&quot;visitors&quot; show-label=&quot;true&quot; height=&quot;300&quot;&#10;           data='[{&quot;month&quot;:&quot;Jan&quot;,&quot;visitors&quot;:275},...]' /&gt;&#10;&#10;&lt;!-- Area Chart (Multi-Series) --&gt;&#10;&lt;area-chart x-field=&quot;month&quot; y-fields='[&quot;desktop&quot;,&quot;mobile&quot;]' height=&quot;300&quot;&#10;            data='[{&quot;month&quot;:&quot;Jan&quot;,&quot;desktop&quot;:186,&quot;mobile&quot;:80},...]' /&gt;&#10;&#10;&lt;!-- Pie Chart --&gt;&#10;&lt;pie-chart value-field=&quot;amount&quot; height=&quot;300&quot;&#10;           data='[{&quot;label&quot;:&quot;Chrome&quot;,&quot;amount&quot;:275},...]' /&gt;&#10;&#10;&lt;!-- Donut (Pie with inner radius) --&gt;&#10;&lt;pie-chart value-field=&quot;value&quot; inner-radius=&quot;60&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Candlestick --&gt;&#10;&lt;candlestick-chart x-field=&quot;date&quot; open-field=&quot;open&quot; high-field=&quot;high&quot;&#10;                   low-field=&quot;low&quot; close-field=&quot;close&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Column / Stacked / Clustered --&gt;&#10;&lt;column-chart x-field=&quot;month&quot; y-field=&quot;sales&quot; height=&quot;300&quot; /&gt;&#10;&lt;stacked-column-chart x-field=&quot;quarter&quot; y-fields='[&quot;product_a&quot;,&quot;product_b&quot;]' /&gt;&#10;&lt;clustered-column-chart x-field=&quot;region&quot; y-fields='[&quot;sales&quot;,&quot;returns&quot;]' /&gt;&#10;&#10;&lt;!-- Stacked / Clustered Bar (horizontal) --&gt;&#10;&lt;stacked-bar-chart y-field=&quot;department&quot; x-fields='[&quot;budget&quot;,&quot;spent&quot;]' /&gt;&#10;&lt;clustered-bar-chart y-field=&quot;language&quot; x-fields='[&quot;stars&quot;,&quot;forks&quot;]' /&gt;&#10;&#10;&lt;!-- Scatter / Bubble --&gt;&#10;&lt;scatter-chart x-field=&quot;weight&quot; y-field=&quot;height&quot; dot-size=&quot;5&quot; height=&quot;300&quot; /&gt;&#10;&lt;bubble-chart x-field=&quot;gdp&quot; y-field=&quot;life_expectancy&quot; size-field=&quot;population&quot;&#10;              min-radius=&quot;5&quot; max-radius=&quot;35&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Heatmap --&gt;&#10;&lt;heatmap-chart x-field=&quot;day&quot; y-field=&quot;hour&quot; value-field=&quot;count&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Radar --&gt;&#10;&lt;radar-chart categories='[&quot;Speed&quot;,&quot;Strength&quot;,...]'&#10;            y-fields='[&quot;warrior&quot;,&quot;mage&quot;]' max-value=&quot;100&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Pyramid / Funnel --&gt;&#10;&lt;pyramid-chart label-field=&quot;stage&quot; value-field=&quot;count&quot; height=&quot;300&quot; /&gt;&#10;&lt;funnel-chart label-field=&quot;step&quot; value-field=&quot;users&quot; height=&quot;300&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Accordion page -->
@@ -470,52 +691,63 @@
           <label id="accordion_title" text="Accordion" size="lg" />
           <text id="accordion_desc" content="Accordions show collapsible content sections. Supports multiple open items and bordered styles." />
 
-          <label id="accordion_section_basic" text="Basic Accordion" size="sm" />
-          <accordion id="accordion_demo">
-            <accordion-item id="acc_q1" title="What is Nemo?" open="true">
-              <text id="acc_a1" content="Nemo is a GPUI desktop application framework configured with XML." />
-            </accordion-item>
-            <accordion-item id="acc_q2" title="How do I get started?">
-              <text id="acc_a2" content="Create an app.xml file and define your layout with components." />
-            </accordion-item>
-            <accordion-item id="acc_q3" title="Can I use custom themes?">
-              <text id="acc_a3" content="Yes, Nemo supports theme configuration via the app.theme block." />
-            </accordion-item>
-          </accordion>
-
-          <label id="accordion_section_multi" text="Multiple Open (no border)" size="sm" />
-          <accordion id="accordion_multi" multiple="true" bordered="false">
-            <accordion-item id="acc_sa" title="Section A" open="true">
-              <text id="acc_sa_body" content="Content for section A." />
-            </accordion-item>
-            <accordion-item id="acc_sb" title="Section B" open="true">
-              <text id="acc_sb_body" content="Content for section B." />
-            </accordion-item>
-            <accordion-item id="acc_sc" title="Section C">
-              <text id="acc_sc_body" content="Content for section C." />
-            </accordion-item>
-          </accordion>
-
-          <label id="accordion_section_rich" text="Rich Content" size="sm" />
-          <text id="accordion_rich_desc" content="An accordion item's children can be any components, not just text." />
-          <accordion id="accordion_rich">
-            <accordion-item id="acc_rich_actions" title="Item with actions" open="true">
-              <stack id="acc_rich_actions_body" direction="vertical" spacing="8">
-                <text id="acc_rich_actions_text" content="This item's body holds a row of buttons." />
-                <stack id="acc_rich_actions_row" direction="horizontal" spacing="8">
-                  <button id="acc_rich_btn_save" label="Save" variant="primary" />
-                  <button id="acc_rich_btn_cancel" label="Cancel" variant="ghost" />
-                </stack>
+          <tabs id="accordion_tabs">
+            <tab-item id="accordion_tabs_preview" label="Preview">
+              <stack id="accordion_preview" direction="vertical" spacing="12">
+                <label id="accordion_section_basic" text="Basic Accordion" size="sm" />
+                <accordion id="accordion_demo">
+                  <accordion-item id="acc_q1" title="What is Nemo?" open="true">
+                    <text id="acc_a1" content="Nemo is a GPUI desktop application framework configured with XML." />
+                  </accordion-item>
+                  <accordion-item id="acc_q2" title="How do I get started?">
+                    <text id="acc_a2" content="Create an app.xml file and define your layout with components." />
+                  </accordion-item>
+                  <accordion-item id="acc_q3" title="Can I use custom themes?">
+                    <text id="acc_a3" content="Yes, Nemo supports theme configuration via the app.theme block." />
+                  </accordion-item>
+                </accordion>
+  
+                <label id="accordion_section_multi" text="Multiple Open (no border)" size="sm" />
+                <accordion id="accordion_multi" multiple="true" bordered="false">
+                  <accordion-item id="acc_sa" title="Section A" open="true">
+                    <text id="acc_sa_body" content="Content for section A." />
+                  </accordion-item>
+                  <accordion-item id="acc_sb" title="Section B" open="true">
+                    <text id="acc_sb_body" content="Content for section B." />
+                  </accordion-item>
+                  <accordion-item id="acc_sc" title="Section C">
+                    <text id="acc_sc_body" content="Content for section C." />
+                  </accordion-item>
+                </accordion>
+  
+                <label id="accordion_section_rich" text="Rich Content" size="sm" />
+                <text id="accordion_rich_desc" content="An accordion item's children can be any components, not just text." />
+                <accordion id="accordion_rich">
+                  <accordion-item id="acc_rich_actions" title="Item with actions" open="true">
+                    <stack id="acc_rich_actions_body" direction="vertical" spacing="8">
+                      <text id="acc_rich_actions_text" content="This item's body holds a row of buttons." />
+                      <stack id="acc_rich_actions_row" direction="horizontal" spacing="8">
+                        <button id="acc_rich_btn_save" label="Save" variant="primary" />
+                        <button id="acc_rich_btn_cancel" label="Cancel" variant="ghost" />
+                      </stack>
+                    </stack>
+                  </accordion-item>
+                  <accordion-item id="acc_rich_mixed" title="Item with mixed content">
+                    <stack id="acc_rich_mixed_body" direction="vertical" spacing="12">
+                      <alert id="acc_rich_alert" title="Heads up" message="This panel composes several components." variant="info" />
+                      <input id="acc_rich_input" placeholder="Enter a value..." />
+                      <progress id="acc_rich_progress" value="60" />
+                    </stack>
+                  </accordion-item>
+                </accordion>
               </stack>
-            </accordion-item>
-            <accordion-item id="acc_rich_mixed" title="Item with mixed content">
-              <stack id="acc_rich_mixed_body" direction="vertical" spacing="12">
-                <alert id="acc_rich_alert" title="Heads up" message="This panel composes several components." variant="info" />
-                <input id="acc_rich_input" placeholder="Enter a value..." />
-                <progress id="acc_rich_progress" value="60" />
-              </stack>
-            </accordion-item>
-          </accordion>
+            </tab-item>
+            <tab-item id="accordion_tabs_code" label="Code">
+              <panel id="accordion_code_panel">
+                <code-editor id="accordion_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;accordion&gt;&#10;  &lt;accordion-item title=&quot;What is Nemo?&quot; open=&quot;true&quot;&gt;&#10;    &lt;text content=&quot;Nemo is a GPUI desktop app framework.&quot; /&gt;&#10;  &lt;/accordion-item&gt;&#10;  &lt;accordion-item title=&quot;How do I get started?&quot;&gt;&#10;    &lt;text content=&quot;Create an app.xml file.&quot; /&gt;&#10;  &lt;/accordion-item&gt;&#10;&lt;/accordion&gt;&#10;&#10;&lt;!-- Multiple open, no border --&gt;&#10;&lt;accordion multiple=&quot;true&quot; bordered=&quot;false&quot;&gt;&#10;  &lt;accordion-item title=&quot;Section A&quot; open=&quot;true&quot;&gt;...&lt;/accordion-item&gt;&#10;  &lt;accordion-item title=&quot;Section B&quot; open=&quot;true&quot;&gt;...&lt;/accordion-item&gt;&#10;&lt;/accordion&gt;&#10;&#10;&lt;!-- Rich content children --&gt;&#10;&lt;accordion-item title=&quot;Item with actions&quot; open=&quot;true&quot;&gt;&#10;  &lt;stack direction=&quot;vertical&quot; spacing=&quot;8&quot;&gt;&#10;    &lt;text content=&quot;Body holds a row of buttons.&quot; /&gt;&#10;    &lt;stack direction=&quot;horizontal&quot; spacing=&quot;8&quot;&gt;&#10;      &lt;button label=&quot;Save&quot; variant=&quot;primary&quot; /&gt;&#10;      &lt;button label=&quot;Cancel&quot; variant=&quot;ghost&quot; /&gt;&#10;    &lt;/stack&gt;&#10;  &lt;/stack&gt;&#10;&lt;/accordion-item&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Alert page -->
@@ -523,11 +755,22 @@
           <label id="alert_title" text="Alert" size="lg" />
           <text id="alert_desc" content="Alerts display important messages. Variants: info, success, warning, error." />
 
-          <label id="alert_section_variants" text="Variants" size="sm" />
-          <alert id="alert_info" title="Information" message="This is an informational alert message." variant="info" />
-          <alert id="alert_success" title="Success" message="The operation completed successfully." variant="success" />
-          <alert id="alert_warning" title="Warning" message="Please review the changes before continuing." variant="warning" />
-          <alert id="alert_error" title="Error" message="Something went wrong. Please try again." variant="error" />
+          <tabs id="alert_tabs">
+            <tab-item id="alert_tabs_preview" label="Preview">
+              <stack id="alert_preview" direction="vertical" spacing="8">
+                <label id="alert_section_variants" text="Variants" size="sm" />
+                <alert id="alert_info" title="Information" message="This is an informational alert message." variant="info" />
+                <alert id="alert_success" title="Success" message="The operation completed successfully." variant="success" />
+                <alert id="alert_warning" title="Warning" message="Please review the changes before continuing." variant="warning" />
+                <alert id="alert_error" title="Error" message="Something went wrong. Please try again." variant="error" />
+              </stack>
+            </tab-item>
+            <tab-item id="alert_tabs_code" label="Code">
+              <panel id="alert_code_panel">
+                <code-editor id="alert_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;alert title=&quot;Information&quot; message=&quot;Informational alert.&quot; variant=&quot;info&quot; /&gt;&#10;&lt;alert title=&quot;Success&quot; message=&quot;Operation completed.&quot; variant=&quot;success&quot; /&gt;&#10;&lt;alert title=&quot;Warning&quot; message=&quot;Please review.&quot; variant=&quot;warning&quot; /&gt;&#10;&lt;alert title=&quot;Error&quot; message=&quot;Something went wrong.&quot; variant=&quot;error&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Avatar page -->
@@ -535,13 +778,24 @@
           <label id="avatar_title" text="Avatar" size="lg" />
           <text id="avatar_desc" content="Avatars display user initials. Provide a name to generate initials automatically." />
 
-          <label id="avatar_section_examples" text="Examples" size="sm" />
-          <stack id="avatar_row" direction="horizontal" spacing="12">
-            <avatar id="avatar_alice" name="Alice Johnson" />
-            <avatar id="avatar_bob" name="Bob Smith" />
-            <avatar id="avatar_carol" name="Carol White" />
-            <avatar id="avatar_dave" name="Dave Brown" />
-          </stack>
+          <tabs id="avatar_tabs">
+            <tab-item id="avatar_tabs_preview" label="Preview">
+              <stack id="avatar_preview" direction="vertical" spacing="8">
+                <label id="avatar_section_examples" text="Examples" size="sm" />
+                <stack id="avatar_row" direction="horizontal" spacing="12">
+                  <avatar id="avatar_alice" name="Alice Johnson" />
+                  <avatar id="avatar_bob" name="Bob Smith" />
+                  <avatar id="avatar_carol" name="Carol White" />
+                  <avatar id="avatar_dave" name="Dave Brown" />
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="avatar_tabs_code" label="Code">
+              <panel id="avatar_code_panel">
+                <code-editor id="avatar_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;stack direction=&quot;horizontal&quot; spacing=&quot;12&quot;&gt;&#10;  &lt;avatar name=&quot;Alice Johnson&quot; /&gt;&#10;  &lt;avatar name=&quot;Bob Smith&quot; /&gt;&#10;  &lt;avatar name=&quot;Carol White&quot; /&gt;&#10;  &lt;avatar name=&quot;Dave Brown&quot; /&gt;&#10;&lt;/stack&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Badge page -->
@@ -549,20 +803,31 @@
           <label id="badge_title" text="Badge" size="lg" />
           <text id="badge_desc" content="Badges show notification counts or dot indicators on child elements." />
 
-          <label id="badge_section_count" text="Count Badge" size="sm" />
-          <stack id="badge_count_row" direction="horizontal" spacing="16">
-            <badge id="badge_count_demo" count="5">
-              <button id="badge_count_btn" label="Notifications" variant="secondary" />
-            </badge>
-            <badge id="badge_count_large" count="99">
-              <button id="badge_count_large_btn" label="Messages" variant="secondary" />
-            </badge>
-          </stack>
-
-          <label id="badge_section_dot" text="Dot Badge" size="sm" />
-          <badge id="badge_dot_demo" dot="true">
-            <button id="badge_dot_btn" label="Updates" variant="secondary" />
-          </badge>
+          <tabs id="badge_tabs">
+            <tab-item id="badge_tabs_preview" label="Preview">
+              <stack id="badge_preview" direction="vertical" spacing="12">
+                <label id="badge_section_count" text="Count Badge" size="sm" />
+                <stack id="badge_count_row" direction="horizontal" spacing="16">
+                  <badge id="badge_count_demo" count="5">
+                    <button id="badge_count_btn" label="Notifications" variant="secondary" />
+                  </badge>
+                  <badge id="badge_count_large" count="99">
+                    <button id="badge_count_large_btn" label="Messages" variant="secondary" />
+                  </badge>
+                </stack>
+  
+                <label id="badge_section_dot" text="Dot Badge" size="sm" />
+                <badge id="badge_dot_demo" dot="true">
+                  <button id="badge_dot_btn" label="Updates" variant="secondary" />
+                </badge>
+              </stack>
+            </tab-item>
+            <tab-item id="badge_tabs_code" label="Code">
+              <panel id="badge_code_panel">
+                <code-editor id="badge_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;badge count=&quot;5&quot;&gt;&#10;  &lt;button label=&quot;Notifications&quot; variant=&quot;secondary&quot; /&gt;&#10;&lt;/badge&gt;&#10;&#10;&lt;badge count=&quot;99&quot;&gt;&#10;  &lt;button label=&quot;Messages&quot; variant=&quot;secondary&quot; /&gt;&#10;&lt;/badge&gt;&#10;&#10;&lt;!-- Dot badge --&gt;&#10;&lt;badge dot=&quot;true&quot;&gt;&#10;  &lt;button label=&quot;Updates&quot; variant=&quot;secondary&quot; /&gt;&#10;&lt;/badge&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Collapsible page -->
@@ -570,13 +835,24 @@
           <label id="collapsible_title" text="Collapsible" size="lg" />
           <text id="collapsible_desc" content="Collapsible sections expand and collapse to reveal child content." />
 
-          <label id="collapsible_section_examples" text="Examples" size="sm" />
-          <collapsible id="collapsible_open" title="Click to collapse" open="true">
-            <text id="collapsible_open_content" content="This content is visible by default because open = true." />
-          </collapsible>
-          <collapsible id="collapsible_closed" title="Click to expand" open="false">
-            <text id="collapsible_closed_content" content="This content is hidden by default and will show when expanded." />
-          </collapsible>
+          <tabs id="collapsible_tabs">
+            <tab-item id="collapsible_tabs_preview" label="Preview">
+              <stack id="collapsible_preview" direction="vertical" spacing="8">
+                <label id="collapsible_section_examples" text="Examples" size="sm" />
+                <collapsible id="collapsible_open" title="Click to collapse" open="true">
+                  <text id="collapsible_open_content" content="This content is visible by default because open = true." />
+                </collapsible>
+                <collapsible id="collapsible_closed" title="Click to expand" open="false">
+                  <text id="collapsible_closed_content" content="This content is hidden by default and will show when expanded." />
+                </collapsible>
+              </stack>
+            </tab-item>
+            <tab-item id="collapsible_tabs_code" label="Code">
+              <panel id="collapsible_code_panel">
+                <code-editor id="collapsible_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;collapsible title=&quot;Click to collapse&quot; open=&quot;true&quot;&gt;&#10;  &lt;text content=&quot;Visible by default.&quot; /&gt;&#10;&lt;/collapsible&gt;&#10;&#10;&lt;collapsible title=&quot;Click to expand&quot; open=&quot;false&quot;&gt;&#10;  &lt;text content=&quot;Hidden by default.&quot; /&gt;&#10;&lt;/collapsible&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Dropdown Button page -->
@@ -584,12 +860,34 @@
           <label id="dropdown_title" text="Dropdown Button" size="lg" />
           <text id="dropdown_desc" content="Dropdown buttons combine a button with a dropdown menu indicator." />
 
-          <label id="dropdown_section_variants" text="Variants" size="sm" />
-          <stack id="dropdown_row" direction="horizontal" spacing="8">
-            <dropdown-button id="dropdown_default" label="Actions" items='["Copy","Paste","Cut"]' />
-            <dropdown-button id="dropdown_primary" label="Save" variant="primary" items='["Save as Draft","Save and Publish","Save as Template"]' />
-            <dropdown-button id="dropdown_danger" label="Delete" variant="danger" items='["Move to Trash","Delete Permanently"]' />
-          </stack>
+          <tabs id="dropdown_tabs">
+            <tab-item id="dropdown_tabs_preview" label="Preview">
+              <stack id="dropdown_preview" direction="vertical" spacing="8">
+                <label id="dropdown_section_variants" text="Variants" size="sm" />
+                <stack id="dropdown_row" direction="horizontal" spacing="8">
+                  <dropdown-button id="dropdown_default" label="Actions">
+                    <menu-item label="Copy" />
+                    <menu-item label="Paste" />
+                    <menu-item label="Cut" />
+                  </dropdown-button>
+                  <dropdown-button id="dropdown_primary" label="Save" variant="primary">
+                    <menu-item label="Save as Draft" />
+                    <menu-item label="Save and Publish" />
+                    <menu-item label="Save as Template" />
+                  </dropdown-button>
+                  <dropdown-button id="dropdown_danger" label="Delete" variant="danger">
+                    <menu-item label="Move to Trash" />
+                    <menu-item label="Delete Permanently" />
+                  </dropdown-button>
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="dropdown_tabs_code" label="Code">
+              <panel id="dropdown_code_panel">
+                <code-editor id="dropdown_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;dropdown-button label=&quot;Actions&quot;&gt;&#10;  &lt;menu-item label=&quot;Copy&quot; /&gt;&#10;  &lt;menu-item label=&quot;Paste&quot; /&gt;&#10;  &lt;menu-item label=&quot;Cut&quot; /&gt;&#10;&lt;/dropdown-button&gt;&#10;&#10;&lt;dropdown-button label=&quot;Save&quot; variant=&quot;primary&quot;&gt;&#10;  &lt;menu-item label=&quot;Save as Draft&quot; /&gt;&#10;  &lt;menu-item label=&quot;Save and Publish&quot; /&gt;&#10;&lt;/dropdown-button&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Spinner page -->
@@ -597,13 +895,24 @@
           <label id="spinner_title" text="Spinner" size="lg" />
           <text id="spinner_desc" content="Spinners indicate loading state. Available sizes: xs, sm, md (default), lg." />
 
-          <label id="spinner_section_sizes" text="Sizes" size="sm" />
-          <stack id="spinner_row" direction="horizontal" spacing="24">
-            <spinner id="spinner_xs" size="xs" />
-            <spinner id="spinner_sm" size="sm" />
-            <spinner id="spinner_md" />
-            <spinner id="spinner_lg" size="lg" />
-          </stack>
+          <tabs id="spinner_tabs">
+            <tab-item id="spinner_tabs_preview" label="Preview">
+              <stack id="spinner_preview" direction="vertical" spacing="8">
+                <label id="spinner_section_sizes" text="Sizes" size="sm" />
+                <stack id="spinner_row" direction="horizontal" spacing="24">
+                  <spinner id="spinner_xs" size="xs" />
+                  <spinner id="spinner_sm" size="sm" />
+                  <spinner id="spinner_md" />
+                  <spinner id="spinner_lg" size="lg" />
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="spinner_tabs_code" label="Code">
+              <panel id="spinner_code_panel">
+                <code-editor id="spinner_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;spinner size=&quot;xs&quot; /&gt;&#10;&lt;spinner size=&quot;sm&quot; /&gt;&#10;&lt;spinner size=&quot;md&quot; /&gt;&#10;&lt;spinner size=&quot;lg&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Tag page -->
@@ -611,22 +920,33 @@
           <label id="tag_title" text="Tag" size="lg" />
           <text id="tag_desc" content="Tags are small labels for categorization. Variants: primary, secondary, danger, success, warning, info." />
 
-          <label id="tag_section_filled" text="Filled Tags" size="sm" />
-          <stack id="tag_filled_row" direction="horizontal" spacing="8">
-            <tag id="tag_primary" label="Primary" variant="primary" />
-            <tag id="tag_secondary" label="Secondary" variant="secondary" />
-            <tag id="tag_danger" label="Danger" variant="danger" />
-            <tag id="tag_success" label="Success" variant="success" />
-            <tag id="tag_warning" label="Warning" variant="warning" />
-            <tag id="tag_info" label="Info" variant="info" />
-          </stack>
-
-          <label id="tag_section_outline" text="Outline Tags" size="sm" />
-          <stack id="tag_outline_row" direction="horizontal" spacing="8">
-            <tag id="tag_outline_primary" label="Primary" variant="primary" outline="true" />
-            <tag id="tag_outline_danger" label="Danger" variant="danger" outline="true" />
-            <tag id="tag_outline_success" label="Success" variant="success" outline="true" />
-          </stack>
+          <tabs id="tag_tabs">
+            <tab-item id="tag_tabs_preview" label="Preview">
+              <stack id="tag_preview" direction="vertical" spacing="12">
+                <label id="tag_section_filled" text="Filled Tags" size="sm" />
+                <stack id="tag_filled_row" direction="horizontal" spacing="8">
+                  <tag id="tag_primary" label="Primary" variant="primary" />
+                  <tag id="tag_secondary" label="Secondary" variant="secondary" />
+                  <tag id="tag_danger" label="Danger" variant="danger" />
+                  <tag id="tag_success" label="Success" variant="success" />
+                  <tag id="tag_warning" label="Warning" variant="warning" />
+                  <tag id="tag_info" label="Info" variant="info" />
+                </stack>
+  
+                <label id="tag_section_outline" text="Outline Tags" size="sm" />
+                <stack id="tag_outline_row" direction="horizontal" spacing="8">
+                  <tag id="tag_outline_primary" label="Primary" variant="primary" outline="true" />
+                  <tag id="tag_outline_danger" label="Danger" variant="danger" outline="true" />
+                  <tag id="tag_outline_success" label="Success" variant="success" outline="true" />
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="tag_tabs_code" label="Code">
+              <panel id="tag_code_panel">
+                <code-editor id="tag_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Filled --&gt;&#10;&lt;tag label=&quot;Primary&quot; variant=&quot;primary&quot; /&gt;&#10;&lt;tag label=&quot;Secondary&quot; variant=&quot;secondary&quot; /&gt;&#10;&lt;tag label=&quot;Danger&quot; variant=&quot;danger&quot; /&gt;&#10;&lt;tag label=&quot;Success&quot; variant=&quot;success&quot; /&gt;&#10;&lt;tag label=&quot;Warning&quot; variant=&quot;warning&quot; /&gt;&#10;&lt;tag label=&quot;Info&quot; variant=&quot;info&quot; /&gt;&#10;&#10;&lt;!-- Outline --&gt;&#10;&lt;tag label=&quot;Primary&quot; variant=&quot;primary&quot; outline=&quot;true&quot; /&gt;&#10;&lt;tag label=&quot;Danger&quot; variant=&quot;danger&quot; outline=&quot;true&quot; /&gt;&#10;&lt;tag label=&quot;Success&quot; variant=&quot;success&quot; outline=&quot;true&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Tooltip page -->
@@ -634,15 +954,26 @@
           <label id="tooltip_title" text="Tooltip" size="lg" />
           <text id="tooltip_desc" content="Tooltips show additional information on hover." />
 
-          <label id="tooltip_section_examples" text="Hover the buttons below" size="sm" />
-          <stack id="tooltip_row" direction="horizontal" spacing="8">
-            <tooltip id="tooltip_demo1" content="This is a helpful tooltip">
-              <button id="tooltip_btn1" label="Hover me" variant="primary" />
-            </tooltip>
-            <tooltip id="tooltip_demo2" content="Another tooltip with more info">
-              <button id="tooltip_btn2" label="More info" variant="secondary" />
-            </tooltip>
-          </stack>
+          <tabs id="tooltip_tabs">
+            <tab-item id="tooltip_tabs_preview" label="Preview">
+              <stack id="tooltip_preview" direction="vertical" spacing="8">
+                <label id="tooltip_section_examples" text="Hover the buttons below" size="sm" />
+                <stack id="tooltip_row" direction="horizontal" spacing="8">
+                  <tooltip id="tooltip_demo1" content="This is a helpful tooltip">
+                    <button id="tooltip_btn1" label="Hover me" variant="primary" />
+                  </tooltip>
+                  <tooltip id="tooltip_demo2" content="Another tooltip with more info">
+                    <button id="tooltip_btn2" label="More info" variant="secondary" />
+                  </tooltip>
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="tooltip_tabs_code" label="Code">
+              <panel id="tooltip_code_panel">
+                <code-editor id="tooltip_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;tooltip content=&quot;This is a helpful tooltip&quot;&gt;&#10;  &lt;button label=&quot;Hover me&quot; variant=&quot;primary&quot; /&gt;&#10;&lt;/tooltip&gt;&#10;&#10;&lt;tooltip content=&quot;Another tooltip with more info&quot;&gt;&#10;  &lt;button label=&quot;More info&quot; variant=&quot;secondary&quot; /&gt;&#10;&lt;/tooltip&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Radio page -->
@@ -650,11 +981,30 @@
           <label id="radio_title" text="Radio" size="lg" />
           <text id="radio_desc" content="Radio groups allow selecting one option from a set. Support vertical and horizontal layouts." />
 
-          <label id="radio_section_vertical" text="Vertical (default)" size="sm" />
-          <radio id="radio_vertical" options='["Option A","Option B","Option C"]' value="Option A" />
-
-          <label id="radio_section_horizontal" text="Horizontal" size="sm" />
-          <radio id="radio_horizontal" options='["Small","Medium","Large"]' value="Medium" direction="horizontal" />
+          <tabs id="radio_tabs">
+            <tab-item id="radio_tabs_preview" label="Preview">
+              <stack id="radio_preview" direction="vertical" spacing="8">
+                <label id="radio_section_vertical" text="Vertical (default)" size="sm" />
+                <radio id="radio_vertical" value="Option A">
+                  <option value="Option A" />
+                  <option value="Option B" />
+                  <option value="Option C" />
+                </radio>
+  
+                <label id="radio_section_horizontal" text="Horizontal" size="sm" />
+                <radio id="radio_horizontal" value="Medium" direction="horizontal">
+                  <option value="Small" />
+                  <option value="Medium" />
+                  <option value="Large" />
+                </radio>
+              </stack>
+            </tab-item>
+            <tab-item id="radio_tabs_code" label="Code">
+              <panel id="radio_code_panel">
+                <code-editor id="radio_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;radio value=&quot;Option A&quot;&gt;&#10;  &lt;option value=&quot;Option A&quot; /&gt;&#10;  &lt;option value=&quot;Option B&quot; /&gt;&#10;  &lt;option value=&quot;Option C&quot; /&gt;&#10;&lt;/radio&gt;&#10;&#10;&lt;radio value=&quot;Medium&quot; direction=&quot;horizontal&quot;&gt;&#10;  &lt;option value=&quot;Small&quot; /&gt;&#10;  &lt;option value=&quot;Medium&quot; /&gt;&#10;  &lt;option value=&quot;Large&quot; /&gt;&#10;&lt;/radio&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Slider page -->
@@ -662,11 +1012,22 @@
           <label id="slider_title" text="Slider" size="lg" />
           <text id="slider_desc" content="Sliders allow selecting a numeric value within a range. Supports min, max, step, and default value." />
 
-          <label id="slider_section_basic" text="Basic Slider (0-100)" size="sm" />
-          <slider id="slider_basic" min="0" max="100" step="1" value="50" />
-
-          <label id="slider_section_fine" text="Fine Step (0-1, step 0.1)" size="sm" />
-          <slider id="slider_fine" min="0.0" max="1.0" step="0.1" value="0.5" />
+          <tabs id="slider_tabs">
+            <tab-item id="slider_tabs_preview" label="Preview">
+              <stack id="slider_preview" direction="vertical" spacing="8">
+                <label id="slider_section_basic" text="Basic Slider (0-100)" size="sm" />
+                <slider id="slider_basic" min="0" max="100" step="1" value="50" />
+  
+                <label id="slider_section_fine" text="Fine Step (0-1, step 0.1)" size="sm" />
+                <slider id="slider_fine" min="0.0" max="1.0" step="0.1" value="0.5" />
+              </stack>
+            </tab-item>
+            <tab-item id="slider_tabs_code" label="Code">
+              <panel id="slider_code_panel">
+                <code-editor id="slider_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;slider min=&quot;0&quot; max=&quot;100&quot; step=&quot;1&quot; value=&quot;50&quot; /&gt;&#10;&#10;&lt;slider min=&quot;0.0&quot; max=&quot;1.0&quot; step=&quot;0.1&quot; value=&quot;0.5&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Switch page -->
@@ -674,11 +1035,22 @@
           <label id="switch_title" text="Switch" size="lg" />
           <text id="switch_desc" content="Switches toggle boolean state, similar to checkboxes but with a sliding visual style." />
 
-          <label id="switch_section_states" text="States" size="sm" />
-          <switch id="switch_off" label="Off by default" checked="false" />
-          <switch id="switch_on" label="On by default" checked="true" />
-          <switch id="switch_disabled" label="Disabled switch" checked="false" disabled="true" />
-          <switch id="switch_disabled_on" label="Disabled (on)" checked="true" disabled="true" />
+          <tabs id="switch_tabs">
+            <tab-item id="switch_tabs_preview" label="Preview">
+              <stack id="switch_preview" direction="vertical" spacing="8">
+                <label id="switch_section_states" text="States" size="sm" />
+                <switch id="switch_off" label="Off by default" checked="false" />
+                <switch id="switch_on" label="On by default" checked="true" />
+                <switch id="switch_disabled" label="Disabled switch" checked="false" disabled="true" />
+                <switch id="switch_disabled_on" label="Disabled (on)" checked="true" disabled="true" />
+              </stack>
+            </tab-item>
+            <tab-item id="switch_tabs_code" label="Code">
+              <panel id="switch_code_panel">
+                <code-editor id="switch_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;switch label=&quot;Off by default&quot; checked=&quot;false&quot; /&gt;&#10;&lt;switch label=&quot;On by default&quot; checked=&quot;true&quot; /&gt;&#10;&lt;switch label=&quot;Disabled&quot; checked=&quot;false&quot; disabled=&quot;true&quot; /&gt;&#10;&lt;switch label=&quot;Disabled (on)&quot; checked=&quot;true&quot; disabled=&quot;true&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Toggle page -->
@@ -686,19 +1058,30 @@
           <label id="toggle_title" text="Toggle" size="lg" />
           <text id="toggle_desc" content="Toggle buttons switch between on/off states. Support labels and icons." />
 
-          <label id="toggle_section_basic" text="Basic Toggles" size="sm" />
-          <stack id="toggle_row" direction="horizontal" spacing="8">
-            <toggle id="toggle_off" label="Off" checked="false" />
-            <toggle id="toggle_on" label="On" checked="true" />
-            <toggle id="toggle_disabled" label="Disabled" checked="false" disabled="true" />
-          </stack>
-
-          <label id="toggle_section_icons" text="With Icons" size="sm" />
-          <stack id="toggle_icon_row" direction="horizontal" spacing="8">
-            <toggle id="toggle_star" label="Star" icon="star" checked="false" />
-            <toggle id="toggle_heart" label="Heart" icon="heart" checked="true" />
-            <toggle id="toggle_bell" label="Bell" icon="bell" checked="false" />
-          </stack>
+          <tabs id="toggle_tabs">
+            <tab-item id="toggle_tabs_preview" label="Preview">
+              <stack id="toggle_preview" direction="vertical" spacing="12">
+                <label id="toggle_section_basic" text="Basic Toggles" size="sm" />
+                <stack id="toggle_row" direction="horizontal" spacing="8">
+                  <toggle id="toggle_off" label="Off" checked="false" />
+                  <toggle id="toggle_on" label="On" checked="true" />
+                  <toggle id="toggle_disabled" label="Disabled" checked="false" disabled="true" />
+                </stack>
+  
+                <label id="toggle_section_icons" text="With Icons" size="sm" />
+                <stack id="toggle_icon_row" direction="horizontal" spacing="8">
+                  <toggle id="toggle_star" label="Star" icon="star" checked="false" />
+                  <toggle id="toggle_heart" label="Heart" icon="heart" checked="true" />
+                  <toggle id="toggle_bell" label="Bell" icon="bell" checked="false" />
+                </stack>
+              </stack>
+            </tab-item>
+            <tab-item id="toggle_tabs_code" label="Code">
+              <panel id="toggle_code_panel">
+                <code-editor id="toggle_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;toggle label=&quot;Off&quot; checked=&quot;false&quot; /&gt;&#10;&lt;toggle label=&quot;On&quot; checked=&quot;true&quot; /&gt;&#10;&lt;toggle label=&quot;Disabled&quot; checked=&quot;false&quot; disabled=&quot;true&quot; /&gt;&#10;&#10;&lt;!-- With icons --&gt;&#10;&lt;toggle label=&quot;Star&quot; icon=&quot;star&quot; checked=&quot;false&quot; /&gt;&#10;&lt;toggle label=&quot;Heart&quot; icon=&quot;heart&quot; checked=&quot;true&quot; /&gt;&#10;&lt;toggle label=&quot;Bell&quot; icon=&quot;bell&quot; checked=&quot;false&quot; /&gt;" />
+              </panel>
+            </tab-item>
+          </tabs>
         </panel>
 
         <!-- Styling page -->
@@ -708,122 +1091,146 @@
 
           <!-- Padding -->
           <label id="styling_padding_title" text="Padding" size="sm" />
-          <tabs id="styling_padding_tabs" tabs='["Preview","HCL"]'>
-            <stack id="styling_padding_preview" direction="vertical" spacing="8">
-              <label id="styling_pad_uniform" text="padding = 16" padding="16" border="1" border-color="theme.border" />
-              <stack id="styling_pad_xy_row" direction="horizontal" spacing="8">
-                <label id="styling_pad_x" text="padding_x = 24" padding-x="24" border="1" border-color="theme.border" />
-                <label id="styling_pad_y" text="padding_y = 24" padding-y="24" border="1" border-color="theme.border" />
+          <tabs id="styling_padding_tabs">
+            <tab-item id="styling_padding_tabs_preview" label="Preview">
+              <stack id="styling_padding_preview" direction="vertical" spacing="8">
+                <label id="styling_pad_uniform" text="padding = 16" padding="16" border="1" border-color="theme.border" />
+                <stack id="styling_pad_xy_row" direction="horizontal" spacing="8">
+                  <label id="styling_pad_x" text="padding_x = 24" padding-x="24" border="1" border-color="theme.border" />
+                  <label id="styling_pad_y" text="padding_y = 24" padding-y="24" border="1" border-color="theme.border" />
+                </stack>
+                <stack id="styling_pad_dir_row" direction="horizontal" spacing="8">
+                  <label id="styling_pad_left" text="padding_left = 32" padding-left="32" border="1" border-color="theme.border" />
+                  <label id="styling_pad_right" text="padding_right = 32" padding-right="32" border="1" border-color="theme.border" />
+                  <label id="styling_pad_top" text="padding_top = 32" padding-top="32" border="1" border-color="theme.border" />
+                  <label id="styling_pad_bottom" text="padding_bottom = 32" padding-bottom="32" border="1" border-color="theme.border" />
+                </stack>
               </stack>
-              <stack id="styling_pad_dir_row" direction="horizontal" spacing="8">
-                <label id="styling_pad_left" text="padding_left = 32" padding-left="32" border="1" border-color="theme.border" />
-                <label id="styling_pad_right" text="padding_right = 32" padding-right="32" border="1" border-color="theme.border" />
-                <label id="styling_pad_top" text="padding_top = 32" padding-top="32" border="1" border-color="theme.border" />
-                <label id="styling_pad_bottom" text="padding_bottom = 32" padding-bottom="32" border="1" border-color="theme.border" />
-              </stack>
-            </stack>
-            <panel id="styling_padding_hcl">
-              <code-editor id="styling_padding_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform padding on all sides&#10;padding = 16&#10;&#10;# Axis padding (horizontal / vertical)&#10;padding_x = 24&#10;padding_y = 24&#10;&#10;# Directional padding&#10;padding_left   = 32&#10;padding_right  = 32&#10;padding_top    = 32&#10;padding_bottom = 32" />
-            </panel>
+            </tab-item>
+            <tab-item id="styling_padding_tabs_code" label="Code">
+              <panel id="styling_padding_code_panel">
+                <code-editor id="styling_padding_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Uniform padding on all sides --&gt;&#10;&lt;label padding=&quot;16&quot; /&gt;&#10;&#10;&lt;!-- Axis padding (horizontal / vertical) --&gt;&#10;&lt;label padding-x=&quot;24&quot; /&gt;&#10;&lt;label padding-y=&quot;24&quot; /&gt;&#10;&#10;&lt;!-- Directional padding --&gt;&#10;&lt;label padding-left=&quot;32&quot; /&gt;&#10;&lt;label padding-right=&quot;32&quot; /&gt;&#10;&lt;label padding-top=&quot;32&quot; /&gt;&#10;&lt;label padding-bottom=&quot;32&quot; /&gt;" />
+              </panel>
+            </tab-item>
           </tabs>
 
           <!-- Margin -->
           <label id="styling_margin_title" text="Margin" size="sm" />
-          <tabs id="styling_margin_tabs" tabs='["Preview","HCL"]'>
-            <stack id="styling_margin_preview" direction="vertical" spacing="12">
-              <stack id="styling_margin_uniform_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
-                <label id="styling_margin_box1" text="margin = 4" margin="4" border="1" border-color="theme.primary" padding="8" />
-                <label id="styling_margin_box2" text="margin = 12" margin="12" border="1" border-color="theme.primary" padding="8" />
-                <label id="styling_margin_box3" text="margin = 24" margin="24" border="1" border-color="theme.primary" padding="8" />
+          <tabs id="styling_margin_tabs">
+            <tab-item id="styling_margin_tabs_preview" label="Preview">
+              <stack id="styling_margin_preview" direction="vertical" spacing="12">
+                <stack id="styling_margin_uniform_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                  <label id="styling_margin_box1" text="margin = 4" margin="4" border="1" border-color="theme.primary" padding="8" />
+                  <label id="styling_margin_box2" text="margin = 12" margin="12" border="1" border-color="theme.primary" padding="8" />
+                  <label id="styling_margin_box3" text="margin = 24" margin="24" border="1" border-color="theme.primary" padding="8" />
+                </stack>
+                <stack id="styling_margin_axis_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                  <label id="styling_margin_x" text="margin_x = 20" margin-x="20" border="1" border-color="theme.primary" padding="8" />
+                  <label id="styling_margin_y" text="margin_y = 20" margin-y="20" border="1" border-color="theme.primary" padding="8" />
+                </stack>
+                <stack id="styling_margin_dir_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                  <label id="styling_margin_left" text="margin_left = 24" margin-left="24" border="1" border-color="theme.primary" padding="8" />
+                  <label id="styling_margin_right" text="margin_right = 24" margin-right="24" border="1" border-color="theme.primary" padding="8" />
+                  <label id="styling_margin_top" text="margin_top = 16" margin-top="16" border="1" border-color="theme.primary" padding="8" />
+                  <label id="styling_margin_bottom" text="margin_bottom = 16" margin-bottom="16" border="1" border-color="theme.primary" padding="8" />
+                </stack>
               </stack>
-              <stack id="styling_margin_axis_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
-                <label id="styling_margin_x" text="margin_x = 20" margin-x="20" border="1" border-color="theme.primary" padding="8" />
-                <label id="styling_margin_y" text="margin_y = 20" margin-y="20" border="1" border-color="theme.primary" padding="8" />
-              </stack>
-              <stack id="styling_margin_dir_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
-                <label id="styling_margin_left" text="margin_left = 24" margin-left="24" border="1" border-color="theme.primary" padding="8" />
-                <label id="styling_margin_right" text="margin_right = 24" margin-right="24" border="1" border-color="theme.primary" padding="8" />
-                <label id="styling_margin_top" text="margin_top = 16" margin-top="16" border="1" border-color="theme.primary" padding="8" />
-                <label id="styling_margin_bottom" text="margin_bottom = 16" margin-bottom="16" border="1" border-color="theme.primary" padding="8" />
-              </stack>
-            </stack>
-            <panel id="styling_margin_hcl">
-              <code-editor id="styling_margin_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform margin on all sides&#10;margin = 12&#10;&#10;# Axis margin (horizontal / vertical)&#10;margin_x = 20&#10;margin_y = 20&#10;&#10;# Directional margin&#10;margin_left   = 24&#10;margin_right  = 24&#10;margin_top    = 16&#10;margin_bottom = 16" />
-            </panel>
+            </tab-item>
+            <tab-item id="styling_margin_tabs_code" label="Code">
+              <panel id="styling_margin_code_panel">
+                <code-editor id="styling_margin_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Uniform margin on all sides --&gt;&#10;&lt;label margin=&quot;12&quot; /&gt;&#10;&#10;&lt;!-- Axis margin (horizontal / vertical) --&gt;&#10;&lt;label margin-x=&quot;20&quot; /&gt;&#10;&lt;label margin-y=&quot;20&quot; /&gt;&#10;&#10;&lt;!-- Directional margin --&gt;&#10;&lt;label margin-left=&quot;24&quot; /&gt;&#10;&lt;label margin-right=&quot;24&quot; /&gt;&#10;&lt;label margin-top=&quot;16&quot; /&gt;&#10;&lt;label margin-bottom=&quot;16&quot; /&gt;" />
+              </panel>
+            </tab-item>
           </tabs>
 
           <!-- Border -->
           <label id="styling_border_title" text="Border" size="sm" />
-          <tabs id="styling_border_tabs" tabs='["Preview","HCL"]'>
-            <stack id="styling_border_preview" direction="vertical" spacing="12">
-              <stack id="styling_border_uniform_row" direction="horizontal" spacing="12">
-                <label id="styling_border_1" text="border = 1" border="1" border-color="theme.border" padding="12" />
-                <label id="styling_border_2" text="border = 2" border="2" border-color="theme.border" padding="12" />
-                <label id="styling_border_primary" text="theme.primary" border="2" border-color="theme.primary" padding="12" />
-                <label id="styling_border_danger" text="theme.danger" border="2" border-color="theme.danger" padding="12" />
+          <tabs id="styling_border_tabs">
+            <tab-item id="styling_border_tabs_preview" label="Preview">
+              <stack id="styling_border_preview" direction="vertical" spacing="12">
+                <stack id="styling_border_uniform_row" direction="horizontal" spacing="12">
+                  <label id="styling_border_1" text="border = 1" border="1" border-color="theme.border" padding="12" />
+                  <label id="styling_border_2" text="border = 2" border="2" border-color="theme.border" padding="12" />
+                  <label id="styling_border_primary" text="theme.primary" border="2" border-color="theme.primary" padding="12" />
+                  <label id="styling_border_danger" text="theme.danger" border="2" border-color="theme.danger" padding="12" />
+                </stack>
+                <stack id="styling_border_axis_row" direction="horizontal" spacing="12">
+                  <label id="styling_border_x" text="border_x = 2" border-x="2" border-color="theme.primary" padding="12" />
+                  <label id="styling_border_y" text="border_y = 2" border-y="2" border-color="theme.primary" padding="12" />
+                </stack>
+                <stack id="styling_border_dir_row" direction="horizontal" spacing="12">
+                  <label id="styling_border_left" text="border_left = 3" border-left="3" border-color="theme.primary" padding="12" />
+                  <label id="styling_border_right" text="border_right = 3" border-right="3" border-color="theme.primary" padding="12" />
+                  <label id="styling_border_top" text="border_top = 3" border-top="3" border-color="theme.primary" padding="12" />
+                  <label id="styling_border_bottom" text="border_bottom = 3" border-bottom="3" border-color="theme.primary" padding="12" />
+                </stack>
               </stack>
-              <stack id="styling_border_axis_row" direction="horizontal" spacing="12">
-                <label id="styling_border_x" text="border_x = 2" border-x="2" border-color="theme.primary" padding="12" />
-                <label id="styling_border_y" text="border_y = 2" border-y="2" border-color="theme.primary" padding="12" />
-              </stack>
-              <stack id="styling_border_dir_row" direction="horizontal" spacing="12">
-                <label id="styling_border_left" text="border_left = 3" border-left="3" border-color="theme.primary" padding="12" />
-                <label id="styling_border_right" text="border_right = 3" border-right="3" border-color="theme.primary" padding="12" />
-                <label id="styling_border_top" text="border_top = 3" border-top="3" border-color="theme.primary" padding="12" />
-                <label id="styling_border_bottom" text="border_bottom = 3" border-bottom="3" border-color="theme.primary" padding="12" />
-              </stack>
-            </stack>
-            <panel id="styling_border_hcl">
-              <code-editor id="styling_border_code" language="hcl" line-number="false" searchable="false" default-value="# Uniform border on all sides&#10;border = 1&#10;border = 2&#10;&#10;# Axis border (horizontal / vertical)&#10;border_x = 2&#10;border_y = 2&#10;&#10;# Directional border&#10;border_left   = 3&#10;border_right  = 3&#10;border_top    = 3&#10;border_bottom = 3&#10;&#10;# Border color (theme references or hex)&#10;border_color = &quot;theme.border&quot;&#10;border_color = &quot;theme.primary&quot;&#10;border_color = &quot;#FF6600&quot;" />
-            </panel>
+            </tab-item>
+            <tab-item id="styling_border_tabs_code" label="Code">
+              <panel id="styling_border_code_panel">
+                <code-editor id="styling_border_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Uniform border on all sides --&gt;&#10;&lt;label border=&quot;1&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label border=&quot;2&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&#10;&lt;!-- Axis border (horizontal / vertical) --&gt;&#10;&lt;label border-x=&quot;2&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-y=&quot;2&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&#10;&lt;!-- Directional border --&gt;&#10;&lt;label border-left=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-right=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-top=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-bottom=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&#10;&lt;!-- Border color (theme references or hex) --&gt;&#10;&lt;label border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-color=&quot;#FF6600&quot; /&gt;" />
+              </panel>
+            </tab-item>
           </tabs>
 
           <!-- Shadow -->
           <label id="styling_shadow_title" text="Shadow" size="sm" />
-          <tabs id="styling_shadow_tabs" tabs='["Preview","HCL"]'>
-            <stack id="styling_shadow_preview" direction="horizontal" spacing="20">
-              <label id="styling_shadow_sm" text="sm" shadow="sm" padding="16" rounded="md" />
-              <label id="styling_shadow_md" text="md" shadow="md" padding="16" rounded="md" />
-              <label id="styling_shadow_lg" text="lg" shadow="lg" padding="16" rounded="md" />
-              <label id="styling_shadow_xl" text="xl" shadow="xl" padding="16" rounded="md" />
-              <label id="styling_shadow_2xl" text="2xl" shadow="2xl" padding="16" rounded="md" />
-            </stack>
-            <panel id="styling_shadow_hcl">
-              <code-editor id="styling_shadow_code" language="hcl" line-number="false" searchable="false" default-value="# Shadow sizes: sm, md, lg, xl, 2xl&#10;shadow = &quot;sm&quot;&#10;shadow = &quot;md&quot;&#10;shadow = &quot;lg&quot;&#10;shadow = &quot;xl&quot;&#10;shadow = &quot;2xl&quot;" />
-            </panel>
+          <tabs id="styling_shadow_tabs">
+            <tab-item id="styling_shadow_tabs_preview" label="Preview">
+              <stack id="styling_shadow_preview" direction="horizontal" spacing="20">
+                <label id="styling_shadow_sm" text="sm" shadow="sm" padding="16" rounded="md" />
+                <label id="styling_shadow_md" text="md" shadow="md" padding="16" rounded="md" />
+                <label id="styling_shadow_lg" text="lg" shadow="lg" padding="16" rounded="md" />
+                <label id="styling_shadow_xl" text="xl" shadow="xl" padding="16" rounded="md" />
+                <label id="styling_shadow_2xl" text="2xl" shadow="2xl" padding="16" rounded="md" />
+              </stack>
+            </tab-item>
+            <tab-item id="styling_shadow_tabs_code" label="Code">
+              <panel id="styling_shadow_code_panel">
+                <code-editor id="styling_shadow_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Shadow sizes: sm, md, lg, xl, 2xl --&gt;&#10;&lt;label shadow=&quot;sm&quot; /&gt;&#10;&lt;label shadow=&quot;md&quot; /&gt;&#10;&lt;label shadow=&quot;lg&quot; /&gt;&#10;&lt;label shadow=&quot;xl&quot; /&gt;&#10;&lt;label shadow=&quot;2xl&quot; /&gt;" />
+              </panel>
+            </tab-item>
           </tabs>
 
           <!-- Rounded -->
           <label id="styling_rounded_title" text="Rounded" size="sm" />
-          <tabs id="styling_rounded_tabs" tabs='["Preview","HCL"]'>
-            <stack id="styling_rounded_preview" direction="horizontal" spacing="12">
-              <label id="styling_rounded_sm" text="sm" rounded="sm" border="2" border-color="theme.border" padding="16" />
-              <label id="styling_rounded_md" text="md" rounded="md" border="2" border-color="theme.border" padding="16" />
-              <label id="styling_rounded_lg" text="lg" rounded="lg" border="2" border-color="theme.border" padding="16" />
-              <label id="styling_rounded_xl" text="xl" rounded="xl" border="2" border-color="theme.border" padding="16" />
-              <label id="styling_rounded_full" text="full" rounded="full" border="2" border-color="theme.border" padding="16" />
-            </stack>
-            <panel id="styling_rounded_hcl">
-              <code-editor id="styling_rounded_code" language="hcl" line-number="false" searchable="false" default-value="# Rounded sizes: sm, md, lg, xl, full&#10;rounded = &quot;sm&quot;&#10;rounded = &quot;md&quot;&#10;rounded = &quot;lg&quot;&#10;rounded = &quot;xl&quot;&#10;rounded = &quot;full&quot;" />
-            </panel>
+          <tabs id="styling_rounded_tabs">
+            <tab-item id="styling_rounded_tabs_preview" label="Preview">
+              <stack id="styling_rounded_preview" direction="horizontal" spacing="12">
+                <label id="styling_rounded_sm" text="sm" rounded="sm" border="2" border-color="theme.border" padding="16" />
+                <label id="styling_rounded_md" text="md" rounded="md" border="2" border-color="theme.border" padding="16" />
+                <label id="styling_rounded_lg" text="lg" rounded="lg" border="2" border-color="theme.border" padding="16" />
+                <label id="styling_rounded_xl" text="xl" rounded="xl" border="2" border-color="theme.border" padding="16" />
+                <label id="styling_rounded_full" text="full" rounded="full" border="2" border-color="theme.border" padding="16" />
+              </stack>
+            </tab-item>
+            <tab-item id="styling_rounded_tabs_code" label="Code">
+              <panel id="styling_rounded_code_panel">
+                <code-editor id="styling_rounded_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Rounded sizes: sm, md, lg, xl, full --&gt;&#10;&lt;label rounded=&quot;sm&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;md&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;lg&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;xl&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;full&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;" />
+              </panel>
+            </tab-item>
           </tabs>
 
           <!-- Combined -->
           <label id="styling_combined_title" text="Combined" size="sm" />
-          <tabs id="styling_combined_tabs" tabs='["Preview","HCL"]'>
-            <stack id="styling_combined_preview" direction="horizontal" spacing="16">
-              <stack id="styling_card1" direction="vertical" spacing="8" padding="24" border="1" border-color="theme.border" shadow="md" rounded="lg">
-                <label id="styling_card1_title" text="Styled Card" size="md" />
-                <text id="styling_card1_body" content="This card combines border, shadow, rounded, and padding to create a polished container." />
+          <tabs id="styling_combined_tabs">
+            <tab-item id="styling_combined_tabs_preview" label="Preview">
+              <stack id="styling_combined_preview" direction="horizontal" spacing="16">
+                <stack id="styling_card1" direction="vertical" spacing="8" padding="24" border="1" border-color="theme.border" shadow="md" rounded="lg">
+                  <label id="styling_card1_title" text="Styled Card" size="md" />
+                  <text id="styling_card1_body" content="This card combines border, shadow, rounded, and padding to create a polished container." />
+                </stack>
+                <stack id="styling_card2" direction="vertical" spacing="8" padding="24" border="2" border-color="theme.primary" shadow="lg" rounded="xl">
+                  <label id="styling_card2_title" text="Accent Card" size="md" />
+                  <text id="styling_card2_body" content="An accent-bordered card with a larger shadow and rounder corners." />
+                </stack>
               </stack>
-              <stack id="styling_card2" direction="vertical" spacing="8" padding="24" border="2" border-color="theme.primary" shadow="lg" rounded="xl">
-                <label id="styling_card2_title" text="Accent Card" size="md" />
-                <text id="styling_card2_body" content="An accent-bordered card with a larger shadow and rounder corners." />
-              </stack>
-            </stack>
-            <panel id="styling_combined_hcl">
-              <code-editor id="styling_combined_code" language="hcl" line-number="false" searchable="false" default-value="component &quot;styled_card&quot; {&#10;  type         = &quot;stack&quot;&#10;  direction    = &quot;vertical&quot;&#10;  spacing      = 8&#10;  padding      = 24&#10;  border       = 1&#10;  border_color = &quot;theme.border&quot;&#10;  shadow       = &quot;md&quot;&#10;  rounded      = &quot;lg&quot;&#10;&#10;  component &quot;title&quot; {&#10;    type = &quot;label&quot;&#10;    text = &quot;Styled Card&quot;&#10;  }&#10;&#10;  component &quot;body&quot; {&#10;    type    = &quot;text&quot;&#10;    content = &quot;Card content here.&quot;&#10;  }&#10;}" />
-            </panel>
+            </tab-item>
+            <tab-item id="styling_combined_tabs_code" label="Code">
+              <panel id="styling_combined_code_panel">
+                <code-editor id="styling_combined_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;stack direction=&quot;vertical&quot; spacing=&quot;8&quot; padding=&quot;24&quot;&#10;      border=&quot;1&quot; border-color=&quot;theme.border&quot;&#10;      shadow=&quot;md&quot; rounded=&quot;lg&quot;&gt;&#10;  &lt;label text=&quot;Styled Card&quot; size=&quot;md&quot; /&gt;&#10;  &lt;text content=&quot;Card content here.&quot; /&gt;&#10;&lt;/stack&gt;" />
+              </panel>
+            </tab-item>
           </tabs>
         </panel>
 
@@ -832,58 +1239,61 @@
           <label id="sidenav_title" text="Sidenav Bar" size="xl" />
           <text id="sidenav_desc" content="A vertical navigation sidebar with icon and label items. Supports collapsed (icon-only) and expanded (icon + label) modes." />
 
-          <!-- Three sidenav bars side by side -->
-          <stack id="sidenav_demos" direction="horizontal" spacing="24">
-
-            <!-- Left: collapsed (icons only) -->
-            <stack id="sidenav_demo_left_collapsed" direction="vertical" spacing="8">
-              <label id="sidenav_demo_left_collapsed_label" text="Collapsed (icons only)" size="sm" />
-              <stack id="sidenav_left_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
-                <sidenav-bar id="sidenav_left_collapsed" collapsed="true">
-                  <sidenav-bar-item id="snlc_item_home" icon="globe" label="Home" />
-                  <sidenav-bar-item id="snlc_item_inbox" icon="inbox" label="Inbox" />
-                  <sidenav-bar-item id="snlc_item_search" icon="search" label="Search" />
-                  <sidenav-bar-item id="snlc_item_settings" icon="settings" label="Settings" />
-                </sidenav-bar>
+          <tabs id="sidenav_tabs">
+            <tab-item id="sidenav_tabs_preview" label="Preview">
+              <stack id="sidenav_preview" direction="vertical" spacing="12">
+                <!-- Three sidenav bars side by side -->
+                <stack id="sidenav_demos" direction="horizontal" spacing="24">
+  
+                  <!-- Left: collapsed (icons only) -->
+                  <stack id="sidenav_demo_left_collapsed" direction="vertical" spacing="8">
+                    <label id="sidenav_demo_left_collapsed_label" text="Collapsed (icons only)" size="sm" />
+                    <stack id="sidenav_left_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                      <sidenav-bar id="sidenav_left_collapsed" collapsed="true">
+                        <sidenav-bar-item id="snlc_item_home" icon="globe" label="Home" />
+                        <sidenav-bar-item id="snlc_item_inbox" icon="inbox" label="Inbox" />
+                        <sidenav-bar-item id="snlc_item_search" icon="search" label="Search" />
+                        <sidenav-bar-item id="snlc_item_settings" icon="settings" label="Settings" />
+                      </sidenav-bar>
+                    </stack>
+                  </stack>
+  
+                  <!-- Center: expanded with toggle button -->
+                  <stack id="sidenav_demo_center_expanded" direction="vertical" spacing="8">
+                    <label id="sidenav_demo_center_label" text="Expanded (with toggle)" size="sm" />
+                    <stack id="sidenav_center_expanded_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                      <sidenav-bar id="sidenav_center_expanded" collapsed="false">
+                        <sidenav-bar-item id="snce_item_home" icon="globe" label="Home" />
+                        <sidenav-bar-item id="snce_item_inbox" icon="inbox" label="Inbox" />
+                        <sidenav-bar-item id="snce_item_search" icon="search" label="Search" />
+                        <sidenav-bar-item id="snce_item_settings" icon="settings" label="Settings" />
+                        <button id="snce_toggle_btn" label="Toggle" variant="ghost" size="sm" icon="menu" on-click="on_toggle_sidenav" />
+                      </sidenav-bar>
+                    </stack>
+                  </stack>
+  
+                  <!-- Right: collapsed (icons only) -->
+                  <stack id="sidenav_demo_right_collapsed" direction="vertical" spacing="8">
+                    <label id="sidenav_demo_right_collapsed_label" text="Collapsed (right side)" size="sm" />
+                    <stack id="sidenav_right_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                      <!-- Spacer pushes sidenav to the right -->
+                      <panel id="snrc_spacer" flex="1" />
+                      <sidenav-bar id="sidenav_right_collapsed" collapsed="true">
+                        <sidenav-bar-item id="snrc_item_user" icon="user" label="Profile" />
+                        <sidenav-bar-item id="snrc_item_bell" icon="bell" label="Notifications" />
+                        <sidenav-bar-item id="snrc_item_star" icon="star" label="Favorites" />
+                        <sidenav-bar-item id="snrc_item_settings" icon="settings" label="Settings" />
+                      </sidenav-bar>
+                    </stack>
+                  </stack>
+                </stack>
               </stack>
-            </stack>
-
-            <!-- Center: expanded with toggle button -->
-            <stack id="sidenav_demo_center_expanded" direction="vertical" spacing="8">
-              <label id="sidenav_demo_center_label" text="Expanded (with toggle)" size="sm" />
-              <stack id="sidenav_center_expanded_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
-                <sidenav-bar id="sidenav_center_expanded" collapsed="false">
-                  <sidenav-bar-item id="snce_item_home" icon="globe" label="Home" />
-                  <sidenav-bar-item id="snce_item_inbox" icon="inbox" label="Inbox" />
-                  <sidenav-bar-item id="snce_item_search" icon="search" label="Search" />
-                  <sidenav-bar-item id="snce_item_settings" icon="settings" label="Settings" />
-                  <button id="snce_toggle_btn" label="Toggle" variant="ghost" size="sm" icon="menu" on-click="on_toggle_sidenav" />
-                </sidenav-bar>
-              </stack>
-            </stack>
-
-            <!-- Right: collapsed (icons only) -->
-            <stack id="sidenav_demo_right_collapsed" direction="vertical" spacing="8">
-              <label id="sidenav_demo_right_collapsed_label" text="Collapsed (right side)" size="sm" />
-              <stack id="sidenav_right_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
-                <!-- Spacer pushes sidenav to the right -->
-                <panel id="snrc_spacer" flex="1" />
-                <sidenav-bar id="sidenav_right_collapsed" collapsed="true">
-                  <sidenav-bar-item id="snrc_item_user" icon="user" label="Profile" />
-                  <sidenav-bar-item id="snrc_item_bell" icon="bell" label="Notifications" />
-                  <sidenav-bar-item id="snrc_item_star" icon="star" label="Favorites" />
-                  <sidenav-bar-item id="snrc_item_settings" icon="settings" label="Settings" />
-                </sidenav-bar>
-              </stack>
-            </stack>
-          </stack>
-
-          <!-- HCL example -->
-          <tabs id="sidenav_hcl_tabs" tabs='["Preview","HCL"]'>
-            <text id="sidenav_preview_placeholder" content="See the sidenav bar demos above." />
-            <panel id="sidenav_hcl_code">
-              <code-editor id="sidenav_hcl_text" language="hcl" line-number="false" searchable="false" default-value="component &quot;my_sidenav&quot; {&#10;  type      = &quot;sidenav_bar&quot;&#10;  collapsed = false&#10;&#10;  component &quot;item_home&quot; {&#10;    type  = &quot;sidenav_bar_item&quot;&#10;    icon  = &quot;globe&quot;&#10;    label = &quot;Home&quot;&#10;  }&#10;&#10;  component &quot;item_inbox&quot; {&#10;    type  = &quot;sidenav_bar_item&quot;&#10;    icon  = &quot;inbox&quot;&#10;    label = &quot;Inbox&quot;&#10;  }&#10;}" />
-            </panel>
+            </tab-item>
+            <tab-item id="sidenav_tabs_code" label="Code">
+              <panel id="sidenav_code_panel">
+                <code-editor id="sidenav_code_text" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Collapsed (icons only) --&gt;&#10;&lt;sidenav-bar collapsed=&quot;true&quot;&gt;&#10;  &lt;sidenav-bar-item icon=&quot;globe&quot; label=&quot;Home&quot; /&gt;&#10;  &lt;sidenav-bar-item icon=&quot;inbox&quot; label=&quot;Inbox&quot; /&gt;&#10;  &lt;sidenav-bar-item icon=&quot;search&quot; label=&quot;Search&quot; /&gt;&#10;  &lt;sidenav-bar-item icon=&quot;settings&quot; label=&quot;Settings&quot; /&gt;&#10;&lt;/sidenav-bar&gt;&#10;&#10;&lt;!-- Expanded --&gt;&#10;&lt;sidenav-bar collapsed=&quot;false&quot;&gt;&#10;  &lt;sidenav-bar-item icon=&quot;globe&quot; label=&quot;Home&quot; /&gt;&#10;  &lt;sidenav-bar-item icon=&quot;inbox&quot; label=&quot;Inbox&quot; /&gt;&#10;  &lt;sidenav-bar-item icon=&quot;search&quot; label=&quot;Search&quot; /&gt;&#10;  &lt;sidenav-bar-item icon=&quot;settings&quot; label=&quot;Settings&quot; /&gt;&#10;  &lt;button label=&quot;Toggle&quot; variant=&quot;ghost&quot; size=&quot;sm&quot;&#10;          icon=&quot;menu&quot; on-click=&quot;on_toggle_sidenav&quot; /&gt;&#10;&lt;/sidenav-bar&gt;" />
+              </panel>
+            </tab-item>
           </tabs>
         </panel>
 

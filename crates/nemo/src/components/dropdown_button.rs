@@ -3,7 +3,6 @@ use gpui_component::button::{
     Button as GpuiButton, ButtonVariants, DropdownButton as GpuiDropdownButton,
 };
 use gpui_component::menu::PopupMenuItem;
-use nemo_config::Value;
 use nemo_layout::BuiltComponent;
 
 /// A button with a dropdown menu component.
@@ -11,8 +10,10 @@ use nemo_layout::BuiltComponent;
 /// # XML Configuration
 ///
 /// ```xml
-/// <dropdown-button id="actions" label="Actions" variant="primary"
-///   items='[{"label":"Edit"},{"label":"Delete"}]' />
+/// <dropdown-button id="actions" label="Actions" variant="primary">
+///   <menu-item label="Edit" />
+///   <menu-item label="Delete" />
+/// </dropdown-button>
 /// ```
 ///
 /// # Properties
@@ -21,16 +22,26 @@ use nemo_layout::BuiltComponent;
 /// |----------|------|-------------|
 /// | `label` | string | Button text label |
 /// | `variant` | string | Button style variant |
-/// | `items` | JSON array | Array of menu item objects with `label` fields |
+///
+/// Menu entries are declared as `<menu-item>` children (`label`).
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct DropdownButton {
     source: BuiltComponent,
+    items: Vec<String>,
 }
 
 impl DropdownButton {
     pub fn new(source: BuiltComponent) -> Self {
-        Self { source }
+        Self {
+            source,
+            items: Vec::new(),
+        }
+    }
+
+    pub fn items(mut self, items: Vec<String>) -> Self {
+        self.items = items;
+        self
     }
 }
 
@@ -55,14 +66,7 @@ impl RenderOnce for DropdownButton {
             _ => button,
         };
 
-        // Parse menu items from the "items" property
-        let menu_items: Vec<String> = match props.get("items") {
-            Some(Value::Array(arr)) => arr
-                .iter()
-                .filter_map(|v| v.as_str().map(|s| s.to_string()))
-                .collect(),
-            _ => Vec::new(),
-        };
+        let menu_items = self.items;
 
         let mut dropdown = GpuiDropdownButton::new(id).button(button);
 

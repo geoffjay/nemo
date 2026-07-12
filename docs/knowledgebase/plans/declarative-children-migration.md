@@ -103,10 +103,33 @@ children (nested-component bodies, hard switch — `items` removed):
   `HashSet<usize>` of open indices — `crates/nemo/src/components/state.rs`.
 * Example migrated: `examples/components/app.xml`.
 
-Verified: builds, component + parser tests pass, and `nemo validate
+Confirmed working in the running GPUI app.
+
+**Fan-out landed** (2026-07-12). The same hard switch applied to the remaining
+collection components:
+
+* `tabs` → `<tab-item label="…">…</tab-item>` (unifies the former
+  labels-from-JSON / panels-from-children split; `tabs` prop removed).
+* `select` / `radio` → shared `<option value label>` children (`options` prop
+  removed; `value` on the parent still selects the initial choice). `OptionData`
+  lives in `components/select.rs`.
+* `dropdown-button` → `<menu-item label>` children (`items` prop removed).
+* `list` → `<list-item>` children whose own children are the row content
+  (`items` prop removed).
+* Registry: added `tab_item`, `option`, `menu_item`, `list_item` types; dropped
+  the JSON-array props from the five parents.
+* Dispatch (`app.rs`): each parent collects its typed children; added a combined
+  standalone-fallback arm and a `collect_options` helper.
+* Example fully migrated: all 39 `<tabs>` blocks plus the select/radio/list/
+  dropdown demos and their Code-panel doc strings in
+  `examples/components/app.xml`.
+
+Verified: `nemo`/`nemo-registry` build clean; `nemo`, `nemo-config`, and
+`nemo-registry` test suites pass; and `nemo validate
 examples/components/app.xml` passes. Not yet exercised in a live GPUI window.
 
-The generalization to `tabs`/`select`/`radio`/`dropdown-button`/`list` remains
-**not started**. When those land (or the pilot is confirmed in the app), record
-a decision and update [Components](../concepts/components.md) and
-[Configuration](../concepts/configuration.md).
+**Remaining (out of scope):** `table` (`columns`/`data`) and `tree` (recursive
+`items`) still use JSON-string properties — see
+[collection properties as JSON-string attributes](../patterns/json-string-collection-properties.md).
+`tree`'s recursive shape would need a nesting-capable `<tree-item>`; `table`'s
+data is typically data-bound. Neither is migrated.
