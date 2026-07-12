@@ -79,3 +79,33 @@ jobs:
             libwayland-dev libfontconfig1-dev libfreetype6-dev libvulkan-dev
       # Don't use --all-features as local-embeddings-metal/accelerate are macOS-only
       - run: cargo clippy --all-targets -- -D warnings
+
+  validate-examples:
+    name: Validate examples
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config cmake build-essential \
+            libxcb1-dev libx11-dev libxkbcommon-dev libxkbcommon-x11-dev \
+            libwayland-dev libfontconfig1-dev libfreetype6-dev libvulkan-dev
+      - name: Build nemo
+        # Don't use --all-features as local-embeddings-metal/accelerate are macOS-only
+        run: cargo build --bin nemo
+      - name: Validate example configurations
+        run: |
+          set -e
+          failed=0
+          for config in examples/*/app.xml; do
+            echo "::group::Validating $config"
+            if ! ./target/debug/nemo validate "$config" --strict; then
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $failed
