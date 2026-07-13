@@ -16,8 +16,8 @@ A `nemo screenshot` capability so automated and AI-assisted workflows can *see*
 what an app renders. Combined with hot-reload, this closes an
 edit → render → observe loop for AI agents.
 
-Source: `docs/planning/phase-2-build-and-installation.md` §9 (spike run
-2026-07-11). The findings below are durable and should not be re-derived.
+Source: phase-2 spike run (2026-07-11). The findings below are durable and
+should not be re-derived.
 
 # Spike result: feasible, capture path needs one more iteration
 
