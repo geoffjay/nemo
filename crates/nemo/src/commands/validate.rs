@@ -156,6 +156,30 @@ fn is_structural_key(key: &str) -> bool {
     )
 }
 
+/// Universal styling attributes applied by `apply_layout_styles` to every
+/// component wrapper, regardless of component type. These are not enumerated
+/// in individual builtin schemas, so the `unknown-attribute` lint must skip
+/// them to avoid false positives.
+fn is_universal_style(key: &str) -> bool {
+    matches!(
+        key,
+        // Sizing
+        "width" | "height" | "min_width" | "min_height" | "flex"
+        // Margin
+        | "margin" | "margin_x" | "margin_y"
+        | "margin_left" | "margin_right" | "margin_top" | "margin_bottom"
+        // Padding
+        | "padding" | "padding_x" | "padding_y"
+        | "padding_left" | "padding_right" | "padding_top" | "padding_bottom"
+        // Border
+        | "border" | "border_x" | "border_y"
+        | "border_left" | "border_right" | "border_top" | "border_bottom"
+        | "border_color"
+        // Decoration
+        | "shadow" | "rounded" | "background"
+    )
+}
+
 /// Component-level lints, only run under `--strict`.
 ///
 /// Walks the parsed config the way the runtime does (`layout.component` is an
@@ -246,15 +270,12 @@ fn lint_component(
         } else if let Some(descriptor) = registry.get_component(ctype) {
             let schema = &descriptor.schema;
 
-            // Property-level checks are only reliable when a schema declares
-            // itself exhaustive (`additional_properties == false`). Builtin
-            // schemas are permissive and omit universal/styling attributes
-            // (padding, border, width, ...) and props supplied via bindings,
-            // child elements, or template expansion — so enforcing required or
-            // unknown-property rules against them produces false positives
-            // (e.g. a template body button whose `label` comes from the
-            // referencing element). Plugin/custom schemas that opt into strict
-            // validation get the full checks.
+            // `missing-required` is only reliable when a schema declares itself
+            // exhaustive (`additional_properties == false`). Permissive builtin
+            // schemas don't declare requireds reliably (props can arrive via
+            // bindings, child elements, or template expansion), so enforcing
+            // required against them produces false positives. Strict/plugin
+            // schemas that opt in get the full check.
             if !schema.additional_properties {
                 for required in &schema.required {
                     if !obj.contains_key(required) {
@@ -266,20 +287,27 @@ fn lint_component(
                         ));
                     }
                 }
+            }
 
-                for key in obj.keys() {
-                    if is_structural_key(key) || key.starts_with("on_") || key.starts_with("bind_")
-                    {
-                        continue;
-                    }
-                    if !schema.properties.contains_key(key) {
-                        diagnostics.push(Diagnostic::warning(
-                            "unknown-attribute",
-                            format!(
-                                "Component '{id}' (type '{ctype}') has unknown attribute '{key}'"
-                            ),
-                        ));
-                    }
+            // `unknown-attribute` runs on all schemas. Universal styling
+            // attributes (padding, border, width, ...) are applied by
+            // `apply_layout_styles` to every component wrapper and are not
+            // enumerated in individual schemas — they are allowlisted via
+            // `is_universal_style`. Structural keys, handler prefixes (`on_`),
+            // and binding prefixes (`bind_`) are also skipped.
+            for key in obj.keys() {
+                if is_structural_key(key)
+                    || is_universal_style(key)
+                    || key.starts_with("on_")
+                    || key.starts_with("bind_")
+                {
+                    continue;
+                }
+                if !schema.properties.contains_key(key) {
+                    diagnostics.push(Diagnostic::warning(
+                        "unknown-attribute",
+                        format!("Component '{id}' (type '{ctype}') has unknown attribute '{key}'"),
+                    ));
                 }
             }
         }
@@ -417,16 +445,32 @@ mod tests {
     }
 
     #[test]
-    fn permissive_builtin_schemas_do_not_flag_attributes() {
-        // A styled label with attributes not in the schema must NOT warn,
-        // because builtin schemas are permissive (additional_properties=true).
+    fn universal_style_attributes_not_flagged() {
+        // Universal styling attributes (padding, border, width, ...) are applied
+        // by apply_layout_styles to every component wrapper and are not
+        // enumerated in individual schemas — they must not be flagged.
         let value = parse(
-            r#"<nemo><layout type="stack"><label id="l" text="hi" padding="4" border="1" /></layout></nemo>"#,
+            r#"<nemo><layout type="stack"><label id="l" text="hi" padding="4" border="1" width="200" margin="8" rounded="sm" background="red.500" /></layout></nemo>"#,
         );
         let diags = lint_config(&value, &builtins());
         assert!(
             !codes(&diags).contains(&"unknown-attribute"),
-            "permissive schema should not flag attributes: {diags:?}"
+            "universal style attributes should not be flagged: {diags:?}"
+        );
+    }
+
+    #[test]
+    fn unknown_attribute_flagged_on_permissive_schema() {
+        // A genuinely unknown attribute (typo, non-existent property) should be
+        // flagged even on a permissive builtin schema — the lint is no longer
+        // gated on additional_properties.
+        let value = parse(
+            r#"<nemo><layout type="stack"><label id="l" text="hi" typo_attribute="oops" /></layout></nemo>"#,
+        );
+        let diags = lint_config(&value, &builtins());
+        assert!(
+            codes(&diags).contains(&"unknown-attribute"),
+            "unknown attribute should be flagged: {diags:?}"
         );
     }
 

@@ -79,6 +79,7 @@ fn register_layout_components(registry: &ComponentRegistry) {
         "A generic container panel",
         ConfigSchema::new("panel")
             .property("title", PropertySchema::string())
+            .property("visible", PropertySchema::boolean().with_default(true))
             .property("width", PropertySchema::integer())
             .property("height", PropertySchema::integer())
             .property("min_width", PropertySchema::integer())
@@ -233,6 +234,11 @@ fn register_input_components(registry: &ComponentRegistry) {
     button.schema = ConfigSchema::new("button")
         .property("label", PropertySchema::string())
         .property("variant", PropertySchema::string().with_default("primary"))
+        .property("size", PropertySchema::string().with_default("md"))
+        .property("icon", PropertySchema::string())
+        .property("text_color", PropertySchema::string())
+        .property("full_width", PropertySchema::boolean().with_default(false))
+        .property("align", PropertySchema::string())
         .property("disabled", PropertySchema::boolean().with_default(false))
         .property("width", PropertySchema::integer())
         .property("height", PropertySchema::integer())
@@ -310,7 +316,8 @@ fn register_input_components(registry: &ComponentRegistry) {
         "A checkbox input",
         ConfigSchema::new("checkbox")
             .property("label", PropertySchema::string())
-            .property("checked", PropertySchema::boolean().with_default(false)),
+            .property("checked", PropertySchema::boolean().with_default(false))
+            .property("disabled", PropertySchema::boolean().with_default(false)),
     );
 
     reg(

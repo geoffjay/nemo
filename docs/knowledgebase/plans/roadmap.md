@@ -28,7 +28,7 @@ Nemo currently supports:
 * Built-in themes, workspace shell (header/footer/main view), and a settings UI.
 
 Worked examples live under `examples/` (basic, components, data-binding,
-data-streaming, calculator, pid-control, complete). Example configs are
+data-streaming, calculator, pid-control, complete, task-list). Example configs are
 validated in CI via `nemo validate --strict` (`.github/workflows/ci.yml`,
 `validate-examples` job).
 
@@ -43,9 +43,10 @@ Source: `docs/planning/phase-2-build-and-installation.md` (re-baselined
 | `nemo new` scaffold | ✅ Done | 4 templates (`basic`, `calculator`, `data-binding`, `complete`) embedded via `include_str!`; scaffolds validate. |
 | Hot-reload dev mode | ✅ Done | `nemo dev` + `--watch`; `notify` watcher drives `Workspace::reload_config` (~0.7 s). |
 | `nemo validate` subcommand | ✅ Done | `--strict` lints (`unknown-component`, `missing-required`, `unknown-attribute`, `missing-id`, `unused-template`); `--format human\|json`; `--validate-only` forwards. |
-| Cross-platform packaging | ✅ Validated | v0.7.0-rc.1 produced 14 assets across 5 targets (`.tar.gz`/`.zip`/`.app`/`.dmg`/`.deb`/`.rpm` + checksums). Gaps: AppImage, `.msi`, signing. |
-| Distribution | ✅ Validated | `install.sh` verified end-to-end; Homebrew formula auto-push wired (gated on `HOMEBREW_TAP_TOKEN`). `brew install geoffjay/tap/nemo`. |
-| Headless renderer / screenshots | 🟡 Spiked | Render works under Xvfb+lavapipe; Linux launch panic fixed (`be2afa0`); capture is blank without a compositor. See [headless screenshots](headless-screenshots.md). |
+| Cross-platform packaging | ✅ Validated | v0.7.0-rc.1 produced 14 assets across 5 targets (`.tar.gz`/`.zip`/`.app`/`.dmg`/`.deb`/`.rpm` + checksums). AppImage/`.msi` deferred; signing declined (`xattr` workaround). |
+| Distribution | ✅ Done | `install.sh` verified end-to-end; Homebrew tap auto-push working. AUR/Scoop/Winget deferred. |
+| `nemo validate` subcommand | ✅ Done | `--strict` lints; `unknown-attribute` runs on all schemas with universal-style allowlist; `missing-required` gated on strict schemas. |
+| Headless renderer / screenshots | 🟡 Deferred | Spike done: render works under Xvfb+lavapipe, capture blank without a compositor. Not worth the vendor/fork effort right now. See [headless screenshots](headless-screenshots.md). |
 
 # Remaining roadmap items
 

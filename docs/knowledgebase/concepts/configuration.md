@@ -50,6 +50,18 @@ directory of config schemas). `ConfigSchema`/`PropertySchema`/`ValueType`/
 `ComponentDescriptor` embeds a `ConfigSchema`, registered in
 `crates/nemo-registry/src/builtins.rs`.
 
+`nemo validate --strict` lints components against their schemas
+(`crates/nemo/src/commands/validate.rs`). `missing-required` is gated on
+`additional_properties == false` (permissive builtin schemas don't declare
+requireds reliably). `unknown-attribute` runs on all schemas; it skips
+structural keys (`type`/`component`/`binding`/`slot`/`vars`/`template`),
+handler prefixes (`on_*`), binding prefixes (`bind_*`), and **universal styling
+attributes** (`width`/`height`/`margin*`/`padding*`/`border*`/`shadow`/`rounded`/
+`background`/etc.) applied by `apply_layout_styles` to every component wrapper.
+Custom state attributes set by Rhai handlers via `set_component_property` are
+not enumerated in schemas and will produce a warning (by design — they are
+indistinguishable from typos at parse time).
+
 # Config → components → layout
 
 1. **Registry lookup** — the `ComponentRegistry` maps type names to

@@ -37,10 +37,10 @@ The two biggest corrections versus the roadmap:
 | §2.1 Fix `futures` conflict | ✅ Done | Resolved in the workspace; no longer reproduces. |
 | §2.2 `nemo new` scaffold | ✅ Done | 4 templates embedded via `include_str!`; scaffolds validate. See §4. |
 | §2.3 Hot-reload dev mode | ✅ Done | `nemo dev` + `--watch`; watcher drives the existing full-rebuild path. See §5. |
-| §2.4 Cross-platform packaging | ✅ Validated | `v0.7.0-rc.1` produced all 14 assets across 5 targets (`.tar.gz`/`.zip`/`.app`/`.dmg`/`.deb`/`.rpm` + checksums). Gaps: AppImage, `.msi`, signing. See §7. |
-| §2.5 Distribution | ✅ Validated | `install.sh` verified end-to-end against the rc release; Homebrew tap auto-push wired (skips until `HOMEBREW_TAP_TOKEN` is set). See §8. |
-| §2.6 `validate` subcommand | ✅ Done | `nemo validate [--strict] [--format]`; `--validate-only` forwards to it. See §6. |
-| **NEW** Headless renderer / screenshots | 🟡 Spiked | Linux launch panic FIXED (`be2afa0`); screenshots feasible but capture path needs a compositor/offscreen iteration. See §9. |
+| §2.4 Cross-platform packaging | ✅ Validated | `v0.7.0-rc.1` produced all 14 assets across 5 targets (`.tar.gz`/`.zip`/`.app`/`.dmg`/`.deb`/`.rpm` + checksums). AppImage/`.msi` deferred (see §7). |
+| §2.5 Distribution | ✅ Done | `install.sh` verified end-to-end; Homebrew tap auto-push working (`HOMEBREW_TAP_TOKEN` set). AUR/Scoop/Winget deferred (see §8). |
+| §2.6 `validate` subcommand | ✅ Done | `nemo validate [--strict] [--format]`; `--validate-only` forwards. `unknown-attribute` lint now runs on all schemas with universal-style allowlist. |
+| **NEW** Headless renderer / screenshots | 🟡 Deferred | Spike done: render works under Xvfb+lavapipe, capture blank without a compositor. Deferred — not worth the vendor/fork effort right now (see §9). |
 
 ---
 
@@ -289,10 +289,16 @@ watch include-path changes, not just the root file.
 > against builtins produced ~172 false positives on `examples/components`
 > (including a template body flagged for a `label` its references provide).
 > Gating makes them correct-by-construction and quiet on builtins while still
-> serving plugin/opt-in strict schemas. **Follow-up:** tighten builtin schemas
-> (add `.strict()` + enumerate styling props) or add a universal-attribute
-> allowlist to make attribute/required linting useful on builtins. Verified
-> end-to-end (valid/broken/JSON/strict); 5 unit tests; full suite (167) green.
+> serving plugin/opt-in strict schemas. **Follow-up (done):** `unknown-attribute`
+> now runs on all schemas (not just strict ones). A universal-attribute
+> allowlist (`is_universal_style` in `validate.rs`) skips the 30+ styling
+> attributes applied by `apply_layout_styles` (`width`/`height`/`margin*`/
+> `padding*`/`border*`/`shadow`/`rounded`/`background`). Missing schema
+> properties on builtins were added (`button`: `size`/`icon`/`text_color`/
+> `full_width`/`align`; `checkbox`: `disabled`; `panel`: `visible`).
+> `missing-required` remains gated on `additional_properties == false`.
+> Verified end-to-end (valid/broken/JSON/strict); 8 unit tests; full suite
+> (276) green.
 
 **Objective:** promote the existing `--validate-only` flag to a discoverable
 subcommand with actionable, non-zero-exit diagnostics and an optional strict mode.
@@ -347,16 +353,17 @@ validation logic in `crates/nemo-config` / `crates/nemo-registry`.
 + `.rpm`, Windows portable `.zip`, per-release `checksums.txt`, generated release
 notes with install + `xattr` instructions (`.github/workflows/release.yml`).
 
-### Remaining, in priority order
+### Deferred items
+
+The following are deferred until demand warrants. Code signing is deferred
+indefinitely — the `xattr` workaround is the documented interim.
 
 | Gap | Approach | Effort | Notes |
 |-----|----------|--------|-------|
-| macOS `.dmg` | `create-dmg` or `hdiutil` step in release matrix | Low | Nicer than a zipped `.app`. |
 | Linux AppImage | `linuxdeploy` + `appimagetool` in CI | Medium | Covers non-Debian distros; bundles GPUI's runtime libs. Needs a `.desktop` + icon. |
-| Linux `.rpm` | `cargo-generate-rpm` | Low–Medium | Fedora/RHEL parity with the `.deb`. |
 | Windows `.msi` | `cargo-wix` | Medium | Proper installer vs. portable zip. |
-| macOS notarization | `codesign` + `notarytool` | Blocked | Needs an Apple Developer cert. `xattr` workaround documented meanwhile. |
-| Windows signing | Authenticode cert | Blocked | Needs a code-signing cert. |
+| macOS notarization | `codesign` + `notarytool` | Deferred | Needs an Apple Developer cert; `xattr` workaround stands in. |
+| Windows signing | Authenticode cert | Deferred | Needs a code-signing cert. |
 
 ### Tasks (unblocked subset)
 
@@ -401,16 +408,11 @@ Releases, and the gated tap auto-push job.
 
 ### Remaining
 
-1. **Create the `geoffjay/homebrew-nemo` tap repo** so `brew install
-   geoffjay/nemo/nemo` resolves. Seed `Formula/nemo.rb` from the generator.
-2. **Auto-push the formula on release.** Add a release job that runs
-   `gen-homebrew-formula.sh` against the new `checksums.txt` and commits the
-   result to the tap using a `HOMEBREW_TAP_TOKEN` secret (guarded so it no-ops
-   when the secret is absent).
-3. **Document the binstall limitation:** because `nemo` cannot be published to
+1. **Document the binstall limitation:** because `nemo` cannot be published to
    crates.io (git `gpui` dependency), `cargo binstall` requires the `--git` form;
    keep this called out in `docs/public/packaging.md`.
-4. **Optional future channels:** AUR (`nemo-bin`), Scoop/Winget manifests.
+2. **Optional future channels (deferred):** AUR (`nemo-bin`), Scoop/Winget
+   manifests. Revisit when distribution demand warrants.
 
 ### Files
 External tap repo, `.github/workflows/release.yml` (tap-push job),
@@ -424,7 +426,12 @@ to exist; gate it.
 
 ## 9. Workstream G (Exploratory) — Headless Renderer & Screenshots
 
-> **Spike result (2026-07-11): FEASIBLE, but gated on a Linux GPUI-feature fix.**
+> **Status: Deferred.** Spike done (2026-07-11); render works under
+> Xvfb+lavapipe, capture is blank without a compositor. Not worth the
+> vendor/fork effort right now — revisit when the value justifies it. Findings
+> preserved below for when this is picked up.
+>
+> **Original spike findings:**
 > Ran `.github/workflows/screenshot-spike.yml` on `ubuntu-latest`. Findings:
 > - **The render environment works.** Mesa `lavapipe` provides a software Vulkan
 >   1.4 device under Xvfb with `VK_KHR_xcb_surface` — so headless GPU rendering
@@ -563,22 +570,21 @@ F (distribution)     ── independent; benefits from one successful release
   moves these to the default-branch HEAD, breaking the `gpui`/`gpui-component`
   API contract — this bit Workstream B (worked around with `include_str!`). A
   workspace rev-pin is insufficient because `gpui-component` depends on `gpui`
-  rev-less and `[patch.crates-io]` can't patch a git dep. **Follow-up:** vendor
+  rev-less and `[patch.crates-io]` can't patch a git dep. **Deferred:** vendor
   or fork `gpui-component` to pin its `gpui` rev, or track a `gpui-component`
   release that pins upstream, so the tree survives dependency changes. Until
   then, treat `Cargo.lock` as load-bearing and avoid `cargo update`.
-- **A touches every entry path.** Guard the no-subcommand default with a test so
-  the refactor can't silently break `nemo --app-config`.
-- **C's reload scope.** Confirm `create_runtime` re-reads `<include>`s and
-  reloads `.rhai` on rebuild; if not, extend before wiring the watcher.
-- **E's AppImage** must be tested on a clean distro — bundling GPUI's Vulkan/font
-  libraries is the failure-prone part.
-- **F's tap** requires an external repo and a token; keep the auto-push job
-  gated so releases succeed without it.
-- **G is genuinely uncertain.** The single most valuable next action is the
-  Xvfb + `lavapipe` spike; treat everything past it as conditional.
-- **Signing (E)** stays blocked on certificates; the `xattr` workaround is the
-  documented interim and should remain in the release notes until then.
+- **C's reload scope (confirmed).** `create_runtime` constructs a fresh
+  `NemoRuntime` (new `ExtensionManager`, `ConfigLoader`, etc.); `load_config`
+  re-reads the config file and `<include>`s from disk; `initialize` discovers
+  and loads `.rhai` scripts from disk. Hot-reload is complete — no gaps.
+- **D's schema tightening (done).** Builtin schemas were permissive
+  (`additional_properties == true`), so `missing-required`/`unknown-attribute`
+  lints were gated off for builtins. Now: `unknown-attribute` runs on all
+  schemas with a universal-attribute allowlist for styling props;
+  `missing-required` remains gated on strict schemas. Missing builtin
+  properties added (`button.size/icon/text_color/full_width/align`,
+  `checkbox.disabled`, `panel.visible`).
 
 ---
 

@@ -68,6 +68,7 @@ to touch the KB on every edit.
 * [Definite height for uniform_list widgets](patterns/definite-height-for-lists.md) - Table/Tree collapse to 0px without a definite parent height.
 * [Collection properties as JSON-string attributes](patterns/json-string-collection-properties.md) - which components take arrays/objects as a JSON-string attribute, and how coerce_value handles them.
 * [Parent-rendered child components](patterns/parent-rendered-child-components.md) - how a parent reads and renders its typed child components, vs. generic render_children.
+* [Layout sizing and centering](patterns/layout-sizing-and-centering.md) - the minimal style surface: `flex` ignores its value, no percent/align, and how to center a fixed-width panel.
 
 ## Plans
 

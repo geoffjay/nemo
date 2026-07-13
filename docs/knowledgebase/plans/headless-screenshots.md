@@ -1,10 +1,16 @@
 ---
 type: Plan
 title: Headless renderer and screenshots
-description: Spike findings for headless GPUI rendering under Xvfb+lavapipe; capture path needs one more iteration.
+description: Spike findings for headless GPUI rendering under Xvfb+lavapipe; deferred — not worth the vendor/fork effort right now.
 tags: [screenshots, headless, gpui, linux, ci]
 timestamp: 2026-07-12T00:00:00Z
 ---
+
+**Status: Deferred (2026-07-12).** The spike proved rendering works, but the
+capture path needs a compositor experiment or a GPUI fork for offscreen
+render-to-texture. Neither justifies the effort right now — revisit when the
+value (visual regression, AI-observable renders) demands it. Findings preserved
+below.
 
 A `nemo screenshot` capability so automated and AI-assisted workflows can *see*
 what an app renders. Combined with hot-reload, this closes an
