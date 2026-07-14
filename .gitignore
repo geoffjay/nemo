@@ -25,3 +25,6 @@ build_rs_cov.profraw
 .sidecar-start.sh
 .sidecar-base
 .td-root
+
+# Example app generated data
+examples/task-list/tasks.json

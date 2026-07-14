@@ -1,9 +1,10 @@
 # Task List
 
 A todo application built entirely from Nemo's XML configuration plus a small
-Rhai handler script. It demonstrates interactive, handler-driven UI: checking
-tasks off, showing optional due dates, and changing a task's category icon by
-clicking it and picking one from a popup.
+Rhai handler script. It demonstrates interactive, handler-driven UI with
+**on-disk persistence**: checking tasks off, changing category icons, and
+optional due dates are all saved to a JSON file and restored on the next
+launch.
 
 ## Running
 
@@ -20,23 +21,33 @@ The window opens **maximized** (full screen) using the **nord** dark theme.
 - **Centered, scrolling task panel.** A fixed-width card is centered
   horizontally and scrolls its task list internally while the page itself never
   scrolls.
+- **Persistent state.** Task completion, icons, and due dates are written to
+  `tasks.json` (next to the app config) on every change and loaded on startup.
+  Uses the [rhai-fs](https://crates.io/crates/rhai-fs) package for file I/O,
+  enabled via `<script src="./scripts" features="file-io" />`.
 - **Check tasks off.** Each row has a checkbox. Its `on-change` handler
-  (`toggle_task`) persists the checked state and flips the row's status label
-  between `Pending` and `✓ Completed`.
-- **Optional due dates.** Each row shows a due-date label; tasks without a
-  deadline show `No due date`.
+  (`toggle_task`) persists the checked state, flips the row's status label
+  between `Pending` and `✓ Completed`, and writes back to disk.
+- **Optional due dates with live countdown.** Each row shows a due-date label
+  computed from the stored ISO date using
+  [rhai-chrono](https://crates.io/crates/rhai-chrono) — `Due in 3d`, `Overdue
+  (2d)`, `Due today`, or `No due date`.
 - **Clickable category icon with a popup picker.** The emoji on the far left of
   each row is a ghost button. Clicking it opens a shared modal
-  (`open_icon_picker`); choosing an emoji copies it back onto that row's icon
-  and closes the popup (`choose_icon`).
+  (`open_icon_picker`); choosing an emoji copies it back onto that row's icon,
+  persists it, and closes the popup (`choose_icon`).
 
 ## How it works
 
-State lives on the components themselves. Handlers call
-`set_component_property` / `set_component_text` / `set_component_label`, and the
-next render reflects the change — the same pattern used by the `calculator`
-example. The shared icon picker remembers which row is being edited by storing
-the clicked button's id in the modal's custom `editing` property.
+State is persisted to `tasks.json` via the `json_parse` / `json_stringify`
+helpers (backed by `serde_json`) and the `rhai-fs` filesystem package. The
+handler script keeps an in-memory cache of the task list (a rhai array of
+maps) that is loaded from disk on first interaction and written back on every
+change.
+
+The `file-io` feature is opt-in: `<script src="./scripts" features="file-io" />`
+in `app.xml` tells the runtime to register the `rhai-fs` package with the Rhai
+engine. Without it, scripts are sandboxed with no host I/O.
 
 Repeated task rows are defined with `<template>`s (`task_row`, `task_icon`,
 `task_check`, `due`, `status`) so each row is a few lines of XML.

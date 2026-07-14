@@ -106,17 +106,39 @@ The optional `extend` sub-block allows overriding individual theme colors.
 
 ## `script` Element
 
-Configure where RHAI scripts are loaded from.
+Configure where RHAI scripts are loaded from and which optional features they
+may use.
 
 ```xml
-<script src="./scripts" />
+<script src="./scripts" features="file-io" />
 ```
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `src` | string | Directory containing `.rhai` script files |
+| `features` | string | Comma-separated list of opt-in script features (default: none) |
 
 All `.rhai` files in the directory are loaded at startup. Scripts are identified by their filename without the extension (e.g., `handlers.rhai` becomes script ID `"handlers"`).
+
+### Script features
+
+By default scripts are sandboxed — no filesystem, environment, or process
+access. The `features` attribute opts in to host-access packages:
+
+| Feature | Package | What it enables |
+|---------|---------|-----------------|
+| `file-io` | [`rhai-fs`](https://crates.io/crates/rhai-fs) | File read/write (`open_file`, `read_string`, `write`, `exists`, `create_dir`, `cwd`, `path`, …) |
+| `network` | _(reserved)_ | HTTP is already available via built-in `http_get`/`http_post`/`http_put`/`http_delete` |
+| `system` | _(reserved)_ | For future `rhai-env` / `rhai-process` opt-in |
+
+The [`rhai-chrono`](https://crates.io/crates/rhai-chrono) package (date/time
+arithmetic: `datetime_utc`, `datetime_parse`, `format`, `timedelta_days`, …)
+and the `json_parse` / `json_stringify` helpers are **always** available —
+they are pure and touch no host state.
+
+> **Security:** `file-io` grants full filesystem access with the permissions
+> of the host process (no sandbox root confinement). Only enable it for apps
+> whose scripts you trust.
 
 Alternatively, a script can be defined inline with a CDATA block instead of `src`:
 

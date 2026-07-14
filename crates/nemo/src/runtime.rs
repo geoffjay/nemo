@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use nemo_config::{ConfigurationLoader, SchemaRegistry, Value};
 use nemo_data::{DataFlowEngine, DataRepository};
 use nemo_events::EventBus;
-use nemo_extension::ExtensionManager;
+use nemo_extension::{ExtensionManager, RhaiFeatures};
 use nemo_integration::IntegrationGateway;
 use nemo_layout::{LayoutConfig, LayoutManager, LayoutNode, LayoutType};
 use nemo_plugin_api::{LogLevel, PluginContext, PluginError, PluginValue};
@@ -281,6 +281,36 @@ impl NemoRuntime {
         };
 
         if let Some(scripts) = scripts_config {
+            // Apply opt-in Rhai features from `<script features="file-io" />`
+            // before any scripts are loaded, so the rhai-fs package is
+            // registered (and the underlying engine rebuilt) before
+            // compilation. Default is off — scripts are sandboxed (no I/O)
+            // unless the app explicitly opts in.
+            let mut features = RhaiFeatures::default();
+            if let Some(arr) = scripts.get("features").and_then(|v| v.as_array()) {
+                for v in arr {
+                    if let Some(s) = v.as_str() {
+                        match s {
+                            "file-io" | "file_io" => features.file_io = true,
+                            "network" => features.network = true,
+                            "system" => features.system = true,
+                            _ => tracing::warn!("Unknown script feature: {s}"),
+                        }
+                    }
+                }
+            }
+            if features.file_io || features.network || features.system {
+                let mut ext = self
+                    .extension_manager
+                    .write()
+                    .expect("extension_manager lock poisoned");
+                ext.apply_rhai_features(features);
+                info!(
+                    "Applied Rhai script features: file_io={}, network={}, system={}",
+                    features.file_io, features.network, features.system
+                );
+            }
+
             // Handle scripts.path for directory-based loading
             if let Some(path_str) = scripts.get("path").and_then(|v| v.as_str()) {
                 let scripts_path = if path_str.starts_with("./") || path_str.starts_with("../") {

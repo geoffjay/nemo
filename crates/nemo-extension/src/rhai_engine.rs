@@ -2,6 +2,7 @@
 
 use crate::error::ExtensionError;
 use nemo_plugin_api::{LogLevel, PluginContext, PluginValue};
+use rhai::packages::Package;
 use rhai::{Dynamic, Engine, Module, Scope, AST};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -78,8 +79,10 @@ impl RhaiEngine {
         engine.set_max_map_size(config.max_map_size);
         engine.set_max_call_levels(config.max_call_stack_depth);
 
-        // Register standard functions
-        Self::register_standard_functions(&mut engine);
+        // Register standard functions (math, string, conversion, logging),
+        // the rhai-chrono package (pure — no host I/O), JSON helpers, and —
+        // only when `features.file_io` is enabled — the rhai-fs package.
+        Self::register_standard_functions(&mut engine, &config);
 
         Self {
             engine,
@@ -89,7 +92,9 @@ impl RhaiEngine {
     }
 
     /// Registers standard functions available to all scripts.
-    fn register_standard_functions(engine: &mut Engine) {
+    fn register_standard_functions(engine: &mut Engine, config: &RhaiConfig) {
+        // rhai-chrono: pure date/time arithmetic, no host I/O. Always registered.
+        rhai_chrono::ChronoPackage::new().register_into_engine(engine);
         // Math functions
         engine.register_fn("abs", |x: i64| x.abs());
         engine.register_fn("abs", |x: f64| x.abs());
@@ -153,6 +158,28 @@ impl RhaiEngine {
         engine.register_fn("print", |msg: &str| {
             println!("{}", msg);
         });
+
+        // JSON helpers. Rhai has no built-in JSON, so expose two functions
+        // backed by serde_json (already a workspace dep). `json_parse` returns
+        // a Dynamic (map/array/scalar); `json_stringify` serializes a Dynamic.
+        engine.register_fn("json_parse", |s: &str| -> Dynamic {
+            match serde_json::from_str::<serde_json::Value>(s) {
+                Ok(value) => json_to_dynamic(value),
+                Err(_) => Dynamic::UNIT,
+            }
+        });
+        engine.register_fn("json_stringify", |d: Dynamic| -> String {
+            let json = dynamic_to_json(&d);
+            serde_json::to_string(&json).unwrap_or_default()
+        });
+
+        // rhai-fs: filesystem read/write. Only register when the app opts in
+        // via `RhaiFeatures.file_io` — this preserves the default sandbox
+        // (no host I/O) and lets scripts touch the disk only when the app
+        // explicitly enables it.
+        if config.features.file_io {
+            rhai_fs::FilesystemPackage::new().register_into_engine(engine);
+        }
     }
 
     /// Loads and compiles a script.
@@ -629,6 +656,41 @@ fn json_to_dynamic(value: serde_json::Value) -> Dynamic {
     }
 }
 
+/// Convert a RHAI `Dynamic` to a `serde_json::Value` for serialization.
+fn dynamic_to_json(value: &Dynamic) -> serde_json::Value {
+    if value.is_unit() {
+        serde_json::Value::Null
+    } else if value.is_bool() {
+        serde_json::Value::Bool(value.as_bool().unwrap_or(false))
+    } else if value.is_int() {
+        serde_json::Value::Number(value.as_int().unwrap_or(0).into())
+    } else if let Ok(f) = value.as_float() {
+        serde_json::Number::from_f64(f)
+            .map(serde_json::Value::Number)
+            .unwrap_or(serde_json::Value::Null)
+    } else if value.is_string() {
+        serde_json::Value::String(value.clone().into_string().unwrap_or_default())
+    } else if value.is_array() {
+        let arr: Vec<serde_json::Value> = value
+            .clone()
+            .into_array()
+            .unwrap_or_default()
+            .iter()
+            .map(dynamic_to_json)
+            .collect();
+        serde_json::Value::Array(arr)
+    } else if value.is_map() {
+        let map: rhai::Map = value.clone().cast();
+        let obj: serde_json::Map<String, serde_json::Value> = map
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), dynamic_to_json(&v)))
+            .collect();
+        serde_json::Value::Object(obj)
+    } else {
+        serde_json::Value::String(value.to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -812,5 +874,125 @@ mod tests {
         let mut engine = RhaiEngine::new(RhaiConfig::default());
         engine.register_fn_2("add_custom", |a: i64, b: i64| a + b);
         assert_eq!(engine.eval::<i64>("add_custom(3, 4)").unwrap(), 7);
+    }
+
+    // ── JSON helpers ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_json_parse_object() {
+        // rhai::Map is a BTreeMap, so key order is lexicographic, not
+        // insertion order. Round-trip through json_stringify and check
+        // both keys rather than the exact string. Use a backticked string
+        // to avoid rhai's parser choking on inner double-quotes.
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let script = r#"
+            let s = `{"name":"Alice","age":42}`;
+            json_stringify(json_parse(s))
+        "#;
+        let result: String = engine.eval(script).unwrap();
+        assert!(
+            result.contains(r#""name":"Alice""#),
+            "expected name field, got: {result}"
+        );
+        assert!(
+            result.contains(r#""age":42"#),
+            "expected age field, got: {result}"
+        );
+    }
+
+    #[test]
+    fn test_json_parse_array() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let result: String = engine
+            .eval(r#"json_stringify(json_parse(`[1, 2, 3]`))"#)
+            .unwrap();
+        assert_eq!(result, r#"[1,2,3]"#);
+    }
+
+    #[test]
+    fn test_json_parse_invalid_returns_unit() {
+        // Invalid JSON yields () which json_stringify renders as "null".
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let result: String = engine
+            .eval(r#"json_stringify(json_parse("not json"))"#)
+            .unwrap();
+        assert_eq!(result, "null");
+    }
+
+    #[test]
+    fn test_json_stringify_roundtrip() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let script = r#"
+            let s = `{"x":1,"y":"two"}`;
+            json_stringify(json_parse(s))
+        "#;
+        let result: String = engine.eval(script).unwrap();
+        assert_eq!(result, r#"{"x":1,"y":"two"}"#);
+    }
+
+    // ── rhai-chrono package ───────────────────────────────────────────
+
+    #[test]
+    fn test_chrono_package_available() {
+        // rhai-chrono is registered unconditionally; verify a basic
+        // date-time operation succeeds. Functions are registered globally
+        // (no module prefix), e.g. `datetime_utc()`, `datetime_now()`.
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let result: String = engine
+            .eval(r#"let dt = datetime_utc(); dt.to_string()"#)
+            .unwrap();
+        // RFC3339 string, e.g. "2026-07-14T12:34:56.789+00:00"
+        assert!(
+            result.contains("T") && result.contains("+00:00"),
+            "expected RFC3339 UTC, got: {result}"
+        );
+    }
+
+    // ── rhai-fs package (gated by features.file_io) ────────────────────
+
+    #[test]
+    fn test_fs_not_available_by_default() {
+        // Without file_io, rhai-fs functions must not be registered.
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let result = engine.eval::<String>(r#"open_file("Cargo.toml").read_string()"#);
+        assert!(result.is_err(), "rhai-fs should be disabled by default");
+    }
+
+    #[test]
+    fn test_fs_available_when_file_io_enabled() {
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                file_io: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let engine = RhaiEngine::new(config);
+        let result: String = engine
+            .eval(r#"open_file("Cargo.toml", "r").read_string()"#)
+            .unwrap();
+        assert!(result.contains("[package]"), "should read Cargo.toml");
+    }
+
+    // ── Example script compilation ────────────────────────────────────
+
+    #[test]
+    fn test_task_list_handlers_compile() {
+        // Verify the task-list example's handler script compiles with
+        // file_io enabled. The script uses rhai-fs, rhai-chrono, and the
+        // json_parse/json_stringify helpers — all registered when
+        // file_io is on (chrono and json are always on).
+        let script = include_str!("../../../examples/task-list/scripts/handlers.rhai");
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                file_io: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut engine = RhaiEngine::new(config);
+        engine
+            .load_script("handlers", script)
+            .expect("task-list handlers.rhai should compile");
     }
 }

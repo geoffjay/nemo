@@ -39,10 +39,54 @@ bridging plugins to the `DataRepository`, event bus, config, and `LayoutManager`
 # Rhai scripts
 
 `RhaiEngine` (`crates/nemo-extension/src/rhai_engine.rs`) compiles `.rhai`
-scripts to ASTs and exposes math/string/conversion/logging helpers. Sandboxed by
-`RhaiConfig` limits (operations, string/array/map sizes, call-stack depth); no
-eval, no I/O. Handlers referenced from XML (e.g. `on-click="handler"`) resolve to
-script functions.
+scripts to ASTs and exposes math/string/conversion/logging helpers, JSON
+helpers (`json_parse` / `json_stringify`, backed by `serde_json`), and the
+`rhai-chrono` package for date/time arithmetic. Sandboxed by `RhaiConfig`
+limits (operations, string/array/map sizes, call-stack depth); no eval.
+
+Handlers referenced from XML (e.g. `on-click="handler"`) resolve to script
+functions.
+
+## Opt-in packages and the `file-io` feature
+
+By default scripts have **no host I/O** — they cannot read or write files,
+spawn processes, or access the environment. Two opt-in packages are wired
+behind the `<script>` element's `features` attribute:
+
+| Feature flag | Package | What it adds |
+|---|---|---|
+| `file-io` | [`rhai-fs`](https://crates.io/crates/rhai-fs) | `open_file`, `read_string`, `write`, `exists`, `create_dir`, `cwd`, `path`, … |
+| `network` | _(reserved — HTTP is provided by the built-in `http_get`/`http_post`/`http_put`/`http_delete`)_ | — |
+| `system` | _(reserved — for future `rhai-env` / `rhai-process` opt-in)_ | — |
+
+`rhai-chrono` (date/time) is **always** registered — it is pure and touches no
+host state. `json_parse` / `json_stringify` are also always available.
+
+Enable filesystem access from an app:
+
+```xml
+<script src="./scripts" features="file-io" />
+```
+
+Multiple features are comma-separated: `features="file-io, system"`.
+
+### Security model
+
+`file-io` grants the script **full filesystem access** with the permissions of
+the host process — there is no sandbox root confinement. Only enable it for
+apps whose scripts you trust. The default (no `features` attribute) preserves
+the sandbox: no file, environment, or process access. The `network` and
+`system` flags are reserved for future opt-in packages and currently no-ops.
+
+### Packages considered but not included
+
+- **rhai-ml** — stale (last published Feb 2024), pulls smartcore, no use case.
+- **rhai-http** — non-standard license, and nemo already ships built-in
+  `http_get`/`http_post`/`http_put`/`http_delete` registered via
+  `register_http_functions`.
+- **rhai-env**, **rhai-sci**, **rhai-process** — available to add behind
+  feature flags if a use case arises; `rhai-process` in particular is
+  dangerous (subprocess spawning) and must remain opt-in.
 
 # Native plugins
 

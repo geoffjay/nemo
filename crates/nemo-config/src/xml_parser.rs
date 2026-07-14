@@ -285,6 +285,21 @@ impl XmlParser {
                 scripts_obj.insert("path".to_string(), Value::String(src.to_string()));
             }
 
+            // features attribute → features key (comma-separated, e.g.
+            // "file-io"). Used by the runtime to enable opt-in Rhai
+            // packages like rhai-fs. Stored as an array of strings.
+            if let Some(features) = obj.get("features").and_then(|v| v.as_str()) {
+                let list: Vec<Value> = features
+                    .split(',')
+                    .map(|s| s.trim().to_lowercase())
+                    .filter(|s| !s.is_empty())
+                    .map(Value::String)
+                    .collect();
+                if !list.is_empty() {
+                    scripts_obj.insert("features".to_string(), Value::Array(list));
+                }
+            }
+
             // CDATA content → inline key
             if let Some(cdata) = obj.get("__cdata__").and_then(|v| v.as_str()) {
                 if !cdata.trim().is_empty() {
@@ -1025,6 +1040,57 @@ mod tests {
             scripts.get("path"),
             Some(&Value::String("./scripts".to_string()))
         );
+    }
+
+    #[test]
+    fn test_parse_scripts_with_features() {
+        let xml = r#"
+        <nemo>
+            <script src="./scripts" features="file-io" />
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let scripts = value.get("scripts").unwrap();
+        let features = scripts.get("features").unwrap().as_array().unwrap();
+        assert_eq!(features.len(), 1);
+        assert_eq!(features[0].as_str().unwrap(), "file-io");
+    }
+
+    #[test]
+    fn test_parse_scripts_with_multiple_features() {
+        let xml = r#"
+        <nemo>
+            <script src="./scripts" features="file-io, network, system" />
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let scripts = value.get("scripts").unwrap();
+        let features = scripts.get("features").unwrap().as_array().unwrap();
+        assert_eq!(features.len(), 3);
+        assert_eq!(features[0].as_str().unwrap(), "file-io");
+        assert_eq!(features[1].as_str().unwrap(), "network");
+        assert_eq!(features[2].as_str().unwrap(), "system");
+    }
+
+    #[test]
+    fn test_parse_scripts_without_features_omits_key() {
+        let xml = r#"
+        <nemo>
+            <script src="./scripts" />
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let scripts = value.get("scripts").unwrap();
+        assert!(scripts.get("features").is_none());
     }
 
     #[test]

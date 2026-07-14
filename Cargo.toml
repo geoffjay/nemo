@@ -70,6 +70,8 @@ dirs = "5"
 
 # Scripting
 rhai = "1.19"
+rhai-chrono = "0.1"
+rhai-fs = "0.1"
 
 # Plugin loading
 libloading = "0.8"

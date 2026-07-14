@@ -17,6 +17,8 @@ nemo-events = { workspace = true }
 nemo-plugin-api = { workspace = true }
 nemo-wasm = { workspace = true, optional = true }
 rhai = { workspace = true }
+rhai-chrono = { workspace = true }
+rhai-fs = { workspace = true }
 libloading = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

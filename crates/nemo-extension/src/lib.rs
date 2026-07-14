@@ -86,6 +86,40 @@ impl ExtensionManager {
         self.loader.add_script_path(path);
     }
 
+    /// Reconfigures the Rhai engine with the given features, preserving
+    /// any already-loaded scripts. Called by the runtime when the app
+    /// XML config enables opt-in script features (e.g. `file-io`).
+    ///
+    /// This rebuilds the underlying `rhai::Engine` so that package
+    /// registration (which happens at engine construction time) can
+    /// include the newly-enabled features. Already-compiled scripts are
+    /// recompiled against the new engine so they pick up the new
+    /// registered functions.
+    pub fn apply_rhai_features(&mut self, features: RhaiFeatures) {
+        let new_config = RhaiConfig {
+            features,
+            ..self.rhai_engine.config().clone()
+        };
+        // Collect loaded script sources so we can recompile them.
+        let sources: Vec<(String, String)> = self
+            .rhai_engine
+            .list_scripts()
+            .into_iter()
+            .filter_map(|id| {
+                self.registry
+                    .get_script_path(&id)
+                    .and_then(|path| std::fs::read_to_string(&path).ok())
+                    .map(|source| (id, source))
+            })
+            .collect();
+        self.rhai_engine = RhaiEngine::new(new_config);
+        for (id, source) in sources {
+            if let Err(e) = self.rhai_engine.load_script(&id, &source) {
+                tracing::warn!("Failed to recompile script {id} after feature change: {e}");
+            }
+        }
+    }
+
     /// Adds a plugin search path.
     pub fn add_plugin_path(&mut self, path: impl Into<std::path::PathBuf>) {
         self.loader.add_plugin_path(path);
