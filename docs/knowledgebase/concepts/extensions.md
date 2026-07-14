@@ -50,14 +50,17 @@ functions.
 ## Opt-in packages and the `file-io` feature
 
 By default scripts have **no host I/O** — they cannot read or write files,
-spawn processes, or access the environment. Two opt-in packages are wired
-behind the `<script>` element's `features` attribute:
+spawn processes, or access the environment. Opt-in packages are wired behind
+the `<script>` element's `features` attribute and, for the heavier packages,
+behind Cargo features on `nemo-extension`:
 
-| Feature flag | Package | What it adds |
-|---|---|---|
-| `file-io` | [`rhai-fs`](https://crates.io/crates/rhai-fs) | `open_file`, `read_string`, `write`, `exists`, `create_dir`, `cwd`, `path`, … |
-| `network` | _(reserved — HTTP is provided by the built-in `http_get`/`http_post`/`http_put`/`http_delete`)_ | — |
-| `system` | _(reserved — for future `rhai-env` / `rhai-process` opt-in)_ | — |
+| Feature flag | Package | Cargo feature | What it adds |
+|---|---|---|---|
+| `file-io` | [`rhai-fs`](https://crates.io/crates/rhai-fs) | always compiled | `open_file`, `read_string`, `write`, `exists`, `create_dir`, `cwd`, `path`, … |
+| `system` | [`rhai-env`](https://crates.io/crates/rhai-env) | `pkg-env` | `env(key)`, `envs()`, `set_env(key, value)` |
+| `system` | [`rhai-process`](https://crates.io/crates/rhai-process) | `pkg-process` | `cmd([...]).pipe(...).build().run()` — subprocess execution with `Config` policy |
+| `science` | [`rhai-sci`](https://crates.io/crates/rhai-sci) | `pkg-sci` | `mean`, `std`, `median`, `linspace`, matrix ops, regression, SVD, … (compiled with `default-features = false` to avoid polars/nalgebra) |
+| `network` | _(reserved)_ | — | HTTP is already available via built-in `http_get`/`http_post`/`http_put`/`http_delete` |
 
 `rhai-chrono` (date/time) is **always** registered — it is pure and touches no
 host state. `json_parse` / `json_stringify` are also always available.
@@ -68,15 +71,34 @@ Enable filesystem access from an app:
 <script src="./scripts" features="file-io" />
 ```
 
-Multiple features are comma-separated: `features="file-io, system"`.
+Enable env + process (requires the `pkg-env` and `pkg-process` Cargo features
+on `nemo-extension` at build time):
+
+```xml
+<script src="./scripts" features="file-io, system" />
+```
+
+Multiple features are comma-separated: `features="file-io, system, science"`.
 
 ### Security model
 
 `file-io` grants the script **full filesystem access** with the permissions of
-the host process — there is no sandbox root confinement. Only enable it for
-apps whose scripts you trust. The default (no `features` attribute) preserves
-the sandbox: no file, environment, or process access. The `network` and
-`system` flags are reserved for future opt-in packages and currently no-ops.
+the host process — there is no sandbox root confinement. `system` grants
+environment-variable access (rhai-env) and **subprocess spawning** (rhai-process)
+— the latter is the most dangerous capability. `science` is pure computation
+but gated behind a Cargo feature because it adds a heavy dependency tree.
+Only enable these for apps whose scripts you trust. The default (no `features`
+attribute) preserves the sandbox: no file, environment, or process access.
+
+### Cargo features
+
+The `pkg-env`, `pkg-sci`, and `pkg-process` Cargo features on `nemo-extension`
+control whether the packages are compiled into the binary at all. This keeps
+the default build lean. To build nemo with all optional packages:
+
+```bash
+cargo build -p nemo --features nemo-extension/pkg-env,nemo-extension/pkg-sci,nemo-extension/pkg-process
+```
 
 ### Packages considered but not included
 
@@ -84,9 +106,6 @@ the sandbox: no file, environment, or process access. The `network` and
 - **rhai-http** — non-standard license, and nemo already ships built-in
   `http_get`/`http_post`/`http_put`/`http_delete` registered via
   `register_http_functions`.
-- **rhai-env**, **rhai-sci**, **rhai-process** — available to add behind
-  feature flags if a use case arises; `rhai-process` in particular is
-  dangerous (subprocess spawning) and must remain opt-in.
 
 # Native plugins
 

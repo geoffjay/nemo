@@ -72,6 +72,9 @@ dirs = "5"
 rhai = "1.19"
 rhai-chrono = "0.1"
 rhai-fs = "0.1"
+rhai-env = "0.1"
+rhai-sci = { version = "0.3", default-features = false }
+rhai-process = "0.1"
 
 # Plugin loading
 libloading = "0.8"

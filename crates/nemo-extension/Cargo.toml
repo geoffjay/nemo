@@ -7,6 +7,9 @@ license.workspace = true
 [features]
 default = []
 wasm = ["nemo-wasm"]
+pkg-env = ["dep:rhai-env"]
+pkg-sci = ["dep:rhai-sci"]
+pkg-process = ["dep:rhai-process"]
 
 [dependencies]
 indexmap = { workspace = true }
@@ -19,6 +22,9 @@ nemo-wasm = { workspace = true, optional = true }
 rhai = { workspace = true }
 rhai-chrono = { workspace = true }
 rhai-fs = { workspace = true }
+rhai-env = { workspace = true, optional = true }
+rhai-sci = { workspace = true, optional = true, default-features = false }
+rhai-process = { workspace = true, optional = true }
 libloading = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

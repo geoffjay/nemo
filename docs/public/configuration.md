@@ -128,8 +128,9 @@ access. The `features` attribute opts in to host-access packages:
 | Feature | Package | What it enables |
 |---------|---------|-----------------|
 | `file-io` | [`rhai-fs`](https://crates.io/crates/rhai-fs) | File read/write (`open_file`, `read_string`, `write`, `exists`, `create_dir`, `cwd`, `path`, …) |
+| `system` | [`rhai-env`](https://crates.io/crates/rhai-env), [`rhai-process`](https://crates.io/crates/rhai-process) | Environment variables (`env`, `envs`, `set_env`) and subprocess execution (`cmd([...]).pipe(...).build().run()`) |
+| `science` | [`rhai-sci`](https://crates.io/crates/rhai-sci) | Scientific computing (`mean`, `std`, `median`, `linspace`, matrix ops, regression, SVD, …) |
 | `network` | _(reserved)_ | HTTP is already available via built-in `http_get`/`http_post`/`http_put`/`http_delete` |
-| `system` | _(reserved)_ | For future `rhai-env` / `rhai-process` opt-in |
 
 The [`rhai-chrono`](https://crates.io/crates/rhai-chrono) package (date/time
 arithmetic: `datetime_utc`, `datetime_parse`, `format`, `timedelta_days`, …)
@@ -137,8 +138,9 @@ and the `json_parse` / `json_stringify` helpers are **always** available —
 they are pure and touch no host state.
 
 > **Security:** `file-io` grants full filesystem access with the permissions
-> of the host process (no sandbox root confinement). Only enable it for apps
-> whose scripts you trust.
+> of the host process (no sandbox root confinement). `system` grants
+> environment-variable access and subprocess spawning — the most dangerous
+> capability. Only enable these for apps whose scripts you trust.
 
 Alternatively, a script can be defined inline with a CDATA block instead of `src`:
 

@@ -41,12 +41,14 @@ impl Default for RhaiConfig {
 /// Features that can be enabled/disabled in the RHAI engine.
 #[derive(Debug, Clone, Default)]
 pub struct RhaiFeatures {
-    /// Allow file I/O operations.
+    /// Allow file I/O operations (rhai-fs).
     pub file_io: bool,
     /// Allow network operations.
     pub network: bool,
-    /// Allow system operations.
+    /// Allow system operations (rhai-env, rhai-process).
     pub system: bool,
+    /// Allow scientific computing functions (rhai-sci).
+    pub science: bool,
 }
 
 /// A compiled script.
@@ -179,6 +181,31 @@ impl RhaiEngine {
         // explicitly enables it.
         if config.features.file_io {
             rhai_fs::FilesystemPackage::new().register_into_engine(engine);
+        }
+
+        // rhai-env: environment variable access. Gated by `system` and the
+        // `pkg-env` cargo feature. Grants scripts read/write access to
+        // process environment variables — opt-in.
+        #[cfg(feature = "pkg-env")]
+        if config.features.system {
+            rhai_env::EnvironmentPackage::new().register_into_engine(engine);
+        }
+
+        // rhai-sci: scientific computing (mean, std, linspace, matrix ops,
+        // etc.). Gated by `science` and the `pkg-sci` cargo feature. Pure
+        // computation, but heavy dependency tree, so behind a cargo feature.
+        #[cfg(feature = "pkg-sci")]
+        if config.features.science {
+            rhai_sci::SciPackage::new().register_into_engine(engine);
+        }
+
+        // rhai-process: subprocess execution. Gated by `system` and the
+        // `pkg-process` cargo feature. The most dangerous package — spawns
+        // external processes. Strictly opt-in.
+        #[cfg(feature = "pkg-process")]
+        if config.features.system {
+            rhai_process::ProcessPackage::new(rhai_process::Config::default())
+                .register_into_engine(engine);
         }
     }
 
@@ -972,6 +999,93 @@ mod tests {
             .eval(r#"open_file("Cargo.toml", "r").read_string()"#)
             .unwrap();
         assert!(result.contains("[package]"), "should read Cargo.toml");
+    }
+
+    // ── rhai-env package (gated by features.system + pkg-env cargo feature) ──
+
+    #[cfg(feature = "pkg-env")]
+    #[test]
+    fn test_env_not_available_without_system_feature() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let result = engine.eval::<String>(r#"env("HOME")"#);
+        assert!(
+            result.is_err(),
+            "rhai-env should be disabled without system feature"
+        );
+    }
+
+    #[cfg(feature = "pkg-env")]
+    #[test]
+    fn test_env_available_when_system_enabled() {
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                system: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let engine = RhaiEngine::new(config);
+        // `env("PATH")` should return the PATH env var (always set in tests).
+        let result: String = engine.eval(r#"env("PATH")"#).unwrap();
+        assert!(!result.is_empty(), "should read PATH env var");
+    }
+
+    // ── rhai-sci package (gated by features.science + pkg-sci cargo feature) ─
+
+    #[cfg(feature = "pkg-sci")]
+    #[test]
+    fn test_sci_not_available_without_science_feature() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let result = engine.eval::<f64>(r#"mean([1.0, 2.0, 3.0])"#);
+        assert!(
+            result.is_err(),
+            "rhai-sci should be disabled without science feature"
+        );
+    }
+
+    #[cfg(feature = "pkg-sci")]
+    #[test]
+    fn test_sci_available_when_science_enabled() {
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                science: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let engine = RhaiEngine::new(config);
+        let result: f64 = engine.eval(r#"mean([1.0, 2.0, 3.0])"#).unwrap();
+        assert!((result - 2.0).abs() < 1e-10, "mean should be 2.0, got {result}");
+    }
+
+    // ── rhai-process package (gated by features.system + pkg-process feature) ─
+
+    #[cfg(feature = "pkg-process")]
+    #[test]
+    fn test_process_not_available_without_system_feature() {
+        let engine = RhaiEngine::new(RhaiConfig::default());
+        let result = engine.eval::<String>(r#"cmd(["echo", "hello"]).build().run().stdout"#);
+        assert!(
+            result.is_err(),
+            "rhai-process should be disabled without system feature"
+        );
+    }
+
+    #[cfg(feature = "pkg-process")]
+    #[test]
+    fn test_process_available_when_system_enabled() {
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                system: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let engine = RhaiEngine::new(config);
+        let result: String = engine
+            .eval(r#"cmd(["echo", "hello"]).build().run().stdout"#)
+            .unwrap();
+        assert!(result.contains("hello"), "echo should output hello");
     }
 
     // ── Example script compilation ────────────────────────────────────
