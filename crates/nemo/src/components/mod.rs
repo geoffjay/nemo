@@ -54,6 +54,27 @@ pub(crate) mod tree;
 
 use gpui::*;
 use gpui_component::ActiveTheme;
+use nemo_config::Value;
+use std::collections::HashMap;
+
+/// Whether a `flex` property value counts as "grow" (`flex="1"`, `flex="true"`,
+/// or any positive number). `0`, `false`, and non-numeric strings do not grow.
+pub(crate) fn flex_is_truthy(value: &Value) -> bool {
+    value.as_bool() == Some(true)
+        || value.as_i64().map(|i| i > 0).unwrap_or(false)
+        || value.as_f64().map(|f| f > 0.0).unwrap_or(false)
+}
+
+/// Whether a container (stack/panel) should grow along its main axis: it has a
+/// truthy `flex`, or it scrolls (a scroll container must grow to establish the
+/// bounded flex chain that overflow scrolling needs).
+pub(crate) fn container_grows(props: &HashMap<String, Value>) -> bool {
+    props.get("flex").map(flex_is_truthy).unwrap_or(false)
+        || props
+            .get("scroll")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false)
+}
 
 /// Resolves a color string to an Hsla value.
 ///

@@ -40,7 +40,7 @@
 
   <layout type="stack">
     <!-- Root horizontal stack: sidebar + content -->
-    <stack id="root_row" direction="horizontal" spacing="0">
+    <stack id="root_row" direction="horizontal" spacing="0" flex="1" align="stretch">
 
       <!-- Sidebar -->
       <panel id="sidebar">
@@ -1248,7 +1248,7 @@
                   <!-- Left: collapsed (icons only) -->
                   <stack id="sidenav_demo_left_collapsed" direction="vertical" spacing="8">
                     <label id="sidenav_demo_left_collapsed_label" text="Collapsed (icons only)" size="sm" />
-                    <stack id="sidenav_left_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                    <stack id="sidenav_left_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1" align="stretch">
                       <sidenav-bar id="sidenav_left_collapsed" collapsed="true">
                         <sidenav-bar-item id="snlc_item_home" icon="globe" label="Home" />
                         <sidenav-bar-item id="snlc_item_inbox" icon="inbox" label="Inbox" />
@@ -1261,7 +1261,7 @@
                   <!-- Center: expanded with toggle button -->
                   <stack id="sidenav_demo_center_expanded" direction="vertical" spacing="8">
                     <label id="sidenav_demo_center_label" text="Expanded (with toggle)" size="sm" />
-                    <stack id="sidenav_center_expanded_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                    <stack id="sidenav_center_expanded_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1" align="stretch">
                       <sidenav-bar id="sidenav_center_expanded" collapsed="false">
                         <sidenav-bar-item id="snce_item_home" icon="globe" label="Home" />
                         <sidenav-bar-item id="snce_item_inbox" icon="inbox" label="Inbox" />
@@ -1275,7 +1275,7 @@
                   <!-- Right: collapsed (icons only) -->
                   <stack id="sidenav_demo_right_collapsed" direction="vertical" spacing="8">
                     <label id="sidenav_demo_right_collapsed_label" text="Collapsed (right side)" size="sm" />
-                    <stack id="sidenav_right_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1">
+                    <stack id="sidenav_right_collapsed_wrap" direction="horizontal" spacing="0" width="240" height="300" border="1" align="stretch">
                       <!-- Spacer pushes sidenav to the right -->
                       <panel id="snrc_spacer" flex="1" />
                       <sidenav-bar id="sidenav_right_collapsed" collapsed="true">

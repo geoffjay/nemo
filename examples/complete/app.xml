@@ -26,7 +26,7 @@
   <include href="templates/data.xml" />
 
   <layout type="stack">
-    <stack id="main" direction="horizontal" spacing="0">
+    <stack id="main" direction="horizontal" spacing="0" flex="1" align="stretch">
 
       <!-- Sidebar navigation -->
       <panel id="sidebar">
@@ -49,7 +49,7 @@
           <text id="dash_desc" content="Overview of application state with live data from timer sources." />
 
           <!-- Status cards using included template -->
-          <stack id="dash_cards" direction="horizontal" spacing="16">
+          <stack id="dash_cards" direction="horizontal" spacing="16" align="stretch">
             <panel id="card_uptime" template="status_card">
               <label id="uptime_title" text="Uptime" size="sm" />
               <label id="uptime_value" text="0s" size="xl">

@@ -65,7 +65,11 @@ fn register_layout_components(registry: &ComponentRegistry) {
             .property("height", PropertySchema::integer())
             .property("min_width", PropertySchema::integer())
             .property("min_height", PropertySchema::integer())
+            .property("max_width", PropertySchema::integer())
+            .property("max_height", PropertySchema::integer())
             .property("flex", PropertySchema::float())
+            .property("align", PropertySchema::string())
+            .property("justify", PropertySchema::string())
             .property("padding", PropertySchema::integer())
             .property("margin", PropertySchema::integer())
             .property("scroll", PropertySchema::boolean().with_default(false)),
@@ -84,9 +88,15 @@ fn register_layout_components(registry: &ComponentRegistry) {
             .property("height", PropertySchema::integer())
             .property("min_width", PropertySchema::integer())
             .property("min_height", PropertySchema::integer())
+            .property("max_width", PropertySchema::integer())
+            .property("max_height", PropertySchema::integer())
             .property("flex", PropertySchema::float())
             .property("padding", PropertySchema::integer())
-            .property("margin", PropertySchema::integer()),
+            .property("margin", PropertySchema::integer())
+            .property("border", PropertySchema::integer())
+            .property("border_color", PropertySchema::string())
+            .property("rounded", PropertySchema::string())
+            .property("shadow", PropertySchema::string()),
     );
 
     reg(

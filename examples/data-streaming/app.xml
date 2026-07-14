@@ -15,7 +15,7 @@
   </data>
 
   <layout type="stack">
-    <stack id="root_row" direction="horizontal" spacing="0">
+    <stack id="root_row" direction="horizontal" spacing="0" flex="1" align="stretch">
 
       <!-- Side Navigation -->
       <sidenav-bar id="sidenav" collapsed="true" border-left="false">
@@ -28,7 +28,7 @@
       <stack id="content" direction="vertical" flex="1">
 
         <!-- Charts Page -->
-        <panel id="page_charts" visible="true">
+        <panel id="page_charts" visible="true" flex="1">
           <stack id="charts_stack" direction="vertical" spacing="16" padding="16" scroll="true">
             <label id="charts_heading" text="Live Metrics" size="lg" />
             <label id="status_label" text="NATS: waiting for data...">
@@ -49,7 +49,7 @@
         </panel>
 
         <!-- Time Series Page -->
-        <panel id="page_timeseries" visible="false">
+        <panel id="page_timeseries" visible="false" flex="1">
           <stack id="timeseries_stack" direction="vertical" spacing="16" padding="16" scroll="true">
             <label id="timeseries_heading" text="Live Time Series (30s window)" size="lg" />
 
@@ -104,7 +104,7 @@
         </panel>
 
         <!-- Data Tables Page -->
-        <panel id="page_tables" visible="false">
+        <panel id="page_tables" visible="false" flex="1">
           <stack id="tables_stack" direction="vertical" spacing="16" padding="16" scroll="true">
             <label id="tables_heading" text="Data Tables" size="lg" />
 

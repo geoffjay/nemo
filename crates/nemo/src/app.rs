@@ -360,10 +360,16 @@ impl App {
             (root_id, components)
         };
 
-        // Render the root component from the snapshot
+        // Render the root component from the snapshot. Stacks are content-sized
+        // by default, but the layout root must fill the viewport — inject a
+        // truthy `flex` so it grows through the normal grow path.
         if let Some(root_id) = root_id {
             if let Some(root) = components.get(&root_id) {
-                return self.render_component(root, &components, entity_id, window, cx);
+                let mut root = root.clone();
+                root.properties
+                    .entry("flex".to_string())
+                    .or_insert(Value::Integer(1));
+                return self.render_component(&root, &components, entity_id, window, cx);
             }
         }
 
@@ -418,9 +424,17 @@ impl App {
         let height = props.get("height").and_then(|v| v.as_i64());
         let min_width = props.get("min_width").and_then(|v| v.as_i64());
         let min_height = props.get("min_height").and_then(|v| v.as_i64());
-        let flex = props
+        let max_width = props.get("max_width").and_then(|v| v.as_i64());
+        let max_height = props.get("max_height").and_then(|v| v.as_i64());
+        // A component grows when it has a truthy `flex` (or, for stacks, scrolls).
+        let flex_grows = props
             .get("flex")
-            .and_then(|v| v.as_f64().or_else(|| v.as_i64().map(|i| i as f64)));
+            .map(crate::components::flex_is_truthy)
+            .unwrap_or(false);
+        let scroll = props
+            .get("scroll")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
 
         // Margin
         let margin = props.get("margin").and_then(|v| v.as_i64());
@@ -461,6 +475,8 @@ impl App {
             height,
             min_width,
             min_height,
+            max_width,
+            max_height,
             margin,
             margin_x,
             margin_y,
@@ -485,7 +501,8 @@ impl App {
         ]
         .iter()
         .all(|v| v.is_none())
-            && flex.is_none()
+            && !flex_grows
+            && !scroll
             && shadow.is_none()
             && rounded.is_none()
             && background.is_none()
@@ -494,12 +511,13 @@ impl App {
             return element;
         }
 
+        let is_panel = component.component_type == "panel";
+
         let mut wrapper = div().flex().flex_col().min_h(px(0.));
 
-        // Propagate flex layout for container components whose inner element
-        // uses flex_1 — without this the wrapper breaks the flex chain and
-        // prevents overflow scrolling.
-        if component.component_type == "stack" {
+        // A scrolling stack must grow so the wrapper doesn't break the flex chain
+        // that overflow scrolling depends on. (Truthy `flex` is handled below.)
+        if component.component_type == "stack" && scroll {
             wrapper = wrapper.flex_1();
         }
 
@@ -516,7 +534,13 @@ impl App {
         if let Some(mh) = min_height {
             wrapper = wrapper.min_h(px(mh as f32));
         }
-        if flex.is_some() {
+        if let Some(mw) = max_width {
+            wrapper = wrapper.max_w(px(mw as f32));
+        }
+        if let Some(mh) = max_height {
+            wrapper = wrapper.max_h(px(mh as f32));
+        }
+        if flex_grows {
             wrapper = wrapper.flex_1();
         }
         if let Some(m) = margin {
@@ -541,75 +565,81 @@ impl App {
             wrapper = wrapper.mb(px(mb as f32));
         }
 
-        // Padding
-        if let Some(p) = padding {
-            wrapper = wrapper.p(px(p as f32));
-        }
-        if let Some(px_val) = padding_x {
-            wrapper = wrapper.px(px(px_val as f32));
-        }
-        if let Some(py_val) = padding_y {
-            wrapper = wrapper.py(px(py_val as f32));
-        }
-        if let Some(pl) = padding_left {
-            wrapper = wrapper.pl(px(pl as f32));
-        }
-        if let Some(pr) = padding_right {
-            wrapper = wrapper.pr(px(pr as f32));
-        }
-        if let Some(pt) = padding_top {
-            wrapper = wrapper.pt(px(pt as f32));
-        }
-        if let Some(pb) = padding_bottom {
-            wrapper = wrapper.pb(px(pb as f32));
-        }
+        // Decoration (padding, border, rounding, shadow, background) is skipped
+        // for panels: `Panel::render` owns its own decoration, so applying it
+        // here too would double-decorate (a stray outer border/box). The wrapper
+        // still handles geometry (size, margin, flex) for panels.
+        if !is_panel {
+            // Padding
+            if let Some(p) = padding {
+                wrapper = wrapper.p(px(p as f32));
+            }
+            if let Some(px_val) = padding_x {
+                wrapper = wrapper.px(px(px_val as f32));
+            }
+            if let Some(py_val) = padding_y {
+                wrapper = wrapper.py(px(py_val as f32));
+            }
+            if let Some(pl) = padding_left {
+                wrapper = wrapper.pl(px(pl as f32));
+            }
+            if let Some(pr) = padding_right {
+                wrapper = wrapper.pr(px(pr as f32));
+            }
+            if let Some(pt) = padding_top {
+                wrapper = wrapper.pt(px(pt as f32));
+            }
+            if let Some(pb) = padding_bottom {
+                wrapper = wrapper.pb(px(pb as f32));
+            }
 
-        // Border
-        let resolved_border_color = border_color
-            .and_then(|c| crate::components::resolve_color(c, cx))
-            .unwrap_or(cx.theme().colors.border);
-        let has_any_border = [
-            border,
-            border_x,
-            border_y,
-            border_left,
-            border_right,
-            border_top,
-            border_bottom,
-        ]
-        .iter()
-        .any(|v| v.is_some());
-        if has_any_border {
-            wrapper = wrapper.border_color(resolved_border_color);
-        }
-        if let Some(b) = border {
-            wrapper = wrapper.border(px(b as f32));
-        }
-        if let Some(bx) = border_x {
-            wrapper = wrapper.border_x(px(bx as f32));
-        }
-        if let Some(by) = border_y {
-            wrapper = wrapper.border_y(px(by as f32));
-        }
-        if let Some(bl) = border_left {
-            wrapper = wrapper.border_l(px(bl as f32));
-        }
-        if let Some(br) = border_right {
-            wrapper = wrapper.border_r(px(br as f32));
-        }
-        if let Some(bt) = border_top {
-            wrapper = wrapper.border_t(px(bt as f32));
-        }
-        if let Some(bb) = border_bottom {
-            wrapper = wrapper.border_b(px(bb as f32));
-        }
+            // Border
+            let resolved_border_color = border_color
+                .and_then(|c| crate::components::resolve_color(c, cx))
+                .unwrap_or(cx.theme().colors.border);
+            let has_any_border = [
+                border,
+                border_x,
+                border_y,
+                border_left,
+                border_right,
+                border_top,
+                border_bottom,
+            ]
+            .iter()
+            .any(|v| v.is_some());
+            if has_any_border {
+                wrapper = wrapper.border_color(resolved_border_color);
+            }
+            if let Some(b) = border {
+                wrapper = wrapper.border(px(b as f32));
+            }
+            if let Some(bx) = border_x {
+                wrapper = wrapper.border_x(px(bx as f32));
+            }
+            if let Some(by) = border_y {
+                wrapper = wrapper.border_y(px(by as f32));
+            }
+            if let Some(bl) = border_left {
+                wrapper = wrapper.border_l(px(bl as f32));
+            }
+            if let Some(br) = border_right {
+                wrapper = wrapper.border_r(px(br as f32));
+            }
+            if let Some(bt) = border_top {
+                wrapper = wrapper.border_t(px(bt as f32));
+            }
+            if let Some(bb) = border_bottom {
+                wrapper = wrapper.border_b(px(bb as f32));
+            }
 
-        // Decoration
-        wrapper = apply_shadow(wrapper, shadow);
-        wrapper = apply_rounded(wrapper, rounded);
-        if let Some(bg) = background.and_then(|v| crate::components::resolve_color(v, cx)) {
-            wrapper = wrapper.bg(bg);
-        }
+            // Decoration
+            wrapper = apply_shadow(wrapper, shadow);
+            wrapper = apply_rounded(wrapper, rounded);
+            if let Some(bg) = background.and_then(|v| crate::components::resolve_color(v, cx)) {
+                wrapper = wrapper.bg(bg);
+            }
+        } // end !is_panel decoration
 
         wrapper.child(element).into_any_element()
     }

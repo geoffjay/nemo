@@ -58,6 +58,16 @@ Table and Tree have a sizing gotcha: their `uniform_list` bodies collapse to 0px
 without a definite parent height. See
 [definite height for lists](../patterns/definite-height-for-lists.md).
 
+# Layout containers (stack / panel)
+
+Layout is **flexbox-native**: `<stack>` is content-sized by default and grows
+only when it opts in (truthy `flex`, `scroll="true"`, or being the layout root);
+horizontal stacks center children by default, and `align`/`justify` control the
+axes. `<panel>` owns its own decoration (padding/border/border-color/rounded/
+shadow/bg) — `apply_layout_styles` skips those props for panels to avoid
+double-decorating — and can also grow with `flex`. See
+[layout sizing and centering](../patterns/layout-sizing-and-centering.md).
+
 # Children and collection data
 
 Container components render their children via `render_children()`; components

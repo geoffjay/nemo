@@ -18,7 +18,7 @@
     <stack id="root_panel" direction="vertical" margin="16" spacing="8">
       <label id="title" text="PID Control Demo" size="xl" />
 
-      <stack id="main_content" direction="horizontal" spacing="16">
+      <stack id="main_content" direction="horizontal" spacing="16" flex="1" align="stretch">
         <!-- Left: Motor 1 PID control panel -->
         <panel id="motor1_pid" template="pid_control">
           <vars ns="pid.motor1" />
