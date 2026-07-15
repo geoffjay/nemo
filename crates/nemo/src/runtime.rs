@@ -301,8 +301,10 @@ impl NemoRuntime {
                 }
             }
             if features.file_io || features.network || features.system || features.science {
-                info!("Applying Rhai script features: file_io={}, network={}, system={}, science={}",
-                    features.file_io, features.network, features.system, features.science);
+                info!(
+                    "Applying Rhai script features: file_io={}, network={}, system={}, science={}",
+                    features.file_io, features.network, features.system, features.science
+                );
                 let mut ext = self
                     .extension_manager
                     .write()
@@ -484,9 +486,9 @@ impl NemoRuntime {
             script_id, function_name, component_id, event_data
         );
 
-        let ext = self
+        let mut ext = self
             .extension_manager
-            .read()
+            .write()
             .expect("extension_manager lock poisoned");
         match ext.call_script::<()>(
             script_id,

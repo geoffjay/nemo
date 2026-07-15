@@ -15,15 +15,36 @@
 //   cargo build --features nemo-extension/pkg-env,nemo-extension/pkg-sci,nemo-extension/pkg-process
 
 // ── State ────────────────────────────────────────────────────────────────────
-// Response-time samples (ms) for the stats panel.
-let samples = [];
-let initialized = false;
+// Rhai script functions are PURE: they cannot read or mutate module-level
+// `let` state, and nested calls get a fresh scope. So shared state lives in
+// host data storage (set_data / get_data), which every function can reach.
+// The response-time samples are kept there as a JSON string; the one-shot
+// init flag is kept there as a bool.
+//
+// The host-data keys are exposed as zero-arg functions, NOT top-level
+// `const` — a top-level constant is not visible inside a function called
+// from a handler (script functions only see their parameters and other
+// functions), so a function is the reliable way to share a value.
+fn samples_key() { "dev_dashboard.samples" }
+fn init_key() { "dev_dashboard.initialized" }
+
+fn load_samples() {
+    let raw = get_data(samples_key());
+    if raw == () || raw == "" { return []; }
+    let parsed = json_parse(raw);
+    if parsed == () { return []; }
+    parsed
+}
+
+fn save_samples(samples) {
+    set_data(samples_key(), json_stringify(samples));
+}
 
 // ── Initialization ───────────────────────────────────────────────────────────
 
 fn ensure_init() {
-    if initialized { return; }
-    initialized = true;
+    if get_data(init_key()) == true { return; }
+    set_data(init_key(), true);
     refresh_clock();
     refresh_env();
     refresh_sys();
@@ -96,7 +117,7 @@ fn refresh_sys() {
 // ── HTTP Fetch (built-in http_get) ───────────────────────────────────────────
 
 fn fetch_uuid(component_id, event_data) {
-    if !initialized { ensure_init(); }
+    ensure_init();
 
     set_component_text("http_uuid", "Fetching...");
     set_component_text("http_status", "--");
@@ -125,21 +146,23 @@ fn fetch_uuid(component_id, event_data) {
 // ── Stats (rhai-sci) ──────────────────────────────────────────────────────────
 
 fn take_sample(component_id, event_data) {
-    if !initialized { ensure_init(); }
+    ensure_init();
 
-    // Simulate a response-time measurement (ms) with some randomness.
-    // Uses the built-in http_get timing as a real-world sample.
+    // Measure a real round-trip time (ms) using the built-in http_get.
     let start = datetime_utc().timestamp_millis();
     let response = http_get("https://httpbin.org/delay/1");
     let end = datetime_utc().timestamp_millis();
     let elapsed = to_float(end - start);
 
+    let samples = load_samples();
     samples.push(elapsed);
+    save_samples(samples);
     update_stats();
     log_info("Sample " + len(samples) + ": " + elapsed + "ms");
 }
 
 fn update_stats() {
+    let samples = load_samples();
     let n = len(samples);
     set_component_text("stats_samples", "Samples: " + n);
 
@@ -165,7 +188,7 @@ fn update_stats() {
 }
 
 fn reset_stats(component_id, event_data) {
-    samples = [];
+    save_samples([]);
     update_stats();
     log_info("Stats reset");
 }

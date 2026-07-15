@@ -1,54 +1,62 @@
-// Task List event handlers with on-disk persistence
+// Task List event handlers with on-disk persistence.
 //
-// State is persisted to `tasks.json` next to the app config. On first
-// interaction the saved state is loaded and applied to the components;
-// every toggle / icon change writes back. Uses rhai-fs (gated by the
-// `file-io` feature in app.xml) for file I/O, rhai-chrono for due-date
-// arithmetic, and the json_parse / json_stringify helpers for (de)serialization.
+// IMPORTANT: Rhai script functions are PURE. They cannot read or mutate
+// script-level (module) `let`/`var` state, and a function called from another
+// function gets a fresh scope. So this script keeps NO mutable module state.
+// Instead:
+//   * per-task state lives on disk in tasks.json (via rhai-fs), and
+//   * the one-shot "have we applied saved state to the UI yet?" flag lives in
+//     host data storage (set_data / get_data), which every function can reach.
+//
+// Uses rhai-fs (gated by the `file-io` feature in app.xml) for file I/O,
+// rhai-chrono for due-date arithmetic, and the json_parse / json_stringify
+// helpers for (de)serialization.
 //
 // File layout (tasks.json):
 //   { "tasks": [ {"icon":"📋","label":"...","done":false,"due":"2026-07-15"}, ... ] }
 
-// Path to the persistence file, resolved relative to the script location.
-const DATA_FILE = "examples/task-list/tasks.json";
+// Shared constants are exposed as zero-arg functions, NOT top-level `const`.
+// A top-level `const`/`let` is not visible inside a function called from
+// another handler (script functions are pure and only see their parameters
+// plus other functions), so a function is the reliable way to share a value.
 
-// In-memory cache of the task list (a rhai array of maps). Loaded once
-// from disk on first use, then kept in sync with the components.
-let tasks_cache = ();
-let tasks_loaded = false;
+// Path to the persistence file, resolved relative to the working directory.
+fn data_file() { "examples/task-list/tasks.json" }
+
+// Host-data key for the one-shot "applied to UI" flag. Not bound to any
+// component, so writing it has no visible side effect.
+fn applied_key() { "task_list.applied" }
 
 // ── Persistence ─────────────────────────────────────────────────────────────
+// Every handler is self-contained: it loads the task array from disk (or the
+// defaults), works with it as a local, and writes it back. No shared cache.
 
 fn load_tasks() {
-    if tasks_loaded { return; }
-    tasks_loaded = true;
-
-    if !exists(path(DATA_FILE)) {
+    if !path(data_file()).exists {
         log_info("No tasks.json found; starting with defaults");
-        tasks_cache = default_tasks();
-        return;
+        return default_tasks();
     }
 
-    let file = open_file(DATA_FILE, "r");
+    let file = open_file(data_file(), "r");
     let contents = file.read_string();
     let parsed = json_parse(contents);
 
-    if parsed == () {
-        log_warn("tasks.json is not valid JSON; starting with defaults");
-        tasks_cache = default_tasks();
-        return;
+    if parsed == () || parsed.tasks == () {
+        log_warn("tasks.json is not valid; starting with defaults");
+        return default_tasks();
     }
 
-    tasks_cache = parsed.tasks;
-    log_info("Loaded " + len(tasks_cache) + " tasks from " + DATA_FILE);
+    parsed.tasks
 }
 
-fn save_tasks() {
-    let obj = #{ tasks: tasks_cache };
-    let json = json_stringify(obj);
-    let file = open_file(DATA_FILE, "w");
+fn save_tasks(tasks) {
+    let json = json_stringify(#{ tasks: tasks });
+    let file = open_file(data_file(), "w");
+    // "w" opens without truncating, so a shorter payload would leave stale
+    // trailing bytes and corrupt the JSON. Truncate to zero first.
+    file.truncate_file();
     file.write(json);
-    log_debug("Saved tasks to " + DATA_FILE);
+    log_debug("Saved " + len(tasks) + " tasks to " + data_file());
 }
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
@@ -72,14 +80,20 @@ fn default_tasks() {
 }
 
 // ── Component sync ──────────────────────────────────────────────────────────
-// Apply the cached task state to the XML components. Called once on first
-// interaction so the UI reflects the persisted state.
+// Apply the persisted task state to the XML components exactly once per run,
+// so the UI reflects the saved state on the first interaction. The "already
+// applied" flag lives in host data storage because a plain module variable
+// would not survive across handler calls.
 
-fn apply_tasks_to_components() {
-    let n = len(tasks_cache);
+fn apply_saved_state() {
+    if get_data(applied_key()) == true { return; }
+    set_data(applied_key(), true);
+
+    let tasks = load_tasks();
+    let n = len(tasks);
     let i = 1;
     while i <= n {
-        let task = tasks_cache[i - 1];
+        let task = tasks[i - 1];
 
         set_component_label("icon_" + i, task.icon);
         set_component_property("check_" + i, "checked", task.done);
@@ -89,21 +103,20 @@ fn apply_tasks_to_components() {
 
         i += 1;
     }
+    log_info("Applied " + n + " saved tasks to the UI");
 }
 
 // Format a due date for display using rhai-chrono. Empty string → "No due
-// date"; past dates show "Overdue"; future dates show "Due in N days" or
-// the ISO date if parsing fails.
+// date"; past dates show "Overdue"; today/tomorrow are special-cased; future
+// dates show "Due in N days".
 
 fn format_due(due) {
     if due == "" || due == () { return "No due date"; }
 
-    let dt = datetime_parse(due, "%Y-%m-%d");
-    if dt == () { return "Due " + due; }
-
-    let now = datetime_local();
-    let diff = dt.diff(now);
-    let days = diff.days;
+    // datetime_parse wraps NaiveDateTime::parse_from_str, which requires a
+    // full date-time — a bare "%Y-%m-%d" would fail — so append midnight.
+    let dt = datetime_parse(due + " 00:00:00", "%Y-%m-%d %H:%M:%S");
+    let days = dt.diff(datetime_local()).days;
 
     if days < 0 { return "Overdue (" + (-days) + "d)"; }
     if days == 0 { return "Due today"; }
@@ -114,28 +127,26 @@ fn format_due(due) {
 // ── Event handlers ──────────────────────────────────────────────────────────
 
 fn toggle_task(component_id, event_data) {
-    if !tasks_loaded { load_tasks(); apply_tasks_to_components(); }
+    apply_saved_state();
 
     let done = event_data == "true";
-    let idx = parse_index(component_id, "check_");
-
     set_component_property(component_id, "checked", done);
 
     let status_id = component_id.replace("check_", "status_");
-    if done {
-        set_component_text(status_id, "✓ Completed");
-    } else {
-        set_component_text(status_id, "Pending");
-    }
+    set_component_text(status_id, if done { "✓ Completed" } else { "Pending" });
 
-    tasks_cache[idx].done = done;
-    save_tasks();
+    let idx = parse_index(component_id, "check_");
+    let tasks = load_tasks();
+    if idx >= 0 && idx < len(tasks) {
+        tasks[idx].done = done;
+        save_tasks(tasks);
+    }
 
     log_info("Task " + component_id + " completed=" + event_data);
 }
 
 fn open_icon_picker(component_id, event_data) {
-    if !tasks_loaded { load_tasks(); apply_tasks_to_components(); }
+    apply_saved_state();
 
     set_component_property("icon_picker", "editing", component_id);
     set_component_property("icon_picker", "open", true);
@@ -150,8 +161,11 @@ fn choose_icon(component_id, event_data) {
         set_component_label(target, emoji);
 
         let idx = parse_index(target, "icon_");
-        tasks_cache[idx].icon = emoji;
-        save_tasks();
+        let tasks = load_tasks();
+        if idx >= 0 && idx < len(tasks) {
+            tasks[idx].icon = emoji;
+            save_tasks(tasks);
+        }
 
         log_info("Set " + target + " icon to " + emoji);
     } else {

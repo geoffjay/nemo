@@ -165,7 +165,7 @@ impl ExtensionManager {
 
     /// Calls a script function.
     pub fn call_script<T: Clone + Send + Sync + 'static>(
-        &self,
+        &mut self,
         script_id: &str,
         function: &str,
         args: impl rhai::FuncArgs,

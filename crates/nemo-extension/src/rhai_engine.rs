@@ -210,6 +210,14 @@ impl RhaiEngine {
     }
 
     /// Loads and compiles a script.
+    ///
+    /// After compilation the script's top-level statements (`let`/`const`
+    /// declarations, imports, etc.) are run once against a fresh scope to
+    /// seed the script's persistent state. That scope is reused on every
+    /// [`call`](Self::call), so module-level variables persist across
+    /// handler invocations (e.g. the `tasks_loaded` flag in the task-list
+    /// example). Without this step, `call_fn` gets an empty scope and any
+    /// reference to a top-level variable fails with "Variable not found".
     pub fn load_script(&mut self, id: &str, source: &str) -> Result<(), ExtensionError> {
         let ast = self
             .engine
@@ -219,10 +227,15 @@ impl RhaiEngine {
                 reason: e.to_string(),
             })?;
 
-        let compiled = CompiledScript {
-            ast,
-            scope: Scope::new(),
-        };
+        let mut scope = Scope::new();
+        self.engine
+            .run_ast_with_scope(&mut scope, &ast)
+            .map_err(|e| ExtensionError::ScriptError {
+                script_id: id.to_string(),
+                reason: e.to_string(),
+            })?;
+
+        let compiled = CompiledScript { ast, scope };
 
         self.scripts.insert(id.to_string(), compiled);
         Ok(())
@@ -245,21 +258,24 @@ impl RhaiEngine {
     }
 
     /// Calls a function in a script.
+    ///
+    /// Uses the script's persistent scope (seeded at load time and updated
+    /// on every call), so module-level variables survive across invocations.
     pub fn call<T: Clone + Send + Sync + 'static>(
-        &self,
+        &mut self,
         script_id: &str,
         function: &str,
         args: impl rhai::FuncArgs,
     ) -> Result<T, ExtensionError> {
         let script = self
             .scripts
-            .get(script_id)
+            .get_mut(script_id)
             .ok_or_else(|| ExtensionError::NotFound {
                 id: script_id.to_string(),
             })?;
 
         self.engine
-            .call_fn(&mut script.scope.clone(), &script.ast, function, args)
+            .call_fn(&mut script.scope, &script.ast, function, args)
             .map_err(|e| ExtensionError::ScriptError {
                 script_id: script_id.to_string(),
                 reason: e.to_string(),
@@ -751,6 +767,32 @@ mod tests {
     }
 
     #[test]
+    fn test_module_state_persists_across_calls() {
+        // Regression: scripts with top-level `let` declarations (like the
+        // task-list example's `tasks_loaded` flag) must be callable. The
+        // scope is seeded at load time and persists across `call`s.
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
+        let script = r#"
+            let counter = 0;
+            let initialized = false;
+
+            fn bump() {
+                if !initialized {
+                    counter = 100;
+                    initialized = true;
+                }
+                counter += 1;
+                counter
+            }
+        "#;
+        engine.load_script("s", script).unwrap();
+
+        assert_eq!(engine.call::<i64>("s", "bump", ()).unwrap(), 101);
+        assert_eq!(engine.call::<i64>("s", "bump", ()).unwrap(), 102);
+        assert_eq!(engine.call::<i64>("s", "bump", ()).unwrap(), 103);
+    }
+
+    #[test]
     fn test_custom_functions() {
         let engine = RhaiEngine::new(RhaiConfig::default());
 
@@ -763,7 +805,7 @@ mod tests {
 
     #[test]
     fn test_script_not_found() {
-        let engine = RhaiEngine::new(RhaiConfig::default());
+        let mut engine = RhaiEngine::new(RhaiConfig::default());
         let result: Result<i64, _> = engine.call("nonexistent", "func", ());
         assert!(matches!(result, Err(ExtensionError::NotFound { .. })));
     }
@@ -1055,7 +1097,10 @@ mod tests {
         };
         let engine = RhaiEngine::new(config);
         let result: f64 = engine.eval(r#"mean([1.0, 2.0, 3.0])"#).unwrap();
-        assert!((result - 2.0).abs() < 1e-10, "mean should be 2.0, got {result}");
+        assert!(
+            (result - 2.0).abs() < 1e-10,
+            "mean should be 2.0, got {result}"
+        );
     }
 
     // ── rhai-process package (gated by features.system + pkg-process feature) ─
@@ -1088,15 +1133,76 @@ mod tests {
         assert!(result.contains("hello"), "echo should output hello");
     }
 
-    // ── Example script compilation ────────────────────────────────────
+    // ── Example scripts (end-to-end) ──────────────────────────────────
+
+    /// Minimal in-memory `PluginContext` for driving example handlers:
+    /// a key/value data store (get_data/set_data) and a component-property
+    /// store (get/set_component_property). Enough to exercise the Rhai host
+    /// API without a running app.
+    #[derive(Default)]
+    struct MockContext {
+        data: std::sync::Mutex<HashMap<String, PluginValue>>,
+        props: std::sync::Mutex<HashMap<(String, String), PluginValue>>,
+    }
+
+    impl nemo_plugin_api::PluginContext for MockContext {
+        fn get_data(&self, path: &str) -> Option<PluginValue> {
+            self.data.lock().unwrap().get(path).cloned()
+        }
+        fn set_data(
+            &self,
+            path: &str,
+            value: PluginValue,
+        ) -> Result<(), nemo_plugin_api::PluginError> {
+            self.data.lock().unwrap().insert(path.to_string(), value);
+            Ok(())
+        }
+        fn emit_event(&self, _event_type: &str, _payload: PluginValue) {}
+        fn get_config(&self, _path: &str) -> Option<PluginValue> {
+            None
+        }
+        fn log(&self, _level: LogLevel, _message: &str) {}
+        fn get_component_property(
+            &self,
+            component_id: &str,
+            property: &str,
+        ) -> Option<PluginValue> {
+            self.props
+                .lock()
+                .unwrap()
+                .get(&(component_id.to_string(), property.to_string()))
+                .cloned()
+        }
+        fn set_component_property(
+            &self,
+            component_id: &str,
+            property: &str,
+            value: PluginValue,
+        ) -> Result<(), nemo_plugin_api::PluginError> {
+            self.props
+                .lock()
+                .unwrap()
+                .insert((component_id.to_string(), property.to_string()), value);
+            Ok(())
+        }
+    }
 
     #[test]
-    fn test_task_list_handlers_compile() {
-        // Verify the task-list example's handler script compiles with
-        // file_io enabled. The script uses rhai-fs, rhai-chrono, and the
-        // json_parse/json_stringify helpers — all registered when
-        // file_io is on (chrono and json are always on).
-        let script = include_str!("../../../examples/task-list/scripts/handlers.rhai");
+    fn test_task_list_handlers_end_to_end() {
+        // Drive the real task-list handlers against a mock context. This is
+        // the regression guard for the whole class of bugs the script hit:
+        // module-level mutable state (unsupported — functions are pure),
+        // `exists()` vs the `.exists` getter, non-truncating `"w"` writes,
+        // and date-only `datetime_parse`. Persistence targets a temp file so
+        // the repo is never touched.
+        let raw = include_str!("../../../examples/task-list/scripts/handlers.rhai");
+        let tmp = tempfile::tempdir().unwrap();
+        let data_file = tmp.path().join("tasks.json");
+        let script = raw.replace(
+            "\"examples/task-list/tasks.json\"",
+            &format!("{:?}", data_file.to_str().unwrap()),
+        );
+
         let config = RhaiConfig {
             features: RhaiFeatures {
                 file_io: true,
@@ -1105,9 +1211,80 @@ mod tests {
             ..Default::default()
         };
         let mut engine = RhaiEngine::new(config);
+        let ctx = Arc::new(MockContext::default());
+        engine.register_context(ctx.clone());
         engine
-            .load_script("handlers", script)
+            .load_script("handlers", &script)
             .expect("task-list handlers.rhai should compile");
+
+        // First toggle: also runs apply_saved_state, which formats all 12
+        // default due dates via rhai-chrono — so this exercises the fs, json,
+        // and chrono paths together.
+        engine
+            .call::<()>(
+                "handlers",
+                "toggle_task",
+                ("check_1".to_string(), "true".to_string()),
+            )
+            .expect("toggle_task should run");
+
+        assert_eq!(
+            ctx.get_component_property("check_1", "checked"),
+            Some(PluginValue::Bool(true))
+        );
+        assert_eq!(
+            ctx.get_component_property("status_1", "text"),
+            Some(PluginValue::String("✓ Completed".to_string()))
+        );
+
+        let parsed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
+        assert_eq!(parsed["tasks"][0]["done"], serde_json::json!(true));
+
+        // Second toggle on a different row: apply must NOT re-run (flag lives
+        // in host data), and the first row's saved state must survive a
+        // shorter/longer rewrite (truncation).
+        engine
+            .call::<()>(
+                "handlers",
+                "toggle_task",
+                ("check_3".to_string(), "true".to_string()),
+            )
+            .expect("second toggle_task should run");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
+        assert_eq!(parsed["tasks"][0]["done"], serde_json::json!(true));
+        assert_eq!(parsed["tasks"][2]["done"], serde_json::json!(true));
+
+        // Icon change via the picker: record the editing target, pick an
+        // emoji, and confirm the label + persisted icon update.
+        ctx.set_component_property(
+            "icon_picker",
+            "editing",
+            PluginValue::String("icon_2".to_string()),
+        )
+        .unwrap();
+        ctx.set_component_property(
+            "palette_star",
+            "label",
+            PluginValue::String("⭐".to_string()),
+        )
+        .unwrap();
+        engine
+            .call::<()>(
+                "handlers",
+                "choose_icon",
+                ("palette_star".to_string(), String::new()),
+            )
+            .expect("choose_icon should run");
+
+        assert_eq!(
+            ctx.get_component_property("icon_2", "label"),
+            Some(PluginValue::String("⭐".to_string()))
+        );
+        let parsed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
+        assert_eq!(parsed["tasks"][1]["icon"], serde_json::json!("⭐"));
     }
 
     #[cfg(feature = "pkg-env")]
@@ -1119,8 +1296,7 @@ mod tests {
         // all features enabled. The script uses rhai-env (env), rhai-process
         // (cmd), rhai-sci (mean/std/median/min/max), rhai-chrono
         // (datetime_local/datetime_utc), and the built-in http_get.
-        let script =
-            include_str!("../../../examples/dev-dashboard/scripts/handlers.rhai");
+        let script = include_str!("../../../examples/dev-dashboard/scripts/handlers.rhai");
         let config = RhaiConfig {
             features: RhaiFeatures {
                 file_io: true,
@@ -1134,5 +1310,60 @@ mod tests {
         engine
             .load_script("handlers", script)
             .expect("dev-dashboard handlers.rhai should compile");
+    }
+
+    #[cfg(feature = "pkg-sci")]
+    #[test]
+    fn test_dev_dashboard_stats_runtime() {
+        // Runtime guard for the dev-dashboard's shared-state pattern (which
+        // had the same module-state bug as task-list): seed the sample store
+        // via set_data, then call update_stats and confirm it reads them back
+        // (get_data + json + helper-fn constants) and computes the rhai-sci
+        // stats. No network or subprocess — update_stats touches neither.
+        let script = include_str!("../../../examples/dev-dashboard/scripts/handlers.rhai");
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                science: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut engine = RhaiEngine::new(config);
+        let ctx = Arc::new(MockContext::default());
+        engine.register_context(ctx.clone());
+        engine.load_script("handlers", script).unwrap();
+
+        ctx.set_data(
+            "dev_dashboard.samples",
+            PluginValue::String("[10.0, 20.0, 30.0]".to_string()),
+        )
+        .unwrap();
+
+        engine
+            .call::<()>("handlers", "update_stats", ())
+            .expect("update_stats should run");
+
+        assert_eq!(
+            ctx.get_component_property("stats_samples", "text"),
+            Some(PluginValue::String("Samples: 3".to_string()))
+        );
+        // mean([10,20,30]) == 20 → "20 ms"
+        match ctx.get_component_property("stats_mean", "text") {
+            Some(PluginValue::String(s)) => assert!(s.contains("20"), "mean text: {s}"),
+            other => panic!("unexpected stats_mean: {other:?}"),
+        }
+
+        // reset_stats clears the store and zeroes the display.
+        engine
+            .call::<()>(
+                "handlers",
+                "reset_stats",
+                ("btn".to_string(), String::new()),
+            )
+            .expect("reset_stats should run");
+        assert_eq!(
+            ctx.get_component_property("stats_samples", "text"),
+            Some(PluginValue::String("Samples: 0".to_string()))
+        );
     }
 }

@@ -45,7 +45,29 @@ helpers (`json_parse` / `json_stringify`, backed by `serde_json`), and the
 limits (operations, string/array/map sizes, call-stack depth); no eval.
 
 Handlers referenced from XML (e.g. `on-click="handler"`) resolve to script
-functions.
+functions. `load_script` runs the script's top-level statements once against a
+persistent `Scope` (seeding `let`/`const` declarations), and `call` reuses that
+scope across invocations.
+
+**Rhai script functions are pure — do not rely on module-level state.** A
+top-level `let`/`const` is *not* visible inside a script function: the seeded
+scope reaches only the entry function of a `call`, and a function invoked from
+another function (the normal handler → helper case) gets a fresh scope. Any
+reference to a top-level variable from such a function fails at run time with
+`Variable not found` — and because Rhai resolves names at call time, this is
+invisible to `load_script` (compilation succeeds). Share values two ways:
+
+* **Shared constants** — expose as a zero-arg function (`fn data_file() {
+  "path/to.json" }`). Functions are globally callable from any other function.
+* **Shared mutable state** — use the host store via `get_data` / `set_data`
+  (backed by the `DataRepository`), or the components themselves via
+  `get_component_property` / `set_component_property`. Both persist across
+  handler calls and are reachable from every function.
+
+The task-list and dev-dashboard examples follow this: per-item state lives on
+disk / in components, and a one-shot "already applied to the UI" flag lives in
+`get_data`/`set_data`. See `test_task_list_handlers_end_to_end` in
+`rhai_engine.rs` for the end-to-end regression guard.
 
 ## Opt-in packages and the `file-io` feature
 
