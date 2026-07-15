@@ -1,7 +1,7 @@
 //! GPUI application wrapper.
 
 use gpui::*;
-use gpui_component::input::InputState;
+use gpui_component::input::{InputEvent, InputState};
 use gpui_component::slider::SliderState;
 use gpui_component::table::TableState;
 use gpui_component::tree::TreeState;
@@ -33,6 +33,13 @@ pub struct App {
     runtime: Arc<NemoRuntime>,
     component_states: ComponentStates,
     _subscriptions: Vec<Subscription>,
+    /// Last `value` we pushed into each `<input>`'s `InputState`, keyed by id.
+    ///
+    /// Lets the render pass tell script-driven property changes (e.g. clearing a
+    /// field after submit) apart from user typing: only when the component's
+    /// `value` property differs from this cached copy do we push it back into
+    /// the `InputState`, so we never fight the cursor while the user types.
+    input_values: HashMap<String, String>,
 }
 
 impl App {
@@ -53,10 +60,20 @@ impl App {
 
         let _subscriptions = vec![];
 
+        // Run the one-shot on-load handler (if configured via
+        // `<script on-load="…" />`) now that scripts are loaded and the layout
+        // is built. This is where an app hydrates its UI from persisted state,
+        // so the first paint already reflects it — no deferring onto the first
+        // user interaction.
+        if let Some(handler) = runtime.on_load_handler() {
+            runtime.call_handler(&handler, "app", "load");
+        }
+
         Self {
             runtime,
             component_states: ComponentStates::new(),
             _subscriptions,
+            input_values: HashMap::new(),
         }
     }
 
@@ -65,21 +82,102 @@ impl App {
         self.runtime.shutdown();
     }
 
-    /// Gets or creates an InputState entity for the given component id.
+    /// Gets or creates an `InputState` entity for the given `<input>` component.
+    ///
+    /// On first creation this also subscribes to the input's events so that:
+    ///
+    /// * on every `Change`/`Blur` the typed value is written back into the
+    ///   component's `value` property, making `get_component_property(id,
+    ///   "value")` return live text that a handler (or button) can read; and
+    /// * on `PressEnter` the `on-change` handler (if any) fires with the current
+    ///   value as its event data, giving a "submit" affordance.
+    ///
+    /// Every render it also pushes any script-set `value` back into the
+    /// `InputState` (e.g. clearing a field after submit) without disturbing the
+    /// cursor while the user types — see [`App::input_values`].
     fn get_or_create_input_state(
         &mut self,
-        id: &str,
+        component: &BuiltComponent,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Entity<InputState> {
-        if let Some(ComponentState::Input(state)) = self.component_states.get(id) {
-            return state.clone();
+        let id = component.id.clone();
+        let desired = component
+            .properties
+            .get("value")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        if let Some(ComponentState::Input(state)) = self.component_states.get(&id) {
+            let state = state.clone();
+            self.sync_input_value(&state, &id, &desired, window, cx);
+            return state;
         }
 
         let state = cx.new(|cx| InputState::new(window, cx));
+
+        // Subscribe once to keep the `value` property in sync with what the
+        // user types, and to route Enter to the on-change handler.
+        let change_handler = component.handlers.get("change").cloned();
+        let sub_id = id.clone();
+        let runtime = Arc::clone(&self.runtime);
+        let subscription = cx.subscribe_in(
+            &state,
+            window,
+            move |this: &mut App, input_state, event: &InputEvent, _window, cx| {
+                let sync_value = |this: &mut App, value: String| {
+                    if let Ok(mut lm) = runtime.layout_manager.try_write() {
+                        let _ = lm.set_property(&sub_id, "value", Value::String(value.clone()));
+                    }
+                    // Record what the property now holds so the render pass does
+                    // not push it back into the InputState and reset the cursor.
+                    this.input_values.insert(sub_id.clone(), value);
+                };
+
+                match event {
+                    InputEvent::Change | InputEvent::Blur => {
+                        let value = input_state.read(cx).value().to_string();
+                        sync_value(this, value);
+                    }
+                    InputEvent::PressEnter { .. } => {
+                        let value = input_state.read(cx).value().to_string();
+                        sync_value(this, value.clone());
+                        if let Some(handler) = &change_handler {
+                            runtime.call_handler(handler, &sub_id, &value);
+                            cx.notify();
+                        }
+                    }
+                    InputEvent::Focus => {}
+                }
+            },
+        );
+        self._subscriptions.push(subscription);
+
         self.component_states
-            .insert(id.to_string(), ComponentState::Input(state.clone()));
+            .insert(id.clone(), ComponentState::Input(state.clone()));
+        self.sync_input_value(&state, &id, &desired, window, cx);
         state
+    }
+
+    /// Pushes `desired` into an input's `InputState` only when it differs from
+    /// the last value we synced for `id` (i.e. a script changed it), so user
+    /// typing is never overwritten mid-edit.
+    fn sync_input_value(
+        &mut self,
+        state: &Entity<InputState>,
+        id: &str,
+        desired: &str,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if self.input_values.get(id).map(String::as_str) == Some(desired) {
+            return;
+        }
+        let value = desired.to_string();
+        state.update(cx, |s, cx| s.set_value(value, window, cx));
+        self.input_values
+            .insert(id.to_string(), desired.to_string());
     }
 
     /// Gets or creates a TableState entity for the given component.
@@ -678,7 +776,7 @@ impl App {
                 .entity_id(entity_id)
                 .into_any_element(),
             "input" => {
-                let input_state = self.get_or_create_input_state(&component.id, window, cx);
+                let input_state = self.get_or_create_input_state(component, window, cx);
                 crate::components::Input::new(component.clone())
                     .input_state(input_state)
                     .runtime(Arc::clone(&self.runtime))

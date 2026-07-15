@@ -273,6 +273,20 @@ impl NemoRuntime {
         Ok(())
     }
 
+    /// Returns the configured on-load handler name, if any.
+    ///
+    /// Set via `<script src="…" on-load="handler_fn" />`. The handler is
+    /// invoked once, after the layout is built (see `App::new`), so scripts can
+    /// hydrate the UI from persisted state at startup.
+    pub fn on_load_handler(&self) -> Option<String> {
+        let config = self.config.read().ok()?;
+        config
+            .get("scripts")
+            .and_then(|s| s.get("on_load"))
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+    }
+
     /// Loads scripts specified in configuration.
     fn load_scripts_from_config(&self) -> Result<()> {
         let scripts_config = {
@@ -3424,6 +3438,32 @@ mod error_path_tests {
             1,
             "'Median: ' should appear exactly once, got {texts:?}"
         );
+    }
+
+    #[test]
+    fn test_on_load_handler_reads_config() {
+        // `<script on-load="…">` must surface through NemoRuntime::on_load_handler
+        // so App::new can call it once at startup.
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
+        {
+            let mut cfg = rt.config.write().unwrap();
+            *cfg = nemo_config::XmlParser::new()
+                .parse(r#"<nemo><script src="./scripts" on-load="hydrate" /></nemo>"#)
+                .unwrap();
+        }
+        assert_eq!(rt.on_load_handler(), Some("hydrate".to_string()));
+    }
+
+    #[test]
+    fn test_on_load_handler_absent_is_none() {
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
+        {
+            let mut cfg = rt.config.write().unwrap();
+            *cfg = nemo_config::XmlParser::new()
+                .parse(r#"<nemo><script src="./scripts" /></nemo>"#)
+                .unwrap();
+        }
+        assert_eq!(rt.on_load_handler(), None);
     }
 
     #[test]

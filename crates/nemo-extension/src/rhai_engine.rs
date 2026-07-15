@@ -1220,12 +1220,12 @@ mod tests {
 
     #[test]
     fn test_task_list_handlers_end_to_end() {
-        // Drive the real task-list handlers against a mock context. This is
-        // the regression guard for the whole class of bugs the script hit:
-        // module-level mutable state (unsupported — functions are pure),
-        // `exists()` vs the `.exists` getter, non-truncating `"w"` writes,
-        // and date-only `datetime_parse`. Persistence targets a temp file so
-        // the repo is never touched.
+        // Drive the real task-list handlers against a mock context. This is the
+        // regression guard for the example's whole lifecycle: on_load creates an
+        // empty file and starts empty (no baked-in defaults), submit_add reads
+        // the inputs' live `value` and persists, toggle/delete key off the typed
+        // row number, and the table `data` array + header count stay in sync
+        // with disk. Persistence targets a temp file so the repo is untouched.
         let raw = include_str!("../../../examples/task-list/scripts/handlers.rhai");
         let tmp = tempfile::tempdir().unwrap();
         let data_file = tmp.path().join("tasks.json");
@@ -1248,74 +1248,150 @@ mod tests {
             .load_script("handlers", &script)
             .expect("task-list handlers.rhai should compile");
 
-        // First toggle: also runs apply_saved_state, which formats all 12
-        // default due dates via rhai-chrono — so this exercises the fs, json,
-        // and chrono paths together.
+        // Number of rows the table's `data` property currently holds.
+        let table_len = |ctx: &MockContext| -> usize {
+            match ctx.get_component_property("tasks_table", "data") {
+                Some(PluginValue::Array(rows)) => rows.len(),
+                _ => panic!("tasks_table data should be an array"),
+            }
+        };
+
+        // on_load: no file yet → create an empty one and render an empty table.
         engine
             .call::<()>(
                 "handlers",
-                "toggle_task",
-                ("check_1".to_string(), "true".to_string()),
+                "on_load",
+                ("app".to_string(), "load".to_string()),
             )
-            .expect("toggle_task should run");
-
+            .expect("on_load should run");
+        assert!(data_file.exists(), "on_load should create tasks.json");
+        assert_eq!(table_len(&ctx), 0);
         assert_eq!(
-            ctx.get_component_property("check_1", "checked"),
-            Some(PluginValue::Bool(true))
-        );
-        assert_eq!(
-            ctx.get_component_property("status_1", "text"),
-            Some(PluginValue::String("✓ Completed".to_string()))
+            ctx.get_component_property("task_count", "text"),
+            Some(PluginValue::String("0 tasks".to_string()))
         );
 
-        let parsed: serde_json::Value =
-            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
-        assert_eq!(parsed["tasks"][0]["done"], serde_json::json!(true));
-
-        // Second toggle on a different row: apply must NOT re-run (flag lives
-        // in host data), and the first row's saved state must survive a
-        // shorter/longer rewrite (truncation).
-        engine
-            .call::<()>(
-                "handlers",
-                "toggle_task",
-                ("check_3".to_string(), "true".to_string()),
-            )
-            .expect("second toggle_task should run");
-        let parsed: serde_json::Value =
-            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
-        assert_eq!(parsed["tasks"][0]["done"], serde_json::json!(true));
-        assert_eq!(parsed["tasks"][2]["done"], serde_json::json!(true));
-
-        // Icon change via the picker: record the editing target, pick an
-        // emoji, and confirm the label + persisted icon update.
+        // Add a task via the modal: the inputs' `value` props stand in for typed
+        // text (kept live by the input readback wiring in the real app).
         ctx.set_component_property(
-            "icon_picker",
-            "editing",
-            PluginValue::String("icon_2".to_string()),
+            "new_task_input",
+            "value",
+            PluginValue::String("Write the report".to_string()),
         )
         .unwrap();
         ctx.set_component_property(
-            "palette_star",
-            "label",
-            PluginValue::String("⭐".to_string()),
+            "new_due_input",
+            "value",
+            PluginValue::String("2026-07-20".to_string()),
         )
         .unwrap();
         engine
             .call::<()>(
                 "handlers",
-                "choose_icon",
-                ("palette_star".to_string(), String::new()),
+                "submit_add",
+                ("add_confirm".to_string(), "click".to_string()),
             )
-            .expect("choose_icon should run");
+            .expect("submit_add should run");
 
-        assert_eq!(
-            ctx.get_component_property("icon_2", "label"),
-            Some(PluginValue::String("⭐".to_string()))
-        );
+        // Persisted, rendered, fields cleared, modal closed.
         let parsed: serde_json::Value =
             serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
-        assert_eq!(parsed["tasks"][1]["icon"], serde_json::json!("⭐"));
+        assert_eq!(
+            parsed["tasks"][0]["label"],
+            serde_json::json!("Write the report")
+        );
+        assert_eq!(parsed["tasks"][0]["done"], serde_json::json!(false));
+        assert_eq!(table_len(&ctx), 1);
+        assert_eq!(
+            ctx.get_component_property("task_count", "text"),
+            Some(PluginValue::String("1 task".to_string()))
+        );
+        assert_eq!(
+            ctx.get_component_property("new_task_input", "value"),
+            Some(PluginValue::String(String::new()))
+        );
+        assert_eq!(
+            ctx.get_component_property("add_modal", "open"),
+            Some(PluginValue::Bool(false))
+        );
+
+        // An empty description is ignored (no phantom row).
+        ctx.set_component_property(
+            "new_task_input",
+            "value",
+            PluginValue::String(String::new()),
+        )
+        .unwrap();
+        engine
+            .call::<()>(
+                "handlers",
+                "submit_add",
+                ("add_confirm".to_string(), "click".to_string()),
+            )
+            .expect("submit_add should run");
+        assert_eq!(table_len(&ctx), 1);
+
+        // Add a second task so we can toggle/delete against a specific row.
+        ctx.set_component_property(
+            "new_task_input",
+            "value",
+            PluginValue::String("Buy groceries".to_string()),
+        )
+        .unwrap();
+        engine
+            .call::<()>(
+                "handlers",
+                "submit_add",
+                ("add_confirm".to_string(), "click".to_string()),
+            )
+            .expect("submit_add should run");
+        assert_eq!(table_len(&ctx), 2);
+
+        // Toggle row 1 done (rows are 1-based in the "#" column).
+        ctx.set_component_property("row_num", "value", PluginValue::String("1".to_string()))
+            .unwrap();
+        engine
+            .call::<()>(
+                "handlers",
+                "toggle_done",
+                ("toggle_button".to_string(), "click".to_string()),
+            )
+            .expect("toggle_done should run");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
+        assert_eq!(parsed["tasks"][0]["done"], serde_json::json!(true));
+        assert_eq!(parsed["tasks"][1]["done"], serde_json::json!(false));
+
+        // A non-numeric row number is a no-op, not a crash.
+        ctx.set_component_property("row_num", "value", PluginValue::String("abc".to_string()))
+            .unwrap();
+        engine
+            .call::<()>(
+                "handlers",
+                "toggle_done",
+                ("toggle_button".to_string(), "click".to_string()),
+            )
+            .expect("toggle_done with bad input should not error");
+        assert_eq!(table_len(&ctx), 2);
+
+        // Delete row 1: only the second task should remain.
+        ctx.set_component_property("row_num", "value", PluginValue::String("1".to_string()))
+            .unwrap();
+        engine
+            .call::<()>(
+                "handlers",
+                "delete_task",
+                ("delete_button".to_string(), "click".to_string()),
+            )
+            .expect("delete_task should run");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
+        assert_eq!(parsed["tasks"].as_array().unwrap().len(), 1);
+        assert_eq!(
+            parsed["tasks"][0]["label"],
+            serde_json::json!("Buy groceries")
+        );
+        assert_eq!(table_len(&ctx), 1);
     }
 
     #[cfg(feature = "pkg-env")]

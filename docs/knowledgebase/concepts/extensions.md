@@ -49,6 +49,22 @@ functions. `load_script` runs the script's top-level statements once against a
 persistent `Scope` (seeding `let`/`const` declarations), and `call` reuses that
 scope across invocations.
 
+**Startup hook.** `<script on-load="fn_name" />` names a handler that the runtime
+calls exactly once, after scripts are loaded and the layout is built, from
+`App::new` (via `NemoRuntime::on_load_handler`). It is invoked as
+`fn_name("app", "load")`. This is the only "run once on load" hook nemo exposes;
+use it to hydrate the UI from persisted state at startup, so the first paint
+already reflects it rather than deferring the sync onto the first user
+interaction. The `on-load` attribute is parsed into `scripts.on_load` (attribute
+keys are kebab→snake normalized, so `on-load` arrives as `on_load`).
+
+**Input value readback.** An `<input>`'s typed text is written back into its
+`value` property on every change/blur (and Enter fires its `on-change` handler),
+so `get_component_property(id, "value")` returns live text a handler can read.
+The render pass also pushes any script-set `value` back into the field — e.g.
+`set_component_property(id, "value", "")` clears it — without disturbing the
+cursor mid-edit. See `App::get_or_create_input_state` / `App::sync_input_value`.
+
 **Rhai script functions are pure — do not rely on module-level state.** A
 top-level `let`/`const` is *not* visible inside a script function: the seeded
 scope reaches only the entry function of a `call`, and a function invoked from
@@ -65,9 +81,12 @@ invisible to `load_script` (compilation succeeds). Share values two ways:
   handler calls and are reachable from every function.
 
 The task-list and dev-dashboard examples follow this: per-item state lives on
-disk / in components, and a one-shot "already applied to the UI" flag lives in
-`get_data`/`set_data`. See `test_task_list_handlers_end_to_end` in
-`rhai_engine.rs` for the end-to-end regression guard.
+disk / in components rather than module variables. The task-list starts empty,
+loads `tasks.json` via the `on-load` hook, adds tasks through a modal (reading
+the inputs' `value` properties), and renders the list into a data-driven
+`<table>` — each handler loads from disk, edits, saves, and re-renders. See
+`test_task_list_handlers_end_to_end` in `rhai_engine.rs` for the end-to-end
+regression guard.
 
 ## Opt-in packages and the `file-io` feature
 

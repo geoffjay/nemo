@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Task List -->
-<!-- A todo application: check off tasks, view optional due dates, and change -->
-<!-- each task's category icon by clicking it and picking one from a popup. -->
-<!-- Full-screen, nord theme, with a centered card that scrolls internally. -->
+<!-- A todo application backed entirely by a JSON file. The list starts empty on -->
+<!-- first run; tasks are added through a modal, checked off / deleted by row     -->
+<!-- number, and every change is written straight back to tasks.json.            -->
+<!-- Full-screen, nord theme, with a centered card.                              -->
 <nemo>
   <app title="Nemo Task List">
     <!-- No width/height on <window> => the window opens maximized (full screen). -->
@@ -13,216 +14,77 @@
     <theme name="nord" mode="dark" />
   </app>
 
-  <script src="./scripts" features="file-io" />
+  <!--
+    file-io  → rhai-fs, for reading/writing tasks.json.
+    on-load  → run `on_load` once after the layout is built, so the table is
+               hydrated from tasks.json before the first paint (no default list
+               baked into the XML, and no state revealed lazily on first click).
+  -->
+  <script src="./scripts" features="file-io" on-load="on_load" />
 
   <!--
     Layout notes
     ============
-    Stacks are content-sized by default and only grow when they opt in with
-    flex="1" (or scroll="true", or being the layout root). Horizontal stacks
-    center their children vertically by default, and `justify`/`align` control
-    the rest — so this whole layout needs no empty spacer stacks:
-      * center_row grows (flex="1") to fill the window and justify="center"
-        centers the card horizontally; the default vertical centering (items
-        center on a horizontal stack) centers it vertically.
-      * The card is content-sized; only task_scroll scrolls, bounded by its
-        own fixed height, so the page itself never scrolls.
+    center_row grows (flex="1") to fill the window and justify="center" centers
+    the card horizontally; the default vertical centering on a horizontal stack
+    centers it vertically. The card itself is content-sized.
   -->
   <layout type="stack">
     <stack id="center_row" direction="horizontal" flex="1" justify="center">
-      <panel id="task_card" width="820" padding="24" border="1" rounded="lg">
+      <panel id="task_card" width="860" padding="24" border="1" rounded="lg">
         <stack id="card_inner" direction="vertical" spacing="16">
+
+          <!-- Title row: heading + live task count on the left, Add on the right -->
           <stack id="card_header" direction="horizontal" justify="between">
-            <label id="title" text="Tasks" size="xl" />
-            <label id="hint" text="Click an icon to change its category" size="sm" />
+            <stack id="title_group" direction="horizontal" spacing="12">
+              <label id="title" text="Tasks" size="xl" />
+              <label id="task_count" text="0 tasks" size="sm" />
+            </stack>
+            <button id="add_button" label="+ Add Task" variant="primary" on-click="open_add_modal" />
           </stack>
 
-          <!-- Only this inner stack scrolls; the page itself never scrolls -->
-          <stack id="task_scroll" direction="vertical" spacing="4" scroll="true" height="520">
+          <!-- The task table. Rows are supplied as a data array by the handler
+               script (set_component_property "tasks_table" "data" …); the cells
+               are text-only, so "done" shows as a ✓ glyph rather than a live
+               checkbox. -->
+          <table id="tasks_table" height="440" stripe="true" bordered="true"
+                 columns='[
+                   {"key":"num","label":"#","width":48},
+                   {"key":"done","label":"✓","width":48},
+                   {"key":"label","label":"Task","width":420},
+                   {"key":"due","label":"Due","width":180},
+                   {"key":"status","label":"Status","width":130}
+                 ]' />
 
-            <stack id="row_1" template="task_row">
-              <stack id="row_1_left" template="task_left">
-                <button id="icon_1" template="task_icon" label="📋" />
-                <checkbox id="check_1" template="task_check" label="Finish the quarterly report" />
-              </stack>
-              <stack id="row_1_right" template="task_right">
-                <label id="due_1" template="due" text="Due Jul 15" />
-                <label id="status_1" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_2" template="task_row">
-              <stack id="row_2_left" template="task_left">
-                <button id="icon_2" template="task_icon" label="🛒" />
-                <checkbox id="check_2" template="task_check" label="Buy groceries for the week" />
-              </stack>
-              <stack id="row_2_right" template="task_right">
-                <label id="due_2" template="due" text="Due Jul 13" />
-                <label id="status_2" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_3" template="task_row">
-              <stack id="row_3_left" template="task_left">
-                <button id="icon_3" template="task_icon" label="💪" />
-                <checkbox id="check_3" template="task_check" label="Go for a morning run" />
-              </stack>
-              <stack id="row_3_right" template="task_right">
-                <label id="due_3" template="due" text="No due date" />
-                <label id="status_3" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_4" template="task_row">
-              <stack id="row_4_left" template="task_left">
-                <button id="icon_4" template="task_icon" label="🏠" />
-                <checkbox id="check_4" template="task_check" label="Fix the leaking kitchen sink" />
-              </stack>
-              <stack id="row_4_right" template="task_right">
-                <label id="due_4" template="due" text="Due Jul 20" />
-                <label id="status_4" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_5" template="task_row">
-              <stack id="row_5_left" template="task_left">
-                <button id="icon_5" template="task_icon" label="⭐" />
-                <checkbox id="check_5" template="task_check" label="Prepare the client presentation" />
-              </stack>
-              <stack id="row_5_right" template="task_right">
-                <label id="due_5" template="due" text="Due Jul 14" />
-                <label id="status_5" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_6" template="task_row">
-              <stack id="row_6_left" template="task_left">
-                <button id="icon_6" template="task_icon" label="📋" />
-                <checkbox id="check_6" template="task_check" label="Reply to outstanding client emails" />
-              </stack>
-              <stack id="row_6_right" template="task_right">
-                <label id="due_6" template="due" text="No due date" />
-                <label id="status_6" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_7" template="task_row">
-              <stack id="row_7_left" template="task_left">
-                <button id="icon_7" template="task_icon" label="🎯" />
-                <checkbox id="check_7" template="task_check" label="Read 20 pages of the current book" />
-              </stack>
-              <stack id="row_7_right" template="task_right">
-                <label id="due_7" template="due" text="Due Jul 12" />
-                <label id="status_7" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_8" template="task_row">
-              <stack id="row_8_left" template="task_left">
-                <button id="icon_8" template="task_icon" label="🏠" />
-                <checkbox id="check_8" template="task_check" label="Water the plants" />
-              </stack>
-              <stack id="row_8_right" template="task_right">
-                <label id="due_8" template="due" text="No due date" />
-                <label id="status_8" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_9" template="task_row">
-              <stack id="row_9_left" template="task_left">
-                <button id="icon_9" template="task_icon" label="🛒" />
-                <checkbox id="check_9" template="task_check" label="Order a birthday gift" />
-              </stack>
-              <stack id="row_9_right" template="task_right">
-                <label id="due_9" template="due" text="Due Jul 18" />
-                <label id="status_9" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_10" template="task_row">
-              <stack id="row_10_left" template="task_left">
-                <button id="icon_10" template="task_icon" label="📋" />
-                <checkbox id="check_10" template="task_check" label="Plan the team offsite" />
-              </stack>
-              <stack id="row_10_right" template="task_right">
-                <label id="due_10" template="due" text="Due Jul 25" />
-                <label id="status_10" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_11" template="task_row">
-              <stack id="row_11_left" template="task_left">
-                <button id="icon_11" template="task_icon" label="💪" />
-                <checkbox id="check_11" template="task_check" label="Book a dentist appointment" />
-              </stack>
-              <stack id="row_11_right" template="task_right">
-                <label id="due_11" template="due" text="No due date" />
-                <label id="status_11" template="status" text="Pending" />
-              </stack>
-            </stack>
-
-            <stack id="row_12" template="task_row">
-              <stack id="row_12_left" template="task_left">
-                <button id="icon_12" template="task_icon" label="⭐" />
-                <checkbox id="check_12" template="task_check" label="Submit the tax documents" />
-              </stack>
-              <stack id="row_12_right" template="task_right">
-                <label id="due_12" template="due" text="Due Jul 30" />
-                <label id="status_12" template="status" text="Pending" />
-              </stack>
-            </stack>
-
+          <!-- Row-level actions. Because table cells can't hold live controls,
+               editing is keyed by the row number shown in the "#" column. -->
+          <stack id="row_actions" direction="horizontal" spacing="12">
+            <input id="row_num" placeholder="Row #" value="" width="90" />
+            <button id="toggle_button" label="Toggle Done" variant="secondary" on-click="toggle_done" />
+            <button id="delete_button" label="Delete" variant="danger" on-click="delete_task" />
+            <label id="action_hint" text="Enter a row number, then Toggle or Delete." size="sm" />
           </stack>
+
         </stack>
       </panel>
     </stack>
 
     <!--
-      Shared icon picker popup. Hidden (open="false") until a task icon is
-      clicked. `open_icon_picker` records which icon button was clicked in the
-      modal's `editing` property; `choose_icon` copies the chosen emoji back
-      onto that button and closes the popup.
+      Add-task modal. Opened by the "+ Add Task" button (open_add_modal), which
+      also clears the fields. `submit_add` reads the two inputs' live `value`
+      properties, appends a task, saves, and closes; pressing Enter in either
+      field submits too (the input's on-change fires on Enter).
     -->
-    <modal id="icon_picker" title="Choose a category icon" open="false" editing="">
-      <text id="picker_hint" content="Pick an icon for this task:" />
-      <stack id="picker_options" direction="horizontal" spacing="12">
-        <button id="pick_work" variant="ghost" label="📋" on-click="choose_icon" />
-        <button id="pick_home" variant="ghost" label="🏠" on-click="choose_icon" />
-        <button id="pick_shop" variant="ghost" label="🛒" on-click="choose_icon" />
-        <button id="pick_health" variant="ghost" label="💪" on-click="choose_icon" />
-        <button id="pick_star" variant="ghost" label="⭐" on-click="choose_icon" />
-        <button id="pick_goal" variant="ghost" label="🎯" on-click="choose_icon" />
+    <modal id="add_modal" title="Add a task" open="false">
+      <text id="add_hint" content="Describe the task and (optionally) a due date." />
+      <stack id="add_fields" direction="vertical" spacing="12">
+        <input id="new_task_input" placeholder="Task description" value="" on-change="submit_add" />
+        <input id="new_due_input" placeholder="Due date (YYYY-MM-DD, optional)" value="" on-change="submit_add" />
       </stack>
-      <button id="picker_close" label="Cancel" variant="secondary" on-click="close_icon_picker" />
+      <stack id="add_actions" direction="horizontal" spacing="12" justify="end">
+        <button id="add_cancel" label="Cancel" variant="secondary" on-click="close_add_modal" />
+        <button id="add_confirm" label="Add Task" variant="primary" on-click="submit_add" />
+      </stack>
     </modal>
   </layout>
-
-  <!-- Templates keep the repeated task rows terse and consistent -->
-  <templates>
-    <!-- A row spreads a left group (icon + task) and a right group (due +
-         status) to opposite edges; min/max height keep rows comfortably sized. -->
-    <template name="task_row">
-      <stack direction="horizontal" spacing="12" padding="8" justify="between"
-             min-height="32" max-height="64"
-             border-bottom="1" border-color="theme.border" />
-    </template>
-    <template name="task_left">
-      <stack direction="horizontal" spacing="12" />
-    </template>
-    <template name="task_right">
-      <stack direction="horizontal" spacing="12" />
-    </template>
-    <template name="task_icon">
-      <button variant="ghost" on-click="open_icon_picker" />
-    </template>
-    <template name="task_check">
-      <checkbox checked="false" on-change="toggle_task" />
-    </template>
-    <template name="due">
-      <label size="sm" />
-    </template>
-    <template name="status">
-      <label size="sm" />
-    </template>
-  </templates>
 </nemo>

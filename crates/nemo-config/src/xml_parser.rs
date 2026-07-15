@@ -313,6 +313,19 @@ impl XmlParser {
                 }
             }
 
+            // on-load attribute → on_load key. Names a handler function that
+            // the runtime calls exactly once, after the layout is built, so a
+            // script can hydrate the UI from persisted state at startup (the
+            // only "run once on load" hook nemo exposes). Attribute keys are
+            // kebab→snake normalized at parse time, so `on-load` arrives as
+            // `on_load`.
+            if let Some(on_load) = obj.get("on_load").and_then(|v| v.as_str()) {
+                let trimmed = on_load.trim();
+                if !trimmed.is_empty() {
+                    scripts_obj.insert("on_load".to_string(), Value::String(trimmed.to_string()));
+                }
+            }
+
             // CDATA content → inline key
             if let Some(cdata) = obj.get("__cdata__").and_then(|v| v.as_str()) {
                 if !cdata.trim().is_empty() {
@@ -1073,6 +1086,39 @@ mod tests {
         let features = scripts.get("features").unwrap().as_array().unwrap();
         assert_eq!(features.len(), 1);
         assert_eq!(features[0].as_str().unwrap(), "file-io");
+    }
+
+    #[test]
+    fn test_parse_scripts_with_on_load() {
+        let xml = r#"
+        <nemo>
+            <script src="./scripts" on-load="on_load" />
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let scripts = value.get("scripts").unwrap();
+        assert_eq!(
+            scripts.get("on_load"),
+            Some(&Value::String("on_load".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_scripts_without_on_load_omits_key() {
+        let xml = r#"
+        <nemo>
+            <script src="./scripts" />
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let scripts = value.get("scripts").unwrap();
+        assert!(scripts.get("on_load").is_none());
     }
 
     #[test]
