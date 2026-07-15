@@ -25,9 +25,9 @@ Nemo currently supports:
   checksums) and distribution (`install.sh`, Homebrew tap auto-push).
 
 Worked examples live under `examples/` (basic, components, data-binding,
-data-streaming, calculator, pid-control, complete, task-list). Example configs
-are validated in CI via `nemo validate --strict` (`.github/workflows/ci.yml`,
-`validate-examples` job).
+data-streaming, calculator, pid-control, complete, task-list, dev-dashboard).
+Example configs are validated in CI via `nemo validate --strict`
+(`.github/workflows/ci.yml`, `validate-examples` job).
 
 # Phase 2 — build, installation, and developer experience
 

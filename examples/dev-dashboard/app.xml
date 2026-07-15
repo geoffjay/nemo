@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Dev Dashboard -->
+<!-- A developer tools dashboard that exercises every Rhai extension package: -->
+<!--   rhai-env     → read environment variables (HOME, SHELL, PATH, USER) -->
+<!--   rhai-process → run shell commands (uname, whoami, date, df) -->
+<!--   rhai-sci     → compute stats on response-time samples -->
+<!--   rhai-chrono  → timestamp and format the current time -->
+<!--   built-in HTTP → fetch a public API (httpbin.org/uuid) -->
+<!-- Requires the pkg-env, pkg-sci, and pkg-process cargo features on -->
+<!-- nemo-extension, and the system + science + file-io script features. -->
+<nemo>
+  <app title="Nemo Dev Dashboard">
+    <window title="Dev Dashboard">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/dev-dashboard"
+                  theme-toggle="true" />
+    </window>
+    <theme name="nord" mode="dark" />
+  </app>
+
+  <script src="./scripts" features="file-io, system, science" />
+
+  <layout type="stack">
+    <stack id="root" direction="vertical" flex="1" scroll="true" padding="24" spacing="16">
+
+      <!-- Header -->
+      <stack id="header" direction="horizontal" justify="between">
+        <label id="title" text="Dev Dashboard" size="xl" />
+        <label id="clock" text="--:--:--" size="sm" />
+      </stack>
+
+      <!-- Environment Variables (rhai-env) -->
+      <panel id="env_panel" padding="16" border="1" rounded="lg">
+        <stack id="env_inner" direction="vertical" spacing="8">
+          <label id="env_heading" text="Environment Variables" size="lg" />
+          <stack id="env_row1" direction="horizontal" spacing="8">
+            <label text="HOME: " size="sm" />
+            <label id="env_home" text="(click Refresh)" size="sm" />
+          </stack>
+          <stack id="env_row2" direction="horizontal" spacing="8">
+            <label text="SHELL: " size="sm" />
+            <label id="env_shell" text="--" size="sm" />
+          </stack>
+          <stack id="env_row3" direction="horizontal" spacing="8">
+            <label text="USER: " size="sm" />
+            <label id="env_user" text="--" size="sm" />
+          </stack>
+          <stack id="env_row4" direction="horizontal" spacing="8">
+            <label text="PATH (first 80 chars): " size="sm" />
+            <label id="env_path" text="--" size="sm" />
+          </stack>
+        </stack>
+      </panel>
+
+      <!-- System Info (rhai-process) -->
+      <panel id="sys_panel" padding="16" border="1" rounded="lg">
+        <stack id="sys_inner" direction="vertical" spacing="8">
+          <label id="sys_heading" text="System Info" size="lg" />
+          <stack id="sys_row1" direction="horizontal" spacing="8">
+            <label text="OS: " size="sm" />
+            <label id="sys_os" text="(click Refresh)" size="sm" />
+          </stack>
+          <stack id="sys_row2" direction="horizontal" spacing="8">
+            <label text="Host: " size="sm" />
+            <label id="sys_host" text="--" size="sm" />
+          </stack>
+          <stack id="sys_row3" direction="horizontal" spacing="8">
+            <label text="Disk: " size="sm" />
+            <label id="sys_disk" text="--" size="sm" />
+          </stack>
+        </stack>
+      </panel>
+
+      <!-- HTTP Fetch (built-in http_get) -->
+      <panel id="http_panel" padding="16" border="1" rounded="lg">
+        <stack id="http_inner" direction="vertical" spacing="8">
+          <label id="http_heading" text="HTTP Fetch" size="lg" />
+          <stack id="http_row1" direction="horizontal" spacing="8">
+            <label text="UUID: " size="sm" />
+            <label id="http_uuid" text="(click Fetch UUID)" size="sm" />
+          </stack>
+          <stack id="http_row2" direction="horizontal" spacing="8">
+            <label text="Status: " size="sm" />
+            <label id="http_status" text="--" size="sm" />
+          </stack>
+          <button id="fetch_uuid_btn" label="Fetch UUID" variant="secondary" on-click="fetch_uuid" />
+        </stack>
+      </panel>
+
+      <!-- Stats (rhai-sci) -->
+      <panel id="stats_panel" padding="16" border="1" rounded="lg">
+        <stack id="stats_inner" direction="vertical" spacing="8">
+          <label id="stats_heading" text="Response-Time Stats" size="lg" />
+          <label id="stats_samples" text="Samples: 0" size="sm" />
+          <stack id="stats_row1" direction="horizontal" spacing="8">
+            <label text="Mean: " size="sm" />
+            <label id="stats_mean" text="--" size="sm" />
+          </stack>
+          <stack id="stats_row2" direction="horizontal" spacing="8">
+            <label text="Std Dev: " size="sm" />
+            <label id="stats_std" text="--" size="sm" />
+          </stack>
+          <stack id="stats_row3" direction="horizontal" spacing="8">
+            <label text="Min / Max: " size="sm" />
+            <label id="stats_minmax" text="--" size="sm" />
+          </stack>
+          <stack id="stats_row4" direction="horizontal" spacing="8">
+            <label text="Median: " size="sm" />
+            <label id="stats_median" text="--" size="sm" />
+          </stack>
+          <button id="sample_btn" label="Take Sample" variant="secondary" on-click="take_sample" />
+          <button id="reset_stats_btn" label="Reset" variant="ghost" on-click="reset_stats" />
+        </stack>
+      </panel>
+
+      <!-- Actions -->
+      <stack id="actions" direction="horizontal" spacing="8">
+        <button id="refresh_btn" label="Refresh All" on-click="refresh_all" />
+      </stack>
+
+    </stack>
+  </layout>
+</nemo>

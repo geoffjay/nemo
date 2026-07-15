@@ -1109,4 +1109,30 @@ mod tests {
             .load_script("handlers", script)
             .expect("task-list handlers.rhai should compile");
     }
+
+    #[cfg(feature = "pkg-env")]
+    #[cfg(feature = "pkg-sci")]
+    #[cfg(feature = "pkg-process")]
+    #[test]
+    fn test_dev_dashboard_handlers_compile() {
+        // Verify the dev-dashboard example's handler script compiles with
+        // all features enabled. The script uses rhai-env (env), rhai-process
+        // (cmd), rhai-sci (mean/std/median/min/max), rhai-chrono
+        // (datetime_local/datetime_utc), and the built-in http_get.
+        let script =
+            include_str!("../../../examples/dev-dashboard/scripts/handlers.rhai");
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                file_io: true,
+                system: true,
+                science: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut engine = RhaiEngine::new(config);
+        engine
+            .load_script("handlers", script)
+            .expect("dev-dashboard handlers.rhai should compile");
+    }
 }
