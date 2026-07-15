@@ -6,12 +6,20 @@ use crate::Value;
 use indexmap::IndexMap;
 use quick_xml::events::{BytesCData, BytesStart, Event};
 use quick_xml::Reader;
+use std::cell::Cell;
 use std::path::{Path, PathBuf};
 
 /// Parser for XML configuration files.
 pub struct XmlParser {
     source_name: String,
     base_dir: Option<PathBuf>,
+    /// Monotonic counter for generating ids for id-less ("anonymous")
+    /// components. It must be unique across the *whole document*, not per
+    /// parent: components are ultimately stored in a flat id-keyed map, so two
+    /// anonymous siblings in different parents that shared an id (e.g. every
+    /// `__anon_1`) would collapse into one — the classic "all labels show the
+    /// last one's text" bug. `Cell` gives interior mutability under `&self`.
+    anon_counter: Cell<usize>,
 }
 
 impl XmlParser {
@@ -20,6 +28,7 @@ impl XmlParser {
         XmlParser {
             source_name: "<input>".to_string(),
             base_dir: None,
+            anon_counter: Cell::new(0),
         }
     }
 
@@ -37,6 +46,10 @@ impl XmlParser {
 
     /// Parses XML content into a Value.
     pub fn parse(&self, content: &str) -> Result<Value, ParseError> {
+        // Reset the anonymous-component counter so ids are deterministic per
+        // document even if this parser instance is reused.
+        self.anon_counter.set(0);
+
         let mut reader = Reader::from_str(content);
         reader.config_mut().trim_text(true);
 
@@ -639,7 +652,6 @@ impl XmlParser {
     /// Converts child elements into a component map keyed by id.
     fn children_to_component_map(&self, children: &[Value]) -> IndexMap<String, Value> {
         let mut components = IndexMap::new();
-        let mut anon_counter = 0;
 
         for child in children {
             if let Some(child_obj) = child.as_object() {
@@ -653,14 +665,18 @@ impl XmlParser {
                     continue;
                 }
 
-                // Get the id attribute, or generate one
+                // Get the id attribute, or generate a document-unique one.
+                // The counter is shared across the whole document (not reset
+                // per parent) so anonymous components in different parents
+                // never collide when flattened into the id-keyed map.
                 let id = child_obj
                     .get("id")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
                     .unwrap_or_else(|| {
-                        anon_counter += 1;
-                        format!("__anon_{}", anon_counter)
+                        let n = self.anon_counter.get() + 1;
+                        self.anon_counter.set(n);
+                        format!("__anon_{}", n)
                     });
 
                 let component_val = self.process_component_element(child_obj);
@@ -1057,6 +1073,67 @@ mod tests {
         let features = scripts.get("features").unwrap().as_array().unwrap();
         assert_eq!(features.len(), 1);
         assert_eq!(features[0].as_str().unwrap(), "file-io");
+    }
+
+    #[test]
+    fn test_anonymous_components_get_document_unique_ids() {
+        // Regression: id-less ("anonymous") components in different parents
+        // must get distinct ids. Previously the counter reset per parent, so
+        // the first id-less child of every parent became `__anon_1`; when the
+        // runtime flattened components into an id-keyed map they collapsed and
+        // every such label rendered the last one's text (the dev-dashboard
+        // "all labels show Median:" bug).
+        let xml = r#"
+        <nemo>
+            <layout type="stack">
+                <stack id="row1">
+                    <label text="Alpha" />
+                    <label id="v1" text="one" />
+                </stack>
+                <stack id="row2">
+                    <label text="Beta" />
+                    <label id="v2" text="two" />
+                </stack>
+            </layout>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let rows = value
+            .get("layout")
+            .and_then(|l| l.get("component"))
+            .and_then(|c| c.as_object())
+            .unwrap();
+
+        // Collect the anonymous (prefix) label ids and their text from each row.
+        let mut anon_ids = Vec::new();
+        let mut anon_texts = Vec::new();
+        for (_row_id, row) in rows {
+            let children = row.get("component").and_then(|c| c.as_object()).unwrap();
+            for (child_id, child) in children {
+                if child_id.starts_with("__anon") {
+                    anon_ids.push(child_id.clone());
+                    anon_texts.push(
+                        child
+                            .get("text")
+                            .and_then(|t| t.as_str())
+                            .unwrap()
+                            .to_string(),
+                    );
+                }
+            }
+        }
+
+        assert_eq!(anon_ids.len(), 2, "expected two anonymous labels");
+        assert_ne!(
+            anon_ids[0], anon_ids[1],
+            "anonymous components across parents must have distinct ids, got {anon_ids:?}"
+        );
+        // Both distinct texts survive (they don't collapse to one).
+        assert!(anon_texts.contains(&"Alpha".to_string()));
+        assert!(anon_texts.contains(&"Beta".to_string()));
     }
 
     #[test]

@@ -115,12 +115,28 @@ attribute) preserves the sandbox: no file, environment, or process access.
 ### Cargo features
 
 The `pkg-env`, `pkg-sci`, and `pkg-process` Cargo features on `nemo-extension`
-control whether the packages are compiled into the binary at all. This keeps
-the default build lean. To build nemo with all optional packages:
+control whether the packages are compiled into the binary at all. The `nemo`
+crate re-exports them as its own features (`pkg-env`, `pkg-sci`, `pkg-process`,
+and `all-packages` for all three). `nemo`'s **default** is `["pkg-env",
+"pkg-sci"]`: `rhai-sci` is a light numeric dependency and `rhai-env` is low-risk
+and still gated by the script `system` feature. `pkg-process` (arbitrary
+subprocess spawning) is deliberately **left out of the default** so a stock
+binary physically cannot spawn processes — enable it explicitly for apps that
+need it:
 
 ```bash
-cargo build -p nemo --features nemo-extension/pkg-env,nemo-extension/pkg-sci,nemo-extension/pkg-process
+cargo run --features pkg-process -- --app-config examples/dev-dashboard/app.xml
 ```
+
+**Both layers are required.** A package is registered only when the app opts in
+via the `<script features="…">` attribute *and* the binary was compiled with the
+matching Cargo feature. (Compiling a package in does not weaken the sandbox — a
+stock app with no `features` attribute stays fully sandboxed regardless.) If a script requests `system`/`science` but the Cargo
+feature is absent, the package is silently skipped and calls fail at run time
+with `Function not found: env` (etc.) — because Rhai resolves names at call time,
+compilation still succeeds. To make this obvious, `register_standard_functions`
+logs a `warn!` at engine construction when a requested feature has no compiled
+package (e.g. "feature 'system' enabled but built without 'pkg-env'").
 
 ### Packages considered but not included
 

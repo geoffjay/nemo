@@ -5,12 +5,18 @@ available to nemo scripts in a single, cohesive application.
 
 ## Running
 
-This example requires the optional Rhai packages to be compiled into the
-binary. Build with:
+This example runs subprocesses (`cmd(...)`), which needs the `pkg-process`
+Cargo feature — that one is **not** in the default build (a stock binary can't
+spawn processes). The `rhai-env` and `rhai-sci` packages it also uses are on by
+default, so `pkg-process` (or `all-packages`) is all you need:
 
 ```bash
-cargo run --features nemo-extension/pkg-env,nemo-extension/pkg-sci,nemo-extension/pkg-process -- --config examples/dev-dashboard/app.xml
+cargo run --features pkg-process -- --app-config examples/dev-dashboard/app.xml
 ```
+
+Without `pkg-process` the app still launches, but the handlers log a warning
+(`cmd(...) subprocess execution is unavailable`) and the System Info panel stays
+empty.
 
 The window opens maximized using the **nord** dark theme.
 

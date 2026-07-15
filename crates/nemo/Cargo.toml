@@ -10,6 +10,23 @@ repository.workspace = true
 name = "nemo"
 path = "src/main.rs"
 
+[features]
+# Rhai script packages, forwarded to nemo-extension so they compile into the
+# `nemo` binary. Compiling a package in is only half the gate — an app must
+# still opt in per-script via `<script features="...">` — so a stock app stays
+# sandboxed regardless of what is built in.
+#
+# `pkg-env` (env vars) and `pkg-sci` (statistics) are on by default: sci is a
+# light numeric dependency and env is low-risk and still gated by the script
+# `system` feature. `pkg-process` (arbitrary subprocess spawning) is left out
+# of the default so a stock binary physically cannot spawn processes; enable it
+# explicitly (or via `all-packages`) for apps that need it, e.g. dev-dashboard.
+default = ["pkg-env", "pkg-sci"]
+pkg-env = ["nemo-extension/pkg-env"]
+pkg-sci = ["nemo-extension/pkg-sci"]
+pkg-process = ["nemo-extension/pkg-process"]
+all-packages = ["pkg-env", "pkg-sci", "pkg-process"]
+
 [dependencies]
 nemo-config = { workspace = true }
 nemo-registry = { workspace = true }

@@ -9,8 +9,12 @@ launch.
 ## Running
 
 ```bash
-cargo run -- --config examples/task-list/app.xml
+cargo run -- --app-config examples/task-list/app.xml
 ```
+
+Run it from the repository root: the handler script persists to
+`examples/task-list/tasks.json`, a path resolved relative to the working
+directory (the file is git-ignored).
 
 The window opens **maximized** (full screen) using the **nord** dark theme.
 

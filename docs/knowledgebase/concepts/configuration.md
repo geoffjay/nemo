@@ -73,6 +73,19 @@ indistinguishable from typos at parse time).
    converts `BuildResult` into a `BuiltComponent` tree keyed by component ID, and
    sets up bindings.
 
+**Component IDs must be unique document-wide.** Because `apply_layout` stores
+components in a *flat* `HashMap` keyed by ID (and parents reference children by
+ID), two components sharing an ID collapse into one — the last one wins, and
+every reference resolves to it. Id-less ("anonymous") elements are therefore
+given generated ids: `children_to_component_map` (`xml_parser.rs`) assigns
+`__anon_N` from a **document-global** counter (not per-parent), and
+`LayoutNode::effective_id` (`node.rs`) falls back to `type_<counter>`. A past bug
+reset the anon counter per parent, so the first id-less child of every parent
+became `__anon_1` and they all collapsed (symptom: every id-less label in the
+dev-dashboard rendered the last one's text). See
+`test_anonymous_components_get_document_unique_ids` and
+`test_anonymous_labels_survive_full_build_pipeline`.
+
 # Data binding in config
 
 `<binding source="data.path" target="property" transform="expr" />` maps a

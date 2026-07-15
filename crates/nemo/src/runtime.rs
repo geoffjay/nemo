@@ -3366,6 +3366,67 @@ mod error_path_tests {
     }
 
     #[test]
+    fn test_anonymous_labels_survive_full_build_pipeline() {
+        // End-to-end guard for the dev-dashboard "all labels show Median:" bug:
+        // id-less labels in sibling stacks must each keep their own text after
+        // parse → parse_layout_config → LayoutManager (which flattens the tree
+        // into an id-keyed map). If anonymous ids collided they would collapse
+        // to one entry here.
+        let xml = r#"
+        <nemo>
+            <layout type="stack">
+                <stack id="row1" direction="horizontal">
+                    <label text="Mean: " />
+                    <label id="stats_mean" text="--" />
+                </stack>
+                <stack id="row2" direction="horizontal">
+                    <label text="Median: " />
+                    <label id="stats_median" text="--" />
+                </stack>
+            </layout>
+        </nemo>
+        "#;
+
+        let config = nemo_config::XmlParser::new().parse(xml).unwrap();
+        let layout_config =
+            parse_layout_config(&config, &TemplateMap::new()).expect("layout should parse");
+
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let mut lm = LayoutManager::new(Arc::clone(&registry));
+        lm.apply_layout(layout_config).unwrap();
+
+        // Gather every label's text from the flat component map.
+        let texts: Vec<String> = lm
+            .component_ids()
+            .into_iter()
+            .filter_map(|id| lm.get_component(&id).cloned())
+            .filter(|c| c.component_type == "label")
+            .filter_map(|c| {
+                c.properties
+                    .get("text")
+                    .and_then(|t| t.as_str())
+                    .map(String::from)
+            })
+            .collect();
+
+        // Both distinct prefix labels must be present — not two "Median: ".
+        assert!(
+            texts.iter().any(|t| t == "Mean: "),
+            "missing 'Mean: ' label, got {texts:?}"
+        );
+        assert!(
+            texts.iter().any(|t| t == "Median: "),
+            "missing 'Median: ' label, got {texts:?}"
+        );
+        assert_eq!(
+            texts.iter().filter(|t| t.as_str() == "Median: ").count(),
+            1,
+            "'Median: ' should appear exactly once, got {texts:?}"
+        );
+    }
+
+    #[test]
     fn test_parse_component_with_array_children() {
         let child1 = obj(vec![("type", s("button")), ("label", s("A"))]);
         let child2 = obj(vec![("type", s("button")), ("label", s("B"))]);

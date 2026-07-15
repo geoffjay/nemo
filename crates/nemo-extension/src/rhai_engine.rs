@@ -190,6 +190,19 @@ impl RhaiEngine {
         if config.features.system {
             rhai_env::EnvironmentPackage::new().register_into_engine(engine);
         }
+        // If the app asks for `system` but this binary was built without the
+        // `pkg-env` cargo feature, `env()`/`envs()` won't exist. Warn loudly
+        // rather than let scripts fail later with a cryptic "Function not
+        // found: env".
+        #[cfg(not(feature = "pkg-env"))]
+        if config.features.system {
+            tracing::warn!(
+                "Script feature 'system' is enabled but nemo-extension was built \
+                 without the 'pkg-env' cargo feature — env()/envs()/set_env() are \
+                 unavailable. Rebuild with `--features nemo/pkg-env` (or \
+                 `nemo-extension/pkg-env`)."
+            );
+        }
 
         // rhai-sci: scientific computing (mean, std, linspace, matrix ops,
         // etc.). Gated by `science` and the `pkg-sci` cargo feature. Pure
@@ -197,6 +210,15 @@ impl RhaiEngine {
         #[cfg(feature = "pkg-sci")]
         if config.features.science {
             rhai_sci::SciPackage::new().register_into_engine(engine);
+        }
+        #[cfg(not(feature = "pkg-sci"))]
+        if config.features.science {
+            tracing::warn!(
+                "Script feature 'science' is enabled but nemo-extension was built \
+                 without the 'pkg-sci' cargo feature — mean()/std()/median()/… are \
+                 unavailable. Rebuild with `--features nemo/pkg-sci` (or \
+                 `nemo-extension/pkg-sci`)."
+            );
         }
 
         // rhai-process: subprocess execution. Gated by `system` and the
@@ -206,6 +228,15 @@ impl RhaiEngine {
         if config.features.system {
             rhai_process::ProcessPackage::new(rhai_process::Config::default())
                 .register_into_engine(engine);
+        }
+        #[cfg(not(feature = "pkg-process"))]
+        if config.features.system {
+            tracing::warn!(
+                "Script feature 'system' is enabled but nemo-extension was built \
+                 without the 'pkg-process' cargo feature — cmd(...) subprocess \
+                 execution is unavailable. Rebuild with `--features nemo/pkg-process` \
+                 (or `nemo-extension/pkg-process`)."
+            );
         }
     }
 
@@ -1365,5 +1396,110 @@ mod tests {
             ctx.get_component_property("stats_samples", "text"),
             Some(PluginValue::String("Samples: 0".to_string()))
         );
+    }
+
+    #[cfg(feature = "pkg-env")]
+    #[cfg(feature = "pkg-process")]
+    #[cfg(feature = "pkg-sci")]
+    #[test]
+    fn test_dev_dashboard_refresh_all_runtime() {
+        // End-to-end guard for the exact failure the user hit: `refresh_all`
+        // fans out to refresh_env (rhai-env `env`), refresh_sys (rhai-process
+        // `cmd`), refresh_clock (rhai-chrono), and update_stats (rhai-sci).
+        // With all packages registered (system + science features) every
+        // function must resolve — no "Function not found: env".
+        let script = include_str!("../../../examples/dev-dashboard/scripts/handlers.rhai");
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                system: true,
+                science: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut engine = RhaiEngine::new(config);
+        let ctx = Arc::new(MockContext::default());
+        engine.register_context(ctx.clone());
+        engine.load_script("handlers", script).unwrap();
+
+        engine
+            .call::<()>(
+                "handlers",
+                "refresh_all",
+                ("btn".to_string(), String::new()),
+            )
+            .expect("refresh_all should run with all packages registered");
+
+        // refresh_clock (chrono) and refresh_env (env) wrote their panels, and
+        // update_stats (sci) ran against the empty sample set.
+        assert!(
+            ctx.get_component_property("clock", "text").is_some(),
+            "refresh_clock should set the clock"
+        );
+        assert!(
+            ctx.get_component_property("env_path", "text").is_some(),
+            "refresh_env should set env_path"
+        );
+        // refresh_sys (rhai-process) must populate the System Info panel with a
+        // real `uname` result, not stay at the placeholder or an error string.
+        match ctx.get_component_property("sys_os", "text") {
+            Some(PluginValue::String(s)) => {
+                assert!(
+                    !s.is_empty() && !s.starts_with("uname failed"),
+                    "sys_os should hold a real OS name, got {s:?}"
+                );
+            }
+            other => panic!("sys_os not set by refresh_sys: {other:?}"),
+        }
+        assert_eq!(
+            ctx.get_component_property("stats_samples", "text"),
+            Some(PluginValue::String("Samples: 0".to_string()))
+        );
+    }
+
+    #[cfg(feature = "pkg-env")]
+    #[cfg(not(feature = "pkg-process"))]
+    #[test]
+    fn test_dev_dashboard_refresh_all_degrades_without_process() {
+        // With rhai-process NOT compiled in (the default build), `cmd` does not
+        // exist. refresh_sys wraps each command in try/catch, so refresh_all
+        // must still complete: clock/env/stats update, and the System Info panel
+        // shows an "unavailable" message rather than aborting the handler.
+        let script = include_str!("../../../examples/dev-dashboard/scripts/handlers.rhai");
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                system: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut engine = RhaiEngine::new(config);
+        let ctx = Arc::new(MockContext::default());
+        engine.register_context(ctx.clone());
+        engine.load_script("handlers", script).unwrap();
+
+        engine
+            .call::<()>(
+                "handlers",
+                "refresh_all",
+                ("btn".to_string(), String::new()),
+            )
+            .expect("refresh_all must not abort when pkg-process is absent");
+
+        // Other panels still updated.
+        assert!(ctx.get_component_property("clock", "text").is_some());
+        assert!(ctx.get_component_property("env_path", "text").is_some());
+        assert_eq!(
+            ctx.get_component_property("stats_samples", "text"),
+            Some(PluginValue::String("Samples: 0".to_string()))
+        );
+        // System Info degraded gracefully.
+        match ctx.get_component_property("sys_os", "text") {
+            Some(PluginValue::String(s)) => assert!(
+                s.contains("unavailable"),
+                "sys_os should show an unavailable message, got {s:?}"
+            ),
+            other => panic!("sys_os not set: {other:?}"),
+        }
     }
 }

@@ -81,37 +81,62 @@ fn refresh_env() {
 // ── System Info (rhai-process) ───────────────────────────────────────────────
 
 fn refresh_sys() {
+    // rhai-process (`cmd`) is opt-in — the `pkg-process` cargo feature is NOT in
+    // the default build, so `cmd` may not exist. Each command is wrapped in
+    // try/catch so a missing package (or a failing command) shows a clear
+    // message in its field instead of throwing and aborting the whole handler
+    // (refresh_all / ensure_init also call this).
+
     // OS name (e.g. "Darwin" or "Linux")
-    let os_result = cmd(["uname", "-s"]).build().run();
-    if os_result.success {
-        set_component_text("sys_os", trim(os_result.stdout));
-    } else {
-        set_component_text("sys_os", "uname failed: " + os_result.stderr);
+    try {
+        let os_result = cmd(["uname", "-s"]).build().run();
+        if os_result.success {
+            set_component_text("sys_os", trim(os_result.stdout));
+        } else {
+            set_component_text("sys_os", "uname failed: " + os_result.stderr);
+        }
+    } catch (err) {
+        set_component_text("sys_os", "unavailable — rebuild with --features pkg-process");
     }
 
     // Hostname
-    let host_result = cmd(["hostname"]).build().run();
-    if host_result.success {
-        set_component_text("sys_host", trim(host_result.stdout));
-    } else {
-        set_component_text("sys_host", "hostname failed");
+    try {
+        let host_result = cmd(["hostname"]).build().run();
+        if host_result.success {
+            set_component_text("sys_host", trim(host_result.stdout));
+        } else {
+            set_component_text("sys_host", "hostname failed");
+        }
+    } catch (err) {
+        set_component_text("sys_host", "unavailable (pkg-process)");
     }
 
-    // Disk usage (head -3 of df -h)
-    let df_result = cmd(["df", "-h"]).build().run();
-    if df_result.success {
-        let lines = split_lines(df_result.stdout);
-        let summary = "";
-        let i = 0;
-        while i < min(3, len(lines)) {
-            if i > 0 { summary += " | "; }
-            summary += trim(lines[i]);
-            i += 1;
+    // Disk usage (head -3 of df -h). The summary building lives in a helper so
+    // this block stays shallow — deep nesting inside a try block can exceed
+    // Rhai's expression-complexity limit.
+    try {
+        let df_result = cmd(["df", "-h"]).build().run();
+        if df_result.success {
+            set_component_text("sys_disk", disk_summary(df_result.stdout));
+        } else {
+            set_component_text("sys_disk", "df failed");
         }
-        set_component_text("sys_disk", summary);
-    } else {
-        set_component_text("sys_disk", "df failed");
+    } catch (err) {
+        set_component_text("sys_disk", "unavailable (pkg-process)");
     }
+}
+
+// Join the first 3 lines of `df -h` output into a single " | "-separated line.
+fn disk_summary(output) {
+    let lines = split_lines(output);
+    let summary = "";
+    let i = 0;
+    while i < min(3, len(lines)) {
+        if i > 0 { summary += " | "; }
+        summary += trim(lines[i]);
+        i += 1;
+    }
+    summary
 }
 
 // ── HTTP Fetch (built-in http_get) ───────────────────────────────────────────
