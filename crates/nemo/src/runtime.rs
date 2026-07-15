@@ -301,13 +301,13 @@ impl NemoRuntime {
                 }
             }
             if features.file_io || features.network || features.system || features.science {
+                info!("Applying Rhai script features: file_io={}, network={}, system={}, science={}",
+                    features.file_io, features.network, features.system, features.science);
                 let mut ext = self
                     .extension_manager
                     .write()
                     .expect("extension_manager lock poisoned");
                 ext.apply_rhai_features(features);
-                info!("Applied Rhai script features: file_io={}, network={}, system={}, science={}",
-                    features.file_io, features.network, features.system, features.science);
             }
 
             // Handle scripts.path for directory-based loading
