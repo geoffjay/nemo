@@ -76,6 +76,7 @@ to touch the KB on every edit.
 * [Declarative children over JSON-string properties](plans/declarative-children-migration.md) - migrate collection components from JSON-string attributes to nested child elements, piloted on accordion.
 * [Headless renderer and screenshots](plans/headless-screenshots.md) - spike findings for headless GPUI rendering under Xvfb+lavapipe; capture path needs one more iteration.
 * [Devtools inspector](plans/devtools-inspector.md) - what a nemo-devtools crate would take; the introspection surfaces already exist, in-process panel recommended over an external client.
+* [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
 
 ## References
 
