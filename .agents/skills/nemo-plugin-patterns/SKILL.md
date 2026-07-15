@@ -195,6 +195,8 @@ fn on_input_change(component_id, event_data) {
 
 **Data:** `get_data(path)`, `set_data(path, value)`, `get_config(path)`
 **Components:** `get_component_property(id, prop)`, `set_component_property(id, prop, value)`, `get_component_label(id)`, `get_component_text(id)`, `set_component_text(id, text)`, `set_component_label(id, label)`
+**HTTP:** `http_get(url)`, `http_post(url, body)`, `http_put(url, body)`, `http_delete(url)` — synchronous, blocking; return `{status, body, ok}` on success or `{error}` on failure. Intended for UI event handlers (e.g. `on-click`), not async data-source contexts.
+**JSON:** `json_parse(str)` → parsed value, `json_stringify(value)` → string
 **Math:** `abs`, `min`, `max`, `clamp`, `floor`, `ceil`, `round`, `sqrt`, `pow`
 **Strings:** `trim`, `to_upper`, `to_lower`, `starts_with`, `ends_with`, `contains`, `replace`
 **Type conversion:** `parse_float`, `parse_int`, `to_string`, `to_int`, `to_float`
@@ -205,7 +207,7 @@ fn on_input_change(component_id, event_data) {
 - Max string size: 64KB
 - Max array/map size: 10,000
 - Max call stack depth: 64
-- No `eval`, no file I/O, no network access
+- No `eval`, no file I/O. Network access IS available via the `http_*` functions above (file/system access remain gated off by default).
 
 ## Plugin Capabilities
 

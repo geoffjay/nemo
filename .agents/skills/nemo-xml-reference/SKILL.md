@@ -20,7 +20,7 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
   </app>
 
   <variable name="key" type="string" default="value" />
-  <script src="./scripts" />
+  <script src="./scripts" on-load="init_handler" />
   <template name="card"> ... </template>
 
   <data>
@@ -43,6 +43,8 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
 | `kanagawa` | Warm, muted palette inspired by Japanese art |
 | `tokyo-night` | Cool, modern dark theme |
 | `nord` | Arctic-inspired pastel scheme |
+| `catppuccin` | Soft pastel theme (Latte light / Frappé / Macchiato / Mocha) |
+| `gruvbox` | Retro warm palette with high contrast |
 
 Modes: `dark`, `light`
 
@@ -100,6 +102,12 @@ Reference Rhai function names:
 <input id="search" on-change="handle_search_change" />
 ```
 
+The `<script>` element accepts an `on-load` attribute naming a Rhai function run once at startup (the only lifecycle hook nemo exposes):
+
+```xml
+<script src="./scripts" on-load="init_handler" />
+```
+
 ## Components — Layout
 
 ### stack
@@ -115,7 +123,18 @@ Reference Rhai function names:
 | `padding` | integer | — | Inner padding (px) |
 | `scroll` | boolean | `false` | Enable scrolling |
 | `width/height` | integer | — | Fixed dimensions |
+| `max-width/max-height` | integer | — | Maximum dimensions |
 | `flex` | float | — | Flex grow factor |
+| `align` | string | cross-axis | `start`/`center`/`end`/`stretch` (default: `center` for horizontal, `stretch` for vertical) |
+| `justify` | string | main-axis | `start`/`center`/`end`/`between`/`around` |
+
+### dock
+```xml
+<dock position="center">
+  <!-- dockable panels -->
+</dock>
+```
+Layout container with dockable panels. `position` defaults to `"center"`.
 
 ### panel
 ```xml
@@ -126,11 +145,12 @@ Reference Rhai function names:
 
 ### tabs
 ```xml
-<tabs active-tab="0">
+<tabs active-tab="0" variant="segmented">
   <panel title="Tab 1"> ... </panel>
   <panel title="Tab 2"> ... </panel>
 </tabs>
 ```
+`active-tab` is the 0-based index of the initially selected tab. `variant` (optional) selects the tab style.
 
 ## Components — Display
 
@@ -203,6 +223,15 @@ Required: `message`. Variants: `info`, `warning`, `danger`, `success`
 </collapsible>
 ```
 
+### dropdown-button
+```xml
+<dropdown-button id="actions" label="Action" variant="primary">
+  <menu-item label="Edit" on-click="handle_edit" />
+  <menu-item label="Delete" on-click="handle_delete" />
+</dropdown-button>
+```
+A button that opens a dropdown menu built from `menu-item` children. `label` defaults to `"Action"`.
+
 ## Components — Input
 
 ### button
@@ -239,6 +268,13 @@ Required: `label`. Variants: `primary`, `secondary`, `danger`, `ghost`, `warning
 ### select
 ```xml
 <select id="color" options='["Red","Green","Blue"]' value="Red" on-change="handle_select" />
+```
+Options may also be supplied declaratively as `option` children (each with `value` and `label`), instead of the `options` JSON attribute:
+```xml
+<select id="color" value="red" on-change="handle_select">
+  <option value="red" label="Red" />
+  <option value="green" label="Green" />
+</select>
 ```
 
 ### radio
@@ -278,6 +314,13 @@ IMPORTANT: Must have a parent with definite height (the `height` property sets t
 ```xml
 <list id="items">
   <binding source="data.items" target="items" />
+</list>
+```
+A list may also be built from `list-item` children, whose own children are the row content:
+```xml
+<list id="items">
+  <list-item><label text="Row one" /></list-item>
+  <list-item><label text="Row two" /></list-item>
 </list>
 ```
 
