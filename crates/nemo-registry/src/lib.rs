@@ -7,6 +7,7 @@ pub mod builtins;
 pub mod descriptor;
 pub mod error;
 pub mod registry;
+pub mod schema_surface;
 
 pub use builtins::{
     register_all_builtins, register_builtin_actions, register_builtin_components,
@@ -21,6 +22,10 @@ pub use descriptor::{
 };
 pub use error::RegistrationError;
 pub use registry::{ComponentRegistry, EntityType, RegistryChange};
+pub use schema_surface::{
+    attribute_families, structural_elements, universal_style_attributes, AttrDef, AttrFamily,
+    StructuralElement,
+};
 
 #[cfg(test)]
 mod tests {

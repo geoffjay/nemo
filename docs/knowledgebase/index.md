@@ -82,3 +82,4 @@ to touch the KB on every edit.
 ## References
 
 * [OKF spec](references/okf-spec.md) - pointer to the OKF v0.1 specification.
+* [Configuration schema export (`nemo schema`)](references/config-schema-export.md) - the nemo-native JSON schema generated from the compiled registries; its shape, determinism, and Phase-1 caveats.

@@ -23,7 +23,10 @@ Nemo currently supports:
   [Extensions](../concepts/extensions.md).
 * Built-in themes, workspace shell (header/footer/main view), and a settings UI.
 * CLI subcommands: `nemo new` (scaffold), `nemo dev` (hot-reload),
-  `nemo validate` (config validation with `--strict` lints).
+  `nemo validate` (config validation with `--strict` lints), `nemo schema`
+  (export the config schema as nemo-native JSON, generated from the compiled
+  registries so it's always current). See
+  [config schema export](../references/config-schema-export.md).
 * Cross-platform packaging (`.tar.gz`/`.zip`/`.app`/`.dmg`/`.deb`/`.rpm` +
   checksums) and distribution (`install.sh`, Homebrew tap auto-push).
 
@@ -63,6 +66,23 @@ completed items pruned):
 | VS Code extension | Editor integration | Medium | P2 |
 | Built-in `<chat>` component | AI in apps | High | P3 |
 | Authoring assistant application | Full guided flow | High | P3 |
+
+## Configuration schema (feedstock for LSP / gallery / LLM)
+
+**Phase 1 landed** (`nemo schema`): a nemo-native JSON export generated from the
+compiled registries + the canonical out-of-registry surface
+(`nemo-registry::schema_surface`: universal style attributes, `on-*`/`bind-*`
+families, structural elements). See
+[config schema export](../references/config-schema-export.md). This is the shared
+feedstock the items below assume ("auto-generated from `nemo-registry`").
+
+**Phase 2 remains**: enrich the *content* so the schema answers "what values are
+allowed". Derive per-property schema from `#[derive(NemoComponent)]` (anti-drift,
+generated from the struct fields); add `#[property(one_of = [...])]` enum
+annotations (`align`, `variant`, `size`, `direction`, …) and numeric ranges;
+populate `events`/`bindableProperties`/`slots`; and add a component containment
+table (currently implicit in the `app.rs` render match arms). Optional later: an
+XSD projection for third-party XML-editor completion.
 
 ## Component storybook
 

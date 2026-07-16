@@ -160,24 +160,13 @@ fn is_structural_key(key: &str) -> bool {
 /// component wrapper, regardless of component type. These are not enumerated
 /// in individual builtin schemas, so the `unknown-attribute` lint must skip
 /// them to avoid false positives.
+///
+/// The canonical list lives in `nemo_registry::schema_surface` so the linter and
+/// the `nemo schema` exporter share one source and cannot drift.
 fn is_universal_style(key: &str) -> bool {
-    matches!(
-        key,
-        // Sizing
-        "width" | "height" | "min_width" | "min_height" | "flex"
-        // Margin
-        | "margin" | "margin_x" | "margin_y"
-        | "margin_left" | "margin_right" | "margin_top" | "margin_bottom"
-        // Padding
-        | "padding" | "padding_x" | "padding_y"
-        | "padding_left" | "padding_right" | "padding_top" | "padding_bottom"
-        // Border
-        | "border" | "border_x" | "border_y"
-        | "border_left" | "border_right" | "border_top" | "border_bottom"
-        | "border_color"
-        // Decoration
-        | "shadow" | "rounded" | "background"
-    )
+    nemo_registry::universal_style_attributes()
+        .iter()
+        .any(|a| a.name == key)
 }
 
 /// Component-level lints, only run under `--strict`.
@@ -456,6 +445,21 @@ mod tests {
         assert!(
             !codes(&diags).contains(&"unknown-attribute"),
             "universal style attributes should not be flagged: {diags:?}"
+        );
+    }
+
+    #[test]
+    fn universal_style_max_and_scroll_not_flagged() {
+        // Regression: is_universal_style previously omitted max-width/max-height/
+        // scroll (drift from apply_layout_styles), so --strict falsely flagged
+        // them. They are now single-sourced from schema_surface.
+        let value = parse(
+            r#"<nemo><layout type="stack"><stack id="s" max-width="400" max-height="300" scroll="true" /></layout></nemo>"#,
+        );
+        let diags = lint_config(&value, &builtins());
+        assert!(
+            !codes(&diags).contains(&"unknown-attribute"),
+            "max-width/max-height/scroll should not be flagged: {diags:?}"
         );
     }
 

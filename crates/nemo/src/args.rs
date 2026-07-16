@@ -63,6 +63,8 @@ pub enum Command {
     Dev(DevArgs),
     /// Validate a configuration file and exit.
     Validate(ValidateArgs),
+    /// Export the configuration schema for this build and exit.
+    Schema(SchemaArgs),
 }
 
 /// Arguments for `nemo new`.
@@ -126,6 +128,29 @@ pub enum ValidateFormat {
     /// Human-readable diagnostics.
     Human,
     /// Machine-readable JSON diagnostics.
+    Json,
+}
+
+/// Arguments for `nemo schema`.
+#[derive(clap::Args, Debug)]
+pub struct SchemaArgs {
+    /// Write the schema to this file instead of stdout.
+    #[arg(short, long)]
+    pub output: Option<PathBuf>,
+
+    /// Emit compact (single-line) JSON instead of pretty-printed.
+    #[arg(long)]
+    pub compact: bool,
+
+    /// Output format for the schema.
+    #[arg(long, value_enum, default_value = "json")]
+    pub format: SchemaFormat,
+}
+
+/// Output format for `nemo schema`.
+#[derive(clap::ValueEnum, Clone, Debug, PartialEq, Eq)]
+pub enum SchemaFormat {
+    /// nemo-native JSON schema.
     Json,
 }
 

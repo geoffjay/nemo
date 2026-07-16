@@ -62,6 +62,17 @@ Custom state attributes set by Rhai handlers via `set_component_property` are
 not enumerated in schemas and will produce a warning (by design — they are
 indistinguishable from typos at parse time).
 
+The universal-attribute allowlist and the structural top-level elements are
+single-sourced in `nemo_registry::schema_surface` (`universal_style_attributes`,
+`attribute_families`, `structural_elements`), consumed by both the linter and the
+`nemo schema` exporter so they cannot drift. (This replaced a hand-duplicated
+list in `validate.rs` that had gone stale.)
+
+`nemo schema` exports the whole config surface — every component/data-source/
+transform/action schema plus the universal/structural surface — as nemo-native
+JSON generated from the compiled registries, so it's always current with the
+binary. See [config schema export](../references/config-schema-export.md).
+
 # Config → components → layout
 
 1. **Registry lookup** — the `ComponentRegistry` maps type names to

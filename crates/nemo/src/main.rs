@@ -67,6 +67,7 @@ fn main() -> Result<()> {
         Some(Command::New(new_args)) => commands::new::run(new_args),
         Some(Command::Dev(dev_args)) => commands::dev::run(args, dev_args),
         Some(Command::Validate(validate_args)) => commands::validate::run(validate_args),
+        Some(Command::Schema(schema_args)) => commands::schema::run(schema_args),
         None => {
             let watch = args
                 .watch
