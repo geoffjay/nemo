@@ -4673,7 +4673,7 @@ dependencies = [
 
 [[package]]
 name = "nemo"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4708,7 +4708,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-config"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "miette",
@@ -4724,7 +4724,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-data"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "async-nats",
  "async-trait",
@@ -4748,7 +4748,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-events"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -4762,7 +4762,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-extension"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "libloading",
@@ -4790,7 +4790,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-integration"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "async-nats",
  "async-trait",
@@ -4811,7 +4811,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-layout"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "nemo-config",
@@ -4825,7 +4825,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-macros"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4834,7 +4834,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-plugin"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "nemo-plugin-api",
@@ -4842,7 +4842,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-plugin-api"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "semver",
@@ -4853,7 +4853,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-registry"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "nemo-config",
@@ -4866,7 +4866,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-wasm"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "indexmap",
  "nemo-plugin-api",
@@ -4880,7 +4880,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-wasm-guest"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "wit-bindgen 0.36.0",
 ]
