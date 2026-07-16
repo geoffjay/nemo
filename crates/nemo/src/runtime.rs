@@ -470,6 +470,11 @@ impl NemoRuntime {
         &self.registry
     }
 
+    /// Returns the path to the loaded configuration file (the project's `app.xml`).
+    pub fn config_path(&self) -> &Path {
+        &self.config_path
+    }
+
     /// Gets a configuration value by path.
     pub fn get_config(&self, path: &str) -> Option<Value> {
         let config = self.config.read().expect("config lock poisoned");

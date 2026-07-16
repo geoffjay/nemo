@@ -220,6 +220,22 @@ pub fn get_theme_names() -> Vec<String> {
     names
 }
 
+/// Get a sorted, de-duplicated list of theme *set* display names.
+///
+/// Returns the original-cased set names (e.g. "Kanagawa", "Tokyo Night") suitable
+/// for display in a selector. `apply_configured_theme` matches set names
+/// case-insensitively, so these values can be passed to it directly.
+pub fn get_theme_set_names() -> Vec<String> {
+    let mut names: Vec<String> = THEME_SOURCES
+        .iter()
+        .filter_map(|source| serde_json::from_str::<ThemeSet>(source).ok())
+        .map(|set| set.name.to_string())
+        .collect();
+    names.sort();
+    names.dedup();
+    names
+}
+
 /// Apply a theme by exact variant name
 #[allow(dead_code)]
 pub fn apply_theme(name: &str, cx: &mut App) {

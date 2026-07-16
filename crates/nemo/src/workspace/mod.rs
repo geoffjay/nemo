@@ -20,6 +20,7 @@ pub mod main_view;
 pub mod project_loader;
 pub mod settings;
 pub mod utils;
+pub mod xml_edit;
 
 use actions::{
     CloseProject, CloseSettings, OpenProject, OpenSettings, QuitApp, ReloadConfig,

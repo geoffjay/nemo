@@ -4,8 +4,10 @@
 //! Shows general application settings and plugin-contributed settings sections.
 
 use gpui::*;
+use gpui_component::button::{Button as GpuiButton, DropdownButton as GpuiDropdownButton};
 use gpui_component::input::{Input as GpuiInput, InputEvent, InputState};
 use gpui_component::label::Label;
+use gpui_component::menu::PopupMenuItem;
 use gpui_component::slider::{Slider as GpuiSlider, SliderState};
 use gpui_component::switch::Switch as GpuiSwitch;
 use gpui_component::v_flex;
@@ -13,10 +15,18 @@ use gpui_component::ActiveTheme;
 use nemo_extension::SettingsPageInfo;
 use nemo_plugin_api::PluginValue;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use crate::config::NemoConfig;
 use crate::runtime::NemoRuntime;
+use crate::theme;
+use crate::workspace::xml_edit;
+
+/// Callback invoked when a settings dropdown item is chosen. Receives the
+/// selected option string plus the GPUI window/app context so it can apply and
+/// persist the change.
+type OnSelect = Rc<dyn Fn(String, &mut Window, &mut App)>;
 
 /// Event emitted when the user wants to close the settings view.
 pub struct CloseSettingsEvent;
@@ -26,19 +36,28 @@ impl EventEmitter<CloseSettingsEvent> for SettingsView {}
 /// Which settings page is currently selected.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SettingsPage {
-    General,
+    /// Global settings, persisted to `~/.config/nemo/config.toml`.
+    Global,
+    /// Project settings, persisted to the loaded project's `app.xml`.
+    Project,
     Plugin(usize),
 }
 
 /// The settings view entity.
 pub struct SettingsView {
     runtime: Arc<NemoRuntime>,
+    nemo_config: Arc<Mutex<NemoConfig>>,
     selected_page: SettingsPage,
     plugin_pages: Vec<SettingsPageInfo>,
     bool_states: HashMap<String, Arc<Mutex<bool>>>,
     input_states: HashMap<String, Entity<InputState>>,
     slider_states: HashMap<String, Entity<SliderState>>,
     font_input_state: Entity<InputState>,
+    /// Last theme selected on the Project page, cached so the dropdown reflects
+    /// the choice before the (read-only) runtime config is reloaded.
+    project_theme: Option<String>,
+    /// Last color mode selected on the Project page (see `project_theme`).
+    project_mode: Option<String>,
 }
 
 impl SettingsView {
@@ -106,12 +125,15 @@ impl SettingsView {
 
         Self {
             runtime,
-            selected_page: SettingsPage::General,
+            nemo_config,
+            selected_page: SettingsPage::Global,
             plugin_pages,
             bool_states: HashMap::new(),
             input_states: HashMap::new(),
             slider_states: HashMap::new(),
             font_input_state,
+            project_theme: None,
+            project_mode: None,
         }
     }
 
@@ -181,31 +203,37 @@ impl SettingsView {
             .border_color(border_color)
             .py_2();
 
-        // General item
-        let is_selected = self.selected_page == SettingsPage::General;
-        let general_bg = if is_selected {
-            selected_bg
-        } else {
-            transparent_black()
-        };
-        sidebar = sidebar.child({
-            let mut item = div()
-                .id("settings-general")
-                .px_3()
-                .py_1p5()
-                .mx_2()
-                .rounded_md()
-                .cursor_pointer()
-                .bg(general_bg)
-                .child(Label::new("General").text_size(px(14.)))
-                .on_click(cx.listener(|this, _, _window, cx| {
-                    this.select_page(SettingsPage::General, cx);
-                }));
-            if !is_selected {
-                item = item.hover(|s| s.bg(hover_bg));
-            }
-            item
-        });
+        // Global + Project items
+        for (page, id, label) in [
+            (SettingsPage::Global, "settings-global", "Global"),
+            (SettingsPage::Project, "settings-project", "Project"),
+        ] {
+            let is_selected = self.selected_page == page;
+            let item_bg = if is_selected {
+                selected_bg
+            } else {
+                transparent_black()
+            };
+            sidebar = sidebar.child({
+                let page = page.clone();
+                let mut item = div()
+                    .id(id)
+                    .px_3()
+                    .py_1p5()
+                    .mx_2()
+                    .rounded_md()
+                    .cursor_pointer()
+                    .bg(item_bg)
+                    .child(Label::new(label).text_size(px(14.)))
+                    .on_click(cx.listener(move |this, _, _window, cx| {
+                        this.select_page(page.clone(), cx);
+                    }));
+                if !is_selected {
+                    item = item.hover(|s| s.bg(hover_bg));
+                }
+                item
+            });
+        }
 
         // Plugin items
         for (idx, page_info) in self.plugin_pages.iter().enumerate() {
@@ -242,9 +270,171 @@ impl SettingsView {
         sidebar
     }
 
-    /// Renders the General settings page.
-    fn render_general_page(&self, cx: &App) -> Div {
+    /// Build a dropdown selector: a button showing `current_label` that opens a
+    /// menu of `options`, invoking `on_select(option)` when an item is clicked.
+    fn selector(
+        id: String,
+        current_label: String,
+        options: Vec<String>,
+        on_select: OnSelect,
+    ) -> impl IntoElement {
+        let button = GpuiButton::new(SharedString::from(format!("{id}-btn")))
+            .label(SharedString::from(current_label));
+        GpuiDropdownButton::new(SharedString::from(id))
+            .button(button)
+            .outline()
+            .dropdown_menu(move |menu, _window, _cx| {
+                let mut m = menu;
+                for opt in &options {
+                    let on_select = on_select.clone();
+                    let val = opt.clone();
+                    m = m.item(
+                        PopupMenuItem::new(SharedString::from(opt.clone()))
+                            .on_click(move |_ev, window, cx| on_select(val.clone(), window, cx)),
+                    );
+                }
+                m
+            })
+    }
+
+    /// A labelled settings row with an interactive control on the right.
+    fn setting_field(label: &str, control: impl IntoElement) -> Div {
+        div()
+            .flex()
+            .flex_row()
+            .items_center()
+            .justify_between()
+            .py_1p5()
+            .child(Label::new(label.to_string()).text_size(px(14.)))
+            .child(control)
+    }
+
+    /// Renders the Global settings page (persists to `~/.config/nemo/config.toml`).
+    fn render_global_page(&self, cx: &mut Context<Self>) -> Div {
         let muted = cx.theme().colors.muted_foreground;
+        let entity = cx.entity();
+
+        let (cur_theme, cur_mode) = {
+            let cfg = self.nemo_config.lock().expect("nemo_config lock poisoned");
+            (
+                cfg.app.theme_name.clone(),
+                cfg.app
+                    .theme_mode
+                    .clone()
+                    .unwrap_or_else(|| "system".to_string()),
+            )
+        };
+
+        let theme_options = theme::get_theme_set_names();
+        let on_theme: OnSelect = {
+            let cfg = Arc::clone(&self.nemo_config);
+            let entity = entity.clone();
+            Rc::new(move |sel, window, cx| {
+                let name_lc = sel.to_lowercase();
+                let mode = {
+                    let c = cfg.lock().expect("nemo_config lock poisoned");
+                    c.app
+                        .theme_mode
+                        .clone()
+                        .unwrap_or_else(|| "system".to_string())
+                };
+                theme::apply_configured_theme(&name_lc, &mode, None, cx);
+                if let Ok(mut c) = cfg.lock() {
+                    c.app.theme_name = name_lc;
+                    let _ = c.save();
+                }
+                entity.update(cx, |_this, cx| cx.notify());
+                window.refresh();
+            })
+        };
+
+        let mode_options = vec![
+            "dark".to_string(),
+            "light".to_string(),
+            "system".to_string(),
+        ];
+        let on_mode: OnSelect = {
+            let cfg = Arc::clone(&self.nemo_config);
+            let entity = entity.clone();
+            Rc::new(move |sel, window, cx| {
+                let name = {
+                    let c = cfg.lock().expect("nemo_config lock poisoned");
+                    c.app.theme_name.clone()
+                };
+                if name != "default" {
+                    theme::apply_configured_theme(&name, &sel, None, cx);
+                }
+                if let Ok(mut c) = cfg.lock() {
+                    c.app.theme_mode = Some(sel);
+                    let _ = c.save();
+                }
+                entity.update(cx, |_this, cx| cx.notify());
+                window.refresh();
+            })
+        };
+
+        v_flex()
+            .gap_4()
+            .child(
+                Label::new("Global Settings")
+                    .text_size(px(18.))
+                    .font_weight(FontWeight::SEMIBOLD),
+            )
+            .child(
+                Label::new("Applies to every project. Stored in ~/.config/nemo/config.toml.")
+                    .text_size(px(12.))
+                    .text_color(muted),
+            )
+            .child(
+                v_flex()
+                    .gap_3()
+                    .child(Self::setting_field(
+                        "Theme",
+                        Self::selector(
+                            "global-theme".to_string(),
+                            display_set_name(&cur_theme),
+                            theme_options,
+                            on_theme,
+                        ),
+                    ))
+                    .child(Self::setting_field(
+                        "Color Mode",
+                        Self::selector("global-mode".to_string(), cur_mode, mode_options, on_mode),
+                    ))
+                    .child(
+                        v_flex()
+                            .gap_1()
+                            .child(Label::new("Font Family").text_size(px(14.)))
+                            .child(GpuiInput::new(&self.font_input_state)),
+                    )
+                    .child(settings_row("Version", env!("CARGO_PKG_VERSION"), muted)),
+            )
+    }
+
+    /// Renders the Project settings page (persists to the loaded `app.xml`).
+    fn render_project_page(&self, cx: &mut Context<Self>) -> Div {
+        let muted = cx.theme().colors.muted_foreground;
+        let entity = cx.entity();
+        let path = self.runtime.config_path().to_path_buf();
+
+        let cur_theme = self
+            .project_theme
+            .clone()
+            .or_else(|| {
+                self.runtime
+                    .get_config("app.theme.name")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            })
+            .unwrap_or_else(|| "default".to_string());
+        let cur_mode = self
+            .project_mode
+            .clone()
+            .or_else(|| {
+                self.runtime
+                    .get_config("app.theme.mode")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            })
+            .unwrap_or_else(|| "dark".to_string());
 
         let project_dir = self
             .runtime
@@ -252,38 +442,97 @@ impl SettingsView {
             .and_then(|v| v.as_str().map(|s| s.to_string()))
             .unwrap_or_else(|| "(not set)".to_string());
 
-        let theme_name = self
-            .runtime
-            .get_config("app.theme.name")
-            .and_then(|v| v.as_str().map(|s| s.to_string()))
-            .unwrap_or_else(|| "default".to_string());
+        let theme_options = theme::get_theme_set_names();
+        let on_theme: OnSelect = {
+            let path = path.clone();
+            let runtime = Arc::clone(&self.runtime);
+            let entity = entity.clone();
+            Rc::new(move |sel, window, cx| {
+                let name_lc = sel.to_lowercase();
+                let mode = entity
+                    .read(cx)
+                    .project_mode
+                    .clone()
+                    .or_else(|| {
+                        runtime
+                            .get_config("app.theme.mode")
+                            .and_then(|v| v.as_str().map(|s| s.to_string()))
+                    })
+                    .unwrap_or_else(|| "dark".to_string());
+                theme::apply_configured_theme(&name_lc, &mode, None, cx);
+                if let Err(e) = xml_edit::set_app_theme(&path, &name_lc, &mode) {
+                    tracing::error!("Failed to write theme to {}: {}", path.display(), e);
+                }
+                entity.update(cx, |this, cx| {
+                    this.project_theme = Some(name_lc);
+                    cx.notify();
+                });
+                window.refresh();
+            })
+        };
 
-        let theme_mode = self
-            .runtime
-            .get_config("app.theme.mode")
-            .and_then(|v| v.as_str().map(|s| s.to_string()))
-            .unwrap_or_else(|| "dark".to_string());
+        let mode_options = vec![
+            "dark".to_string(),
+            "light".to_string(),
+            "system".to_string(),
+        ];
+        let on_mode: OnSelect = {
+            let path = path.clone();
+            let runtime = Arc::clone(&self.runtime);
+            let entity = entity.clone();
+            Rc::new(move |sel, window, cx| {
+                let name = entity.read(cx).project_theme.clone().or_else(|| {
+                    runtime
+                        .get_config("app.theme.name")
+                        .and_then(|v| v.as_str().map(|s| s.to_string()))
+                });
+                if let Some(name) = name {
+                    let name_lc = name.to_lowercase();
+                    theme::apply_configured_theme(&name_lc, &sel, None, cx);
+                    if let Err(e) = xml_edit::set_app_theme(&path, &name_lc, &sel) {
+                        tracing::error!("Failed to write theme to {}: {}", path.display(), e);
+                    }
+                }
+                entity.update(cx, |this, cx| {
+                    this.project_mode = Some(sel);
+                    cx.notify();
+                });
+                window.refresh();
+            })
+        };
 
         v_flex()
             .gap_4()
             .child(
-                Label::new("General Settings")
+                Label::new("Project Settings")
                     .text_size(px(18.))
                     .font_weight(FontWeight::SEMIBOLD),
             )
             .child(
+                Label::new(format!(
+                    "Overrides global settings. Stored in {}.",
+                    path.display()
+                ))
+                .text_size(px(12.))
+                .text_color(muted),
+            )
+            .child(
                 v_flex()
                     .gap_3()
-                    .child(settings_row("Theme", &theme_name, muted))
-                    .child(settings_row("Color Mode", &theme_mode, muted))
-                    .child(
-                        v_flex()
-                            .gap_1()
-                            .child(Label::new("Font Family").text_size(px(14.)))
-                            .child(GpuiInput::new(&self.font_input_state)),
-                    )
-                    .child(settings_row("Project Directory", &project_dir, muted))
-                    .child(settings_row("Version", env!("CARGO_PKG_VERSION"), muted)),
+                    .child(Self::setting_field(
+                        "Theme",
+                        Self::selector(
+                            "project-theme".to_string(),
+                            display_set_name(&cur_theme),
+                            theme_options,
+                            on_theme,
+                        ),
+                    ))
+                    .child(Self::setting_field(
+                        "Color Mode",
+                        Self::selector("project-mode".to_string(), cur_mode, mode_options, on_mode),
+                    ))
+                    .child(settings_row("Project Directory", &project_dir, muted)),
             )
     }
 
@@ -513,7 +762,19 @@ fn pv_f32(obj: &indexmap::IndexMap<String, PluginValue>, key: &str, default: f32
         .unwrap_or(default)
 }
 
-/// Renders a simple key-value row for the general settings page.
+/// Map a stored theme value (e.g. "kanagawa" or "default") to a display label,
+/// matching the canonical set names case-insensitively.
+fn display_set_name(stored: &str) -> String {
+    if stored.eq_ignore_ascii_case("default") {
+        return "Default".to_string();
+    }
+    theme::get_theme_set_names()
+        .into_iter()
+        .find(|n| n.eq_ignore_ascii_case(stored))
+        .unwrap_or_else(|| stored.to_string())
+}
+
+/// Renders a simple key-value row for the settings pages.
 fn settings_row(label: &str, value: &str, muted: Hsla) -> Div {
     div()
         .flex()
@@ -537,7 +798,8 @@ impl Render for SettingsView {
         let sidebar = self.render_sidebar(window, cx);
 
         let content = match &self.selected_page {
-            SettingsPage::General => self.render_general_page(cx).into_any_element(),
+            SettingsPage::Global => self.render_global_page(cx).into_any_element(),
+            SettingsPage::Project => self.render_project_page(cx).into_any_element(),
             SettingsPage::Plugin(idx) => {
                 let idx = *idx;
                 self.render_plugin_page(idx, window, cx)

@@ -159,7 +159,8 @@ pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
 
         // Apply theme from TOML config (base app settings)
         if nemo_config.app.theme_name != "default" {
-            theme::apply_configured_theme(&nemo_config.app.theme_name, "system", None, cx);
+            let mode = nemo_config.app.theme_mode.as_deref().unwrap_or("system");
+            theme::apply_configured_theme(&nemo_config.app.theme_name, mode, None, cx);
         }
 
         // Apply global font family from TOML config
