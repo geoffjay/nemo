@@ -191,6 +191,14 @@ fn on_input_change(component_id, event_data) {
 }
 ```
 
+> **Handler calling convention.** Every XML-referenced handler (`on-click`,
+> `on-change`, `on-load`, …) is invoked as `fn name(component_id, event_data)` —
+> two string arguments. Rhai resolves functions by name **and arity**, so a
+> mismatch (e.g. a zero-parameter handler) fails at runtime with
+> `Function not found: <name>`. Match the two-argument signature exactly. This
+> includes `on-load`, which is dispatched with `component_id = "app"` and
+> `event_data = "load"`.
+
 ### Available Rhai Functions
 
 **Data:** `get_data(path)`, `set_data(path, value)`, `get_config(path)`

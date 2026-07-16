@@ -68,8 +68,8 @@ Expressions use `${...}` in attribute values:
 
 ```xml
 <data>
-  <source name="ticker" type="timer" interval="1000" />
-  <source name="api" type="http" url="https://api.example.com" interval="30000" method="GET" />
+  <source name="ticker" type="timer" interval="1" />                 <!-- tick every 1 second -->
+  <source name="api" type="http" url="https://api.example.com" interval="30" />  <!-- poll every 30 seconds -->
   <source name="live" type="websocket" url="ws://localhost:8080" />
   <source name="events" type="mqtt" url="mqtt://localhost:1883" topic="sensors/#" />
   <source name="cache" type="redis" url="redis://localhost:6379" channel="updates" />
@@ -78,20 +78,67 @@ Expressions use `${...}` in attribute values:
 </data>
 ```
 
+> **`interval` is in SECONDS, not milliseconds.** `create_source` reads it via
+> `Duration::from_secs(...)` (`crates/nemo-data/src/sources/mod.rs`), so
+> `interval="1000"` means poll every ~17 minutes — data will appear to never
+> load. Use `interval="1"` for a 1-second timer, `interval="30"` for a 30-second
+> poll. Only `interval` is honored — the `refresh` attribute seen in some older
+> examples is **not** wired to any source and is silently ignored.
+
 ## Data Bindings
 
-Connect data source paths to component properties:
+Connect data source paths to component properties. A source object is delivered
+whole to the binding; `transform` (optional) reshapes it before it reaches the
+target property.
 
 ```xml
-<table id="my_table">
-  <binding source="data.api" target="rows" />
-  <binding source="data.api" target="data" transform="select:name,value" />
+<!-- Whole array / nested subtree -> table/chart/list: target="data", NO transform.
+     A dot-path in `source` selects the subtree. -->
+<table id="agents">
+  <binding source="data.agents" target="data" />
+</table>
+<table id="nodes">
+  <binding source="data.cluster.nodes" target="data" />   <!-- nested source path is fine -->
 </table>
 
+<!-- Scalar field of a source object -> label/text: name the field in `transform`. -->
+<label id="mode">
+  <binding source="data.node" target="text" transform="mode" />        <!-- data.node.mode -->
+</label>
 <label id="temp">
-  <binding source="mock.temperature" target="text" />
+  <binding source="data.sensors" target="text" transform="payload.temperature" />  <!-- nested field -->
 </label>
 ```
+
+### What `transform` actually does
+
+The `transform` string is applied by `apply_transform`
+(`crates/nemo-layout/src/binding.rs`) and supports exactly two forms:
+
+1. **Field extraction** — a dot-path with no spaces and no literal `value`
+   (e.g. `transform="origin"`, `transform="payload.temp"`) walks into the
+   incoming Object and returns that nested field. A missing field passes the
+   original value through unchanged.
+2. **String templating** — any transform containing the word `value`
+   (e.g. `transform="Temperature: value°C"`) stringifies the incoming data and
+   substitutes it for `value`, yielding a formatted string.
+
+There is **no** `select:...`, `filter:...`, or other prefixed transform syntax
+on bindings, and the `transform` attribute does **not** call Rhai functions —
+only the two forms above work. (Rust-level pipeline transforms like `select`
+exist in `nemo-data` but are not reachable from the XML `transform` attribute.)
+
+### `bind-<prop>` shorthand
+
+Instead of a `<binding>` child, any `bind-<property>` attribute creates a
+one-way binding to that property (`crates/nemo/src/runtime.rs`):
+
+```xml
+<text id="raw" content="waiting…" bind-content="data.api" />
+<label id="t" bind-text="data.sensors.payload.temperature" />
+```
+`bind-content`, `bind-text`, `bind-value`, etc. all follow the `bind-<prop>`
+pattern; the attribute value is the source path (no transform).
 
 ## Event Handlers
 
@@ -107,6 +154,21 @@ The `<script>` element accepts an `on-load` attribute naming a Rhai function run
 ```xml
 <script src="./scripts" on-load="init_handler" />
 ```
+
+### Handler signature: every handler takes `(component_id, event_data)`
+
+Nemo invokes **every** XML-referenced handler — `on-click`, `on-change`,
+`on-load`, … — with exactly two string arguments, `(component_id, event_data)`.
+Rhai resolves functions by name **and arity**, so a zero-parameter handler fails
+at runtime with `Function not found: <name>`. Always write:
+
+```rhai
+fn init_handler(component_id, event_data) { ... }
+```
+
+`on-load` is no exception: it is dispatched as `call_handler(handler, "app", "load")`
+(`crates/nemo/src/app.rs`), so `component_id` is `"app"` and `event_data` is
+`"load"`.
 
 ## Components — Layout
 
@@ -145,12 +207,28 @@ Layout container with dockable panels. `position` defaults to `"center"`.
 
 ### tabs
 ```xml
-<tabs active-tab="0" variant="segmented">
-  <panel title="Tab 1"> ... </panel>
-  <panel title="Tab 2"> ... </panel>
+<tabs id="my_tabs" active-tab="0" variant="underline">
+  <tab-item id="t1" label="Tab 1"> ...content... </tab-item>
+  <tab-item id="t2" label="Tab 2"> ...content... </tab-item>
 </tabs>
 ```
-`active-tab` is the 0-based index of the initially selected tab. `variant` (optional) selects the tab style.
+- **Tab pages MUST be `<tab-item id="…" label="…">`.** A `<panel>` (or any other
+  element) is valid XML *anywhere*, so a config with `<panel>` tab pages **passes
+  `nemo validate`** but the tab bar gets zero pages and the whole component
+  renders invisibly. The render dispatch only collects children whose type is
+  `tab_item` (`crates/nemo/src/app.rs`).
+- `active-tab` — 0-based index of the initially selected tab.
+- `variant` — tab style, one of `underline` (default), `pill`, `segmented`,
+  `outline`, `tab` (`crates/nemo/src/components/tabs.rs`). Any other value falls
+  back to `underline`.
+
+> **Child-only elements.** Several elements are valid *only* inside a specific
+> parent and render nothing (with no validation error) if placed elsewhere or if
+> the parent's direct children are the wrong type:
+> `tab-item` (in `tabs`), `menu-item` (in `dropdown-button`), `option` (in
+> `select`), `list-item` (in `list`), `accordion-item` (in `accordion`),
+> `sidenav-bar-item` (in `sidenav-bar`), `slot` (in `template`). When a
+> container renders blank, check that its direct children are the right type.
 
 ## Components — Display
 
@@ -454,3 +532,23 @@ These work on most components via `apply_layout_styles()`:
 | `shadow` | string | Shadow preset: sm, md, lg, xl, 2xl |
 | `rounded` | string | Corner radius: sm, md, lg, xl, full |
 | `visible` | boolean | Show/hide the component |
+
+## Definite-height gotcha (silent 0px collapse)
+
+`table`, `tree`, and `list` render their bodies with a `uniform_list`, which
+collapses to **0px** unless an ancestor has a *definite* height — the rows
+silently disappear (a table's header may still show, which is misleading). This
+also bites content inside a `tabs` region.
+
+Give the scrollable region a real height instead of relying on flex to size it
+from content:
+
+```xml
+<!-- Preferred: a scrolling stack that grows to fill its parent -->
+<stack scroll="true" flex="1">
+  <table id="rows"> <binding source="data.rows" target="data" /> </table>
+</stack>
+
+<!-- Or set an explicit height on the widget -->
+<table id="rows" height="400"> <binding source="data.rows" target="data" /> </table>
+```

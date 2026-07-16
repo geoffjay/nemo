@@ -4,17 +4,17 @@
     "nemo-component-patterns": {
       "source": "/Users/geoff/Projects/nemo/skills",
       "sourceType": "local",
-      "computedHash": "1777d91557fb337ccae474b24f6a5109e28b350146edbc187614b07d6e6f4e09"
+      "computedHash": "d97c60db1c564743b586e103cdab935929479ec491081f8ebbb0011c006f6cc0"
     },
     "nemo-plugin-patterns": {
       "source": "/Users/geoff/Projects/nemo/skills",
       "sourceType": "local",
-      "computedHash": "e69c18c9d7c92446002d3d82f9e88ba8e4d428eba362a087b4d776f9243ee99a"
+      "computedHash": "fe7b0c2d6a964afdaed79dea169039716b634cabd1fce9fff7743d70d976db8e"
     },
     "nemo-xml-reference": {
       "source": "/Users/geoff/Projects/nemo/skills",
       "sourceType": "local",
-      "computedHash": "7c49ba88a0e1a1232e2d776876c9f4bdbc23d1f84e890feb914409d09128ab29"
+      "computedHash": "5d3f21b3c62af5de10e4fe57bfb813f1e0ca8d332fb78e774ffa0b35b021e077"
     }
   }
 }

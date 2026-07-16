@@ -1,6 +1,6 @@
 ---
 name: nemo-component-patterns
-description: Reference for Nemo component conventions including NemoComponent derive, RenderOnce vs Render, stateful vs stateless patterns, sizing gotchas, and color resolution. Use when writing or modifying Nemo components.
+description: Reference for contributing new built-in components to the Nemo source tree (Rust) — the 4-file workflow, NemoComponent derive, RenderOnce vs Render, stateful vs stateless patterns, sizing gotchas, and color resolution. NOT for authoring app.xml configs — use nemo-xml-reference for that.
 ---
 
 # Nemo Component Patterns
