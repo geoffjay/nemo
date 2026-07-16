@@ -12,6 +12,9 @@ Nemo currently supports:
 
 * Declarative XML UI with 50+ built-in components and a component registry.
   See [Components](../concepts/components.md).
+* High-level layout **containers** (`crates/nemo/src/containers/`) that package
+  common app layouts — first is `app-shell` (sidenav + switchable content pages +
+  footer, with built-in page switching). See [Containers](../patterns/containers.md).
 * Live data binding from HTTP, WebSocket, MQTT, Redis, NATS, timer, and file
   sources through a transform pipeline and central repository. See
   [Data flow](../concepts/data-flow.md).
@@ -25,7 +28,8 @@ Nemo currently supports:
   checksums) and distribution (`install.sh`, Homebrew tap auto-push).
 
 Worked examples live under `examples/` (basic, components, data-binding,
-data-streaming, calculator, pid-control, complete, task-list, dev-dashboard).
+data-streaming, calculator, pid-control, complete, task-list, dev-dashboard,
+app-shell).
 Example configs are validated in CI via `nemo validate --strict`
 (`.github/workflows/ci.yml`, `validate-examples` job).
 

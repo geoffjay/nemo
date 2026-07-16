@@ -1,0 +1,58 @@
+<nemo>
+  <app title="App Shell">
+    <window title="App Shell Example">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/app-shell"
+                  theme-toggle="true" />
+    </window>
+    <theme name="nord" mode="dark" />
+  </app>
+
+  <!--
+    The <app-shell> container packages a standard application layout: a left
+    sidenav, a switchable content area, and a full-width status footer.
+
+    Clicking a <sidenav-item target="..."> shows the matching <page id="...">
+    and highlights the active item — page switching is built in, so no Rhai
+    handler is needed.
+  -->
+  <layout type="stack">
+    <app-shell id="shell" sidenav-width="200">
+
+      <app-sidenav>
+        <sidenav-item icon="layout-dashboard" label="Overview" target="overview" />
+        <sidenav-item icon="chart-pie" label="Reports" target="reports" />
+        <sidenav-item icon="settings" label="Settings" target="settings" />
+      </app-sidenav>
+
+      <app-content>
+        <page id="overview">
+          <stack direction="vertical" padding="24" spacing="12">
+            <label text="Overview" size="xl" />
+            <text content="Welcome to the App Shell example. Pick an item on the left to switch pages." />
+          </stack>
+        </page>
+
+        <page id="reports">
+          <stack direction="vertical" padding="24" spacing="12">
+            <label text="Reports" size="xl" />
+            <text content="This is the Reports page. Its content is only rendered while active." />
+          </stack>
+        </page>
+
+        <page id="settings">
+          <stack direction="vertical" padding="24" spacing="12">
+            <label text="Settings" size="xl" />
+            <text content="This is the Settings page." />
+          </stack>
+        </page>
+      </app-content>
+
+      <app-footer>
+        <stack direction="horizontal" spacing="8">
+          <label text="Ready" size="sm" />
+        </stack>
+      </app-footer>
+
+    </app-shell>
+  </layout>
+</nemo>

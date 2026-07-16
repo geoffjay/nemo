@@ -29,6 +29,7 @@ fn reg(
 /// Registers all built-in components.
 pub fn register_builtin_components(registry: &ComponentRegistry) {
     register_layout_components(registry);
+    register_container_components(registry);
     register_basic_components(registry);
     register_input_components(registry);
     register_display_components(registry);
@@ -117,6 +118,71 @@ fn register_layout_components(registry: &ComponentRegistry) {
         "Tab Item",
         "A titled tab panel for use inside Tabs; its children are the panel body",
         ConfigSchema::new("tab_item").property("label", PropertySchema::string()),
+    );
+}
+
+/// Registers high-level layout containers (crates/nemo/src/containers).
+fn register_container_components(registry: &ComponentRegistry) {
+    reg(
+        registry,
+        "app_shell",
+        ComponentCategory::Layout,
+        "App Shell",
+        "A standard application frame with a sidenav, switchable content pages, and a footer",
+        ConfigSchema::new("app_shell")
+            .property(
+                "sidenav_width",
+                PropertySchema::integer().with_default(200i64),
+            )
+            .property("collapsed", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
+        "app_sidenav",
+        ComponentCategory::Layout,
+        "App Sidenav",
+        "The sidenav region of an AppShell; holds sidenav-item children",
+        ConfigSchema::new("app_sidenav"),
+    );
+
+    reg(
+        registry,
+        "app_content",
+        ComponentCategory::Layout,
+        "App Content",
+        "The content region of an AppShell; holds page children",
+        ConfigSchema::new("app_content"),
+    );
+
+    reg(
+        registry,
+        "app_footer",
+        ComponentCategory::Layout,
+        "App Footer",
+        "The full-width footer region of an AppShell",
+        ConfigSchema::new("app_footer"),
+    );
+
+    reg(
+        registry,
+        "sidenav_item",
+        ComponentCategory::Layout,
+        "Sidenav Item",
+        "A navigation item with an icon and label; its target selects a content page",
+        ConfigSchema::new("sidenav_item")
+            .property("icon", PropertySchema::string().with_default("info"))
+            .property("label", PropertySchema::string())
+            .property("target", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "page",
+        ComponentCategory::Layout,
+        "Page",
+        "A content page inside an AppShell's content region, shown when its id is the active target",
+        ConfigSchema::new("page"),
     );
 }
 

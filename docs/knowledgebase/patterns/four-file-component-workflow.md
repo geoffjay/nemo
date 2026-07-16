@@ -34,3 +34,11 @@ Adding a new built-in component to Nemo touches four files.
 Layout styling (width/height/margin/padding/border/background/shadow/rounded) is
 applied uniformly by `apply_layout_styles()` in `app.rs`; individual components
 do not need to handle it.
+
+**Containers** (`crates/nemo/src/containers/`) follow the same four wiring points,
+with two differences: the implementation file lives under `containers/` (declared
+via `mod containers;` in `main.rs` and re-exported from `containers/mod.rs`), and
+because a container routes its children into regions itself it typically uses
+hand-written builders (`#[derive(IntoElement)]` only, like `SidenavBar`) instead
+of the `NemoComponent` derive, plus no-op standalone arms for its region/leaf
+marker types. See [containers](containers.md).

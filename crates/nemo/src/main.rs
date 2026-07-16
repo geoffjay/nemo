@@ -29,6 +29,7 @@ mod args;
 mod commands;
 mod components;
 pub mod config;
+mod containers;
 mod project;
 mod runtime;
 mod theme;

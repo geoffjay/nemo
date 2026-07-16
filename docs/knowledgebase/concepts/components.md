@@ -68,6 +68,23 @@ shadow/bg) — `apply_layout_styles` skips those props for panels to avoid
 double-decorating — and can also grow with `flex`. See
 [layout sizing and centering](../patterns/layout-sizing-and-centering.md).
 
+# Containers
+
+**Containers** are higher-level layout components that package a common
+application layout so authors describe intent instead of assembling primitives.
+They live in `crates/nemo/src/containers/` (separate from `components/`) but wire
+in through the same registry + render-dispatch points as any component. The first
+is **`app-shell`** — a standard frame with a left `<app-sidenav>` of
+`<sidenav-item icon=".." label=".." target="..">`, an `<app-content>` of
+`<page id="..">` children, and a full-width `<app-footer>`. Clicking a sidenav
+item selects the matching page (its `target` = the page `id`) and highlights the
+active item — page switching is built in, needing no handler; `on-click` remains
+optional. It follows the typed parent-rendered-children pattern (the shell
+collects region markers and their children by `component_type` in the `app_shell`
+arm of `render_component`, and the region/leaf markers get no-op standalone arms)
+and stores the active target in `ComponentState::SelectedValue` keyed by the
+shell's id. See [containers](../patterns/containers.md).
+
 # Children and collection data
 
 Container components render their children via `render_children()`; components

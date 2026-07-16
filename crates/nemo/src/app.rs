@@ -25,6 +25,7 @@ use crate::components::{
     SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch, TabItemData,
     Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
+use crate::containers::AppShell;
 use crate::runtime::NemoRuntime;
 use nemo_layout::BuiltComponent;
 
@@ -1092,6 +1093,80 @@ impl App {
             }
             "sidenav_bar_item" => {
                 // Items are rendered by their parent SidenavBar; standalone fallback
+                div().into_any_element()
+            }
+            "app_shell" => {
+                // Resolve the three region markers by type.
+                let region = |ty: &str| {
+                    component
+                        .children
+                        .iter()
+                        .filter_map(|id| components.get(id))
+                        .find(|c| c.component_type == ty)
+                        .cloned()
+                };
+                let sidenav_region = region("app_sidenav");
+                let content_region = region("app_content");
+                let footer_region = region("app_footer");
+
+                // Sidenav items (raw — the shell renders them itself).
+                let sidenav_items: Vec<BuiltComponent> = sidenav_region
+                    .as_ref()
+                    .map(|nav| {
+                        nav.children
+                            .iter()
+                            .filter_map(|id| components.get(id))
+                            .filter(|c| c.component_type == "sidenav_item")
+                            .cloned()
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                // Content pages; the active one is chosen by shared state.
+                let pages: Vec<BuiltComponent> = content_region
+                    .as_ref()
+                    .map(|content| {
+                        content
+                            .children
+                            .iter()
+                            .filter_map(|id| components.get(id))
+                            .filter(|c| c.component_type == "page")
+                            .cloned()
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                let default_target = pages.first().map(|p| p.id.clone()).unwrap_or_default();
+                let active_state = self
+                    .component_states
+                    .get_or_create_selected_value(&component.id, default_target.clone());
+                let active = active_state.lock().unwrap().clone();
+
+                // Render only the active page's body (fall back to the first page).
+                let active_page = pages
+                    .iter()
+                    .find(|p| p.id == active)
+                    .or_else(|| pages.first())
+                    .cloned();
+                let content_children = active_page
+                    .map(|page| self.render_children(&page, components, entity_id, window, cx))
+                    .unwrap_or_default();
+
+                let footer_children = footer_region
+                    .map(|footer| self.render_children(&footer, components, entity_id, window, cx))
+                    .unwrap_or_default();
+
+                AppShell::new(component.clone())
+                    .sidenav_items(sidenav_items)
+                    .content_children(content_children)
+                    .footer_children(footer_children)
+                    .active_state(active_state)
+                    .entity_id(entity_id)
+                    .runtime(Arc::clone(&self.runtime))
+                    .into_any_element()
+            }
+            // Region/leaf markers of app_shell are rendered by their parent.
+            "app_sidenav" | "app_content" | "app_footer" | "sidenav_item" | "page" => {
                 div().into_any_element()
             }
             "spinner" => Spinner::new(component.clone()).into_any_element(),
