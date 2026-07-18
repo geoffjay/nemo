@@ -55,9 +55,11 @@ Names use the internal snake_case form (XML `max-width`/`on-load` normalize to
 The exporter maps the full `PropertySchema` surface, but the builtins are sparse
 today, so in the current output:
 
-- `enum`/`min`/`max` are **absent for almost every property** — no builtin calls
-  `.one_of(...)`/`.min(...)`/`.max(...)` yet (enum-like props such as `align`,
-  `variant`, `size`, `direction` are bare strings).
+- `enum`/`min`/`max` are **absent for most properties**, but `variant`/`size`
+  now carry `.one_of(...)` on `button`, `alert`, `tag`, `tabs`, `dropdown_button`,
+  `spinner`, and `label` (values in `nemo-registry::builtins`, via the `enum_vals`
+  helper), and `nemo validate --strict` enforces them (`invalid-value` lint).
+  Other enum-like props (`align`, `direction`, …) are still bare strings.
 - `events`, `bindableProperties`, `slots`, and `allowedChildren` are **empty** —
   the `EventSpec`/`BindableProperty`/`SlotSpec` metadata and containment aren't
   populated.

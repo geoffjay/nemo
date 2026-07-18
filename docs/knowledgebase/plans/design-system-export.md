@@ -58,9 +58,12 @@ Both the live UI and the exporter read the same data, so they can't drift. See
   category, display name, description, slots, and full property schemas
   (type/default/enum/min/max/required). `states` is a small static per-category
   vocabulary. `variants`/`sizes` are derived from the component's `variant`/`size`
-  enum properties — **empty today** because the registry doesn't carry enum
-  annotations yet (the `nemo schema` Phase-1 caveat); they populate automatically
-  once the registry gains `#[property(one_of=…)]` annotations (a roadmap item).
+  `one_of` enum rules. These are now populated for the annotated components:
+  `button` (7 variants, 5 sizes), `alert`/`tag`/`tabs`/`dropdown_button`
+  (variants), `spinner`/`label` (sizes). Other components have none until their
+  registry schema gains a `variant`/`size` `one_of`. The enum values live in
+  `nemo-registry::builtins` (see the `enum_vals` helper) and are enforced by
+  `nemo validate --strict`'s `invalid-value` lint.
 
 Output is deterministic (BTreeMaps + sorted components/themes) so it can be
 committed and diffed.
@@ -70,11 +73,13 @@ committed and diffed.
 * **Done:** `nemo-tokens` extraction, `xtask` crate + `cargo xtask design-export`,
   the JSON export (tokens + 7 themes + 64 components), 4 export unit tests, clippy
   clean, no Cargo.lock drift.
-* **Next (optional):** (1) enrich the registry with `variant`/`size` enum
-  annotations so `variants`/`sizes` populate (shared win with the LSP/gallery
-  roadmap); (2) the `.pen` conversion skill/MCP step that turns this intermediate
-  into a `.pen` file; (3) optionally fold gpui-component default colors in so
-  absent theme fields resolve.
+* **Done:** registry `variant`/`size` `one_of` annotations, so `variants`/`sizes`
+  populate in the export; enforced by a new `invalid-value` strict validate lint.
+* **Next (optional):** (1) extend `one_of` annotations to more components/props as
+  they gain enums (shared win with the LSP/gallery roadmap); (2) the `.pen`
+  conversion skill/MCP step that turns this intermediate into a `.pen` file;
+  (3) optionally fold gpui-component default colors in so absent theme fields
+  resolve.
 
 # Verification
 

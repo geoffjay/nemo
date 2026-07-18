@@ -5,7 +5,14 @@ use crate::descriptor::{
     DataSourceDescriptor, DataSourceMetadata, TransformDescriptor, TransformMetadata,
 };
 use crate::registry::ComponentRegistry;
-use nemo_config::{ConfigSchema, PropertySchema};
+use nemo_config::{ConfigSchema, PropertySchema, Value};
+
+/// Helper: builds a `Vec<Value>` of string enum values for a `one_of` constraint.
+/// Used to annotate `variant`/`size` properties so the design-system export and
+/// validation know the allowed values.
+fn enum_vals(values: &[&str]) -> Vec<Value> {
+    values.iter().map(|s| Value::from(*s)).collect()
+}
 
 /// Helper: register a component with display name, description, and schema.
 fn reg(
@@ -107,7 +114,16 @@ fn register_layout_components(registry: &ComponentRegistry) {
         "Tabs",
         "Tabbed container holding tab-item children",
         ConfigSchema::new("tabs")
-            .property("variant", PropertySchema::string())
+            .property(
+                "variant",
+                PropertySchema::string().one_of(enum_vals(&[
+                    "underline",
+                    "pill",
+                    "segmented",
+                    "outline",
+                    "tab",
+                ])),
+            )
             .property("active_tab", PropertySchema::integer().with_default(0i64)),
     );
 
@@ -218,7 +234,12 @@ fn register_basic_components(registry: &ComponentRegistry) {
         ConfigSchema::new("alert")
             .property("message", PropertySchema::string())
             .property("title", PropertySchema::string())
-            .property("variant", PropertySchema::string().with_default("info"))
+            .property(
+                "variant",
+                PropertySchema::string()
+                    .with_default("info")
+                    .one_of(enum_vals(&["info", "success", "warning", "error"])),
+            )
             .require("message"),
     );
 
@@ -261,7 +282,15 @@ fn register_basic_components(registry: &ComponentRegistry) {
         "A button with a dropdown menu built from menu-item children",
         ConfigSchema::new("dropdown_button")
             .property("label", PropertySchema::string().with_default("Action"))
-            .property("variant", PropertySchema::string()),
+            .property(
+                "variant",
+                PropertySchema::string().one_of(enum_vals(&[
+                    "primary",
+                    "secondary",
+                    "danger",
+                    "ghost",
+                ])),
+            ),
     );
 
     reg(
@@ -279,7 +308,12 @@ fn register_basic_components(registry: &ComponentRegistry) {
         ComponentCategory::Display,
         "Spinner",
         "A loading spinner indicator",
-        ConfigSchema::new("spinner").property("size", PropertySchema::string().with_default("md")),
+        ConfigSchema::new("spinner").property(
+            "size",
+            PropertySchema::string()
+                .with_default("md")
+                .one_of(enum_vals(&["xs", "sm", "md", "lg", "xl"])),
+        ),
     );
 
     reg(
@@ -292,7 +326,16 @@ fn register_basic_components(registry: &ComponentRegistry) {
             .property("label", PropertySchema::string().with_default("Tag"))
             .property(
                 "variant",
-                PropertySchema::string().with_default("secondary"),
+                PropertySchema::string()
+                    .with_default("secondary")
+                    .one_of(enum_vals(&[
+                        "primary",
+                        "secondary",
+                        "danger",
+                        "success",
+                        "warning",
+                        "info",
+                    ])),
             )
             .property("outline", PropertySchema::boolean().with_default(false)),
     );
@@ -309,8 +352,26 @@ fn register_input_components(registry: &ComponentRegistry) {
     button.tags = vec!["interactive".to_string(), "clickable".to_string()];
     button.schema = ConfigSchema::new("button")
         .property("label", PropertySchema::string())
-        .property("variant", PropertySchema::string().with_default("primary"))
-        .property("size", PropertySchema::string().with_default("md"))
+        .property(
+            "variant",
+            PropertySchema::string()
+                .with_default("primary")
+                .one_of(enum_vals(&[
+                    "primary",
+                    "secondary",
+                    "danger",
+                    "ghost",
+                    "warning",
+                    "success",
+                    "info",
+                ])),
+        )
+        .property(
+            "size",
+            PropertySchema::string()
+                .with_default("md")
+                .one_of(enum_vals(&["xs", "sm", "md", "lg", "xl"])),
+        )
         .property("icon", PropertySchema::string())
         .property("text_color", PropertySchema::string())
         .property("full_width", PropertySchema::boolean().with_default(false))
@@ -478,7 +539,12 @@ fn register_display_components(registry: &ComponentRegistry) {
         "A text label",
         ConfigSchema::new("label")
             .property("text", PropertySchema::string())
-            .property("size", PropertySchema::string().with_default("md"))
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("md")
+                    .one_of(enum_vals(&["xs", "sm", "md", "lg", "xl"])),
+            )
             .require("text"),
     );
 

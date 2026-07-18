@@ -9,7 +9,9 @@ use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Result;
-use nemo_config::{ConfigError, ConfigurationLoader, SchemaRegistry, SourceLocation, Value};
+use nemo_config::{
+    ConfigError, ConfigurationLoader, SchemaRegistry, SourceLocation, ValidationRule, Value,
+};
 use nemo_registry::{register_all_builtins, ComponentRegistry};
 use serde::Serialize;
 
@@ -299,6 +301,35 @@ fn lint_component(
                     ));
                 }
             }
+
+            // `invalid-value`: a property with an enum (`one_of`) constraint
+            // whose literal value isn't allowed (e.g. `variant="bogus"`). Skips
+            // unresolved `${...}` expressions and non-string values, which are
+            // only knowable after resolution/binding.
+            for (key, prop_schema) in &schema.properties {
+                let Some(value) = obj.get(key).and_then(|v| v.as_str()) else {
+                    continue;
+                };
+                if value.contains("${") {
+                    continue;
+                }
+                for rule in &prop_schema.rules {
+                    let ValidationRule::OneOf(allowed) = rule else {
+                        continue;
+                    };
+                    if !allowed.iter().any(|a| a.as_str() == Some(value)) {
+                        let allowed_list: Vec<&str> =
+                            allowed.iter().filter_map(|a| a.as_str()).collect();
+                        diagnostics.push(Diagnostic::warning(
+                            "invalid-value",
+                            format!(
+                                "Component '{id}' (type '{ctype}') property '{key}'=\"{value}\" is not one of: {}",
+                                allowed_list.join(", ")
+                            ),
+                        ));
+                    }
+                }
+            }
         }
     }
 
@@ -431,6 +462,23 @@ mod tests {
         );
         let diags = lint_config(&value, &builtins());
         assert!(codes(&diags).contains(&"missing-id"), "{diags:?}");
+    }
+
+    #[test]
+    fn flags_invalid_enum_value_but_not_valid() {
+        // A `variant` outside the component's `one_of` set is flagged; a valid
+        // one is not.
+        let value = parse(
+            r#"<nemo><layout type="stack">
+                <button id="bad" label="a" variant="bogus" />
+                <button id="ok" label="b" variant="primary" />
+            </layout></nemo>"#,
+        );
+        let diags = lint_config(&value, &builtins());
+        let invalid: Vec<_> = diags.iter().filter(|d| d.code == "invalid-value").collect();
+        assert_eq!(invalid.len(), 1, "{diags:?}");
+        assert!(invalid[0].message.contains("bogus"));
+        assert!(invalid[0].message.contains("primary")); // lists allowed values
     }
 
     #[test]

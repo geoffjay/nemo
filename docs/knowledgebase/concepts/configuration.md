@@ -60,7 +60,12 @@ attributes** (`width`/`height`/`margin*`/`padding*`/`border*`/`shadow`/`rounded`
 `background`/etc.) applied by `apply_layout_styles` to every component wrapper.
 Custom state attributes set by Rhai handlers via `set_component_property` are
 not enumerated in schemas and will produce a warning (by design — they are
-indistinguishable from typos at parse time).
+indistinguishable from typos at parse time). `invalid-value` warns when a
+present, literal property value violates the property's `one_of` enum rule (e.g.
+`variant="bogus"`); it skips unresolved `${...}` expressions and non-string
+values. These enum rules (`variant`/`size` on `button`/`alert`/`tag`/`tabs`/
+`dropdown_button`/`spinner`/`label`) are the same ones the design-system export
+reads.
 
 The universal-attribute allowlist and the structural top-level elements are
 single-sourced in `nemo_registry::schema_surface` (`universal_style_attributes`,
