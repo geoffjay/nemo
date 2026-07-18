@@ -118,6 +118,9 @@ macro_rules! theme_color_match {
 }
 
 fn resolve_theme_color(name: &str, cx: &App) -> Option<Hsla> {
+    // Translate a semantic color role (e.g. `surface_raised`) to its underlying
+    // theme field; direct theme names pass through unchanged.
+    let name = crate::theme::tokens::resolve_role_alias(name).unwrap_or(name);
     let c = &cx.theme().colors;
     theme_color_match!(c, name,
         "accent" => accent, "accent_foreground" => accent_foreground,
@@ -173,15 +176,12 @@ pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
 
 /// Applies a rounded corner preset to a div element.
 ///
-/// Supported sizes: "sm", "md", "lg", "xl", "full"
+/// Supported sizes: "sm", "md", "lg", "xl", "full". Values come from the radius
+/// design tokens (`theme::tokens::radius`) so rounding has a single source.
 pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>) -> Div {
-    match rounded {
-        Some("sm") => base.rounded_sm(),
-        Some("md") => base.rounded_md(),
-        Some("lg") => base.rounded_lg(),
-        Some("xl") => base.rounded_xl(),
-        Some("full") => base.rounded(px(9999.)),
-        _ => base,
+    match crate::theme::tokens::radius_px(rounded.unwrap_or("")) {
+        Some(r) => base.rounded(px(r)),
+        None => base,
     }
 }
 

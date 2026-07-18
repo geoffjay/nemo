@@ -27,6 +27,7 @@ use crate::components::{
 };
 use crate::containers::AppShell;
 use crate::runtime::NemoRuntime;
+use crate::theme::tokens::{FontSize, Space, TokenStyled};
 use nemo_layout::BuiltComponent;
 
 /// The main Nemo GPUI application.
@@ -477,7 +478,7 @@ impl App {
             .items_center()
             .justify_center()
             .size_full()
-            .gap_4()
+            .gap_t(Space::Lg)
             .child(
                 div()
                     .text_3xl()
@@ -486,7 +487,7 @@ impl App {
             )
             .child(
                 div()
-                    .text_lg()
+                    .text_t(FontSize::Lg)
                     .text_color(cx.theme().colors.muted_foreground)
                     .child("Configure your application in app.xml"),
             )

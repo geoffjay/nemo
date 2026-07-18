@@ -9,6 +9,7 @@ use gpui_component::{
 use tracing::debug;
 
 use crate::theme::change_color_mode;
+use crate::theme::tokens::{FontSize, Space, TokenStyled};
 
 pub struct HeaderBar {
     title: String,
@@ -48,7 +49,7 @@ impl Render for HeaderBar {
         let github_url = self.github_url.clone();
         let show_theme_toggle = self.theme_toggle;
 
-        let mut actions = div().flex().items_center().gap_1();
+        let mut actions = div().flex().items_center().gap_t(Space::Xs);
 
         if show_theme_toggle {
             let is_dark = cx.theme().mode.is_dark();
@@ -79,9 +80,9 @@ impl Render for HeaderBar {
             h_flex()
                 .w_full()
                 .h(px(32.))
-                .pr_2()
+                .pr_t(Space::Sm)
                 .justify_between()
-                .child(Label::new(title).text_xs())
+                .child(Label::new(title).text_t(FontSize::Xs))
                 .child(actions),
         )
     }

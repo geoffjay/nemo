@@ -1,3 +1,4 @@
+use crate::theme::tokens::{Space, TokenStyled};
 use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_layout::BuiltComponent;
@@ -40,13 +41,13 @@ impl List {
 impl RenderOnce for List {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let list_hover = cx.theme().colors.list_hover;
-        let mut el = div().flex().flex_col().gap_1();
+        let mut el = div().flex().flex_col().gap_t(Space::Xs);
 
         for body in self.items {
             el = el.child(
                 div()
-                    .px_2()
-                    .py_1()
+                    .px_t(Space::Sm)
+                    .py_t(Space::Xs)
                     .rounded_sm()
                     .hover(move |s| s.bg(list_hover))
                     .children(body),

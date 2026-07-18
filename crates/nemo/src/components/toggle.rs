@@ -4,6 +4,7 @@ use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
 use crate::runtime::NemoRuntime;
+use crate::theme::tokens::{Space, TokenStyled};
 
 /// A toggle button component.
 ///
@@ -95,7 +96,7 @@ impl RenderOnce for Toggle {
             .justify_center()
             .min_w_8()
             .h_8()
-            .px_2()
+            .px_t(Space::Sm)
             .rounded(radius)
             .cursor_pointer();
 

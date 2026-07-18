@@ -54,13 +54,14 @@ pub(crate) fn chart_color(index: usize, cx: &App) -> Hsla {
 
 /// Returns a placeholder element for charts with no data.
 pub(crate) fn empty_chart_placeholder(cx: &App) -> AnyElement {
+    use crate::theme::tokens::{font_size, FontSize, Space};
     div()
         .flex()
         .items_center()
         .justify_center()
         .size_full()
-        .min_h(px(100.0))
-        .text_sm()
+        .min_h(px(Space::Xxl.value() * 3.0))
+        .text_size(font_size(FontSize::Sm))
         .text_color(cx.theme().colors.muted_foreground)
         .child("No data")
         .into_any_element()

@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use super::icon::map_icon_name;
 use crate::runtime::NemoRuntime;
+use crate::theme::tokens::{FontSize, Space, TokenStyled};
 
 /// A vertical navigation sidebar that displays icon+label items.
 ///
@@ -119,7 +120,7 @@ impl RenderOnce for SidenavBar {
             .w(px(current_width))
             .bg(bg)
             .border_color(border_color)
-            .py_2();
+            .py_t(Space::Sm);
 
         if show_border_left {
             container = container.border_l_1();
@@ -146,11 +147,24 @@ impl RenderOnce for SidenavBar {
             .collect();
 
         // Non-sidenav_bar_item children (e.g. buttons) are passed through as-is
-        container = container.child(div().flex().flex_col().flex_1().gap_1().children(items));
+        container = container.child(
+            div()
+                .flex()
+                .flex_col()
+                .flex_1()
+                .gap_t(Space::Xs)
+                .children(items),
+        );
 
         // Append any non-item children (like a toggle button) at the bottom
         if !self.children.is_empty() {
-            container = container.child(div().flex().flex_col().gap_1().children(self.children));
+            container = container.child(
+                div()
+                    .flex()
+                    .flex_col()
+                    .gap_t(Space::Xs)
+                    .children(self.children),
+            );
         }
 
         container.into_any_element()
@@ -230,15 +244,19 @@ impl RenderOnce for SidenavBarItem {
 
         if self.collapsed {
             // Icon only, centered — square aspect ratio
-            row = row.justify_center().mx_1().size(px(40.));
+            row = row.justify_center().mx_t(Space::Xs).size(px(40.));
             row = row
                 .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
         } else {
             // Icon + label
-            row = row.px_2().py_1().mx_1().gap_3();
+            row = row
+                .px_t(Space::Sm)
+                .py_t(Space::Xs)
+                .mx_t(Space::Xs)
+                .gap_t(Space::Md);
             row = row
                 .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
-            row = row.child(div().text_sm().child(self.label));
+            row = row.child(div().text_t(FontSize::Sm).child(self.label));
         }
 
         if let Some(handler) = self.click_handler {

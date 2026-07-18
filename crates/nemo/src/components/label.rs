@@ -2,6 +2,8 @@ use gpui::*;
 use gpui_component::label::Label as GpuiLabel;
 use nemo_macros::NemoComponent;
 
+use crate::theme::tokens::{FontSize, TokenStyled};
+
 /// A text display component.
 ///
 /// # XML Configuration
@@ -31,10 +33,10 @@ impl RenderOnce for Label {
         let label = GpuiLabel::new(SharedString::from(self.text));
 
         let label = match self.size.as_str() {
-            "xs" => label.text_xs(),
-            "sm" => label.text_sm(),
-            "lg" => label.text_lg(),
-            "xl" => label.text_xl(),
+            "xs" => label.text_t(FontSize::Xs),
+            "sm" => label.text_t(FontSize::Sm),
+            "lg" => label.text_t(FontSize::Lg),
+            "xl" => label.text_t(FontSize::Xl),
             _ => label,
         };
 

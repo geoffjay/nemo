@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use crate::runtime;
 use crate::theme;
+use crate::theme::tokens::{Space, TokenStyled};
 
 /// Creates a NemoRuntime, applies extension dirs, loads config, and initializes.
 /// Returns the runtime wrapped in Arc on success.
@@ -72,7 +73,7 @@ pub fn shortcut_row(label: &str, keystroke: &str) -> impl IntoElement {
         .w_full()
         .justify_between()
         .items_center()
-        .py_1()
+        .py_t(Space::Xs)
         .child(Label::new(label.to_string()))
         .child(kbd)
 }

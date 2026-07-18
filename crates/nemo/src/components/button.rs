@@ -143,7 +143,7 @@ impl RenderOnce for Button {
                 "sm" => ButtonRounded::Small,
                 "md" => ButtonRounded::Medium,
                 "lg" => ButtonRounded::Large,
-                "full" => ButtonRounded::Size(px(9999.)),
+                "full" => ButtonRounded::Size(px(crate::theme::tokens::radius::FULL)),
                 _ => ButtonRounded::Medium,
             });
         }

@@ -79,6 +79,7 @@ to touch the KB on every edit.
 * [Declarative children over JSON-string properties](plans/declarative-children-migration.md) - migrate collection components from JSON-string attributes to nested child elements, piloted on accordion.
 * [Headless renderer and screenshots](plans/headless-screenshots.md) - `nemo screenshot` implemented on macOS via gpui's offscreen `Window::render_to_image`; Linux capture remains open.
 * [Devtools inspector](plans/devtools-inspector.md) - what a nemo-devtools crate would take; the introspection surfaces already exist, in-process panel recommended over an external client.
+* [Design tokens and active redesign](plans/design-tokens.md) - centralized spacing/radius/typography/semantic-color tokens in `theme/tokens.rs`; incremental component migration with screenshot verification.
 * [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
 
 ## References

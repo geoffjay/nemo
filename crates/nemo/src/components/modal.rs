@@ -1,3 +1,4 @@
+use crate::theme::tokens::{FontSize, Space, TokenStyled};
 use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
@@ -49,8 +50,8 @@ impl RenderOnce for Modal {
                 div()
                     .flex()
                     .flex_col()
-                    .gap_4()
-                    .p_6()
+                    .gap_t(Space::Lg)
+                    .p_t(Space::Xl)
                     .rounded_lg()
                     .bg(bg)
                     .border_1()
@@ -59,7 +60,7 @@ impl RenderOnce for Modal {
                     .max_w(px(600.0))
                     .child(
                         div()
-                            .text_lg()
+                            .text_t(FontSize::Lg)
                             .font_weight(FontWeight::BOLD)
                             .child(self.title),
                     )

@@ -8,6 +8,7 @@ use tracing::info;
 
 use crate::config::recent::RecentProjects;
 use crate::config::NemoConfig;
+use crate::theme::tokens::{FontSize, Space, TokenStyled};
 
 /// Action emitted when a project is selected (carries the config file path).
 #[derive(Clone, Debug)]
@@ -83,7 +84,7 @@ impl ProjectLoaderView {
                 .width(px(500.))
                 .child(
                     v_flex()
-                        .gap_3()
+                        .gap_t(Space::Md)
                         .child(Label::new("Enter the repository URL:"))
                         .child(Input::new(&input_state)),
                 )
@@ -170,12 +171,12 @@ impl Render for ProjectLoaderView {
         let border_color = theme.colors.border;
         let list_active_bg = theme.colors.list_active;
 
-        let mut content = v_flex().gap_6().w(px(480.)).child(
+        let mut content = v_flex().gap_t(Space::Xl).w(px(480.)).child(
             v_flex()
-                .gap_1()
+                .gap_t(Space::Xs)
                 .child(
                     div()
-                        .text_2xl()
+                        .text_t(FontSize::Xxl)
                         .font_weight(FontWeight::BOLD)
                         .child("Open a Project"),
                 )
@@ -191,8 +192,8 @@ impl Render for ProjectLoaderView {
         if recent.is_empty() {
             content = content.child(
                 div()
-                    .px_4()
-                    .py_3()
+                    .px_t(Space::Lg)
+                    .py_t(Space::Md)
                     .rounded_md()
                     .border_1()
                     .border_color(border_color)
@@ -200,7 +201,7 @@ impl Render for ProjectLoaderView {
                     .child("No recent projects"),
             );
         } else {
-            let mut list = v_flex().gap_1();
+            let mut list = v_flex().gap_t(Space::Xs);
             for project in recent {
                 let config_path = project.config_path.clone();
                 let name = project.name.clone();
@@ -209,15 +210,20 @@ impl Render for ProjectLoaderView {
                 list = list.child(
                     div()
                         .id(SharedString::from(format!("recent-{}", path_display)))
-                        .px_4()
-                        .py_2()
+                        .px_t(Space::Lg)
+                        .py_t(Space::Sm)
                         .rounded_md()
                         .cursor_pointer()
                         .hover(|s| s.bg(list_active_bg))
                         .child(
                             v_flex()
                                 .child(div().font_weight(FontWeight::MEDIUM).child(name))
-                                .child(div().text_xs().text_color(muted).child(path_display)),
+                                .child(
+                                    div()
+                                        .text_t(FontSize::Xs)
+                                        .text_color(muted)
+                                        .child(path_display),
+                                ),
                         )
                         .on_click(cx.listener(move |this, _, window, cx| {
                             this.select_recent(config_path.clone(), window, cx);
@@ -227,10 +233,10 @@ impl Render for ProjectLoaderView {
 
             content = content.child(
                 v_flex()
-                    .gap_1()
+                    .gap_t(Space::Xs)
                     .child(
                         div()
-                            .text_sm()
+                            .text_t(FontSize::Sm)
                             .font_weight(FontWeight::MEDIUM)
                             .child("Recent Projects"),
                     )
@@ -242,12 +248,12 @@ impl Render for ProjectLoaderView {
         if let Some(ref error) = self.clone_error {
             content = content.child(
                 div()
-                    .px_4()
-                    .py_2()
+                    .px_t(Space::Lg)
+                    .py_t(Space::Sm)
                     .rounded_md()
                     .bg(red())
                     .text_color(white())
-                    .text_sm()
+                    .text_t(FontSize::Sm)
                     .child(error.clone()),
             );
         }
@@ -255,7 +261,7 @@ impl Render for ProjectLoaderView {
         // Action buttons
         content = content.child(
             h_flex()
-                .gap_3()
+                .gap_t(Space::Md)
                 .child(
                     Button::new("open-disk")
                         .label("Open from Disk")

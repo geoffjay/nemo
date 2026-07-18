@@ -39,6 +39,7 @@ use crate::config::NemoConfig;
 use crate::project::ActiveProject;
 use crate::runtime;
 use crate::theme;
+use crate::theme::tokens::{Space, TokenStyled};
 
 /// Subset of args needed after initial parse.
 #[derive(Clone)]
@@ -402,7 +403,7 @@ impl Workspace {
                 .close_button(true)
                 .child(
                     v_flex()
-                        .gap_1()
+                        .gap_t(Space::Xs)
                         .child(shortcut_row("Open Project", "ctrl-o"))
                         .child(shortcut_row("Close Project", "ctrl-w"))
                         .child(shortcut_row("Reload Configuration", "ctrl-shift-r"))

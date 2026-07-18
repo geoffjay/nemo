@@ -1,3 +1,4 @@
+use crate::theme::tokens::{FontSize, Space, TokenStyled};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
 use gpui_component::v_flex;
@@ -86,15 +87,20 @@ impl RenderOnce for Collapsible {
                     .id(toggle_id)
                     .flex()
                     .items_center()
-                    .gap_2()
-                    .py_1()
-                    .px_2()
+                    .gap_t(Space::Sm)
+                    .py_t(Space::Xs)
+                    .px_t(Space::Sm)
                     .cursor_pointer()
                     .border_b_1()
                     .border_color(border_color)
                     .hover(|s| s.bg(gpui::hsla(0., 0., 0.5, 0.1)))
                     .child(gpui_component::Icon::new(chevron).xsmall())
-                    .child(div().text_sm().font_weight(FontWeight::MEDIUM).child(title))
+                    .child(
+                        div()
+                            .text_t(FontSize::Sm)
+                            .font_weight(FontWeight::MEDIUM)
+                            .child(title),
+                    )
                     .on_click(move |_, _window, cx| {
                         let mut state = shared_state.lock().unwrap();
                         *state = !*state;
@@ -103,6 +109,8 @@ impl RenderOnce for Collapsible {
                         }
                     }),
             )
-            .when(open, |this| this.child(div().p_2().children(self.children)))
+            .when(open, |this| {
+                this.child(div().p_t(Space::Sm).children(self.children))
+            })
     }
 }

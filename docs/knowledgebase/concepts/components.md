@@ -65,8 +65,15 @@ only when it opts in (truthy `flex`, `scroll="true"`, or being the layout root);
 horizontal stacks center children by default, and `align`/`justify` control the
 axes. `<panel>` owns its own decoration (padding/border/border-color/rounded/
 shadow/bg) — `apply_layout_styles` skips those props for panels to avoid
-double-decorating — and can also grow with `flex`. See
+double-decorating — and can also grow with `flex`; it draws a subtle 1px hairline
+border by default (`border="0"` opts out). See
 [layout sizing and centering](../patterns/layout-sizing-and-centering.md).
+
+Visual style values (spacing, radius, typography, semantic color roles) come
+from the centralized **design tokens** in `crates/nemo/src/theme/tokens.rs` —
+`resolve_theme_color` resolves role aliases like `theme.surface`/`theme.text_muted`,
+and `apply_rounded` reads the radius tokens. See
+[design tokens and active redesign](../plans/design-tokens.md).
 
 # Containers
 

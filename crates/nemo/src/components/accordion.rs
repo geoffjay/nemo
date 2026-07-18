@@ -1,3 +1,4 @@
+use crate::theme::tokens::{Space, TokenStyled};
 use gpui::*;
 use gpui_component::accordion::{Accordion as GpuiAccordion, AccordionItem};
 use nemo_layout::BuiltComponent;
@@ -98,7 +99,7 @@ impl RenderOnce for Accordion {
             accordion = accordion.item(move |item: AccordionItem| {
                 item.title(title)
                     .open(open)
-                    .child(div().p_2().children(body))
+                    .child(div().p_t(Space::Sm).children(body))
             });
         }
 

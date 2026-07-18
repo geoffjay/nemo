@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::components::icon::map_icon_name;
 use crate::runtime::NemoRuntime;
+use crate::theme::tokens::{FontSize, Space, TokenStyled};
 
 /// A standard application shell: a left sidenav of icon+label items, a
 /// switchable content area, and a full-width status footer.
@@ -149,7 +150,7 @@ impl RenderOnce for AppShell {
                     .flex_row()
                     .items_center()
                     .rounded_md()
-                    .mx_1()
+                    .mx_t(Space::Xs)
                     .cursor_pointer()
                     .text_color(sidebar_fg)
                     .hover(move |s| s.bg(hover_bg));
@@ -165,12 +166,12 @@ impl RenderOnce for AppShell {
                             .with_size(gpui_component::Size::Small),
                     );
                 } else {
-                    row = row.px_2().py_1().gap_3();
+                    row = row.px_t(Space::Sm).py_t(Space::Xs).gap_t(Space::Md);
                     row = row.child(
                         gpui_component::Icon::new(map_icon_name(icon))
                             .with_size(gpui_component::Size::Small),
                     );
-                    row = row.child(div().text_sm().child(label));
+                    row = row.child(div().text_t(FontSize::Sm).child(label));
                 }
 
                 // Clicking an item selects its target page (built-in switching)
@@ -202,8 +203,8 @@ impl RenderOnce for AppShell {
             .bg(sidebar_bg)
             .border_r_1()
             .border_color(sidebar_border)
-            .py_2()
-            .gap_1()
+            .py_t(Space::Sm)
+            .gap_t(Space::Xs)
             .children(items);
 
         // ── Content region ────────────────────────────────────────────────
@@ -225,7 +226,7 @@ impl RenderOnce for AppShell {
             .min_h(px(32.))
             .border_t_1()
             .border_color(border)
-            .px_2()
+            .px_t(Space::Sm)
             .children(self.footer_children);
 
         div()

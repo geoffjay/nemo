@@ -2,6 +2,8 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
+use crate::theme::tokens::{Space, TokenStyled};
+
 /// A toast notification component.
 ///
 /// # XML Configuration
@@ -39,9 +41,9 @@ impl RenderOnce for Notification {
         let mut el = div()
             .flex()
             .items_center()
-            .gap_2()
-            .px_4()
-            .py_3()
+            .gap_t(Space::Sm)
+            .px_t(Space::Lg)
+            .py_t(Space::Md)
             .bg(bg)
             .border_l_4()
             .border_color(border_color);

@@ -43,6 +43,8 @@ impl RenderOnce for Panel {
             return div().into_any_element();
         }
 
+        use crate::theme::tokens::{radius, radius_px};
+
         let props = &self.source.properties;
 
         let mut el = div().flex().flex_col().bg(cx.theme().colors.secondary);
@@ -50,13 +52,12 @@ impl RenderOnce for Panel {
         // The panel is the single owner of its own decoration (padding, border,
         // rounding, shadow, background) — `apply_layout_styles` skips these props
         // for panels to avoid double-decorating (a stray outer border/box).
+        //
+        // Rounding comes from the radius design tokens (single source); default md.
         el = match props.get("rounded").and_then(|v| v.as_str()) {
-            Some("sm") => el.rounded_sm(),
-            Some("lg") => el.rounded_lg(),
-            Some("xl") => el.rounded_xl(),
-            Some("full") => el.rounded(px(9999.)),
             Some("none") => el,
-            _ => el.rounded_md(),
+            Some(name) => el.rounded(px(radius_px(name).unwrap_or(radius::MD))),
+            None => el.rounded(px(radius::MD)),
         };
 
         el = crate::components::apply_shadow(el, props.get("shadow").and_then(|v| v.as_str()));
@@ -65,15 +66,19 @@ impl RenderOnce for Panel {
             el = el.p(px(p as f32));
         }
 
-        if let Some(b) = self.border {
-            if b > 0 {
-                let border_color = props
-                    .get("border_color")
-                    .and_then(|v| v.as_str())
-                    .and_then(|c| crate::components::resolve_color(c, cx))
-                    .unwrap_or(cx.theme().colors.border);
-                el = el.border(px(b as f32)).border_color(border_color);
-            }
+        // Border: an explicit XML `border` width wins; otherwise a subtle 1px
+        // hairline gives the panel card-like definition (design-system default).
+        // `border="0"` opts out.
+        let border_width = self.border.unwrap_or(1);
+        if border_width > 0 {
+            let border_color = props
+                .get("border_color")
+                .and_then(|v| v.as_str())
+                .and_then(|c| crate::components::resolve_color(c, cx))
+                .unwrap_or(cx.theme().colors.border);
+            el = el
+                .border(px(border_width as f32))
+                .border_color(border_color);
         }
 
         // Flexbox-native: grow to fill the parent only when opted in with a

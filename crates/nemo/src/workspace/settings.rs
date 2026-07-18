@@ -21,6 +21,7 @@ use std::sync::{Arc, Mutex};
 use crate::config::NemoConfig;
 use crate::runtime::NemoRuntime;
 use crate::theme;
+use crate::theme::tokens::{Space, TokenStyled};
 use crate::workspace::xml_edit;
 
 /// Callback invoked when a settings dropdown item is chosen. Receives the
@@ -201,7 +202,7 @@ impl SettingsView {
             .flex_shrink_0()
             .border_r_1()
             .border_color(border_color)
-            .py_2();
+            .py_t(Space::Sm);
 
         // Global + Project items
         for (page, id, label) in [
@@ -218,9 +219,9 @@ impl SettingsView {
                 let page = page.clone();
                 let mut item = div()
                     .id(id)
-                    .px_3()
+                    .px_t(Space::Md)
                     .py_1p5()
-                    .mx_2()
+                    .mx_t(Space::Sm)
                     .rounded_md()
                     .cursor_pointer()
                     .bg(item_bg)
@@ -250,9 +251,9 @@ impl SettingsView {
                         "settings-plugin".into(),
                         idx as u64,
                     ))
-                    .px_3()
+                    .px_t(Space::Md)
                     .py_1p5()
-                    .mx_2()
+                    .mx_t(Space::Sm)
                     .rounded_md()
                     .cursor_pointer()
                     .bg(item_bg)
@@ -374,7 +375,7 @@ impl SettingsView {
         };
 
         v_flex()
-            .gap_4()
+            .gap_t(Space::Lg)
             .child(
                 Label::new("Global Settings")
                     .text_size(px(18.))
@@ -387,7 +388,7 @@ impl SettingsView {
             )
             .child(
                 v_flex()
-                    .gap_3()
+                    .gap_t(Space::Md)
                     .child(Self::setting_field(
                         "Theme",
                         Self::selector(
@@ -403,7 +404,7 @@ impl SettingsView {
                     ))
                     .child(
                         v_flex()
-                            .gap_1()
+                            .gap_t(Space::Xs)
                             .child(Label::new("Font Family").text_size(px(14.)))
                             .child(GpuiInput::new(&self.font_input_state)),
                     )
@@ -502,7 +503,7 @@ impl SettingsView {
         };
 
         v_flex()
-            .gap_4()
+            .gap_t(Space::Lg)
             .child(
                 Label::new("Project Settings")
                     .text_size(px(18.))
@@ -518,7 +519,7 @@ impl SettingsView {
             )
             .child(
                 v_flex()
-                    .gap_3()
+                    .gap_t(Space::Md)
                     .child(Self::setting_field(
                         "Theme",
                         Self::selector(
@@ -548,7 +549,7 @@ impl SettingsView {
         let page = page_info.page.clone();
         let plugin_id = page_info.plugin_id.clone();
 
-        let mut container = v_flex().gap_4().child(
+        let mut container = v_flex().gap_t(Space::Lg).child(
             Label::new(title)
                 .text_size(px(18.))
                 .font_weight(FontWeight::SEMIBOLD),
@@ -587,9 +588,9 @@ impl SettingsView {
                 let direction = pv_str(obj, "direction").unwrap_or("vertical");
 
                 let mut container = if direction == "horizontal" {
-                    div().flex().flex_row().gap_3()
+                    div().flex().flex_row().gap_t(Space::Md)
                 } else {
-                    div().flex().flex_col().gap_3()
+                    div().flex().flex_col().gap_t(Space::Md)
                 };
 
                 if let Some(PluginValue::Array(children)) = obj.get("children") {
@@ -613,8 +614,8 @@ impl SettingsView {
 
                 let border_color = cx.theme().colors.border;
                 let mut panel = v_flex()
-                    .gap_3()
-                    .p_4()
+                    .gap_t(Space::Md)
+                    .p_t(Space::Lg)
                     .border_1()
                     .border_color(border_color)
                     .rounded_md();
@@ -699,7 +700,7 @@ impl SettingsView {
                 );
 
                 v_flex()
-                    .gap_1()
+                    .gap_t(Space::Xs)
                     .child(Label::new(label_text))
                     .child(GpuiInput::new(&input_state))
                     .into_any_element()
@@ -716,7 +717,7 @@ impl SettingsView {
                     self.get_or_create_slider_state(&slider_id, min, max, step, value, cx);
 
                 v_flex()
-                    .gap_1()
+                    .gap_t(Space::Xs)
                     .child(Label::new(label_text))
                     .child(GpuiSlider::new(&slider_state))
                     .into_any_element()
@@ -809,7 +810,7 @@ impl Render for SettingsView {
         let content_panel = div()
             .id("settings-content")
             .flex_1()
-            .p_6()
+            .p_t(Space::Xl)
             .overflow_y_scroll()
             .child(content);
 

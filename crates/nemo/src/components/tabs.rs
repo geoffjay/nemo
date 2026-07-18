@@ -1,3 +1,4 @@
+use crate::theme::tokens::{Space, TokenStyled};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
 use gpui_component::tab::{Tab as GpuiTab, TabBar, TabVariant};
@@ -116,7 +117,7 @@ impl RenderOnce for Tabs {
             .when(selected < item_count, |this| {
                 // Take ownership of the selected item's body.
                 let body = items.swap_remove(selected).body;
-                this.child(div().pt_2().children(body))
+                this.child(div().pt_t(Space::Sm).children(body))
             })
     }
 }
