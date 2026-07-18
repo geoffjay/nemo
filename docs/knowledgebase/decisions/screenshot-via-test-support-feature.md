@@ -68,9 +68,22 @@ no screen-recording permission, and the window need not be visible.
   `examples/components` (`--theme gruvbox --mode light`): faithful, non-blank
   renders. Linux/Windows: see [screenshots Windows out of scope](screenshots-windows-out-of-scope.md).
 
+# CLI is always present; only the capture path is gated
+
+The `screenshot` subcommand is **always compiled into the CLI** (visible in
+`--help`), but its capture implementation is behind the feature. Running it in a
+default build errors with an actionable message ("requires a build with the
+`screenshot` feature. Rebuild with: cargo run -p nemo --features screenshot -- …")
+rather than the confusing "unrecognized subcommand" you'd get if the whole
+subcommand were `#[cfg]`-gated. The dispatch is a feature-split
+`main.rs::dispatch_screenshot`: the real path with the feature, the actionable
+`bail!` without it.
+
 # Files
 
 * `crates/nemo/Cargo.toml` — `screenshot` feature.
-* `crates/nemo/src/args.rs` — `Screenshot(ScreenshotArgs)` (feature-gated).
-* `crates/nemo/src/commands/screenshot.rs` — the command.
-* `crates/nemo/src/main.rs` — `build_app_window` / `BootstrapParams` + dispatch arm.
+* `crates/nemo/src/args.rs` — `Screenshot(ScreenshotArgs)` (always present; doc
+  notes the feature requirement).
+* `crates/nemo/src/commands/screenshot.rs` — the command (module `#[cfg]`-gated).
+* `crates/nemo/src/main.rs` — `build_app_window` / `BootstrapParams` +
+  `dispatch_screenshot` (feature-split).

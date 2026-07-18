@@ -65,11 +65,11 @@ pub enum Command {
     Validate(ValidateArgs),
     /// Export the configuration schema for this build and exit.
     Schema(SchemaArgs),
-    /// Render an application to a PNG image and exit.
+    /// Render an application to a PNG image and exit (macOS-first).
     ///
-    /// macOS-first; requires the `screenshot` build feature (enables gpui's
-    /// offscreen render path). See the screenshot decision doc.
-    #[cfg(feature = "screenshot")]
+    /// Requires a build with `--features screenshot` (enables gpui's offscreen
+    /// render path); without it, the command errors with instructions rather
+    /// than silently disappearing. See the screenshot decision doc.
     Screenshot(ScreenshotArgs),
 }
 
@@ -161,7 +161,6 @@ pub enum SchemaFormat {
 }
 
 /// Arguments for `nemo screenshot`.
-#[cfg(feature = "screenshot")]
 #[derive(clap::Args, Debug)]
 pub struct ScreenshotArgs {
     /// Path to the project configuration file (app.xml).
@@ -316,7 +315,6 @@ mod tests {
         assert!(args.verbose);
     }
 
-    #[cfg(feature = "screenshot")]
     #[test]
     fn screenshot_subcommand_parses() {
         let args = Args::try_parse_from([

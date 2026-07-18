@@ -68,8 +68,7 @@ fn main() -> Result<()> {
         Some(Command::Dev(dev_args)) => commands::dev::run(args, dev_args),
         Some(Command::Validate(validate_args)) => commands::validate::run(validate_args),
         Some(Command::Schema(schema_args)) => commands::schema::run(schema_args),
-        #[cfg(feature = "screenshot")]
-        Some(Command::Screenshot(shot_args)) => commands::screenshot::run(shot_args),
+        Some(Command::Screenshot(shot_args)) => dispatch_screenshot(shot_args),
         None => {
             let watch = args
                 .watch
@@ -77,6 +76,23 @@ fn main() -> Result<()> {
             run_app(args, watch)
         }
     }
+}
+
+/// Dispatches `nemo screenshot`. The command is always present in the CLI so it
+/// shows in `--help` and gives an actionable error, but the capture path is only
+/// compiled in under the `screenshot` feature (it needs gpui's offscreen render).
+#[cfg(feature = "screenshot")]
+fn dispatch_screenshot(args: args::ScreenshotArgs) -> Result<()> {
+    commands::screenshot::run(args)
+}
+
+#[cfg(not(feature = "screenshot"))]
+fn dispatch_screenshot(_args: args::ScreenshotArgs) -> Result<()> {
+    anyhow::bail!(
+        "the `screenshot` subcommand requires a build with the `screenshot` feature.\n\
+         Rebuild with, e.g.:\n    \
+         cargo run -p nemo --features screenshot -- screenshot --app-config <app.xml> --out <out.png>"
+    )
 }
 
 /// Runs the Nemo application (the default, no-subcommand path).
