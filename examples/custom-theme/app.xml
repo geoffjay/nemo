@@ -1,0 +1,38 @@
+<nemo>
+  <!-- Register project-defined theme sets from external JSON files. These use
+       the same schema as the themes that ship with nemo (see crates/nemo/src/theme/*.json),
+       so the easiest way to author one is to copy a shipped theme and edit its colors. -->
+  <themes>
+    <theme-set src="themes/aurora.json" />
+  </themes>
+
+  <app title="Custom Theme Example">
+    <window title="Custom Theme">
+      <header-bar theme-toggle="true" />
+    </window>
+
+    <!-- Select the project-defined "Aurora" theme, and override a single color
+         on top of it via <extend>. Overrides win over the base theme's colors. -->
+    <theme name="aurora" mode="dark">
+      <extend>
+        <color key="primary.background" value="#ff7a45" />
+        <color key="primary.hover.background" value="#ff9466" />
+      </extend>
+    </theme>
+  </app>
+
+  <layout type="stack">
+    <label id="header" text="Aurora — a project-defined theme" />
+
+    <panel id="intro">
+      <label id="intro-text"
+             text="This window uses a custom theme shipped with the project, not one baked into nemo." />
+    </panel>
+
+    <panel id="buttons">
+      <button id="primary-btn" label="Primary" variant="primary" />
+      <button id="secondary-btn" label="Secondary" variant="secondary" />
+      <button id="danger-btn" label="Danger" variant="danger" />
+    </panel>
+  </layout>
+</nemo>

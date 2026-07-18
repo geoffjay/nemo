@@ -29,6 +29,28 @@ pub fn create_runtime(
 
 /// Apply theme settings from a loaded runtime.
 pub fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gpui::App) {
+    // Register any project-defined theme sets (`<themes><theme-set src=.../></themes>`)
+    // before resolving the selected theme, so custom names resolve. Called
+    // unconditionally (empty list clears the overlay) so switching to a project
+    // without custom themes doesn't leave stale entries from a previous project.
+    let srcs: Vec<String> = runtime
+        .get_config("themes")
+        .as_ref()
+        .and_then(|v| v.as_array())
+        .map(|entries| {
+            entries
+                .iter()
+                .filter_map(|e| e.get("src").and_then(|v| v.as_str()).map(|s| s.to_string()))
+                .collect()
+        })
+        .unwrap_or_default();
+    let base_dir = runtime
+        .config_path()
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("."));
+    theme::register_project_theme_sets(&base_dir, &srcs);
+
     if let Some(theme_name) = runtime
         .get_config("app.theme.name")
         .and_then(|v| v.as_str().map(|s| s.to_string()))
@@ -38,19 +60,23 @@ pub fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gp
             .and_then(|v| v.as_str().map(|s| s.to_string()))
             .unwrap_or_else(|| "dark".to_string());
 
+        // `app.theme.extend` is a flat `{ "color.key": "#hex", ... }` object built
+        // from `<theme><extend><color key value/></extend></theme>`; merge it over
+        // the resolved base theme.
         let overrides = runtime
             .get_config("app.theme.extend")
             .and_then(|extend_val| {
                 let obj = extend_val.as_object()?;
-                let (_, inner) = obj.iter().next()?;
-                let inner_obj = inner.as_object()?;
-                let json_obj: serde_json::Map<String, serde_json::Value> = inner_obj
+                let json_obj: serde_json::Map<String, serde_json::Value> = obj
                     .iter()
                     .filter_map(|(k, v)| {
                         v.as_str()
                             .map(|s| (k.clone(), serde_json::Value::String(s.to_string())))
                     })
                     .collect();
+                if json_obj.is_empty() {
+                    return None;
+                }
                 serde_json::from_value(serde_json::Value::Object(json_obj)).ok()
             });
 

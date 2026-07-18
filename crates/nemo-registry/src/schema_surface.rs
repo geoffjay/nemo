@@ -250,6 +250,7 @@ pub fn structural_elements() -> &'static [StructuralElement] {
                 "variable",
                 "include",
                 "layout",
+                "themes",
             ],
         },
         StructuralElement {
@@ -291,19 +292,65 @@ pub fn structural_elements() -> &'static [StructuralElement] {
         },
         StructuralElement {
             element: "theme",
-            description: "Theme selection.",
+            description: "Theme selection, with optional per-color overrides.",
             attributes: &[
                 AttrDef {
                     name: "name",
                     value_type: "string",
-                    description: "Theme name (e.g. nord, kanagawa).",
+                    description:
+                        "Theme name (shipped set like nord/kanagawa, or a project-defined set).",
                 },
                 AttrDef {
                     name: "mode",
                     value_type: "string",
-                    description: "Theme mode: light | dark.",
+                    description: "Theme mode: light | dark | system.",
+                },
+                AttrDef {
+                    name: "font-family",
+                    value_type: "string",
+                    description: "Optional per-project font-family override.",
                 },
             ],
+            child_elements: &["extend"],
+        },
+        StructuralElement {
+            element: "extend",
+            description: "Per-color overrides merged over the selected base theme.",
+            attributes: &[],
+            child_elements: &["color"],
+        },
+        StructuralElement {
+            element: "color",
+            description: "A single color override inside `<extend>`.",
+            attributes: &[
+                AttrDef {
+                    name: "key",
+                    value_type: "string",
+                    description: "Theme color key (e.g. primary.background, foreground).",
+                },
+                AttrDef {
+                    name: "value",
+                    value_type: "string",
+                    description: "Hex color value (e.g. #ff6600).",
+                },
+            ],
+            child_elements: &[],
+        },
+        StructuralElement {
+            element: "themes",
+            description: "Registers project-defined theme sets from external JSON files.",
+            attributes: &[],
+            child_elements: &["theme-set"],
+        },
+        StructuralElement {
+            element: "theme-set",
+            description:
+                "A reference to an external theme-set JSON file (same schema as shipped themes).",
+            attributes: &[AttrDef {
+                name: "src",
+                value_type: "string",
+                description: "Path to a ThemeSet JSON file, relative to the config directory.",
+            }],
             child_elements: &[],
         },
         StructuralElement {

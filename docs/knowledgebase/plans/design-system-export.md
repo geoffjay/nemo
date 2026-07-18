@@ -75,9 +75,20 @@ committed and diffed.
   clean, no Cargo.lock drift.
 * **Done:** registry `variant`/`size` `one_of` annotations, so `variants`/`sizes`
   populate in the export; enforced by a new `invalid-value` strict validate lint.
+* **Done:** the `.pen` conversion — `docs/assets/nemo.pen` was authored via the
+  Pencil MCP from this export: themed (light/dark, nord) color variables for the
+  semantic roles + palette, spacing/radius/typography number variables, three
+  reusable components (Button, Tag, Alert) bound to those variables, and a
+  "Nemo Design System" showcase screen (Colors / Spacing / Radius / Typography /
+  Components with 7 button + 6 tag + 4 alert variants). Note: the `.pen` palette
+  colors (primary/danger/…) come from the theme JSON's `<role>_background`/
+  `_foreground` keys, not the `SEMANTIC_COLOR_ROLES` field names (which map to
+  gpui-component `ThemeColor` fields like `secondary` that the JSON authors as
+  `secondary.background`) — a mismatch to reconcile if the export's `colorRoles`
+  is used for automated resolution later.
 * **Next (optional):** (1) extend `one_of` annotations to more components/props as
-  they gain enums (shared win with the LSP/gallery roadmap); (2) the `.pen`
-  conversion skill/MCP step that turns this intermediate into a `.pen` file;
+  they gain enums (shared win with the LSP/gallery roadmap); (2) reconcile the
+  `colorRoles` field names with the theme JSON's dotted `<role>_background` keys;
   (3) optionally fold gpui-component default colors in so absent theme fields
   resolve.
 

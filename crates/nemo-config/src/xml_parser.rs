@@ -144,6 +144,10 @@ impl XmlParser {
                     let layout_val = self.process_layout(obj);
                     result.insert("layout".to_string(), layout_val);
                 }
+                "themes" => {
+                    let themes_val = self.process_themes_block(obj);
+                    result.insert("themes".to_string(), themes_val);
+                }
                 _ => {
                     // Unknown top-level element, store as-is
                     let cleaned = self.clean_element(obj);
@@ -211,7 +215,7 @@ impl XmlParser {
                             app.insert("window".to_string(), self.process_nested_block(child_obj));
                         }
                         "theme" => {
-                            app.insert("theme".to_string(), self.clean_element(child_obj));
+                            app.insert("theme".to_string(), self.process_theme_block(child_obj));
                         }
                         "plugins" => {
                             let plugins = self.process_plugins_block(child_obj);
@@ -251,6 +255,87 @@ impl XmlParser {
         }
 
         Value::Array(plugins)
+    }
+
+    /// Processes a top-level `<themes>` block into a `Value::Array` of theme-set
+    /// references.
+    ///
+    /// Each `<theme-set src="themes/foo.json" />` child becomes `{ "src": "..." }`.
+    /// The JSON files themselves are **not** read or parsed here — that requires
+    /// the gpui-component `ThemeSet` type, which lives in the `nemo` crate. This
+    /// parser only records the reference so the app layer can load it later
+    /// (resolving `src` relative to the config directory).
+    fn process_themes_block(&self, obj: &IndexMap<String, Value>) -> Value {
+        let mut sets = Vec::new();
+
+        if let Some(children) = obj.get("__children__").and_then(|v| v.as_array()) {
+            for child in children {
+                if let Some(child_obj) = child.as_object() {
+                    let child_type = child_obj
+                        .get("__type__")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    // `<theme-set>` is kebab→snake normalized to `theme_set`.
+                    if child_type == "theme_set" {
+                        sets.push(self.clean_element(child_obj));
+                    }
+                }
+            }
+        }
+
+        Value::Array(sets)
+    }
+
+    /// Processes an `<app><theme>` element, preserving a `<extend>` override block.
+    ///
+    /// Attributes (`name`, `mode`, `font-family`) are copied through. An optional
+    /// `<extend>` child, whose `<color key="..." value="..." />` children carry
+    /// per-color overrides, is flattened into `theme.extend = { key: value, ... }`
+    /// for `apply_theme_from_runtime` to merge over the resolved base theme.
+    fn process_theme_block(&self, obj: &IndexMap<String, Value>) -> Value {
+        let mut theme = IndexMap::new();
+
+        for (key, val) in obj {
+            match key.as_str() {
+                "__type__" | "__children__" | "__cdata__" => continue,
+                _ => {
+                    theme.insert(key.clone(), val.clone());
+                }
+            }
+        }
+
+        if let Some(children) = obj.get("__children__").and_then(|v| v.as_array()) {
+            for child in children {
+                let Some(child_obj) = child.as_object() else {
+                    continue;
+                };
+                if child_obj.get("__type__").and_then(|v| v.as_str()) != Some("extend") {
+                    continue;
+                }
+
+                let mut colors = IndexMap::new();
+                if let Some(color_children) =
+                    child_obj.get("__children__").and_then(|v| v.as_array())
+                {
+                    for color in color_children {
+                        let Some(color_obj) = color.as_object() else {
+                            continue;
+                        };
+                        if color_obj.get("__type__").and_then(|v| v.as_str()) != Some("color") {
+                            continue;
+                        }
+                        let key = color_obj.get("key").and_then(|v| v.as_str());
+                        let value = color_obj.get("value").and_then(|v| v.as_str());
+                        if let (Some(k), Some(v)) = (key, value) {
+                            colors.insert(k.to_string(), Value::String(v.to_string()));
+                        }
+                    }
+                }
+                theme.insert("extend".to_string(), Value::Object(colors));
+            }
+        }
+
+        Value::Object(theme)
     }
 
     /// Processes a nested block element (like <window>) that may have sub-elements.
@@ -1531,6 +1616,68 @@ mod tests {
         assert_eq!(
             theme.get("name"),
             Some(&Value::String("kanagawa".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_themes_block() {
+        let xml = r#"
+        <nemo>
+            <themes>
+                <theme-set src="themes/corporate.json" />
+                <theme-set src="themes/solar.json" />
+            </themes>
+            <app title="Test">
+                <theme name="corporate" mode="dark" />
+            </app>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let themes = value.get("themes").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(themes.len(), 2);
+        assert_eq!(
+            themes[0].get("src"),
+            Some(&Value::String("themes/corporate.json".to_string()))
+        );
+        assert_eq!(
+            themes[1].get("src"),
+            Some(&Value::String("themes/solar.json".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_theme_extend_overrides() {
+        let xml = r##"
+        <nemo>
+            <app title="Test">
+                <theme name="nord" mode="dark">
+                    <extend>
+                        <color key="primary.background" value="#ff6600" />
+                        <color key="foreground" value="#ffffff" />
+                    </extend>
+                </theme>
+            </app>
+        </nemo>
+        "##;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let theme = value.get("app").unwrap().get("theme").unwrap();
+        assert_eq!(theme.get("name"), Some(&Value::String("nord".to_string())));
+        assert_eq!(theme.get("mode"), Some(&Value::String("dark".to_string())));
+
+        let extend = theme.get("extend").and_then(|v| v.as_object()).unwrap();
+        assert_eq!(
+            extend.get("primary.background"),
+            Some(&Value::String("#ff6600".to_string()))
+        );
+        assert_eq!(
+            extend.get("foreground"),
+            Some(&Value::String("#ffffff".to_string()))
         );
     }
 

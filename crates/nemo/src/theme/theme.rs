@@ -1,6 +1,8 @@
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::LazyLock;
+use std::sync::RwLock;
 
 use gpui::*;
 use gpui_component::Theme;
@@ -9,6 +11,7 @@ use gpui_component::ThemeConfigColors;
 use gpui_component::ThemeMode;
 use gpui_component::ThemeSet;
 use tracing::info;
+use tracing::warn;
 
 const THEME_SOURCES: &[&str] = &[
     include_str!("./catppuccin.json"),
@@ -46,13 +49,117 @@ pub static THEME_SETS: LazyLock<HashMap<String, Vec<ThemeConfig>>> = LazyLock::n
     sets
 });
 
+/// Project-defined theme sets registered from the loaded `app.xml`'s `<themes>`
+/// block. Consulted **before** the baked-in `THEMES`/`THEME_SETS` statics, so a
+/// project can add brand-new themes or fully replace a shipped one by reusing
+/// its set name. Uses the same gpui-component `ThemeSet` schema as the bundled
+/// JSON files.
+static PROJECT_THEME_SETS: LazyLock<RwLock<Vec<ThemeSet>>> =
+    LazyLock::new(|| RwLock::new(Vec::new()));
+
+/// Register project theme sets from external JSON files.
+///
+/// `srcs` are paths (relative to `base_dir`, or absolute) to files using the
+/// same gpui-component `ThemeSet` schema as the bundled themes. The overlay is
+/// **cleared first** so a project reload re-registers cleanly. Unlike the
+/// baked-in themes (which `.unwrap()`), project input is untrusted: a missing or
+/// malformed file is logged and skipped rather than panicking.
+pub fn register_project_theme_sets(base_dir: &Path, srcs: &[String]) {
+    let mut overlay = PROJECT_THEME_SETS
+        .write()
+        .expect("project theme sets lock poisoned");
+    overlay.clear();
+
+    for src in srcs {
+        let path = if Path::new(src).is_absolute() {
+            PathBuf::from(src)
+        } else {
+            base_dir.join(src)
+        };
+
+        let content = match std::fs::read_to_string(&path) {
+            Ok(c) => c,
+            Err(e) => {
+                warn!(
+                    "Failed to read project theme file {}: {}",
+                    path.display(),
+                    e
+                );
+                continue;
+            }
+        };
+
+        match serde_json::from_str::<ThemeSet>(&content) {
+            Ok(set) => {
+                info!(
+                    "Registered project theme set '{}' ({} variant(s)) from {}",
+                    set.name,
+                    set.themes.len(),
+                    path.display()
+                );
+                overlay.push(set);
+            }
+            Err(e) => warn!(
+                "Failed to parse project theme file {}: {}",
+                path.display(),
+                e
+            ),
+        }
+    }
+}
+
+/// Pair a set's variants into (light, dark), duplicating when only one mode
+/// exists. Returns `None` for an empty variant list.
+fn pair_from_variants(variants: &[ThemeConfig]) -> Option<(ThemeConfig, ThemeConfig)> {
+    let light = variants.iter().find(|t| t.mode == ThemeMode::Light);
+    let dark = variants.iter().find(|t| t.mode == ThemeMode::Dark);
+    match (light, dark) {
+        (Some(l), Some(d)) => Some((l.clone(), d.clone())),
+        (Some(l), None) => Some((l.clone(), l.clone())),
+        (None, Some(d)) => Some((d.clone(), d.clone())),
+        (None, None) => variants.first().map(|f| (f.clone(), f.clone())),
+    }
+}
+
+/// Resolve a light/dark pair from the project overlay by set name, then by exact
+/// variant name (duplicated for both modes). `None` if no overlay match.
+fn resolve_pair_from_overlay(name_lower: &str) -> Option<(ThemeConfig, ThemeConfig)> {
+    let sets = PROJECT_THEME_SETS
+        .read()
+        .expect("project theme sets lock poisoned");
+
+    for set in sets.iter() {
+        if set.name.to_lowercase() == name_lower {
+            if let Some(pair) = pair_from_variants(&set.themes) {
+                return Some(pair);
+            }
+        }
+    }
+
+    for set in sets.iter() {
+        for variant in &set.themes {
+            if variant.name.to_lowercase() == name_lower {
+                return Some((variant.clone(), variant.clone()));
+            }
+        }
+    }
+
+    None
+}
+
 /// Resolve a theme config by name and mode.
 ///
 /// First tries exact variant name match in `THEMES` (case-insensitive),
 /// then tries set name match in `THEME_SETS` (picks first variant matching requested mode).
+/// The project overlay is consulted before either.
 #[allow(dead_code)]
 pub fn resolve_theme(name: &str, mode: ThemeMode) -> Option<ThemeConfig> {
     let name_lower = name.to_lowercase();
+
+    // Project overlay wins over baked-in themes.
+    if let Some((light, dark)) = resolve_pair_from_overlay(&name_lower) {
+        return Some(if mode == ThemeMode::Dark { dark } else { light });
+    }
 
     // Try exact variant name match (case-insensitive)
     for (key, config) in THEMES.iter() {
@@ -81,20 +188,15 @@ pub fn resolve_theme(name: &str, mode: ThemeMode) -> Option<ThemeConfig> {
 pub fn resolve_theme_pair(name: &str) -> Option<(ThemeConfig, ThemeConfig)> {
     let name_lower = name.to_lowercase();
 
+    // Project overlay wins over baked-in themes.
+    if let Some(pair) = resolve_pair_from_overlay(&name_lower) {
+        return Some(pair);
+    }
+
     // Try set name first
     if let Some(variants) = THEME_SETS.get(&name_lower) {
-        let light = variants.iter().find(|t| t.mode == ThemeMode::Light);
-        let dark = variants.iter().find(|t| t.mode == ThemeMode::Dark);
-
-        match (light, dark) {
-            (Some(l), Some(d)) => return Some((l.clone(), d.clone())),
-            (Some(l), None) => return Some((l.clone(), l.clone())),
-            (None, Some(d)) => return Some((d.clone(), d.clone())),
-            (None, None) => {
-                if let Some(first) = variants.first() {
-                    return Some((first.clone(), first.clone()));
-                }
-            }
+        if let Some(pair) = pair_from_variants(variants) {
+            return Some(pair);
         }
     }
 
@@ -231,6 +333,12 @@ pub fn get_theme_set_names() -> Vec<String> {
         .filter_map(|source| serde_json::from_str::<ThemeSet>(source).ok())
         .map(|set| set.name.to_string())
         .collect();
+
+    // Include project-defined theme sets so they appear in the settings picker.
+    if let Ok(sets) = PROJECT_THEME_SETS.read() {
+        names.extend(sets.iter().map(|set| set.name.to_string()));
+    }
+
     names.sort();
     names.dedup();
     names
@@ -257,4 +365,58 @@ pub fn change_color_mode(mode: ThemeMode, _win: &mut Window, cx: &mut App) {
     };
     theme.mode = mode;
     theme.apply_config(&config);
+}
+
+#[cfg(test)]
+mod tests {
+    // NOTE: import specific items, not `use super::*` — that glob re-imports the
+    // `gpui::*` prelude re-exported at the top of this module, whose sheer size
+    // pushes the `#[test]` expansion past the crate's macro-recursion ceiling.
+    use super::{
+        get_theme_set_names, merge_theme_config_colors, register_project_theme_sets,
+        resolve_theme_pair,
+    };
+    use gpui_component::{ThemeConfigColors, ThemeMode};
+
+    const SAMPLE_SET: &str = r##"{
+        "name": "Sample",
+        "themes": [
+            { "name": "Sample Dark", "mode": "dark", "colors": { "background": "#111111", "primary.background": "#222222" } },
+            { "name": "Sample Light", "mode": "light", "colors": { "background": "#eeeeee" } }
+        ]
+    }"##;
+
+    // A single test to avoid races on the global `PROJECT_THEME_SETS` overlay
+    // (Cargo runs tests in the same binary concurrently).
+    #[test]
+    fn project_theme_overlay_lifecycle() {
+        let dir = std::env::temp_dir().join(format!("nemo-theme-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("sample.json"), SAMPLE_SET).unwrap();
+
+        register_project_theme_sets(&dir, &["sample.json".to_string()]);
+
+        // Resolves by set name into a light/dark pair.
+        let (light, dark) = resolve_theme_pair("sample").expect("overlay set should resolve");
+        assert_eq!(light.mode, ThemeMode::Light);
+        assert_eq!(dark.mode, ThemeMode::Dark);
+
+        // Appears in the settings picker list.
+        assert!(get_theme_set_names().iter().any(|n| n == "Sample"));
+
+        // Overrides merge over the resolved base colors.
+        let overrides: ThemeConfigColors =
+            serde_json::from_str(r##"{ "primary.background": "#ff7a45" }"##).unwrap();
+        let merged = merge_theme_config_colors(&dark.colors, &overrides);
+        assert_eq!(merged.primary.as_deref(), Some("#ff7a45"));
+        // A non-overridden color is preserved from the base.
+        assert_eq!(merged.background.as_deref(), Some("#111111"));
+
+        // A bad path is skipped gracefully (no panic) and clears the overlay.
+        register_project_theme_sets(&dir, &["missing.json".to_string()]);
+        assert!(resolve_theme_pair("sample").is_none());
+        assert!(!get_theme_set_names().iter().any(|n| n == "Sample"));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }
