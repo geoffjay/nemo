@@ -16,7 +16,9 @@ signals GPUI to re-render.
 
 # Workspace crates
 
-All crates live under `crates/`. `nemo` is the binary; the rest are libraries.
+Library/app crates live under `crates/`; `nemo` is the shipped binary, the rest
+are libraries. `xtask/` is a separate dev-only binary (not shipped, not under
+`crates/`).
 
 * **nemo** — binary, GPUI app shell, component rendering, window/workspace UI.
   `src/main.rs` (entry/CLI), `src/runtime.rs` (`NemoRuntime` orchestration),
@@ -31,9 +33,17 @@ All crates live under `crates/`. `nemo` is the binary; the rest are libraries.
 * **nemo-extension** — Rhai scripts, native plugins (`libloading`), WASM host. See [Extensions](extensions.md).
 * **nemo-integration** — protocol clients (HTTP, WebSocket, MQTT, Redis, NATS).
 * **nemo-registry** — catalog of components/data sources/transforms/actions with schemas (`builtins.rs`).
+* **nemo-tokens** — gpui-free design tokens (spacing/radius/typography scales,
+  semantic color roles); shared by the app's `theme::tokens` and the `xtask`
+  design-system exporter so they can't drift. See
+  [design tokens](../plans/design-tokens.md).
 * **nemo-macros** — proc macros (`#[derive(NemoComponent)]`). See [Components](components.md).
 * **nemo-plugin** / **nemo-plugin-api** — native plugin SDK and the stable host↔plugin API contract.
 * **nemo-wasm** / **nemo-wasm-guest** — WASM Component Model host (wasmtime) and guest SDK (wit-bindgen).
+* **xtask** — dev-only tasks run via `cargo xtask <task>` (aliased in
+  `.cargo/config.toml`); currently `design-export` (see
+  [design-system export](../plans/design-system-export.md)). Depends only on
+  gpui-free crates, so it compiles fast and never launches the app.
 
 # Startup flow
 

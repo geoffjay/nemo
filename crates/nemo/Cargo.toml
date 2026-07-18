@@ -38,6 +38,7 @@ screenshot = ["gpui_platform/test-support"]
 [dependencies]
 nemo-config = { workspace = true }
 nemo-registry = { workspace = true }
+nemo-tokens = { workspace = true }
 nemo-layout = { workspace = true }
 nemo-data = { workspace = true }
 nemo-extension = { workspace = true, features = ["wasm"] }

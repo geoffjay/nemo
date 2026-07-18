@@ -19,8 +19,15 @@ validation loop this redesign uses).
 
 # The token module
 
+The gpui-free token *data* lives in the **`nemo-tokens`** crate
+(`crates/nemo-tokens/src/lib.rs`) so it can be shared with the `xtask`
+design-system exporter without pulling in gpui. The app's
 `crates/nemo/src/theme/tokens.rs` (declared `pub mod tokens;` in `theme/mod.rs`)
-— code-first constants, the single source of truth, and export-ready:
+re-exports `nemo-tokens` and adds the gpui-coupled render helpers (`space()`,
+`font_size()`, `TokenStyled`). One source of truth, consumed two ways — see
+[design-system export](design-system-export.md).
+
+The data (code-first constants, export-ready):
 
 * **`space`** — 4px-based scale (xs 4, sm 8, md 12, lg 16, xl 24, xxl 32); `Space`
   enum + `space(Space) -> Pixels`.

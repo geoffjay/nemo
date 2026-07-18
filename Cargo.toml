@@ -9,6 +9,7 @@ members = [
   "crates/nemo",
   "crates/nemo-config",
   "crates/nemo-registry",
+  "crates/nemo-tokens",
   "crates/nemo-layout",
   "crates/nemo-data",
   "crates/nemo-extension",
@@ -24,6 +25,7 @@ members = [
   "plugins/pid-control",
   "plugins/streaming-stats",
   "plugins/demo-settings",
+  "xtask",
 ]
 
 [workspace.package]
@@ -108,6 +110,7 @@ clap = { version = "4", features = ["derive", "env"] }
 # Internal crates
 nemo-config = { path = "crates/nemo-config" }
 nemo-registry = { path = "crates/nemo-registry" }
+nemo-tokens = { path = "crates/nemo-tokens" }
 nemo-layout = { path = "crates/nemo-layout" }
 nemo-data = { path = "crates/nemo-data" }
 nemo-extension = { path = "crates/nemo-extension" }

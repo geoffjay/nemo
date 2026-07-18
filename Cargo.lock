@@ -4705,6 +4705,7 @@ dependencies = [
  "nemo-macros",
  "nemo-plugin-api",
  "nemo-registry",
+ "nemo-tokens",
  "notify 6.1.1",
  "proptest 1.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
@@ -4874,6 +4875,10 @@ dependencies = [
  "thiserror 1.0.69",
  "tracing",
 ]
+
+[[package]]
+name = "nemo-tokens"
+version = "0.8.0"
 
 [[package]]
 name = "nemo-wasm"
@@ -11088,6 +11093,19 @@ name = "xmlwriter"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
+
+[[package]]
+name = "xtask"
+version = "0.8.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "nemo-config",
+ "nemo-registry",
+ "nemo-tokens",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "y4m"

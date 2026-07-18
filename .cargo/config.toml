@@ -1,0 +1,3 @@
+[alias]
+# Development-only tasks. Run e.g. `cargo xtask design-export`.
+xtask = "run --package xtask --"

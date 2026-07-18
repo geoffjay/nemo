@@ -1,0 +1,9 @@
+[package]
+name = "nemo-tokens"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Nemo design tokens: the gpui-free spacing/radius/typography scales and semantic color roles, shared by the app and the design-system exporter."
+repository.workspace = true
+
+[dependencies]
