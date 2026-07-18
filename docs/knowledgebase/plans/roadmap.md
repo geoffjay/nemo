@@ -48,7 +48,7 @@ All workstreams done or deferred. No separate planning doc remains.
 | `nemo validate` subcommand | ✅ Done | `--strict` lints; `unknown-attribute` runs on all schemas with universal-style allowlist; `missing-required` gated on strict schemas. `--format human\|json`; `--validate-only` forwards. |
 | Cross-platform packaging | ✅ Validated | v0.7.0-rc.1 produced 14 assets across 5 targets. AppImage/`.msi` deferred; signing declined (`xattr` workaround). |
 | Distribution | ✅ Done | `install.sh` verified end-to-end; Homebrew tap auto-push working. AUR/Scoop/Winget deferred. |
-| Headless renderer / screenshots | 🟡 Deferred | Spike done: render works under Xvfb+lavapipe, capture blank without a compositor. Not worth the vendor/fork effort right now. See [headless screenshots](headless-screenshots.md). |
+| Headless renderer / screenshots | ✅ Done (macOS) | `nemo screenshot` via gpui's offscreen `Window::render_to_image` behind the opt-in `screenshot` feature. Linux capture remains open. See [headless screenshots](headless-screenshots.md) + [decision](../decisions/screenshot-via-test-support-feature.md). |
 
 # Remaining roadmap items
 

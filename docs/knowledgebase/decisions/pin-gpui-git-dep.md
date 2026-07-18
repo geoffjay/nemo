@@ -35,3 +35,10 @@ build.
   The workaround is to embed templates via `include_str!` (a compile-time
   builtin, zero new dependencies) instead of `include_dir`. See
   `crates/nemo/src/commands/new.rs`.
+* **Enabling a gpui *feature* is safe if it stays additive.** Turning on the
+  `screenshot` feature (→ `gpui_platform/test-support`) added only `proptest`
+  (a git dep of test-support), `proptest-macro`, and `convert_case` to
+  `Cargo.lock`, leaving the pinned `zed-industries/zed#3bd9d13…` revision
+  unchanged. A feature toggle must **not** drift the rev — verify `git diff
+  Cargo.lock` after the first build and restore the lock if it does. See
+  [screenshot via test-support feature](screenshot-via-test-support-feature.md).

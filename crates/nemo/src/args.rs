@@ -65,6 +65,12 @@ pub enum Command {
     Validate(ValidateArgs),
     /// Export the configuration schema for this build and exit.
     Schema(SchemaArgs),
+    /// Render an application to a PNG image and exit.
+    ///
+    /// macOS-first; requires the `screenshot` build feature (enables gpui's
+    /// offscreen render path). See the screenshot decision doc.
+    #[cfg(feature = "screenshot")]
+    Screenshot(ScreenshotArgs),
 }
 
 /// Arguments for `nemo new`.
@@ -152,6 +158,38 @@ pub struct SchemaArgs {
 pub enum SchemaFormat {
     /// nemo-native JSON schema.
     Json,
+}
+
+/// Arguments for `nemo screenshot`.
+#[cfg(feature = "screenshot")]
+#[derive(clap::Args, Debug)]
+pub struct ScreenshotArgs {
+    /// Path to the project configuration file (app.xml).
+    #[arg(long, env = "NEMO_APP_CONFIG")]
+    pub app_config: PathBuf,
+
+    /// Output PNG path.
+    #[arg(short, long)]
+    pub out: PathBuf,
+
+    /// Logical window size as `WxH` (e.g. `1200x800`). The actual pixel
+    /// dimensions scale with the display (2x on a retina Mac).
+    #[arg(long)]
+    pub size: Option<String>,
+
+    /// Milliseconds to wait after launch before capturing, so async data
+    /// bindings, first paint, and animations can settle.
+    #[arg(long, default_value_t = 500)]
+    pub settle_ms: u64,
+
+    /// Theme name override (e.g. `nord`, `gruvbox`). Wins over the app's own
+    /// configured theme.
+    #[arg(long)]
+    pub theme: Option<String>,
+
+    /// Theme mode override: `light`, `dark`, or `system`.
+    #[arg(long)]
+    pub mode: Option<String>,
 }
 
 impl Args {
@@ -276,5 +314,36 @@ mod tests {
     fn verbose_is_global_after_subcommand() {
         let args = Args::try_parse_from(["nemo", "validate", "app.xml", "--verbose"]).unwrap();
         assert!(args.verbose);
+    }
+
+    #[cfg(feature = "screenshot")]
+    #[test]
+    fn screenshot_subcommand_parses() {
+        let args = Args::try_parse_from([
+            "nemo",
+            "screenshot",
+            "--app-config",
+            "app.xml",
+            "--out",
+            "out.png",
+            "--size",
+            "800x600",
+            "--theme",
+            "nord",
+            "--mode",
+            "dark",
+        ])
+        .unwrap();
+        match args.command {
+            Some(Command::Screenshot(s)) => {
+                assert_eq!(s.app_config, PathBuf::from("app.xml"));
+                assert_eq!(s.out, PathBuf::from("out.png"));
+                assert_eq!(s.size.as_deref(), Some("800x600"));
+                assert_eq!(s.settle_ms, 500);
+                assert_eq!(s.theme.as_deref(), Some("nord"));
+                assert_eq!(s.mode.as_deref(), Some("dark"));
+            }
+            other => panic!("expected Screenshot, got {other:?}"),
+        }
     }
 }

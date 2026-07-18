@@ -6,11 +6,20 @@ tags: [screenshots, headless, gpui, linux, ci]
 timestamp: 2026-07-12T00:00:00Z
 ---
 
-**Status: Deferred (2026-07-12).** The spike proved rendering works, but the
-capture path needs a compositor experiment or a GPUI fork for offscreen
-render-to-texture. Neither justifies the effort right now — revisit when the
-value (visual regression, AI-observable renders) demands it. Findings preserved
-below.
+**Status: Implemented on macOS (2026-07-18).** The capture path that the
+Linux spike was missing already ships in the pinned gpui:
+`Window::render_to_image()` renders the current frame's `Scene` to a Metal
+texture and reads pixels back — no compositor, no fork, no screen-recording
+permission, works while the window is invisible. `nemo screenshot` now uses it
+behind the opt-in `screenshot` cargo feature (enables
+`gpui_platform/test-support`). Verified against `examples/app-shell` and
+`examples/components` with theme/mode/size overrides. See
+[screenshot via test-support feature](../decisions/screenshot-via-test-support-feature.md)
+and [screenshots Windows out of scope](../decisions/screenshots-windows-out-of-scope.md).
+
+**Linux capture remains open** (best-effort/deferred): the blank-capture finding
+below still stands for the Xvfb/blade path; the macOS Metal readback path is what
+made this shippable. The pre-implementation spike findings are preserved below.
 
 A `nemo screenshot` capability so automated and AI-assisted workflows can *see*
 what an app renders. Combined with hot-reload, this closes an

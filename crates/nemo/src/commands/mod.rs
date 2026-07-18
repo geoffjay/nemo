@@ -12,4 +12,6 @@
 pub mod dev;
 pub mod new;
 pub mod schema;
+#[cfg(feature = "screenshot")]
+pub mod screenshot;
 pub mod validate;

@@ -27,6 +27,14 @@ pkg-sci = ["nemo-extension/pkg-sci"]
 pkg-process = ["nemo-extension/pkg-process"]
 all-packages = ["pkg-env", "pkg-sci", "pkg-process"]
 
+# Offscreen screenshot capture (`nemo screenshot`). Turns on gpui's
+# `test-support` render-to-image path (Metal drawable readback on macOS). NOT in
+# `default`: test-support can change gpui codegen, so release/normal builds must
+# stay feature-free. Enabling it is a feature-only change and must NOT drift the
+# pinned gpui rev in Cargo.lock — verify `git diff Cargo.lock` after building.
+# See docs/knowledgebase/decisions/screenshot-via-test-support-feature.md.
+screenshot = ["gpui_platform/test-support"]
+
 [dependencies]
 nemo-config = { workspace = true }
 nemo-registry = { workspace = true }

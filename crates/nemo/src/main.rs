@@ -68,6 +68,8 @@ fn main() -> Result<()> {
         Some(Command::Dev(dev_args)) => commands::dev::run(args, dev_args),
         Some(Command::Validate(validate_args)) => commands::validate::run(validate_args),
         Some(Command::Schema(schema_args)) => commands::schema::run(schema_args),
+        #[cfg(feature = "screenshot")]
+        Some(Command::Screenshot(shot_args)) => commands::screenshot::run(shot_args),
         None => {
             let watch = args
                 .watch
@@ -150,196 +152,246 @@ pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
     info!("Starting GPUI application...");
     let gpui_app = gpui_platform::application().with_assets(gpui_component_assets::Assets);
 
-    let app_config_path = args.app_config.clone();
-    let ws_args = WorkspaceArgs {
-        extension_dirs: args.extension_dirs.clone(),
+    let params = BootstrapParams {
+        nemo_config,
+        app_config_path: args.app_config.clone(),
+        ws_args: WorkspaceArgs {
+            extension_dirs: args.extension_dirs.clone(),
+        },
+        watch,
+        size_override: None,
     };
 
     gpui_app.run(move |cx| {
-        gpui_component::init(cx);
-        router_init(cx);
-
-        // Apply theme from TOML config (base app settings)
-        if nemo_config.app.theme_name != "default" {
-            let mode = nemo_config.app.theme_mode.as_deref().unwrap_or("system");
-            theme::apply_configured_theme(&nemo_config.app.theme_name, mode, None, cx);
-        }
-
-        // Apply global font family from TOML config
-        if let Some(ref font_family) = nemo_config.app.font_family {
-            gpui_component::Theme::global_mut(cx).font_family = font_family.clone().into();
-        }
-
-        // Wrap config in Arc<Mutex<>> for sharing with settings view
-        let nemo_config = Arc::new(Mutex::new(nemo_config));
-
-        cx.bind_keys([
-            KeyBinding::new("ctrl-shift-r", ReloadConfig, None),
-            KeyBinding::new("ctrl-q", QuitApp, None),
-            KeyBinding::new("ctrl-w", CloseProject, None),
-            KeyBinding::new("ctrl-o", OpenProject, None),
-            KeyBinding::new("ctrl-shift-t", ToggleTheme, None),
-            KeyBinding::new("ctrl-p", OpenSettings, None),
-            KeyBinding::new("escape", CloseSettings, None),
-            KeyBinding::new("f10", ShowKeyboardShortcuts, None),
-        ]);
-
-        // Store workspace entity for window close handler
-        let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
-
-        cx.on_window_closed({
-            let workspace_entity = workspace_entity.clone();
-            move |cx, _window_id| {
-                if let Some(ws) = workspace_entity.borrow().clone() {
-                    ws.update(cx, |ws, cx| {
-                        ws.shutdown(cx);
-                    });
-                }
-                cx.quit();
-            }
-        })
-        .detach();
-
-        // If app_config provided, create runtime early so we can read window dimensions
-        let early_runtime = app_config_path.as_ref().and_then(|config_path| {
-            match create_runtime(config_path, &ws_args.extension_dirs) {
-                Ok(rt) => Some(rt),
-                Err(e) => {
-                    tracing::error!("Failed to load project: {}", e);
-                    None
-                }
-            }
-        });
-
-        // Read window dimensions from runtime config (if available)
-        let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
-            let w = rt
-                .get_config("app.window.width")
-                .and_then(|v| v.as_i64().map(|n| n as u32));
-            let h = rt
-                .get_config("app.window.height")
-                .and_then(|v| v.as_i64().map(|n| n as u32));
-            let mw = rt
-                .get_config("app.window.min_width")
-                .and_then(|v| v.as_i64().map(|n| n as u32));
-            let mh = rt
-                .get_config("app.window.min_height")
-                .and_then(|v| v.as_i64().map(|n| n as u32));
-            (w, h, mw, mh)
-        } else {
-            (None, None, None, None)
-        };
-
-        let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h);
-
-        cx.open_window(window_options, |window, cx| {
-            let nemo_config = nemo_config.clone();
-            let ws_args = ws_args.clone();
-            let app_config_path = app_config_path.clone();
-            // Captured for hot-reload watching before the values below are moved
-            // into the workspace constructor.
-            let watch_cfg = app_config_path.clone();
-            let watch_exts = ws_args.extension_dirs.clone();
-
-            let ws = cx.new(|cx| {
-                let mut current_route = "/".to_string();
-
-                // If app_config provided via CLI, use the early-created runtime
-                if let Some(config_path) = app_config_path {
-                    info!("Loading project from: {:?}", config_path);
-
-                    let mut recent_projects = config::recent::RecentProjects::load();
-                    recent_projects.add(config_path.clone());
-                    recent_projects.save();
-
-                    if let Some(rt) = early_runtime {
-                        apply_theme_from_runtime(&rt, cx);
-                        let title = rt
-                            .get_config("app.window.title")
-                            .and_then(|v| v.as_str().map(|s| s.to_string()))
-                            .unwrap_or_else(|| "Nemo Application".to_string());
-                        let github_url = rt
-                            .get_config("app.window.header_bar.github_url")
-                            .and_then(|v| v.as_str().map(|s| s.to_string()));
-                        let theme_toggle = rt
-                            .get_config("app.window.header_bar.theme_toggle")
-                            .and_then(|v| v.as_bool())
-                            .unwrap_or(false);
-                        let header_bar = cx
-                            .new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx));
-                        let footer_bar_enabled = rt
-                            .get_config("app.window.footer_bar.enabled")
-                            .and_then(|v| v.as_bool())
-                            .unwrap_or(false);
-                        let footer_bar = if footer_bar_enabled {
-                            Some(cx.new(|cx| FooterBar::new(window, cx)))
-                        } else {
-                            None
-                        };
-                        let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
-                        cx.set_global(ActiveProject {
-                            runtime: rt,
-                            app_entity,
-                            header_bar,
-                            footer_bar,
-                            settings_view: None,
-                        });
-                        current_route = "/app".to_string();
-                    }
-                }
-
-                let focus_handle = cx.focus_handle();
-                focus_handle.focus(window, cx);
-
-                let loader = Workspace::create_loader(&nemo_config, window, cx);
-
-                Workspace {
-                    nemo_config,
-                    ws_args,
-                    current_config_path: if current_route == "/app" {
-                        args.app_config.clone()
-                    } else {
-                        None
-                    },
-                    pending_project_path: None,
-                    pending_close_project: false,
-                    focus_handle,
-                    current_route,
-                    loader,
-                    pending_reload: false,
-                    _watcher: None,
-                }
-            });
-
-            // Navigate to the initial route after window creation
-            let route = ws.read(cx).current_route.clone();
-            let needs_refresh = route != "/";
-            use_navigate(cx)(route.into());
-            if needs_refresh {
-                window.refresh();
-            }
-
-            // Start hot-reload file watching when requested (nemo dev / --watch).
-            if let Some(debounce) = watch {
-                if let Some(cfg) = watch_cfg.as_ref() {
-                    let mut watch_paths: Vec<PathBuf> = Vec::new();
-                    match cfg.parent() {
-                        Some(parent) if !parent.as_os_str().is_empty() => {
-                            watch_paths.push(parent.to_path_buf());
-                        }
-                        _ => watch_paths.push(PathBuf::from(".")),
-                    }
-                    watch_paths.extend(watch_exts.iter().cloned());
-                    ws.update(cx, |ws, cx| ws.start_watching(watch_paths, debounce, cx));
-                }
-            }
-
-            *workspace_entity.borrow_mut() = Some(ws.clone());
-            cx.new(|_cx| Root::new(ws, window, _cx))
-        })
-        .expect("Failed to open window");
+        build_app_window(cx, params);
     });
 
     info!("Nemo shutdown complete");
     Ok(())
+}
+
+/// Parameters for building and opening the main application window.
+///
+/// Bundles everything the window bootstrap needs so both the normal run path
+/// (`run_app`) and the `screenshot` subcommand construct an identical window.
+pub(crate) struct BootstrapParams {
+    pub nemo_config: NemoConfig,
+    pub app_config_path: Option<PathBuf>,
+    pub ws_args: WorkspaceArgs,
+    /// Hot-reload debounce; `None` disables watching (screenshots never watch).
+    pub watch: Option<Duration>,
+    /// Force a fixed logical window size (WxH), overriding the config/maximized
+    /// default. Used by `screenshot` for deterministic output dimensions.
+    pub size_override: Option<(u32, u32)>,
+}
+
+/// Builds theme/fonts/runtime/workspace, opens the main window, and returns its
+/// handle.
+///
+/// Must be called inside `gpui_platform::application().run(...)`. Behavior is
+/// identical to the historical inline bootstrap in `run_app`; it only
+/// additionally returns the window handle (previously discarded) and honors
+/// `size_override`, so the `screenshot` subcommand can capture the same window
+/// the normal run path produces.
+pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowHandle<Root> {
+    let BootstrapParams {
+        nemo_config,
+        app_config_path,
+        ws_args,
+        watch,
+        size_override,
+    } = params;
+
+    gpui_component::init(cx);
+    router_init(cx);
+
+    // Apply theme from TOML config (base app settings)
+    if nemo_config.app.theme_name != "default" {
+        let mode = nemo_config.app.theme_mode.as_deref().unwrap_or("system");
+        theme::apply_configured_theme(&nemo_config.app.theme_name, mode, None, cx);
+    }
+
+    // Apply global font family from TOML config
+    if let Some(ref font_family) = nemo_config.app.font_family {
+        gpui_component::Theme::global_mut(cx).font_family = font_family.clone().into();
+    }
+
+    // Wrap config in Arc<Mutex<>> for sharing with settings view
+    let nemo_config = Arc::new(Mutex::new(nemo_config));
+
+    cx.bind_keys([
+        KeyBinding::new("ctrl-shift-r", ReloadConfig, None),
+        KeyBinding::new("ctrl-q", QuitApp, None),
+        KeyBinding::new("ctrl-w", CloseProject, None),
+        KeyBinding::new("ctrl-o", OpenProject, None),
+        KeyBinding::new("ctrl-shift-t", ToggleTheme, None),
+        KeyBinding::new("ctrl-p", OpenSettings, None),
+        KeyBinding::new("escape", CloseSettings, None),
+        KeyBinding::new("f10", ShowKeyboardShortcuts, None),
+    ]);
+
+    // Store workspace entity for window close handler
+    let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
+
+    cx.on_window_closed({
+        let workspace_entity = workspace_entity.clone();
+        move |cx, _window_id| {
+            if let Some(ws) = workspace_entity.borrow().clone() {
+                ws.update(cx, |ws, cx| {
+                    ws.shutdown(cx);
+                });
+            }
+            cx.quit();
+        }
+    })
+    .detach();
+
+    // If app_config provided, create runtime early so we can read window dimensions
+    let early_runtime = app_config_path.as_ref().and_then(|config_path| {
+        match create_runtime(config_path, &ws_args.extension_dirs) {
+            Ok(rt) => Some(rt),
+            Err(e) => {
+                tracing::error!("Failed to load project: {}", e);
+                None
+            }
+        }
+    });
+
+    // Read window dimensions from runtime config (if available)
+    let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
+        let w = rt
+            .get_config("app.window.width")
+            .and_then(|v| v.as_i64().map(|n| n as u32));
+        let h = rt
+            .get_config("app.window.height")
+            .and_then(|v| v.as_i64().map(|n| n as u32));
+        let mw = rt
+            .get_config("app.window.min_width")
+            .and_then(|v| v.as_i64().map(|n| n as u32));
+        let mh = rt
+            .get_config("app.window.min_height")
+            .and_then(|v| v.as_i64().map(|n| n as u32));
+        (w, h, mw, mh)
+    } else {
+        (None, None, None, None)
+    };
+
+    // `--size` (screenshot) forces fixed, windowed dimensions for deterministic
+    // output; otherwise use the config-derived size (or maximized default).
+    let (win_w, win_h) = match size_override {
+        Some((w, h)) => (Some(w), Some(h)),
+        None => (win_w, win_h),
+    };
+
+    let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h);
+
+    cx.open_window(window_options, |window, cx| {
+        let nemo_config = nemo_config.clone();
+        let ws_args = ws_args.clone();
+        let app_config_path = app_config_path.clone();
+        // Preserved for the workspace's `current_config_path`, since the binding
+        // below is consumed while creating the runtime.
+        let current_cfg_for_ws = app_config_path.clone();
+        // Captured for hot-reload watching before the values below are moved
+        // into the workspace constructor.
+        let watch_cfg = app_config_path.clone();
+        let watch_exts = ws_args.extension_dirs.clone();
+
+        let ws = cx.new(|cx| {
+            let mut current_route = "/".to_string();
+
+            // If app_config provided via CLI, use the early-created runtime
+            if let Some(config_path) = app_config_path {
+                info!("Loading project from: {:?}", config_path);
+
+                let mut recent_projects = config::recent::RecentProjects::load();
+                recent_projects.add(config_path.clone());
+                recent_projects.save();
+
+                if let Some(rt) = early_runtime {
+                    apply_theme_from_runtime(&rt, cx);
+                    let title = rt
+                        .get_config("app.window.title")
+                        .and_then(|v| v.as_str().map(|s| s.to_string()))
+                        .unwrap_or_else(|| "Nemo Application".to_string());
+                    let github_url = rt
+                        .get_config("app.window.header_bar.github_url")
+                        .and_then(|v| v.as_str().map(|s| s.to_string()));
+                    let theme_toggle = rt
+                        .get_config("app.window.header_bar.theme_toggle")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    let header_bar =
+                        cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx));
+                    let footer_bar_enabled = rt
+                        .get_config("app.window.footer_bar.enabled")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    let footer_bar = if footer_bar_enabled {
+                        Some(cx.new(|cx| FooterBar::new(window, cx)))
+                    } else {
+                        None
+                    };
+                    let app_entity = cx.new(|cx| app::App::new(Arc::clone(&rt), window, cx));
+                    cx.set_global(ActiveProject {
+                        runtime: rt,
+                        app_entity,
+                        header_bar,
+                        footer_bar,
+                        settings_view: None,
+                    });
+                    current_route = "/app".to_string();
+                }
+            }
+
+            let focus_handle = cx.focus_handle();
+            focus_handle.focus(window, cx);
+
+            let loader = Workspace::create_loader(&nemo_config, window, cx);
+
+            Workspace {
+                nemo_config,
+                ws_args,
+                current_config_path: if current_route == "/app" {
+                    current_cfg_for_ws
+                } else {
+                    None
+                },
+                pending_project_path: None,
+                pending_close_project: false,
+                focus_handle,
+                current_route,
+                loader,
+                pending_reload: false,
+                _watcher: None,
+            }
+        });
+
+        // Navigate to the initial route after window creation
+        let route = ws.read(cx).current_route.clone();
+        let needs_refresh = route != "/";
+        use_navigate(cx)(route.into());
+        if needs_refresh {
+            window.refresh();
+        }
+
+        // Start hot-reload file watching when requested (nemo dev / --watch).
+        if let Some(debounce) = watch {
+            if let Some(cfg) = watch_cfg.as_ref() {
+                let mut watch_paths: Vec<PathBuf> = Vec::new();
+                match cfg.parent() {
+                    Some(parent) if !parent.as_os_str().is_empty() => {
+                        watch_paths.push(parent.to_path_buf());
+                    }
+                    _ => watch_paths.push(PathBuf::from(".")),
+                }
+                watch_paths.extend(watch_exts.iter().cloned());
+                ws.update(cx, |ws, cx| ws.start_watching(watch_paths, debounce, cx));
+            }
+        }
+
+        *workspace_entity.borrow_mut() = Some(ws.clone());
+        cx.new(|_cx| Root::new(ws, window, _cx))
+    })
+    .expect("Failed to open window")
 }

@@ -60,6 +60,8 @@ to touch the KB on every edit.
 * [The gpui git dependency is load-bearing in Cargo.lock](decisions/pin-gpui-git-dep.md) - a rev-less git dep means Cargo.lock pins the working revision; avoid `cargo update`.
 * [Three-tier extension model with a unified PluginContext](decisions/three-tier-extensions.md) - Rhai, native cdylib, and WASM plugins share one host API.
 * [cargo audit ignores transitive advisories we cannot upgrade](decisions/audit-ignore-transitive-advisories.md) - .cargo/audit.toml ignores advisories pinned via the gpui/wasmtime deps; wasmtime upgrade tracked.
+* [nemo screenshot uses gpui's test-support render-to-image path](decisions/screenshot-via-test-support-feature.md) - opt-in `screenshot` feature enables offscreen capture; macOS-first, additive to Cargo.lock.
+* [Screenshots target macOS; Windows out of scope](decisions/screenshots-windows-out-of-scope.md) - macOS-first; Linux best-effort/deferred, Windows out of scope.
 
 ## Patterns
 
@@ -75,7 +77,7 @@ to touch the KB on every edit.
 
 * [Roadmap](plans/roadmap.md) - current capabilities, phase-2 status, remaining roadmap items, and pointers to full planning docs.
 * [Declarative children over JSON-string properties](plans/declarative-children-migration.md) - migrate collection components from JSON-string attributes to nested child elements, piloted on accordion.
-* [Headless renderer and screenshots](plans/headless-screenshots.md) - spike findings for headless GPUI rendering under Xvfb+lavapipe; capture path needs one more iteration.
+* [Headless renderer and screenshots](plans/headless-screenshots.md) - `nemo screenshot` implemented on macOS via gpui's offscreen `Window::render_to_image`; Linux capture remains open.
 * [Devtools inspector](plans/devtools-inspector.md) - what a nemo-devtools crate would take; the introspection surfaces already exist, in-process panel recommended over an external client.
 * [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
 

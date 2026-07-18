@@ -37,10 +37,19 @@ All crates live under `crates/`. `nemo` is the binary; the rest are libraries.
 
 # Startup flow
 
-`main.rs:main()` parses CLI args. Subcommands (`new`, `dev`, `validate`) dispatch
-and return; `--headless` runs without GPUI; otherwise GPUI launches. In the
+`main.rs:main()` parses CLI args. Subcommands (`new`, `dev`, `validate`,
+`schema`, and — under the `screenshot` build feature — `screenshot`) dispatch
+and return; `--headless` runs without GPUI; otherwise GPUI launches. The window
+bootstrap (theme/fonts/runtime/`Workspace`/`Root` construction and
+`cx.open_window`) is factored into the shared `main.rs::build_app_window(cx,
+BootstrapParams) -> WindowHandle<Root>`, called by both the default `run_app`
+path and the `screenshot` command so both render an identical window. In the
 window, `create_runtime()` builds an `Arc<NemoRuntime>`, the theme is applied,
 and an `App` entity is created (`cx.new(|cx| App::new(runtime, window, cx))`).
+
+The `screenshot` command reuses `build_app_window`, then captures the rendered
+frame off-screen via gpui's `Window::render_to_image()` (macOS Metal readback).
+See [screenshot via test-support feature](../decisions/screenshot-via-test-support-feature.md).
 
 `NemoRuntime::new()` constructs the subsystems (tokio runtime, event bus,
 registry + `register_all_builtins()`, layout manager, data flow engine,
