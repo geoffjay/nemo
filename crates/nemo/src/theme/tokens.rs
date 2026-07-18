@@ -15,6 +15,14 @@
 //! per-component XML style overrides (always win). Token helpers set *defaults*;
 //! they never override an explicit XML value.
 
+// This module is a deliberate, *complete* design-token API surface. Some items
+// are consumed by render code today, others (e.g. `name`/`ALL`/`line_height`)
+// by the design-system export (Phase 3) or provided for symmetry so the scale
+// and the `TokenStyled` helper set are whole. Allow unused rather than trimming
+// a coherent API that would just be re-added next phase. (Binary crate: `pub`
+// alone does not suppress dead-code warnings.)
+#![allow(dead_code)]
+
 use gpui::{px, Pixels, Styled};
 
 /// Spacing scale, in logical pixels. A small, consistent 4px-based step set so
