@@ -15,6 +15,8 @@
 
   <script src="./scripts" />
 
+  <include href="templates/nav.xml" />
+
   <!-- Templates -->
   <templates>
     <template name="nav_item">
@@ -1296,7 +1298,6 @@
             </tab-item>
           </tabs>
         </panel>
-
       </stack>
     </stack>
   </layout>
