@@ -136,3 +136,35 @@ under `<app>` if absent), preserving the rest of the hand-authored file. A futur
 option is an `overrides.xml` overlay to keep `app.xml` fully immutable; not yet
 implemented. Theme values are matched case-insensitively against the theme *set*
 names from `crates/nemo/src/theme/*.json` (`theme::get_theme_set_names`).
+
+# Project-level custom themes
+
+Beyond selecting a shipped theme, a project can **define its own themes** and
+**override individual colors** — see `examples/custom-theme/`.
+
+* **Register full custom themes** — a top-level `<themes>` block references
+  external JSON files: `<themes><theme-set src="themes/aurora.json" /></themes>`.
+  The files use the exact same gpui-component `ThemeSet` schema as the bundled
+  themes (`crates/nemo/src/theme/*.json`), so authoring one means copying a
+  shipped theme and editing colors. The parser (`xml_parser::process_themes_block`)
+  only records the `src` paths into `themes` (an array); it does **not** parse the
+  JSON (that needs the gpui-component `ThemeSet` type, which lives in the `nemo`
+  crate). `apply_theme_from_runtime` reads `themes`, resolves each `src` relative
+  to the config dir, and calls `theme::register_project_theme_sets`, which loads
+  them into a **`PROJECT_THEME_SETS` overlay** (`crates/nemo/src/theme/theme.rs`).
+  The overlay is consulted **before** the baked-in `THEMES`/`THEME_SETS` statics
+  by `resolve_theme`/`resolve_theme_pair`/`get_theme_set_names`, so a project can
+  add new themes *or* fully replace a shipped one by reusing its set name, and
+  custom themes appear in the settings picker. The overlay is cleared and
+  re-registered on every load (untrusted input: missing/malformed files are logged
+  and skipped, not `.unwrap()`'d).
+
+* **Override individual colors** — a `<theme>` may carry an `<extend>` block:
+  `<theme name="nord"><extend><color key="primary.background" value="#ff6600" />
+  </extend></theme>`. `process_theme_block` flattens these into
+  `app.theme.extend = { "primary.background": "#ff6600", ... }`;
+  `apply_theme_from_runtime` builds a `ThemeConfigColors` from it and passes it to
+  `apply_configured_theme`, where `merge_theme_config_colors` merges it over the
+  resolved base theme (overrides always win). (Both `<themes>`/`<theme-set>` and
+  `<extend>`/`<color>` are registered in `nemo_registry::schema_surface` so
+  `nemo validate` doesn't flag them and `nemo schema` publishes them.)
