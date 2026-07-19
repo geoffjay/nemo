@@ -76,16 +76,28 @@ committed and diffed.
 * **Done:** registry `variant`/`size` `one_of` annotations, so `variants`/`sizes`
   populate in the export; enforced by a new `invalid-value` strict validate lint.
 * **Done:** the `.pen` conversion — `docs/assets/nemo.pen` was authored via the
-  Pencil MCP from this export: themed (light/dark, nord) color variables for the
-  semantic roles + palette, spacing/radius/typography number variables, three
-  reusable components (Button, Tag, Alert) bound to those variables, and a
-  "Nemo Design System" showcase screen (Colors / Spacing / Radius / Typography /
-  Components with 7 button + 6 tag + 4 alert variants). Note: the `.pen` palette
-  colors (primary/danger/…) come from the theme JSON's `<role>_background`/
-  `_foreground` keys, not the `SEMANTIC_COLOR_ROLES` field names (which map to
-  gpui-component `ThemeColor` fields like `secondary` that the JSON authors as
-  `secondary.background`) — a mismatch to reconcile if the export's `colorRoles`
-  is used for automated resolution later.
+  Pencil MCP from this export. It defines themed (light/dark, nord) color
+  variables for the semantic roles + palette and spacing/radius/typography number
+  variables, **14 reusable components** bound to those variables (Button, Tag,
+  Alert, Input, Checkbox, Switch, Select, Progress, Card, Radio, Textarea,
+  Slider, Badge, Avatar), and **three showcase screens**: "Nemo Design System"
+  (token swatches + Button/Tag/Alert variants), "Nemo Components" (Button
+  sizes/states, Input states, Checkbox, Switch, Select, Progress, Card), and
+  "Components — Forms & Data" (Radio group, Textarea, Slider, Badges, Avatars,
+  plus Tabs and Table *compositions* — the Table reuses the Tag component for
+  status cells). Verified via `snapshot_layout` (no layout problems) and
+  `batch_get` with resolved variables/instances (theme-correct). Two caveats:
+  (a) the Pencil `get_screenshot` renders blank in the headless MCP context, so
+  verification used the data/layout tools; (b) `fit_content` frame heights are
+  cached and don't recompute on child edits, so showcase-screen heights are set
+  explicitly. Note: the `.pen` palette colors (primary/danger/…) come from the
+  theme JSON's `<role>_background`/`_foreground` keys, not the
+  `SEMANTIC_COLOR_ROLES` field names (which map to gpui-component `ThemeColor`
+  fields like `secondary` that the JSON authors as `secondary.background`) — a
+  mismatch to reconcile if the export's `colorRoles` is used for automated
+  resolution later. Persistence gotcha: MCP `batch_design` edits land in the live
+  Pencil document but must be **saved in the Pencil app** to flush to the on-disk
+  `.pen` (git-tracked); a plain save may need a reopen first to pull MCP changes.
 * **Next (optional):** (1) extend `one_of` annotations to more components/props as
   they gain enums (shared win with the LSP/gallery roadmap); (2) reconcile the
   `colorRoles` field names with the theme JSON's dotted `<role>_background` keys;
