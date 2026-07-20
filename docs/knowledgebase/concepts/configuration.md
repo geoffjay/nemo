@@ -41,6 +41,42 @@ three stages, producing a universal `Value` tree
 3. **Validate** (optional) — `ConfigValidator::validate()` (`validator.rs:22`)
    checks a `Value` against a `ConfigSchema`, returning errors and warnings.
 
+# Single-file components (`.nemo` SFCs)
+
+An `<imports>`/`<import src="…" [as="tag"]>` block pulls in reusable
+**single-file components**: one `.nemo` file bundling markup, styling, and
+behavior (see [Single-file components](../patterns/single-file-components.md) for
+the authoring pattern). `.nemo` files are **not** wrapped in `<nemo>`; their
+top-level children are `<template>` (required, exactly one root element),
+`<style>` (optional), and `<script>` (optional).
+
+Parsing/compilation touches three places:
+
+1. **`XmlParser::parse_sfc()`** (`xml_parser.rs`) parses a `.nemo` file into an
+   `SfcDefinition { name, template, style, script }`; the template body is
+   flattened with the same `process_component_element` used for layout components.
+2. **`process_import`** (`xml_parser.rs`) resolves `src` relative to the config's
+   `base_dir`, calls `parse_sfc`, and stores the result under the top-level `sfc`
+   key as `sfc[tag] = { template, style?, script?, source_path }`. The tag is
+   resolved `as=` > `<template name>` > filename stem, then **kebab→snake
+   normalized** so it matches how a `<labeled-button>` usage parses (type
+   `labeled_button`). The **resolver skips the `sfc` subtree** — SFC bodies use
+   bare `${prop}` placeholders on the *runtime* vars/interpolation path, not
+   `${var.x}`/`${env.x}` load-time resolution.
+3. **`parse_layout_config`** (`runtime.rs`) merges each SFC template into the
+   `TemplateMap` keyed by tag (rewriting template-authored bare `on_*` handlers to
+   `sfc:<tag>::<fn>` and any nested SFC tags), then `rewrite_sfc_tags` converts
+   every `<tag>` usage in the layout into a `template = "tag"` instance **before**
+   `expand_children`. From there the existing template pipeline (deep-merge, slot
+   injection, `__anon`/id scoping) applies unchanged, so an expanded SFC is
+   ordinary built-in components by the time it reaches the layout builder.
+
+SFC `<script>` bodies are loaded under `sfc:<tag>` ids in
+`load_scripts_from_config`; the single-colon prefix keeps `call_handler`'s
+first-`::` split resolving `sfc:<tag>::<fn>` to (script id `sfc:<tag>`, fn). The
+strict linter treats registered SFC tags as known component types (skipping
+`unknown-component`), like a `template=`-driven node.
+
 # Schema and validation
 
 Schemas are defined **programmatically**, not as files (there is no `schema/`

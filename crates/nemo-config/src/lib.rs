@@ -23,7 +23,7 @@ pub use resolver::{ConfigFunction, ConfigResolver, ResolveContext};
 pub use schema::{ConfigSchema, PropertySchema, ValidationRule, ValueType};
 pub use validator::{ConfigValidator, ValidationResult};
 pub use value::Value;
-pub use xml_parser::XmlParser;
+pub use xml_parser::{SfcDefinition, XmlParser};
 
 #[cfg(test)]
 mod tests {

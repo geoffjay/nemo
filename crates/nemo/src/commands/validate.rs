@@ -190,9 +190,23 @@ fn lint_config(root: &Value, registry: &ComponentRegistry) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
     let mut template_refs = std::collections::HashSet::new();
 
+    // Registered single-file-component tags are valid component types even
+    // though they aren't in the registry — they expand to built-ins at runtime.
+    let sfc_tags: std::collections::HashSet<String> = root
+        .get("sfc")
+        .and_then(|v| v.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default();
+
     // Lint the live layout tree.
     if let Some(layout) = root.get("layout") {
-        lint_component_children(layout, registry, &mut diagnostics, &mut template_refs);
+        lint_component_children(
+            layout,
+            registry,
+            &sfc_tags,
+            &mut diagnostics,
+            &mut template_refs,
+        );
     }
 
     // Lint template bodies too, and collect any template-to-template references.
@@ -202,7 +216,14 @@ fn lint_config(root: &Value, registry: &ComponentRegistry) -> Vec<Diagnostic> {
         .and_then(|t| t.as_object());
     if let Some(templates) = templates {
         for (name, body) in templates {
-            lint_component(name, body, registry, &mut diagnostics, &mut template_refs);
+            lint_component(
+                name,
+                body,
+                registry,
+                &sfc_tags,
+                &mut diagnostics,
+                &mut template_refs,
+            );
         }
         // Flag templates that are defined but never referenced.
         for name in templates.keys() {
@@ -222,12 +243,13 @@ fn lint_config(root: &Value, registry: &ComponentRegistry) -> Vec<Diagnostic> {
 fn lint_component_children(
     node: &Value,
     registry: &ComponentRegistry,
+    sfc_tags: &std::collections::HashSet<String>,
     diagnostics: &mut Vec<Diagnostic>,
     template_refs: &mut std::collections::HashSet<String>,
 ) {
     if let Some(children) = node.get("component").and_then(|c| c.as_object()) {
         for (id, child) in children {
-            lint_component(id, child, registry, diagnostics, template_refs);
+            lint_component(id, child, registry, sfc_tags, diagnostics, template_refs);
         }
     }
 }
@@ -237,6 +259,7 @@ fn lint_component(
     id: &str,
     component: &Value,
     registry: &ComponentRegistry,
+    sfc_tags: &std::collections::HashSet<String>,
     diagnostics: &mut Vec<Diagnostic>,
     template_refs: &mut std::collections::HashSet<String>,
 ) {
@@ -245,7 +268,9 @@ fn lint_component(
     };
 
     let ctype = obj.get("type").and_then(|v| v.as_str()).unwrap_or_default();
-    let uses_template = obj.contains_key("template");
+    // An SFC tag usage is shaped by its `.nemo` template at runtime, so — like a
+    // `template=`-driven node — its component/attribute checks are skipped here.
+    let uses_template = obj.contains_key("template") || sfc_tags.contains(ctype);
     if let Some(name) = obj.get("template").and_then(|v| v.as_str()) {
         template_refs.insert(name.to_string());
     }
@@ -345,7 +370,7 @@ fn lint_component(
         ));
     }
 
-    lint_component_children(component, registry, diagnostics, template_refs);
+    lint_component_children(component, registry, sfc_tags, diagnostics, template_refs);
 }
 
 fn render_human(

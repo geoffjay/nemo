@@ -8,3 +8,4 @@ Recurring implementation patterns used in the project.
 * [Collection properties as JSON-string attributes](json-string-collection-properties.md) - which components take arrays/objects as a JSON-string attribute, and how coerce_value handles them.
 * [Parent-rendered child components](parent-rendered-child-components.md) - how a parent reads and renders its typed child components, vs. generic render_children.
 * [Layout sizing and centering](layout-sizing-and-centering.md) - the minimal style surface: `flex` ignores its value, no percent/align, and how to center a fixed-width panel.
+* [Single-file components](single-file-components.md) - authoring reusable `.nemo` components (template + scoped script + `${prop}` interpolation + default slot), imported and used as a custom tag.

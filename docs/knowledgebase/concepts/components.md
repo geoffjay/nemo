@@ -103,6 +103,21 @@ and [collection properties as JSON-string attributes](../patterns/json-string-co
 migrating the latter toward the former is tracked in
 [declarative children migration](../plans/declarative-children-migration.md).
 
+# Single-file components (`.nemo` SFCs)
+
+Beyond the built-in components (Rust `RenderOnce` types), authors can define
+reusable components in config with **no Rust**: one `.nemo` file bundling a
+`<template>`, optional `<style>`, and optional `<script>`, imported via
+`<import>` and used as a custom tag. An SFC is **not** a new render type — it
+compiles onto the existing template machinery (`TemplateMap` entry + tag rewrite
++ `sfc:<tag>` script), so by the time it reaches `render_component` it is
+ordinary built-in components. See
+[Single-file components](../patterns/single-file-components.md) for authoring and
+[Configuration](configuration.md#single-file-components-nemo-sfcs) for the
+parse/compile pipeline. Use an SFC for a *static markup composition*; use a
+native `RenderOnce` component (the four-file workflow below) when you need new
+rendering behavior, and a plugin-registered type for dynamic/native components.
+
 # Adding a component
 
 Adding a built-in component touches four files. See the

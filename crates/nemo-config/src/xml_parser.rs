@@ -9,6 +9,29 @@ use quick_xml::Reader;
 use std::cell::Cell;
 use std::path::{Path, PathBuf};
 
+/// A parsed single-file component (`.nemo` SFC).
+///
+/// One `.nemo` file bundles a component's markup (`<template>`), scoped styling
+/// (`<style>`), and scoped behavior (`<script>`). It is produced by
+/// [`XmlParser::parse_sfc`] and compiled onto the existing template machinery by
+/// the runtime: the [`template`](Self::template) becomes a `TemplateMap` entry
+/// keyed by the SFC's tag, the [`script`](Self::script) is loaded under
+/// `sfc:<tag>`, and instances of the tag are rewritten into template instances
+/// before expansion.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SfcDefinition {
+    /// The `<template name>` attribute, if present. The final tag the SFC is
+    /// used as is resolved by the importer (`as=` > this name > filename stem).
+    pub name: Option<String>,
+    /// The template body: a single-root component `Value` (the shape
+    /// `process_component_element` produces), ready to merge into a `TemplateMap`.
+    pub template: Value,
+    /// Raw `<style>` body, if present. Not yet folded into props (Phase 3).
+    pub style: Option<String>,
+    /// Raw `<script>` body (Rhai), if present. Loaded under `sfc:<tag>`.
+    pub script: Option<String>,
+}
+
 /// Parser for XML configuration files.
 pub struct XmlParser {
     source_name: String,
@@ -139,6 +162,25 @@ impl XmlParser {
                 }
                 "include" => {
                     self.process_include(obj, &mut result)?;
+                }
+                "imports" => {
+                    // <imports> wrapper containing multiple <import> children.
+                    if let Some(import_children) =
+                        obj.get("__children__").and_then(|v| v.as_array())
+                    {
+                        for import_child in import_children {
+                            if let Some(import_obj) = import_child.as_object() {
+                                if import_obj.get("__type__").and_then(|v| v.as_str())
+                                    == Some("import")
+                                {
+                                    self.process_import(import_obj, &mut result)?;
+                                }
+                            }
+                        }
+                    }
+                }
+                "import" => {
+                    self.process_import(obj, &mut result)?;
                 }
                 "layout" => {
                     let layout_val = self.process_layout(obj);
@@ -664,6 +706,197 @@ impl XmlParser {
         Ok(())
     }
 
+    /// Parses a single-file component (`.nemo`) document into an
+    /// [`SfcDefinition`].
+    ///
+    /// A `.nemo` file is *not* wrapped in `<nemo>`; its top-level children are
+    /// `<template>` (required, exactly one element child), `<style>` (optional),
+    /// and `<script>` (optional). The `<template>` body is flattened with the
+    /// same `process_component_element` used for layout components, so an SFC is
+    /// a namespaced, file-scoped superset of the existing `<template>` mechanism.
+    ///
+    /// Body limits (v1): `parse_element` keeps only the **first** contiguous
+    /// text/CDATA run per element, so `<script>`/`<style>` bodies must be one
+    /// block. Rhai bodies containing `<`/`&` must be wrapped in `<![CDATA[…]]>`
+    /// so the XML reader does not treat them as markup.
+    pub fn parse_sfc(&self, content: &str) -> Result<SfcDefinition, ParseError> {
+        let mut reader = Reader::from_str(content);
+        reader.config_mut().trim_text(true);
+
+        let root = self
+            .parse_element(&mut reader, None)
+            .map_err(|e| ParseError::new(e, SourceLocation::new(&self.source_name, 1, 1)))?;
+
+        let children = root
+            .as_object()
+            .and_then(|m| m.get("__children__"))
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+
+        let mut name: Option<String> = None;
+        let mut template: Option<Value> = None;
+        let mut style: Option<String> = None;
+        let mut script: Option<String> = None;
+
+        for child in &children {
+            let obj = match child.as_object() {
+                Some(o) => o,
+                None => continue,
+            };
+            match obj.get("__type__").and_then(|v| v.as_str()) {
+                Some("template") => {
+                    name = obj
+                        .get("name")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+
+                    // Require exactly one element child as the single template
+                    // root (matches find_and_inject_slot's single-root model).
+                    let element_children: Vec<&Value> = obj
+                        .get("__children__")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter(|c| c.as_object().and_then(|o| o.get("__type__")).is_some())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
+                    if element_children.len() != 1 {
+                        return Err(ParseError::new(
+                            format!(
+                                "SFC <template> must contain exactly one root element, found {}",
+                                element_children.len()
+                            ),
+                            SourceLocation::new(&self.source_name, 1, 1),
+                        ));
+                    }
+                    let root_child = element_children[0].as_object().unwrap();
+                    template = Some(self.process_component_element(root_child));
+                }
+                Some("style") => {
+                    style = obj
+                        .get("__cdata__")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .filter(|s| !s.trim().is_empty());
+                }
+                Some("script") => {
+                    script = obj
+                        .get("__cdata__")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string())
+                        .filter(|s| !s.trim().is_empty());
+                }
+                _ => {}
+            }
+        }
+
+        let template = template.ok_or_else(|| {
+            ParseError::new(
+                "SFC file must contain a <template> element".to_string(),
+                SourceLocation::new(&self.source_name, 1, 1),
+            )
+        })?;
+
+        Ok(SfcDefinition {
+            name,
+            template,
+            style,
+            script,
+        })
+    }
+
+    /// Processes an `<import src="…" [as="tag"]>` element: parses the referenced
+    /// `.nemo` file and stores it under the top-level `sfc` map, keyed by tag.
+    ///
+    /// Tag resolution order: `as=` attribute > `<template name>` > filename stem.
+    fn process_import(
+        &self,
+        obj: &IndexMap<String, Value>,
+        result: &mut IndexMap<String, Value>,
+    ) -> Result<(), ParseError> {
+        let src = match obj
+            .get("src")
+            .or_else(|| obj.get("href"))
+            .and_then(|v| v.as_str())
+        {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+
+        let import_path = self.resolve_path(src);
+
+        if !import_path.exists() {
+            return Err(ParseError::new(
+                format!("Import file not found: {}", import_path.display()),
+                SourceLocation::new(&self.source_name, 1, 1),
+            ));
+        }
+
+        let content = std::fs::read_to_string(&import_path).map_err(|e| {
+            ParseError::new(
+                format!(
+                    "Failed to read import file {}: {}",
+                    import_path.display(),
+                    e
+                ),
+                SourceLocation::new(&self.source_name, 1, 1),
+            )
+        })?;
+
+        let sfc_parser = XmlParser::new().with_source_name(import_path.display().to_string());
+        let sfc = sfc_parser.parse_sfc(&content)?;
+
+        // Resolve the tag: as= > <template name> > filename stem. Element names
+        // are kebab→snake normalized everywhere else (a `<labeled-button>` usage
+        // parses to type `labeled_button`), so normalize the tag the same way for
+        // a consistent match against layout node types.
+        let tag = obj
+            .get("as")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string())
+            .or_else(|| sfc.name.clone())
+            .or_else(|| {
+                import_path
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+            })
+            .filter(|s| !s.is_empty())
+            .map(|s| kebab_to_snake(&s))
+            .ok_or_else(|| {
+                ParseError::new(
+                    format!("Could not determine a tag name for import '{}'", src),
+                    SourceLocation::new(&self.source_name, 1, 1),
+                )
+            })?;
+
+        // Store as a plain Value under the top-level `sfc` map so the config
+        // stays a homogeneous Value tree; the runtime reads it back.
+        let mut entry = IndexMap::new();
+        entry.insert("template".to_string(), sfc.template);
+        if let Some(style) = sfc.style {
+            entry.insert("style".to_string(), Value::String(style));
+        }
+        if let Some(script) = sfc.script {
+            entry.insert("script".to_string(), Value::String(script));
+        }
+        entry.insert(
+            "source_path".to_string(),
+            Value::String(import_path.display().to_string()),
+        );
+
+        let sfc_map = result
+            .entry("sfc".to_string())
+            .or_insert_with(|| Value::Object(IndexMap::new()));
+        if let Value::Object(map) = sfc_map {
+            map.insert(tag, Value::Object(entry));
+        }
+
+        Ok(())
+    }
+
     /// Processes a <layout> element into the layout structure.
     fn process_layout(&self, obj: &IndexMap<String, Value>) -> Value {
         let mut layout = IndexMap::new();
@@ -1079,6 +1312,125 @@ fn merge_into(target: &mut IndexMap<String, Value>, key: &str, val: &Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_sfc_template_style_script() {
+        let sfc = r#"
+        <template name="labeled-button">
+          <button label="${label}" variant="primary" on-click="handleClick" />
+        </template>
+        <style>
+          button { height: 32px; }
+        </style>
+        <script><![CDATA[
+          fn handleClick(component_id, event_data) { log_info("clicked"); }
+        ]]></script>
+        "#;
+
+        let parser = XmlParser::new();
+        let def = parser.parse_sfc(sfc).unwrap();
+
+        assert_eq!(def.name.as_deref(), Some("labeled-button"));
+
+        // Template body is a flattened single-root component Value.
+        assert_eq!(
+            def.template.get("type"),
+            Some(&Value::String("button".to_string()))
+        );
+        assert_eq!(
+            def.template.get("label"),
+            Some(&Value::String("${label}".to_string()))
+        );
+        // on-click is kebab→snake normalized like any attribute.
+        assert_eq!(
+            def.template.get("on_click"),
+            Some(&Value::String("handleClick".to_string()))
+        );
+
+        assert!(def.style.as_deref().unwrap().contains("height: 32px"));
+        assert!(def.script.as_deref().unwrap().contains("handleClick"));
+    }
+
+    #[test]
+    fn test_parse_sfc_default_slot() {
+        let sfc = r#"
+        <template name="card">
+          <panel padding="16">
+            <stack id="inner" direction="vertical"><slot /></stack>
+          </panel>
+        </template>
+        "#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        assert_eq!(
+            def.template.get("type"),
+            Some(&Value::String("panel".to_string()))
+        );
+        // The inner stack carries the slot marker for injection at expand time.
+        let inner = def
+            .template
+            .get("component")
+            .and_then(|c| c.get("inner"))
+            .unwrap();
+        assert_eq!(inner.get("slot"), Some(&Value::Bool(true)));
+    }
+
+    #[test]
+    fn test_parse_sfc_requires_single_root() {
+        let sfc = r#"
+        <template name="bad">
+          <button label="a" />
+          <button label="b" />
+        </template>
+        "#;
+        let err = XmlParser::new().parse_sfc(sfc).unwrap_err();
+        assert!(err.to_string().contains("exactly one root element"));
+    }
+
+    #[test]
+    fn test_parse_sfc_requires_template() {
+        let sfc = r#"<style>button { height: 32px; }</style>"#;
+        let err = XmlParser::new().parse_sfc(sfc).unwrap_err();
+        assert!(err.to_string().contains("must contain a <template>"));
+    }
+
+    #[test]
+    fn test_imports_resolves_and_aliases() {
+        let dir = std::env::temp_dir().join(format!("nemo_sfc_import_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let comp = dir.join("btn.nemo");
+        std::fs::write(
+            &comp,
+            r#"<template name="labeled-button"><button label="${label}" /></template>"#,
+        )
+        .unwrap();
+
+        let app = r#"
+        <nemo>
+          <imports>
+            <import src="./btn.nemo" as="my-button" />
+          </imports>
+          <layout type="stack">
+            <my-button label="Save" />
+          </layout>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new()
+            .with_source_name("app.xml")
+            .with_base_dir(&dir);
+        let value = parser.parse(app).unwrap();
+
+        // `as=` overrides the tag; tags are kebab→snake normalized to match how
+        // element usages parse (`<my-button>` → `my_button`).
+        let sfc = value.get("sfc").unwrap();
+        let entry = sfc.get("my_button").unwrap();
+        assert_eq!(
+            entry.get("template").and_then(|t| t.get("type")),
+            Some(&Value::String("button".to_string()))
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
 
     #[test]
     fn test_parse_basic_structure() {
@@ -1882,7 +2234,8 @@ mod tests {
         assert!(value.get("layout").is_some());
         let templates = value.get("templates").unwrap();
         let template = templates.get("template").unwrap();
-        assert!(template.get("nav_item").is_some());
+        // The components gallery navigates via <router>/<route>/<nav-link> now;
+        // `content_page` is the remaining template wrapper.
         assert!(template.get("content_page").is_some());
     }
 

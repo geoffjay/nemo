@@ -96,7 +96,19 @@ impl ConfigResolver {
             Value::Object(obj) => {
                 let resolved: Result<IndexMap<_, _>, _> = obj
                     .into_iter()
-                    .map(|(k, v)| self.resolve(v, context).map(|rv| (k, rv)))
+                    .map(|(k, v)| {
+                        // Single-file-component definitions live under the top-level
+                        // `sfc` key. Their template bodies use bare `${prop}`
+                        // placeholders resolved by the *runtime* vars/interpolation
+                        // path (not `${var.x}`/`${env.x}` load-time resolution), so
+                        // pass the subtree through verbatim rather than erroring on
+                        // an "undefined variable".
+                        if k == "sfc" {
+                            Ok((k, v))
+                        } else {
+                            self.resolve(v, context).map(|rv| (k, rv))
+                        }
+                    })
                     .collect();
                 Ok(Value::Object(resolved?))
             }

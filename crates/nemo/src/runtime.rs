@@ -481,6 +481,42 @@ impl NemoRuntime {
             }
         }
 
+        // Load single-file component (`.nemo` SFC) `<script>` bodies under
+        // `sfc:<tag>` ids. One script serves every instance of the tag; the
+        // instance is distinguished by the `component_id` its handlers receive.
+        // The `sfc:` prefix keeps a single colon so `call_handler`'s first-`::`
+        // split resolves `sfc:<tag>::<fn>` to (script_id=`sfc:<tag>`, fn).
+        let sfc_scripts: Vec<(String, String)> = {
+            let config = self.config.read().expect("config lock poisoned");
+            config
+                .get("sfc")
+                .and_then(|v| v.as_object())
+                .map(|obj| {
+                    obj.iter()
+                        .filter_map(|(tag, def)| {
+                            def.get("script")
+                                .and_then(|v| v.as_str())
+                                .filter(|s| !s.trim().is_empty())
+                                .map(|s| (tag.clone(), s.to_string()))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default()
+        };
+        if !sfc_scripts.is_empty() {
+            let mut ext = self
+                .extension_manager
+                .write()
+                .expect("extension_manager lock poisoned");
+            for (tag, source) in sfc_scripts {
+                let id = format!("sfc:{}", tag);
+                match ext.load_script_source(&id, &source) {
+                    Ok(()) => info!("Loaded SFC script: {}", id),
+                    Err(e) => tracing::warn!("Failed to load SFC script {}: {}", id, e),
+                }
+            }
+        }
+
         // Register the runtime context with the extension manager for API access
         let context: Arc<dyn PluginContext> = Arc::new(RuntimeContext::new(
             Arc::clone(&self.config),
@@ -1910,6 +1946,161 @@ fn expand_children(
     Ok(Value::Object(result))
 }
 
+// ── Single-file component (SFC) compilation ───────────────────────────────
+//
+// SFCs are a namespaced, file-scoped superset of `<templates>`. Imported
+// `.nemo` files are parsed into `config["sfc"][tag] = { template, style?,
+// script?, source_path }` by nemo-config. Here we (1) collect the registered
+// tags, (2) merge each SFC template into the `TemplateMap`, and (3) rewrite any
+// `<tag>` usage — in the layout and inside other SFC templates — into a
+// `template = "tag"` instance so the existing expansion pipeline (deep-merge,
+// slot injection, id-scoping) handles the rest with no downstream changes.
+
+/// Collects the set of registered SFC tag names from `config["sfc"]`.
+fn collect_sfc_tags(config: &Value) -> HashSet<String> {
+    config
+        .get("sfc")
+        .and_then(|v| v.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default()
+}
+
+/// Recursively rewrites SFC tag usages into template instances. Children are
+/// rewritten first (bottom-up) so a node that is itself an SFC tag keeps its
+/// already-rewritten children.
+fn rewrite_sfc_tags(value: &Value, sfc_tags: &HashSet<String>) -> Value {
+    let obj = match value.as_object() {
+        Some(o) => o,
+        None => {
+            // Arrays of anonymous components can appear under `component`.
+            if let Value::Array(arr) = value {
+                return Value::Array(arr.iter().map(|v| rewrite_sfc_tags(v, sfc_tags)).collect());
+            }
+            return value.clone();
+        }
+    };
+
+    let mut result = obj.clone();
+
+    // Recurse into component children (object of id→node or array of nodes).
+    if let Some(children) = obj.get("component") {
+        result.insert(
+            "component".to_string(),
+            rewrite_sfc_tags(children, sfc_tags),
+        );
+    }
+    // Object maps that are NOT the `component` key still need recursion when
+    // their values look like component nodes (e.g. the `component` object's own
+    // id→node entries reached via the array/object branch above). Handle the
+    // id→node map case: values keyed by id under `component` are objects.
+    if obj.get("component").is_none() && obj.get("type").is_none() {
+        // A bare id→node map (as `component`'s object value) — rewrite each entry.
+        let mut rewritten = indexmap::IndexMap::new();
+        let mut changed = false;
+        for (k, v) in obj {
+            if v.as_object().and_then(|o| o.get("type")).is_some() {
+                rewritten.insert(k.clone(), rewrite_sfc_tags(v, sfc_tags));
+                changed = true;
+            } else {
+                rewritten.insert(k.clone(), v.clone());
+            }
+        }
+        if changed {
+            return Value::Object(rewritten);
+        }
+    }
+
+    // If this node itself is an SFC tag, transform it into a template instance.
+    if let Some(t) = result.get("type").and_then(|v| v.as_str()) {
+        if sfc_tags.contains(t) {
+            let tag = t.to_string();
+            return sfc_node_to_instance(&Value::Object(result), &tag);
+        }
+    }
+
+    Value::Object(result)
+}
+
+/// Converts an SFC tag node (`{ type: "tag", <attrs>, component: {…} }`) into a
+/// template instance (`{ template: "tag", <attrs>, vars: {…}, component: {…} }`).
+///
+/// Scalar attributes are kept at the top level (so `deep_merge_values` overlays
+/// them onto the template body) *and* folded into a `vars` map (so `${attr}`
+/// interpolation works). The `type` key is dropped — the template body supplies
+/// the real component type.
+fn sfc_node_to_instance(node: &Value, tag: &str) -> Value {
+    let obj = match node.as_object() {
+        Some(o) => o,
+        None => return node.clone(),
+    };
+
+    let mut inst = indexmap::IndexMap::new();
+    inst.insert("template".to_string(), Value::String(tag.to_string()));
+
+    let mut vars = indexmap::IndexMap::new();
+    for (key, val) in obj {
+        match key.as_str() {
+            "type" => continue, // template body supplies the real type
+            "component" => {
+                inst.insert("component".to_string(), val.clone());
+            }
+            _ => {
+                inst.insert(key.clone(), val.clone());
+                if let Some(s) = scalar_to_string(val) {
+                    vars.insert(key.clone(), Value::String(s));
+                }
+            }
+        }
+    }
+    if !vars.is_empty() {
+        inst.insert("vars".to_string(), Value::Object(vars));
+    }
+
+    Value::Object(inst)
+}
+
+/// Renders a scalar `Value` as the string used for `${}` interpolation. Returns
+/// `None` for objects/arrays/null, which are not interpolable.
+fn scalar_to_string(value: &Value) -> Option<String> {
+    match value {
+        Value::String(s) => Some(s.clone()),
+        Value::Integer(i) => Some(i.to_string()),
+        Value::Float(f) => Some(f.to_string()),
+        Value::Bool(b) => Some(b.to_string()),
+        _ => None,
+    }
+}
+
+/// Rewrites bare `on_*` handler references (no `::`) in an SFC template body to
+/// `sfc:<tag>::<fn>`, so template-authored handlers route to the SFC's own
+/// script. Already-qualified refs (containing `::`) and instance-supplied
+/// handlers (overlaid later via deep-merge) are left untouched.
+fn rewrite_sfc_handlers(value: &Value, tag: &str) -> Value {
+    match value {
+        Value::Object(obj) => {
+            let mut result = indexmap::IndexMap::new();
+            for (key, val) in obj {
+                let new_val = if key.starts_with("on_") {
+                    match val.as_str() {
+                        Some(f) if !f.contains("::") && !f.trim().is_empty() => {
+                            Value::String(format!("sfc:{}::{}", tag, f))
+                        }
+                        _ => rewrite_sfc_handlers(val, tag),
+                    }
+                } else {
+                    rewrite_sfc_handlers(val, tag)
+                };
+                result.insert(key.clone(), new_val);
+            }
+            Value::Object(result)
+        }
+        Value::Array(arr) => {
+            Value::Array(arr.iter().map(|v| rewrite_sfc_handlers(v, tag)).collect())
+        }
+        _ => value.clone(),
+    }
+}
+
 // ── Layout parsing ───────────────────────────────────────────────────────
 
 /// Parses layout configuration from a Value.
@@ -1927,6 +2118,33 @@ fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<
             .entry(name.clone())
             .or_insert_with(|| value.clone());
     }
+
+    // Compile single-file components (`.nemo` SFCs): each imported SFC becomes a
+    // `TemplateMap` entry keyed by its tag, with template-authored `on_*`
+    // handlers rewritten to `sfc:<tag>::<fn>` and any nested SFC tags rewritten
+    // for composition. XML-defined `<templates>` take precedence on name clash.
+    let sfc_tags = collect_sfc_tags(config);
+    if !sfc_tags.is_empty() {
+        if let Some(sfc_map) = config.get("sfc").and_then(|v| v.as_object()) {
+            for (tag, def) in sfc_map {
+                if let Some(body) = def.get("template") {
+                    let body = rewrite_sfc_tags(body, &sfc_tags);
+                    let body = rewrite_sfc_handlers(&body, tag);
+                    templates.entry(tag.clone()).or_insert(body);
+                }
+            }
+        }
+    }
+
+    // Rewrite SFC tag usages in the layout into template instances before
+    // expansion, so the existing expand/slot/scope pipeline handles them.
+    let layout_owned;
+    let layout: &Value = if sfc_tags.is_empty() {
+        layout
+    } else {
+        layout_owned = rewrite_sfc_tags(layout, &sfc_tags);
+        &layout_owned
+    };
 
     let expanded_layout = if templates.is_empty() {
         layout.clone()
@@ -2324,6 +2542,191 @@ mod test_helpers {
     /// Shorthand for `Value::String`.
     pub fn s(val: &str) -> Value {
         Value::String(val.to_string())
+    }
+}
+
+#[cfg(test)]
+mod sfc_tests {
+    use super::test_helpers::{obj, s};
+    use super::*;
+
+    #[test]
+    fn test_rewrite_sfc_tag_to_instance() {
+        let mut tags = HashSet::new();
+        tags.insert("labeled-button".to_string());
+
+        let node = obj(vec![("type", s("labeled-button")), ("label", s("Save"))]);
+        let rewritten = rewrite_sfc_tags(&node, &tags);
+
+        // Becomes a template instance; the `type` is dropped (template supplies it).
+        assert_eq!(rewritten.get("template"), Some(&s("labeled-button")));
+        assert_eq!(rewritten.get("type"), None);
+        // Scalar attrs are kept for deep-merge overlay …
+        assert_eq!(rewritten.get("label"), Some(&s("Save")));
+        // … and folded into `vars` for `${label}` interpolation.
+        assert_eq!(
+            rewritten.get("vars").and_then(|v| v.get("label")),
+            Some(&s("Save"))
+        );
+    }
+
+    #[test]
+    fn test_rewrite_sfc_handlers_prefixes_bare_refs() {
+        let body = obj(vec![
+            ("type", s("button")),
+            ("on_click", s("handleClick")),
+            ("on_hover", s("other::qualified")),
+        ]);
+        let rewritten = rewrite_sfc_handlers(&body, "labeled-button");
+        // Bare handler routes to the SFC's own script …
+        assert_eq!(
+            rewritten.get("on_click"),
+            Some(&s("sfc:labeled-button::handleClick"))
+        );
+        // … already-qualified refs are left untouched.
+        assert_eq!(rewritten.get("on_hover"), Some(&s("other::qualified")));
+    }
+
+    /// A minimal `card` SFC (panel wrapping a slotted stack) plus an interpolating
+    /// `labeled-button` SFC, exercised through the full `parse_layout_config`
+    /// pipeline: tag rewrite → template merge → expand → slot inject → id scope.
+    fn sfc_config() -> Value {
+        let card_template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![(
+                    "inner",
+                    obj(vec![
+                        ("type", s("stack")),
+                        ("direction", s("vertical")),
+                        ("slot", Value::Bool(true)),
+                    ]),
+                )]),
+            ),
+        ]);
+        let button_template = obj(vec![
+            ("type", s("button")),
+            ("label", s("${label}")),
+            ("on_click", s("handleClick")),
+        ]);
+
+        obj(vec![
+            (
+                "sfc",
+                obj(vec![
+                    ("card", obj(vec![("template", card_template)])),
+                    ("labeled-button", obj(vec![("template", button_template)])),
+                ]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            (
+                                "__anon_1",
+                                obj(vec![
+                                    ("type", s("card")),
+                                    (
+                                        "component",
+                                        obj(vec![(
+                                            "lbl1",
+                                            obj(vec![("type", s("label")), ("text", s("A"))]),
+                                        )]),
+                                    ),
+                                ]),
+                            ),
+                            (
+                                "__anon_2",
+                                obj(vec![
+                                    ("type", s("card")),
+                                    (
+                                        "component",
+                                        obj(vec![(
+                                            "lbl2",
+                                            obj(vec![("type", s("label")), ("text", s("B"))]),
+                                        )]),
+                                    ),
+                                ]),
+                            ),
+                            (
+                                "b1",
+                                obj(vec![("type", s("labeled-button")), ("label", s("Save"))]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
+        ])
+    }
+
+    #[test]
+    fn test_sfc_multi_instance_id_scoping_and_slots() {
+        let config = sfc_config();
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let root = layout.root;
+
+        // Two cards + one button.
+        assert_eq!(root.children.len(), 3);
+
+        let cards: Vec<&LayoutNode> = root
+            .children
+            .iter()
+            .filter(|c| c.component_type == "panel")
+            .collect();
+        assert_eq!(cards.len(), 2, "both cards expanded to panels");
+
+        // The slotted `inner` stack id is scoped per instance — no collision.
+        let inner_ids: Vec<String> = cards
+            .iter()
+            .filter_map(|card| card.children.first())
+            .filter_map(|inner| inner.id.clone())
+            .collect();
+        assert!(inner_ids.contains(&"__anon_1_inner".to_string()));
+        assert!(inner_ids.contains(&"__anon_2_inner".to_string()));
+        assert_ne!(inner_ids[0], inner_ids[1]);
+
+        // Slot content (the instance's label) landed inside the inner stack.
+        let texts: Vec<String> = cards
+            .iter()
+            .filter_map(|card| card.children.first())
+            .flat_map(|inner| inner.children.iter())
+            .filter_map(|lbl| lbl.config.properties.get("text").cloned())
+            .filter_map(|v| v.as_str().map(String::from))
+            .collect();
+        assert!(texts.contains(&"A".to_string()));
+        assert!(texts.contains(&"B".to_string()));
+    }
+
+    #[test]
+    fn test_sfc_interpolation_and_scoped_handler() {
+        let config = sfc_config();
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+
+        let button = layout
+            .root
+            .children
+            .iter()
+            .find(|c| c.component_type == "button")
+            .expect("button expanded");
+
+        // `${label}` interpolated from the instance attr.
+        assert_eq!(
+            button
+                .config
+                .properties
+                .get("label")
+                .and_then(|v| v.as_str()),
+            Some("Save")
+        );
+        // Template-authored bare handler routed to the SFC's own script id.
+        assert_eq!(
+            button.handlers.get("click").map(|s| s.as_str()),
+            Some("sfc:labeled-button::handleClick")
+        );
     }
 }
 

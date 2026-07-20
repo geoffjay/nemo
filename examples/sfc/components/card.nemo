@@ -1,0 +1,22 @@
+<!--
+  A reusable card container SFC.
+
+  The single template root is a bordered panel wrapping a vertical stack whose
+  slot receives the consumer's children. Each usage of the card tag is expanded
+  onto the existing template machinery, so the inner `body` stack id is scoped
+  per instance (e.g. body -> <instance>_body) — two cards never collide.
+
+  Note: XML has no raw-text elements, so a style body containing "<" must be
+  wrapped in CDATA (as below). Scoped-style folding (Phase 3) is not wired yet;
+  this block is captured but not yet applied.
+-->
+<template name="card">
+  <panel padding="20" border="1" border-color="theme.border" rounded="lg">
+    <stack id="body" direction="vertical" spacing="12">
+      <slot />
+    </stack>
+  </panel>
+</template>
+<style><![CDATA[
+  panel { padding: 20px; }
+]]></style>

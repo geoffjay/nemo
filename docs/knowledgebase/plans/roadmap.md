@@ -19,6 +19,11 @@ Nemo currently supports:
   URL-style path routes + params, history, `on-enter`/`on-leave` hooks, nested
   routers, and a Rhai `navigate()`/`back()`/`forward()` API. See
   [Routing](../patterns/routing.md).
+* Reusable **single-file components** (`.nemo` SFCs): one file with
+  `<template>`/`<style>`/`<script>`, imported via `<import>` and used as a custom
+  tag, with `${prop}` interpolation, a default slot, and a scoped Rhai script.
+  Compiled onto the template machinery (Phase 0+1). See
+  [Single-file components](../patterns/single-file-components.md).
 * Live data binding from HTTP, WebSocket, MQTT, Redis, NATS, timer, and file
   sources through a transform pipeline and central repository. See
   [Data flow](../concepts/data-flow.md).
@@ -36,7 +41,7 @@ Nemo currently supports:
 
 Worked examples live under `examples/` (basic, components, data-binding,
 data-streaming, calculator, pid-control, complete, task-list, dev-dashboard,
-app-shell, router).
+app-shell, router, sfc).
 Example configs are validated in CI via `nemo validate --strict`
 (`.github/workflows/ci.yml`, `validate-examples` job).
 

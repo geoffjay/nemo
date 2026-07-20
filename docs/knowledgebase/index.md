@@ -73,6 +73,7 @@ to touch the KB on every edit.
 * [Layout sizing and centering](patterns/layout-sizing-and-centering.md) - the minimal style surface: `flex` ignores its value, no percent/align, and how to center a fixed-width panel.
 * [Containers](patterns/containers.md) - high-level layout containers (`app-shell`) with slot regions and built-in page switching, in `crates/nemo/src/containers/`.
 * [Routing](patterns/routing.md) - the chrome-free `<router>`/`<route>`/`<nav-link>` primitive: host-side router state, deferred navigation, `data.route.*` param projection, and lifecycle hooks.
+* [Single-file components](patterns/single-file-components.md) - authoring reusable `.nemo` components (template + scoped script + `${prop}` interpolation + default slot), imported and used as a custom tag.
 
 ## Plans
 
@@ -84,7 +85,7 @@ to touch the KB on every edit.
 * [Design-system export](plans/design-system-export.md) - `cargo xtask design-export` emits tokens + themes + component structure as a pencil.dev-friendly JSON intermediate.
 * [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
 * [Page router](plans/page-router.md) - a general chrome-free `<router>`/`<route>` primitive (URL-path routes + params, history, lifecycle hooks, nested routers, `navigate()` Rhai API) replacing the fragile visibility-toggle page-switching pattern. **Implemented** — see [routing](patterns/routing.md).
-* [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery.
+* [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery. **Phase 0+1 implemented** — see [single-file components](patterns/single-file-components.md).
 
 ## References
 

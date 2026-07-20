@@ -100,6 +100,15 @@ Facts that make this cheap:
 
 # Phase 0 — MVP: import, tag rewrite, default slot, interpolation props
 
+**Status: implemented.** See [single-file components](../patterns/single-file-components.md),
+`examples/sfc/`, and the tests in `xml_parser.rs`/`runtime.rs`. Two deltas from
+the sketch below: (1) SFC scripts load under `sfc:<tag>` (single colon, then
+`::fn`) rather than `sfc::<tag>`, so `call_handler`'s first-`::` split needs no
+change; (2) slots inject *component children* (raw text between tags is dropped
+everywhere in nemo), so the headline `<foo>Click me</foo>` uses a child component
+or an interpolation prop, not bare text. The resolver also skips the `sfc`
+subtree so bare `${prop}` survives to runtime interpolation.
+
 Deliver `<foo>content</foo>` from one `.nemo` file with template + default slot +
 `${prop}` interpolation. No scoped style/script yet (authors can use inline attrs
 and the global `handlers` script).
@@ -137,6 +146,14 @@ today), `deep_merge_values`, `scope_template_children`,
 `parse_component_from_value` (`:1597`), all of `app.rs`.
 
 # Phase 1 — Scoped `<script>`
+
+**Status: implemented.** SFC `<script>` bodies load under `sfc:<tag>` in
+`load_scripts_from_config` (via a new `ExtensionManager::load_script_source`);
+template-authored bare `on_*` handlers are rewritten to `sfc:<tag>::<fn>` by
+`rewrite_sfc_handlers` at compile time. `call_handler` is unchanged (the
+single-colon prefix keeps its first-`::` split correct). Instance handlers stay
+bare (route to the global `handlers`) and override template handlers via
+deep-merge.
 
 * `load_scripts_from_config` (`runtime.rs:291`): load each SFC's `<script>` under
   `sfc::<name>` via `ExtensionManager::load_script` (per-id AST + persistent

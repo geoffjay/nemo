@@ -155,6 +155,15 @@ impl ExtensionManager {
         Ok(id)
     }
 
+    /// Loads a script from inline source under an explicit id.
+    ///
+    /// Unlike [`load_script`](Self::load_script) there is no backing file, so
+    /// the script is not registered for path-based reload. Used for SFC
+    /// `<script>` bodies, which are loaded under `sfc:<tag>` ids.
+    pub fn load_script_source(&mut self, id: &str, source: &str) -> Result<(), ExtensionError> {
+        self.rhai_engine.load_script(id, source)
+    }
+
     /// Loads a plugin by path.
     pub fn load_plugin(&mut self, path: &std::path::Path) -> Result<String, ExtensionError> {
         let id = self.plugin_host.load(path)?;
