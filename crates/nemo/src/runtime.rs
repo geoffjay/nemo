@@ -1671,49 +1671,132 @@ fn obj_with_component(children: &Value) -> Value {
     Value::Object(map)
 }
 
-/// Walks the template's `component` children looking for one with `slot = true`.
-/// If found, appends `instance_children` into that child's own `component`
-/// children and strips the `slot` key. If no slot found, returns None.
-fn find_and_inject_slot(template_value: &Value, instance_children: &Value) -> Option<Value> {
-    let obj = template_value.as_object()?;
-    let components = obj.get("component")?.as_object()?;
+/// Reads a template node's `slot` marker: `true` → the default slot (`"default"`),
+/// a non-empty string → that named slot. Anything else is not a slot container.
+fn slot_marker_name(v: &Value) -> Option<String> {
+    match v {
+        Value::Bool(true) => Some("default".to_string()),
+        Value::String(s) if !s.is_empty() => Some(s.clone()),
+        _ => None,
+    }
+}
 
-    for (child_id, child_val) in components {
-        if let Some(true) = child_val.get("slot").and_then(|v| v.as_bool()) {
-            // Found the slot child — inject instance children into it
-            let mut new_components = components.clone();
-            let mut slot_child = child_val.as_object().cloned().unwrap_or_default();
-
-            // Merge instance children into the slot child's component children
-            let existing = slot_child.get("component").cloned().unwrap_or(Value::Null);
-            let merged = if existing.is_null() {
-                instance_children.clone()
-            } else {
-                merge_component_children(&existing, instance_children)
-            };
-            slot_child.insert("component".to_string(), merged);
-            slot_child.shift_remove("slot"); // strip slot key
-
-            new_components.insert(child_id.clone(), Value::Object(slot_child));
-
-            let mut result = obj.clone();
-            result.insert("component".to_string(), Value::Object(new_components));
-            return Some(Value::Object(result));
+/// Partitions instance children into slot groups keyed by each child's `slot`
+/// targeting property (`<label slot="header"/>`); children without one go to the
+/// `"default"` group. The `slot` targeting property is stripped from each child
+/// (it is consumed by routing, not a renderable prop). Groups preserve insertion
+/// order and are returned as id→node objects, ready for `merge_component_children`.
+fn partition_children_by_slot(children: &Value) -> indexmap::IndexMap<String, Value> {
+    /// Splits a child into (target slot name, child with its `slot` prop removed).
+    fn split_slot(child: &Value) -> (String, Value) {
+        match child.as_object() {
+            Some(co) => {
+                let name = co
+                    .get("slot")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or("default")
+                    .to_string();
+                let mut c = co.clone();
+                c.shift_remove("slot");
+                (name, Value::Object(c))
+            }
+            None => ("default".to_string(), child.clone()),
         }
+    }
 
-        // Recurse into this child to find a nested slot
-        if child_val.get("component").is_some() {
-            if let Some(injected_child) = find_and_inject_slot(child_val, instance_children) {
-                let mut new_components = components.clone();
-                new_components.insert(child_id.clone(), injected_child);
-                let mut result = obj.clone();
-                result.insert("component".to_string(), Value::Object(new_components));
-                return Some(Value::Object(result));
+    let mut groups: indexmap::IndexMap<String, indexmap::IndexMap<String, Value>> =
+        indexmap::IndexMap::new();
+
+    let entries: Vec<(String, &Value)> = match children {
+        Value::Object(obj) => obj.iter().map(|(id, c)| (id.clone(), c)).collect(),
+        Value::Array(arr) => arr
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (format!("__slot_{}", i), c))
+            .collect(),
+        _ => Vec::new(),
+    };
+    for (id, child) in entries {
+        let (name, cleaned) = split_slot(child);
+        groups.entry(name).or_default().insert(id, cleaned);
+    }
+
+    groups
+        .into_iter()
+        .map(|(k, v)| (k, Value::Object(v)))
+        .collect()
+}
+
+/// Merges all slot groups back into a single id→node object. Used as the
+/// legacy fallback when a template declares no `<slot/>` at all: children are
+/// merged as siblings (with their `slot` targeting props already stripped).
+fn flatten_slot_groups(groups: &indexmap::IndexMap<String, Value>) -> Value {
+    let mut out = indexmap::IndexMap::new();
+    for group in groups.values() {
+        if let Some(obj) = group.as_object() {
+            for (id, child) in obj {
+                out.insert(id.clone(), child.clone());
+            }
+        }
+    }
+    Value::Object(out)
+}
+
+/// Injects grouped instance children into the template's slot containers,
+/// recursively. A container is a node carrying a `slot` marker (`slot = true`
+/// for the default slot, `slot = "name"` for a named slot); it receives the
+/// matching group merged into its own `component` children, and its marker is
+/// stripped. Slot names found in the template are recorded in `found` so the
+/// caller can (a) fall back to sibling-merge when the template has no slots and
+/// (b) warn about consumer children targeting a slot that does not exist.
+fn inject_named_slots(
+    template_value: &Value,
+    groups: &indexmap::IndexMap<String, Value>,
+    found: &mut HashSet<String>,
+) -> Value {
+    let obj = match template_value.as_object() {
+        Some(o) => o,
+        None => return template_value.clone(),
+    };
+    let components = match obj.get("component").and_then(|c| c.as_object()) {
+        Some(c) => c,
+        None => return template_value.clone(),
+    };
+
+    let mut new_components = indexmap::IndexMap::new();
+    for (child_id, child_val) in components {
+        match child_val.get("slot").and_then(slot_marker_name) {
+            Some(name) => {
+                found.insert(name.clone());
+                let mut slot_child = child_val.as_object().cloned().unwrap_or_default();
+                if let Some(group) = groups.get(&name) {
+                    let existing = slot_child.get("component").cloned().unwrap_or(Value::Null);
+                    let merged = if existing.is_null() {
+                        group.clone()
+                    } else {
+                        merge_component_children(&existing, group)
+                    };
+                    slot_child.insert("component".to_string(), merged);
+                }
+                slot_child.shift_remove("slot"); // strip the marker
+                                                 // A slot container is a leaf for slot purposes — its content is
+                                                 // now consumer children, so do not recurse into it.
+                new_components.insert(child_id.clone(), Value::Object(slot_child));
+            }
+            None => {
+                // Not a container itself — recurse to find nested slots.
+                new_components.insert(
+                    child_id.clone(),
+                    inject_named_slots(child_val, groups, found),
+                );
             }
         }
     }
 
-    None
+    let mut result = obj.clone();
+    result.insert("component".to_string(), Value::Object(new_components));
+    Value::Object(result)
 }
 
 /// Expands a single component instance that may reference a template.
@@ -1784,16 +1867,33 @@ fn expand_template(
     let instance_without_children = strip_keys(instance, &["component"]);
     let merged = deep_merge_values(&interpolated, &instance_without_children);
 
-    // Handle children: if template has a slot, inject instance children there.
-    // Otherwise, merge children as siblings via deep_merge.
+    // Handle children: route each into the template's slot(s) by name. A child's
+    // `slot="header"` targets a named `<slot name="header"/>`; unnamed children
+    // go to the default `<slot/>`. If the template declares no slots at all, fall
+    // back to merging children as siblings (legacy templates without a slot).
     let with_slots = match &instance_children {
         Some(children) if !children.is_null() => {
-            match find_and_inject_slot(&merged, children) {
-                Some(injected) => injected,
-                None => {
-                    // No slot found — merge children as siblings
-                    deep_merge_values(&merged, &obj_with_component(children))
+            let groups = partition_children_by_slot(children);
+            let mut found = HashSet::new();
+            let injected = inject_named_slots(&merged, &groups, &mut found);
+            if found.is_empty() {
+                deep_merge_values(&merged, &obj_with_component(&flatten_slot_groups(&groups)))
+            } else {
+                for name in groups.keys() {
+                    if !found.contains(name) {
+                        let target = if name == "default" {
+                            "an unnamed <slot/>".to_string()
+                        } else {
+                            format!("a <slot name=\"{}\"/>", name)
+                        };
+                        tracing::warn!(
+                            "template '{}' has no {} to receive targeted children; they were dropped",
+                            template_name,
+                            target
+                        );
+                    }
                 }
+                injected
             }
         }
         _ => merged,
@@ -2699,6 +2799,107 @@ mod sfc_tests {
             .collect();
         assert!(texts.contains(&"A".to_string()));
         assert!(texts.contains(&"B".to_string()));
+    }
+
+    #[test]
+    fn test_sfc_named_and_default_slot_routing() {
+        // An SFC with a named `header` slot and a default slot.
+        let template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![
+                    (
+                        "head",
+                        obj(vec![("type", s("stack")), ("slot", s("header"))]),
+                    ),
+                    (
+                        "body",
+                        obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
+                    ),
+                ]),
+            ),
+        ]);
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![("panel_card", obj(vec![("template", template)]))]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![(
+                            "card1",
+                            obj(vec![
+                                ("type", s("panel_card")),
+                                (
+                                    "component",
+                                    obj(vec![
+                                        // Targets the named header slot …
+                                        (
+                                            "h",
+                                            obj(vec![
+                                                ("type", s("label")),
+                                                ("slot", s("header")),
+                                                ("text", s("H")),
+                                            ]),
+                                        ),
+                                        // … unnamed child goes to the default slot.
+                                        ("b", obj(vec![("type", s("text")), ("content", s("B"))])),
+                                    ]),
+                                ),
+                            ]),
+                        )]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let panel = layout
+            .root
+            .children
+            .iter()
+            .find(|c| c.component_type == "panel")
+            .expect("panel expanded");
+
+        let head = panel
+            .children
+            .iter()
+            .find(|c| c.id.as_deref() == Some("card1_head"))
+            .expect("scoped header container");
+        let body = panel
+            .children
+            .iter()
+            .find(|c| c.id.as_deref() == Some("card1_body"))
+            .expect("scoped default container");
+
+        // Header-targeted child landed in the header slot only.
+        assert_eq!(head.children.len(), 1);
+        assert_eq!(
+            head.children[0]
+                .config
+                .properties
+                .get("text")
+                .and_then(|v| v.as_str()),
+            Some("H")
+        );
+        // The `slot` targeting prop was consumed, not left on the child.
+        assert!(!head.children[0].config.properties.contains_key("slot"));
+
+        // Unnamed child landed in the default slot only.
+        assert_eq!(body.children.len(), 1);
+        assert_eq!(
+            body.children[0]
+                .config
+                .properties
+                .get("content")
+                .and_then(|v| v.as_str()),
+            Some("B")
+        );
     }
 
     #[test]

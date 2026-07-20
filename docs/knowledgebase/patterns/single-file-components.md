@@ -66,7 +66,28 @@ fn handleClick(component_id, event_data) {
 * **Slots inject components, not text.** Consumer children are injected into the
   template's `<slot/>`; raw text between tags is dropped (as everywhere in nemo).
   Provide text via a child component (`<label text="…"/>`) or an interpolation
-  prop. Named/multiple slots are a later phase — v1 is a single default slot.
+  prop.
+* **Named & multiple slots.** A template can declare `<slot name="header"/>`
+  alongside the default `<slot/>`. Consumer children route by a `slot="header"`
+  attribute; children without one go to the default slot. A child targeting a
+  slot the template does not declare is dropped with a warning. Each slot lives
+  in its own container node, so a template can have as many as it needs.
+
+```xml
+<!-- components/card.nemo -->
+<template name="card">
+  <panel>
+    <stack id="head"><slot name="header" /></stack>
+    <stack id="body"><slot /></stack>
+  </panel>
+</template>
+
+<!-- usage -->
+<card>
+  <label slot="header" text="Title" />   <!-- → header slot -->
+  <text content="Body" />                 <!-- → default slot -->
+</card>
+```
 * **Handler scoping.** A **template-authored** bare `on-click="fn"` is rewritten
   to `sfc:<tag>::fn` and routes to the SFC's own `<script>`. An **instance**
   handler (`<labeled-button on-click="globalFn"/>`) stays bare and routes to the
@@ -79,7 +100,8 @@ fn handleClick(component_id, event_data) {
 
 # Status
 
-Phase 0 (import, tag rewrite, default slot, interpolation props) and Phase 1
-(scoped `<script>`) are implemented. Scoped `<style>` folding, named/multiple
-slots, typed props/auto-discovery, and a build/cache format are planned — see
-[the SFC plan](../plans/sfc-components.md). Worked example: `examples/sfc/`.
+Phase 0 (import, tag rewrite, default slot, interpolation props), Phase 1
+(scoped `<script>`), and Phase 2 (named/multiple slots) are implemented. Scoped
+`<style>` folding (P3), typed props/auto-discovery (P4), and a build/cache format
+(P5) are planned — see [the SFC plan](../plans/sfc-components.md). Worked example:
+`examples/sfc/`.

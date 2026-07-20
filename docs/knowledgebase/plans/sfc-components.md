@@ -170,6 +170,17 @@ deep-merge.
 
 # Phase 2 — Named / multiple slots
 
+**Status: implemented.** `process_component_element` records a slot *name*
+(`slot = "header"`) or `true` for the default. In `expand_template`,
+`partition_children_by_slot` groups consumer children by their `slot="…"`
+targeting attribute (unnamed → `"default"`, stripping the prop), and
+`inject_named_slots` walks the template injecting each group into the matching
+slot container (recursively, so multiple slots across the subtree all fill).
+Children targeting an undeclared slot are dropped with a warning; a template with
+no slots at all falls back to sibling-merge (legacy behavior). The `SlotSpec`
+descriptor validation below is deferred to Phase 4 (SFCs have no descriptor yet);
+until then the only check is the undeclared-slot warning.
+
 * `process_component_element` (`:789`, slot detection `:828`): record a slot
   **name** (`<slot name="header"/>`), not just a bool.
 * Generalize `find_and_inject_slot` (`:1237`) to name-keyed injection; consumer

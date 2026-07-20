@@ -1055,11 +1055,22 @@ impl XmlParser {
                 }
             }
 
-            // Check for <slot/> children
+            // Check for <slot/> children. An unnamed `<slot/>` marks the default
+            // slot (`slot = true`); a named `<slot name="header"/>` records the
+            // name (`slot = "header"`) so consumer children targeting it via
+            // `slot="header"` can be routed at expand time.
             for child in children {
                 if let Some(child_obj) = child.as_object() {
                     if child_obj.get("__type__").and_then(|v| v.as_str()) == Some("slot") {
-                        component.insert("slot".to_string(), Value::Bool(true));
+                        match child_obj.get("name").and_then(|v| v.as_str()) {
+                            Some(name) if !name.is_empty() => {
+                                component
+                                    .insert("slot".to_string(), Value::String(name.to_string()));
+                            }
+                            _ => {
+                                component.insert("slot".to_string(), Value::Bool(true));
+                            }
+                        }
                     }
                 }
             }
@@ -1372,6 +1383,29 @@ mod tests {
             .and_then(|c| c.get("inner"))
             .unwrap();
         assert_eq!(inner.get("slot"), Some(&Value::Bool(true)));
+    }
+
+    #[test]
+    fn test_parse_sfc_named_slots() {
+        let sfc = r#"
+        <template name="panel-card">
+          <panel>
+            <stack id="head"><slot name="header" /></stack>
+            <stack id="body"><slot /></stack>
+          </panel>
+        </template>
+        "#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        let components = def.template.get("component").unwrap();
+        // Named slot records its name; unnamed slot stays `true` (default).
+        assert_eq!(
+            components.get("head").and_then(|c| c.get("slot")),
+            Some(&Value::String("header".to_string()))
+        );
+        assert_eq!(
+            components.get("body").and_then(|c| c.get("slot")),
+            Some(&Value::Bool(true))
+        );
     }
 
     #[test]
