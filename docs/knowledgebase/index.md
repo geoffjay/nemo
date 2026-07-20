@@ -72,6 +72,7 @@ to touch the KB on every edit.
 * [Parent-rendered child components](patterns/parent-rendered-child-components.md) - how a parent reads and renders its typed child components, vs. generic render_children.
 * [Layout sizing and centering](patterns/layout-sizing-and-centering.md) - the minimal style surface: `flex` ignores its value, no percent/align, and how to center a fixed-width panel.
 * [Containers](patterns/containers.md) - high-level layout containers (`app-shell`) with slot regions and built-in page switching, in `crates/nemo/src/containers/`.
+* [Routing](patterns/routing.md) - the chrome-free `<router>`/`<route>`/`<nav-link>` primitive: host-side router state, deferred navigation, `data.route.*` param projection, and lifecycle hooks.
 
 ## Plans
 
@@ -82,7 +83,7 @@ to touch the KB on every edit.
 * [Design tokens and active redesign](plans/design-tokens.md) - centralized spacing/radius/typography/semantic-color tokens (gpui-free `nemo-tokens` crate); full chrome migration with screenshot verification.
 * [Design-system export](plans/design-system-export.md) - `cargo xtask design-export` emits tokens + themes + component structure as a pencil.dev-friendly JSON intermediate.
 * [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
-* [Page router](plans/page-router.md) - a general chrome-free `<router>`/`<route>` primitive (URL-path routes + params, history, lifecycle hooks, nested routers, `navigate()` Rhai API) replacing the fragile visibility-toggle page-switching pattern.
+* [Page router](plans/page-router.md) - a general chrome-free `<router>`/`<route>` primitive (URL-path routes + params, history, lifecycle hooks, nested routers, `navigate()` Rhai API) replacing the fragile visibility-toggle page-switching pattern. **Implemented** — see [routing](patterns/routing.md).
 * [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery.
 
 ## References

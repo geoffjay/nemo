@@ -28,7 +28,9 @@ both host and plugins depend on:
 * `PluginRegistrar` — passed to a plugin's entry point to register capabilities.
 * `PluginContext` (`Send + Sync`) — runtime API: `get_data`/`set_data`,
   `emit_event`, `get_config`, `log`, `get_component_property`/
-  `set_component_property`.
+  `set_component_property`, and `navigate`/`back`/`forward` (router
+  navigation; default impls return `PluginError::Unsupported` so older SDKs
+  still compile).
 * `declare_plugin!(manifest, init_fn)` — generates the `extern "C"`
   `nemo_plugin_manifest` and `nemo_plugin_entry` symbols.
 
@@ -57,6 +59,15 @@ use it to hydrate the UI from persisted state at startup, so the first paint
 already reflects it rather than deferring the sync onto the first user
 interaction. The `on-load` attribute is parsed into `scripts.on_load` (attribute
 keys are kebab→snake normalized, so `on-load` arrives as `on_load`).
+
+**Router navigation.** `navigate(path)` (primary router) / `navigate(router,
+path)`, `back()` / `back(router)`, and `forward()` / `forward(router)` are
+registered on the engine (`register_context`) and drive the page router. They
+only **enqueue** a navigation intent and wake the poll loop — the actual apply
+(history update, param projection, `on-enter`/`on-leave` hooks) happens later,
+outside the `extension_manager` write lock a running handler holds, so calling
+them from inside a handler can't deadlock. See
+[routing](../patterns/routing.md).
 
 **Input value readback.** An `<input>`'s typed text is written back into its
 `value` property on every change/blur (and Enter fires its `on-change` handler),

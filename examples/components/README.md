@@ -12,7 +12,8 @@ cargo run -- --app-config examples/components/app.xml
 
 ## What It Shows
 
-- Sidebar navigation using RHAI to toggle page visibility with `set_component_property`
+- Sidebar navigation via the chrome-free page router: a `<router>` of `<route>`s
+  with a `<nav-link>` per component page — no navigation handler required
 - Every built-in component type:
     - **Button** -- all variants (`primary`, `secondary`, `danger`, `ghost`, `warning`, `success`, `info`) and disabled state
     - **Label** -- all sizes (`xs`, `sm`, `md`, `lg`, `xl`)
@@ -29,5 +30,6 @@ cargo run -- --app-config examples/components/app.xml
     - **Table** -- tabular data display
     - **Tree** -- hierarchical view
     - **Image** -- image display with alt text
-- `visible` property to show/hide component pages without re-rendering
+- The router mounts only the active route's body — pages are unmounted when not
+  shown, rather than built-and-hidden
 - Modal open/close toggling through `get_component_property` and `set_component_property`

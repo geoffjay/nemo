@@ -212,6 +212,18 @@ shape from `app_shell.rs`.
 4. `nemo validate --strict examples/router/app.xml` passes (schemas registered in file 3
    above, so `router`/`route`/`nav-link`/`on-enter`/`on-leave` do not warn).
 
+## Relationship to the SFC plan
+
+This plan is **independent** of [single-file components](sfc-components.md) —
+neither blocks the other and either can land first. They edit disjoint code (the
+router never touches `xml_parser.rs`, the template-expansion pipeline, or the
+`call_handler` routing SFCs rely on; SFCs never touch `app.rs`/`render_component`).
+The only shared file is `runtime.rs`, in different functions (a mechanical merge).
+The one interaction is composition: a `<router>` nested inside an SFC `<template>`
+gets its `id` scoped per instance (`main` → `foo_main`), so nav references inside
+that SFC must be rewritten to the scoped id — a small follow-up owned by whichever
+plan lands second. See [SFC ↔ router](sfc-components.md) for the full write-up.
+
 ## Suggested sequencing
 
 1. Pure `match_route` + tests (no wiring) — cheapest, de-risks matching.

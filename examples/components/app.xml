@@ -15,24 +15,10 @@
 
   <script src="./scripts" />
 
-  <include href="templates/nav.xml" />
-
   <!-- Templates -->
   <templates>
-    <template name="nav_item">
-      <button
-        variant="ghost"
-        size="sm"
-        text-color="theme.muted_foreground"
-        full-width="true"
-        min-height="24"
-        align="left"
-        padding-left="2"
-        on-click="on_nav" />
-    </template>
-
     <template name="content_page">
-      <panel visible="false">
+      <panel>
         <stack id="inner" direction="vertical" spacing="12" padding="32">
           <slot />
         </stack>
@@ -51,63 +37,68 @@
 
           <!-- Reference -->
           <label id="cat_reference" text="Reference" size="sm" />
-          <button id="nav_styling" template="nav_item" label="Styling" />
+          <nav-link router="main" route="/styling" label="Styling" />
 
           <!-- Basic -->
           <label id="cat_basic" text="Basic" size="sm" />
-          <button id="nav_button" template="nav_item" label="Button" />
-          <button id="nav_label" template="nav_item" label="Label" />
-          <button id="nav_icon" template="nav_item" label="Icon" />
-          <button id="nav_text" template="nav_item" label="Text" />
-          <button id="nav_image" template="nav_item" label="Image" />
-          <button id="nav_checkbox" template="nav_item" label="Checkbox" />
-          <button id="nav_progress" template="nav_item" label="Progress" />
-          <button id="nav_accordion" template="nav_item" label="Accordion" />
-          <button id="nav_alert" template="nav_item" label="Alert" />
-          <button id="nav_avatar" template="nav_item" label="Avatar" />
-          <button id="nav_badge" template="nav_item" label="Badge" />
-          <button id="nav_collapsible" template="nav_item" label="Collapsible" />
-          <button id="nav_dropdown_button" template="nav_item" label="Dropdown Button" />
-          <button id="nav_spinner" template="nav_item" label="Spinner" />
-          <button id="nav_tag" template="nav_item" label="Tag" />
-          <button id="nav_tooltip" template="nav_item" label="Tooltip" />
+          <nav-link router="main" route="/button" label="Button" />
+          <nav-link router="main" route="/label" label="Label" />
+          <nav-link router="main" route="/icon" label="Icon" />
+          <nav-link router="main" route="/text" label="Text" />
+          <nav-link router="main" route="/image" label="Image" />
+          <nav-link router="main" route="/checkbox" label="Checkbox" />
+          <nav-link router="main" route="/progress" label="Progress" />
+          <nav-link router="main" route="/accordion" label="Accordion" />
+          <nav-link router="main" route="/alert" label="Alert" />
+          <nav-link router="main" route="/avatar" label="Avatar" />
+          <nav-link router="main" route="/badge" label="Badge" />
+          <nav-link router="main" route="/collapsible" label="Collapsible" />
+          <nav-link router="main" route="/dropdown-button" label="Dropdown Button" />
+          <nav-link router="main" route="/spinner" label="Spinner" />
+          <nav-link router="main" route="/tag" label="Tag" />
+          <nav-link router="main" route="/tooltip" label="Tooltip" />
 
           <!-- Form -->
           <label id="cat_form" text="Form" size="sm" />
-          <button id="nav_input" template="nav_item" label="Input" />
-          <button id="nav_textarea" template="nav_item" label="Textarea" />
-          <button id="nav_code_editor" template="nav_item" label="Code Editor" />
-          <button id="nav_text_editor" template="nav_item" label="Text Editor" />
-          <button id="nav_select" template="nav_item" label="Select" />
-          <button id="nav_radio" template="nav_item" label="Radio" />
-          <button id="nav_slider" template="nav_item" label="Slider" />
-          <button id="nav_switch" template="nav_item" label="Switch" />
-          <button id="nav_toggle" template="nav_item" label="Toggle" />
+          <nav-link router="main" route="/input" label="Input" />
+          <nav-link router="main" route="/textarea" label="Textarea" />
+          <nav-link router="main" route="/code-editor" label="Code Editor" />
+          <nav-link router="main" route="/text-editor" label="Text Editor" />
+          <nav-link router="main" route="/select" label="Select" />
+          <nav-link router="main" route="/radio" label="Radio" />
+          <nav-link router="main" route="/slider" label="Slider" />
+          <nav-link router="main" route="/switch" label="Switch" />
+          <nav-link router="main" route="/toggle" label="Toggle" />
 
           <!-- Layout -->
           <label id="cat_layout" text="Layout" size="sm" />
-          <button id="nav_panel" template="nav_item" label="Panel &amp; Stack" />
-          <button id="nav_list" template="nav_item" label="List" />
-          <button id="nav_notification" template="nav_item" label="Notification" />
-          <button id="nav_modal" template="nav_item" label="Modal" />
+          <nav-link router="main" route="/panel" label="Panel &amp; Stack" />
+          <nav-link router="main" route="/list" label="List" />
+          <nav-link router="main" route="/notification" label="Notification" />
+          <nav-link router="main" route="/modal" label="Modal" />
 
           <!-- Advanced -->
           <label id="cat_advanced" text="Advanced" size="sm" />
-          <button id="nav_table" template="nav_item" label="Table" />
-          <button id="nav_tree" template="nav_item" label="Tree" />
-          <button id="nav_charts" template="nav_item" label="Charts" />
+          <nav-link router="main" route="/table" label="Table" />
+          <nav-link router="main" route="/tree" label="Tree" />
+          <nav-link router="main" route="/charts" label="Charts" />
 
           <!-- Navigation -->
           <label id="cat_navigation" text="Navigation" size="sm" />
-          <button id="nav_sidenavbar" template="nav_item" label="Sidenav Bar" />
+          <nav-link router="main" route="/sidenavbar" label="Sidenav Bar" />
         </stack>
       </panel>
 
       <!-- Content area -->
       <stack id="content" direction="vertical" spacing="0" padding="16" scroll="true">
+        <!-- The page router: only the active route's body is mounted. Left
+             content-sized (no flex) so the enclosing scroll stack scrolls a
+             tall page, exactly as the visibility-toggled panels did before. -->
+        <router id="main" default="/button" primary="true">
 
         <!-- Button page (visible by default) -->
-        <panel id="page_button" template="content_page" visible="true">
+        <route path="/button">
+        <panel template="content_page">
           <label id="btn_title" text="Button" size="lg" />
           <text id="btn_desc" content="Buttons trigger actions. Available variants: primary, secondary, danger, ghost, warning, success, info." />
 
@@ -141,9 +132,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Label page -->
-        <panel id="page_label" template="content_page">
+        <route path="/label">
+        <panel template="content_page">
           <label id="lbl_title" text="Label" size="lg" />
           <text id="lbl_desc" content="Labels display text at various sizes: xs, sm, md (default), lg, xl." />
 
@@ -165,9 +158,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Icon page -->
-        <panel id="page_icon" template="content_page">
+        <route path="/icon">
+        <panel template="content_page">
           <label id="icon_title" text="Icon" size="lg" />
           <text id="icon_desc" content="Icons render named vector icons from the gpui-component icon set." />
 
@@ -211,9 +206,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Checkbox page -->
-        <panel id="page_checkbox" template="content_page">
+        <route path="/checkbox">
+        <panel template="content_page">
           <label id="cb_title" text="Checkbox" size="lg" />
           <text id="cb_desc" content="Checkboxes toggle boolean state. Support labels and disabled state." />
 
@@ -234,9 +231,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Input page -->
-        <panel id="page_input" template="content_page">
+        <route path="/input">
+        <panel template="content_page">
           <label id="inp_title" text="Input" size="lg" />
           <text id="inp_desc" content="Text inputs for user data entry. Support placeholder text and disabled state." />
 
@@ -257,9 +256,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Textarea page -->
-        <panel id="page_textarea" template="content_page">
+        <route path="/textarea">
+        <panel template="content_page">
           <label id="textarea_title" text="Textarea" size="lg" />
           <text id="textarea_desc" content="Textarea is a multi-line text input. Supports configurable rows, placeholder text, auto-grow, and default values." />
 
@@ -286,9 +287,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Code Editor page -->
-        <panel id="page_code_editor" template="content_page">
+        <route path="/code-editor">
+        <panel template="content_page">
           <label id="code_editor_title" text="Code Editor" size="lg" />
           <text id="code_editor_desc" content="Code Editor provides syntax-highlighted code editing with line numbers, search, and configurable indentation." />
 
@@ -315,9 +318,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Text Editor page -->
-        <panel id="page_text_editor" template="content_page">
+        <route path="/text-editor">
+        <panel template="content_page">
           <label id="text_editor_title" text="Text Editor" size="lg" />
           <text id="text_editor_desc" content="Text Editor is a rich-text editing area with a toolbar for basic formatting: Bold, Italic, and Underline. Uses markdown-style markers." />
 
@@ -338,9 +343,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Select page -->
-        <panel id="page_select" template="content_page">
+        <route path="/select">
+        <panel template="content_page">
           <label id="sel_title" text="Select" size="lg" />
           <text id="sel_desc" content="Select presents a list of options for the user to choose from." />
 
@@ -364,9 +371,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Progress page -->
-        <panel id="page_progress" template="content_page">
+        <route path="/progress">
+        <panel template="content_page">
           <label id="prog_title" text="Progress" size="lg" />
           <text id="prog_desc" content="Progress bars show completion percentage. Set value (0-100) and optional max." />
 
@@ -393,9 +402,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Notification page -->
-        <panel id="page_notification" template="content_page">
+        <route path="/notification">
+        <panel template="content_page">
           <label id="notif_title" text="Notification" size="lg" />
           <text id="notif_desc" content="Notifications display status messages. Types: info, success, warning, error." />
 
@@ -416,9 +427,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Modal page -->
-        <panel id="page_modal" template="content_page">
+        <route path="/modal">
+        <panel template="content_page">
           <label id="modal_title" text="Modal" size="lg" />
           <text id="modal_desc" content="Modals display overlay dialogs. Toggle the open property to show or hide." />
 
@@ -439,9 +452,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Text page -->
-        <panel id="page_text" template="content_page">
+        <route path="/text">
+        <panel template="content_page">
           <label id="text_title" text="Text" size="lg" />
           <text id="text_desc" content="Text displays plain content blocks. Use for paragraphs or descriptions." />
 
@@ -460,9 +475,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- List page -->
-        <panel id="page_list" template="content_page">
+        <route path="/list">
+        <panel template="content_page">
           <label id="list_title" text="List" size="lg" />
           <text id="list_desc" content="Lists render arrays of items as a vertical list with hover highlighting." />
 
@@ -486,9 +503,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Panel & Stack page -->
-        <panel id="page_panel" template="content_page">
+        <route path="/panel">
+        <panel template="content_page">
           <label id="panel_title" text="Panel &amp; Stack" size="lg" />
           <text id="panel_desc" content="Panels are containers with padding and background. Stacks arrange children vertically or horizontally with configurable spacing." />
 
@@ -524,9 +543,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Table page -->
-        <panel id="page_table" template="content_page">
+        <route path="/table">
+        <panel template="content_page">
           <label id="table_title" text="Table" size="lg" />
           <text id="table_desc" content="Table displays tabular data with columns, sorting, and row selection." />
 
@@ -545,9 +566,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Tree page -->
-        <panel id="page_tree" template="content_page">
+        <route path="/tree">
+        <panel template="content_page">
           <label id="tree_title" text="Tree" size="lg" />
           <text id="tree_desc" content="Tree displays hierarchical data with expand/collapse and keyboard navigation." />
 
@@ -564,9 +587,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Image page -->
-        <panel id="page_image" template="content_page">
+        <route path="/image">
+        <panel template="content_page">
           <label id="image_title" text="Image" size="lg" />
           <text id="image_desc" content="Image displays an image from a source path. Falls back to alt text when no source is provided." />
 
@@ -585,9 +610,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Charts page -->
-        <panel id="page_charts" template="content_page">
+        <route path="/charts">
+        <panel template="content_page">
           <label id="charts_title" text="Charts" size="lg" />
           <text id="charts_desc" content="Chart components for data visualization. Supports line, bar, area, pie, candlestick, column, stacked, clustered, scatter, bubble, heatmap, radar, pyramid, and funnel charts." />
 
@@ -687,9 +714,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Accordion page -->
-        <panel id="page_accordion" template="content_page">
+        <route path="/accordion">
+        <panel template="content_page">
           <label id="accordion_title" text="Accordion" size="lg" />
           <text id="accordion_desc" content="Accordions show collapsible content sections. Supports multiple open items and bordered styles." />
 
@@ -751,9 +780,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Alert page -->
-        <panel id="page_alert" template="content_page">
+        <route path="/alert">
+        <panel template="content_page">
           <label id="alert_title" text="Alert" size="lg" />
           <text id="alert_desc" content="Alerts display important messages. Variants: info, success, warning, error." />
 
@@ -774,9 +805,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Avatar page -->
-        <panel id="page_avatar" template="content_page">
+        <route path="/avatar">
+        <panel template="content_page">
           <label id="avatar_title" text="Avatar" size="lg" />
           <text id="avatar_desc" content="Avatars display user initials. Provide a name to generate initials automatically." />
 
@@ -799,9 +832,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Badge page -->
-        <panel id="page_badge" template="content_page">
+        <route path="/badge">
+        <panel template="content_page">
           <label id="badge_title" text="Badge" size="lg" />
           <text id="badge_desc" content="Badges show notification counts or dot indicators on child elements." />
 
@@ -831,9 +866,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Collapsible page -->
-        <panel id="page_collapsible" template="content_page">
+        <route path="/collapsible">
+        <panel template="content_page">
           <label id="collapsible_title" text="Collapsible" size="lg" />
           <text id="collapsible_desc" content="Collapsible sections expand and collapse to reveal child content." />
 
@@ -856,9 +893,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Dropdown Button page -->
-        <panel id="page_dropdown_button" template="content_page">
+        <route path="/dropdown-button">
+        <panel template="content_page">
           <label id="dropdown_title" text="Dropdown Button" size="lg" />
           <text id="dropdown_desc" content="Dropdown buttons combine a button with a dropdown menu indicator." />
 
@@ -891,9 +930,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Spinner page -->
-        <panel id="page_spinner" template="content_page">
+        <route path="/spinner">
+        <panel template="content_page">
           <label id="spinner_title" text="Spinner" size="lg" />
           <text id="spinner_desc" content="Spinners indicate loading state. Available sizes: xs, sm, md (default), lg." />
 
@@ -916,9 +957,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Tag page -->
-        <panel id="page_tag" template="content_page">
+        <route path="/tag">
+        <panel template="content_page">
           <label id="tag_title" text="Tag" size="lg" />
           <text id="tag_desc" content="Tags are small labels for categorization. Variants: primary, secondary, danger, success, warning, info." />
 
@@ -950,9 +993,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Tooltip page -->
-        <panel id="page_tooltip" template="content_page">
+        <route path="/tooltip">
+        <panel template="content_page">
           <label id="tooltip_title" text="Tooltip" size="lg" />
           <text id="tooltip_desc" content="Tooltips show additional information on hover." />
 
@@ -977,9 +1022,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Radio page -->
-        <panel id="page_radio" template="content_page">
+        <route path="/radio">
+        <panel template="content_page">
           <label id="radio_title" text="Radio" size="lg" />
           <text id="radio_desc" content="Radio groups allow selecting one option from a set. Support vertical and horizontal layouts." />
 
@@ -1008,9 +1055,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Slider page -->
-        <panel id="page_slider" template="content_page">
+        <route path="/slider">
+        <panel template="content_page">
           <label id="slider_title" text="Slider" size="lg" />
           <text id="slider_desc" content="Sliders allow selecting a numeric value within a range. Supports min, max, step, and default value." />
 
@@ -1031,9 +1080,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Switch page -->
-        <panel id="page_switch" template="content_page">
+        <route path="/switch">
+        <panel template="content_page">
           <label id="switch_title" text="Switch" size="lg" />
           <text id="switch_desc" content="Switches toggle boolean state, similar to checkboxes but with a sliding visual style." />
 
@@ -1054,9 +1105,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Toggle page -->
-        <panel id="page_toggle" template="content_page">
+        <route path="/toggle">
+        <panel template="content_page">
           <label id="toggle_title" text="Toggle" size="lg" />
           <text id="toggle_desc" content="Toggle buttons switch between on/off states. Support labels and icons." />
 
@@ -1085,9 +1138,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Styling page -->
-        <panel id="page_styling" template="content_page">
+        <route path="/styling">
+        <panel template="content_page">
           <label id="styling_title" text="Styling" size="lg" />
           <text id="styling_desc" content="All components support shared styling attributes via apply_layout_styles: padding, margin, border, shadow, and rounded. These wrap any component in a styled container." />
 
@@ -1235,9 +1290,11 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
 
         <!-- Sidenav Bar page -->
-        <panel id="page_sidenavbar" template="content_page">
+        <route path="/sidenavbar">
+        <panel template="content_page">
           <label id="sidenav_title" text="Sidenav Bar" size="xl" />
           <text id="sidenav_desc" content="A vertical navigation sidebar with icon and label items. Supports collapsed (icon-only) and expanded (icon + label) modes." />
 
@@ -1298,6 +1355,8 @@
             </tab-item>
           </tabs>
         </panel>
+        </route>
+        </router>
       </stack>
     </stack>
   </layout>

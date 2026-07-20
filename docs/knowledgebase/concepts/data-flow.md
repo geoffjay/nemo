@@ -76,3 +76,12 @@ sets `data_dirty` (`AtomicBool`), and calls `data_notify.notify_one()`. The
 `App` async task wakes, runs `NemoRuntime::apply_pending_data_updates()` (read
 repository → `LayoutManager::on_data_changed()` → `apply_updates()` sets
 `BuiltComponent` properties), then `cx.notify()` re-renders.
+
+The **page router** reuses this same signal. A `navigate()`/`back()`/`forward()`
+call or a `<nav-link>` click enqueues a `NavIntent`, sets `data_dirty`, and
+notifies; the poll loop runs `apply_pending_navigations()` (just before
+`apply_pending_data_updates()`), which **projects** the active route's path +
+params into the repository at `data.route.<id>.path` and
+`data.route.<id>.params.*` and flags those paths dirty — so pages read them via
+`get_data("route.<id>.params.x")` and `<binding source="data.route.<id>.params.x">`
+propagates them like any other data change. See [routing](../patterns/routing.md).

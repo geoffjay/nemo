@@ -13,9 +13,75 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::sync::Mutex;
 use std::sync::RwLock;
 use tokio::runtime::Runtime as TokioRuntime;
 use tracing::{debug, info};
+
+/// A pending navigation request.
+///
+/// Navigation is **deferred**: `navigate()`/`back()`/`forward()` and
+/// `<nav-link>` clicks only enqueue a `NavIntent` (and wake the UI poll loop);
+/// the intent is applied later by [`NemoRuntime::apply_pending_navigations`],
+/// which runs **outside** the `extension_manager` write lock that
+/// `call_handler` holds. Applying navigation synchronously from inside a
+/// handler would re-acquire that lock on the same thread and deadlock, so the
+/// queue mirrors the existing `plugin_dirty_paths` reactivity path.
+#[derive(Debug, Clone)]
+pub(crate) enum NavIntent {
+    /// Navigate a router (primary when `router` is `None`) to `path`.
+    Navigate {
+        router: Option<String>,
+        path: String,
+    },
+    /// Move a router back one history entry.
+    Back { router: Option<String> },
+    /// Move a router forward one history entry.
+    Forward { router: Option<String> },
+}
+
+impl NavIntent {
+    /// The explicit router id this intent targets, if any.
+    fn router(&self) -> Option<&str> {
+        match self {
+            NavIntent::Navigate { router, .. }
+            | NavIntent::Back { router }
+            | NavIntent::Forward { router } => router.as_deref(),
+        }
+    }
+}
+
+/// Host-side authoritative state for one `<router>`, keyed by router id in the
+/// router registry. The current path is `history[index]`; `back`/`forward`
+/// move `index` within `history`.
+#[derive(Debug, Clone, Default)]
+struct RouterState {
+    /// Visited paths, oldest first.
+    history: Vec<String>,
+    /// Index of the current path within `history`.
+    index: usize,
+    /// Params captured from the current path's matching route.
+    params: HashMap<String, String>,
+    /// Whether the current path+params have been projected into the repository
+    /// at least once (so the render pass can project lazily exactly once).
+    projected: bool,
+}
+
+/// A router's routing table, read from the component tree when applying a
+/// navigation.
+struct RouterInfo {
+    /// The router's `default` path.
+    default_path: String,
+    /// The `<route>` children in document order.
+    routes: Vec<RouteInfo>,
+}
+
+/// One `<route>`: its path pattern and optional lifecycle handlers.
+struct RouteInfo {
+    pattern: String,
+    on_enter: Option<String>,
+    on_leave: Option<String>,
+}
 
 /// Sink configuration for outbound data publishing.
 #[derive(Debug, Clone)]
@@ -89,6 +155,11 @@ pub struct NemoRuntime {
     pub sink_configs: Arc<RwLock<HashMap<String, SinkConfig>>>,
     /// Paths written by plugins that need binding propagation.
     plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
+    /// Host-side router state (history + params) keyed by router id.
+    router_states: Arc<RwLock<HashMap<String, RouterState>>>,
+    /// Queued navigation intents, applied outside the extension lock by
+    /// [`Self::apply_pending_navigations`].
+    nav_intents: Arc<Mutex<Vec<NavIntent>>>,
 }
 
 impl NemoRuntime {
@@ -131,6 +202,8 @@ impl NemoRuntime {
             shutdown: Arc::new(tokio::sync::Notify::new()),
             sink_configs: Arc::new(RwLock::new(HashMap::new())),
             plugin_dirty_paths: Arc::new(RwLock::new(HashSet::new())),
+            router_states: Arc::new(RwLock::new(HashMap::new())),
+            nav_intents: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -405,6 +478,7 @@ impl NemoRuntime {
             Arc::clone(&self.data_dirty),
             Arc::clone(&self.data_notify),
             Arc::clone(&self.plugin_dirty_paths),
+            Arc::clone(&self.nav_intents),
         ));
 
         {
@@ -773,6 +847,295 @@ impl NemoRuntime {
         }
 
         any_updates
+    }
+
+    // ── Router / navigation ────────────────────────────────────────────────
+
+    /// Enqueues a navigation to `path` on `router` (the primary router when
+    /// `None`) and wakes the UI poll loop. Never mutates router state or fires
+    /// hooks directly — those happen in [`Self::apply_pending_navigations`].
+    pub fn enqueue_navigation(&self, router: Option<String>, path: String) {
+        self.push_nav_intent(NavIntent::Navigate { router, path });
+    }
+
+    fn push_nav_intent(&self, intent: NavIntent) {
+        if let Ok(mut q) = self.nav_intents.lock() {
+            q.push(intent);
+        }
+        self.data_dirty.store(true, Ordering::Release);
+        self.data_notify.notify_one();
+    }
+
+    /// Returns the current path for `router_id`, lazily initializing the router
+    /// to `default_path` on first access. Called from the render pass.
+    pub fn router_current_path(&self, router_id: &str, default_path: &str) -> String {
+        {
+            let states = self.router_states.read().expect("router_states poisoned");
+            if let Some(st) = states.get(router_id) {
+                if let Some(path) = st.history.get(st.index) {
+                    return path.clone();
+                }
+            }
+        }
+        let mut states = self.router_states.write().expect("router_states poisoned");
+        let st = states
+            .entry(router_id.to_string())
+            .or_insert_with(|| RouterState {
+                history: vec![default_path.to_string()],
+                index: 0,
+                params: HashMap::new(),
+                projected: false,
+            });
+        st.history
+            .get(st.index)
+            .cloned()
+            .unwrap_or_else(|| default_path.to_string())
+    }
+
+    /// Returns the current path for `router_id` without initializing it. Used
+    /// for `<nav-link>` active-state comparison, which must not create routers.
+    pub fn router_current_path_peek(&self, router_id: &str) -> Option<String> {
+        let states = self.router_states.read().ok()?;
+        let st = states.get(router_id)?;
+        st.history.get(st.index).cloned()
+    }
+
+    /// Resolves the id of the primary router: the one flagged `primary="true"`,
+    /// else the first `<router>` found in the component tree.
+    pub fn primary_router_id(&self) -> Option<String> {
+        let lm = self.layout_manager.read().ok()?;
+        let mut first = None;
+        for id in lm.component_ids() {
+            if let Some(c) = lm.get_component(&id) {
+                if c.component_type == "router" {
+                    let is_primary = c
+                        .properties
+                        .get("primary")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false);
+                    if is_primary {
+                        return Some(id);
+                    }
+                    if first.is_none() {
+                        first = Some(id);
+                    }
+                }
+            }
+        }
+        first
+    }
+
+    /// Gathers a router's `default` path and its `<route>` children (pattern +
+    /// lifecycle handlers) in document order, by reading the component tree.
+    fn router_info(&self, router_id: &str) -> Option<RouterInfo> {
+        let lm = self.layout_manager.read().ok()?;
+        let router = lm.get_component(router_id)?;
+        if router.component_type != "router" {
+            return None;
+        }
+        let default_path = router
+            .properties
+            .get("default")
+            .and_then(|v| v.as_str())
+            .unwrap_or("/")
+            .to_string();
+        let routes = router
+            .children
+            .iter()
+            .filter_map(|cid| lm.get_component(cid))
+            .filter(|c| c.component_type == "route")
+            .map(|c| RouteInfo {
+                pattern: c
+                    .properties
+                    .get("path")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                on_enter: c.handlers.get("enter").cloned(),
+                on_leave: c.handlers.get("leave").cloned(),
+            })
+            .collect();
+        Some(RouterInfo {
+            default_path,
+            routes,
+        })
+    }
+
+    /// Projects a router's current path + params into the `DataRepository` at
+    /// `data.route.<id>.path` and `data.route.<id>.params.*`, and records them
+    /// in the router state. Reused by both the render pass (via
+    /// [`Self::sync_route_projection`]) and applied navigations.
+    fn write_route_to_repo(&self, router_id: &str, path: &str, params: &HashMap<String, String>) {
+        let repo = &self.data_engine.repository;
+        if let Ok(dp) = nemo_data::DataPath::parse(&format!("data.route.{}.path", router_id)) {
+            let _ = repo.set(&dp, Value::String(path.to_string()));
+        }
+        // Replace the whole params object in one set so stale keys from the
+        // previous route are cleared (deleting would leave a Null tombstone
+        // that breaks nested sets).
+        let mut params_obj = Value::Object(Default::default());
+        if let Value::Object(obj) = &mut params_obj {
+            for (k, v) in params {
+                obj.insert(k.clone(), Value::String(v.clone()));
+            }
+        }
+        if let Ok(dp) = nemo_data::DataPath::parse(&format!("data.route.{}.params", router_id)) {
+            let _ = repo.set(&dp, params_obj);
+        }
+        if let Ok(mut states) = self.router_states.write() {
+            if let Some(st) = states.get_mut(router_id) {
+                st.params = params.clone();
+                st.projected = true;
+            }
+        }
+    }
+
+    /// Marks the projected route paths dirty so `apply_pending_data_updates`
+    /// propagates them through bindings (mirrors the `set_data` path).
+    fn mark_route_dirty(&self, router_id: &str, params: &HashMap<String, String>) {
+        if let Ok(mut paths) = self.plugin_dirty_paths.write() {
+            paths.insert(format!("data.route.{}.path", router_id));
+            for k in params.keys() {
+                paths.insert(format!("data.route.{}.params.{}", router_id, k));
+            }
+        }
+        self.data_dirty.store(true, Ordering::Release);
+    }
+
+    /// Projects a router's current path + params from the render pass, but only
+    /// when they have not yet been projected or the params changed — so it is a
+    /// cheap no-op on steady-state re-renders and never loops.
+    pub fn sync_route_projection(
+        &self,
+        router_id: &str,
+        path: &str,
+        params: &HashMap<String, String>,
+    ) {
+        let needs = {
+            let states = self.router_states.read().expect("router_states poisoned");
+            match states.get(router_id) {
+                Some(st) => !st.projected || &st.params != params,
+                None => true,
+            }
+        };
+        if needs {
+            self.write_route_to_repo(router_id, path, params);
+        }
+    }
+
+    /// Applies all queued navigation intents. Runs on the UI thread from the
+    /// poll loop, **outside** the extension lock: it updates router history,
+    /// projects path+params into the repository, and fires `on-leave`/`on-enter`
+    /// lifecycle hooks. Returns `true` if any navigation was applied (so the
+    /// caller re-renders).
+    pub fn apply_pending_navigations(&self) -> bool {
+        let intents: Vec<NavIntent> = {
+            let mut q = self.nav_intents.lock().expect("nav_intents poisoned");
+            if q.is_empty() {
+                return false;
+            }
+            std::mem::take(&mut *q)
+        };
+
+        let mut any = false;
+        for intent in intents {
+            if self.apply_one_navigation(intent) {
+                any = true;
+            }
+        }
+        any
+    }
+
+    /// Applies a single navigation intent. Returns `true` if the current path
+    /// actually changed.
+    fn apply_one_navigation(&self, intent: NavIntent) -> bool {
+        let router_id = match intent
+            .router()
+            .map(String::from)
+            .or_else(|| self.primary_router_id())
+        {
+            Some(id) => id,
+            None => {
+                tracing::warn!("navigate: no router found");
+                return false;
+            }
+        };
+        let info = match self.router_info(&router_id) {
+            Some(info) => info,
+            None => {
+                tracing::warn!("navigate: unknown router '{}'", router_id);
+                return false;
+            }
+        };
+
+        // Update history/index under the write lock and capture old + new path.
+        let (old_path, new_path) = {
+            let mut states = self.router_states.write().expect("router_states poisoned");
+            let st = states
+                .entry(router_id.clone())
+                .or_insert_with(|| RouterState {
+                    history: vec![info.default_path.clone()],
+                    index: 0,
+                    params: HashMap::new(),
+                    projected: false,
+                });
+            let old_path = st.history.get(st.index).cloned();
+            let new_path = match &intent {
+                NavIntent::Navigate { path, .. } => {
+                    // Drop any forward history, then push unless it's a no-op.
+                    st.history.truncate(st.index + 1);
+                    if st.history.get(st.index) != Some(path) {
+                        st.history.push(path.clone());
+                        st.index = st.history.len() - 1;
+                    }
+                    path.clone()
+                }
+                NavIntent::Back { .. } => {
+                    if st.index == 0 {
+                        return false;
+                    }
+                    st.index -= 1;
+                    st.history[st.index].clone()
+                }
+                NavIntent::Forward { .. } => {
+                    if st.index + 1 >= st.history.len() {
+                        return false;
+                    }
+                    st.index += 1;
+                    st.history[st.index].clone()
+                }
+            };
+            (old_path, new_path)
+        };
+
+        let changed = old_path.as_deref() != Some(new_path.as_str());
+
+        // Match the new path to a route for its params + on-enter handler.
+        let patterns: Vec<String> = info.routes.iter().map(|r| r.pattern.clone()).collect();
+        let (new_idx, new_params) = crate::containers::router::resolve_route(&patterns, &new_path)
+            .unwrap_or((usize::MAX, HashMap::new()));
+
+        // Project path + params into the repository and flag for binding
+        // propagation.
+        self.write_route_to_repo(&router_id, &new_path, &new_params);
+        self.mark_route_dirty(&router_id, &new_params);
+
+        // Fire lifecycle hooks only on an actual path change, outside all locks.
+        if changed {
+            if let Some(old) = &old_path {
+                let old_idx = crate::containers::router::resolve_route(&patterns, old)
+                    .map(|(i, _)| i)
+                    .unwrap_or(usize::MAX);
+                if let Some(handler) = info.routes.get(old_idx).and_then(|r| r.on_leave.clone()) {
+                    self.call_handler(&handler, &router_id, "leave");
+                }
+            }
+            if let Some(handler) = info.routes.get(new_idx).and_then(|r| r.on_enter.clone()) {
+                self.call_handler(&handler, &router_id, "enter");
+            }
+        }
+
+        changed
     }
 
     /// Parses sink configuration and stores sink configs.
@@ -1705,10 +2068,12 @@ pub struct RuntimeContext {
     data_dirty: Arc<AtomicBool>,
     data_notify: Arc<tokio::sync::Notify>,
     plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
+    nav_intents: Arc<Mutex<Vec<NavIntent>>>,
 }
 
 impl RuntimeContext {
     /// Creates a new runtime context.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         config: Arc<RwLock<Value>>,
         layout_manager: Arc<RwLock<LayoutManager>>,
@@ -1717,6 +2082,7 @@ impl RuntimeContext {
         data_dirty: Arc<AtomicBool>,
         data_notify: Arc<tokio::sync::Notify>,
         plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
+        nav_intents: Arc<Mutex<Vec<NavIntent>>>,
     ) -> Self {
         Self {
             config,
@@ -1726,7 +2092,18 @@ impl RuntimeContext {
             data_dirty,
             data_notify,
             plugin_dirty_paths,
+            nav_intents,
         }
+    }
+
+    /// Enqueues a navigation intent and wakes the UI poll loop. Shared by the
+    /// `navigate`/`back`/`forward` trait methods below.
+    fn enqueue(&self, intent: NavIntent) {
+        if let Ok(mut q) = self.nav_intents.lock() {
+            q.push(intent);
+        }
+        self.data_dirty.store(true, Ordering::Release);
+        self.data_notify.notify_one();
     }
 }
 
@@ -1805,6 +2182,28 @@ impl PluginContext for RuntimeContext {
                 "Layout manager is locked".to_string(),
             ))
         }
+    }
+
+    fn navigate(&self, router: Option<&str>, path: &str) -> Result<(), PluginError> {
+        self.enqueue(NavIntent::Navigate {
+            router: router.map(String::from),
+            path: path.to_string(),
+        });
+        Ok(())
+    }
+
+    fn back(&self, router: Option<&str>) -> Result<(), PluginError> {
+        self.enqueue(NavIntent::Back {
+            router: router.map(String::from),
+        });
+        Ok(())
+    }
+
+    fn forward(&self, router: Option<&str>) -> Result<(), PluginError> {
+        self.enqueue(NavIntent::Forward {
+            router: router.map(String::from),
+        });
+        Ok(())
     }
 }
 
@@ -2384,6 +2783,7 @@ mod runtime_tests {
             dirty.clone(),
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
 
         // set_data should store and mark dirty
@@ -2415,6 +2815,7 @@ mod runtime_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
         assert_eq!(ctx.get_data("nonexistent"), None);
     }
@@ -2443,6 +2844,7 @@ mod runtime_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
 
         assert_eq!(
@@ -2483,6 +2885,7 @@ mod runtime_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
 
         assert_eq!(
@@ -3518,12 +3921,101 @@ mod error_path_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
 
         // Setting property on a nonexistent component should return error
         let result =
             ctx.set_component_property("no_such_id", "text", PluginValue::String("test".into()));
         assert!(result.is_err());
+    }
+
+    // ── Router navigation (deferred apply) ─────────────────────────────
+
+    /// End-to-end regression guard that a navigation applied through the
+    /// deferred queue updates router state, projects path+params into the
+    /// repository, and fires `on-leave`/`on-enter` hooks — the latter proving
+    /// the apply point is *not* re-entrant with the extension write lock.
+    #[test]
+    fn test_apply_pending_navigation_updates_state_and_fires_hooks() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let scripts_dir = dir.path().join("scripts");
+        std::fs::create_dir(&scripts_dir).unwrap();
+        {
+            let mut f = std::fs::File::create(scripts_dir.join("handlers.rhai")).unwrap();
+            writeln!(
+                f,
+                "fn record_enter(id, ev) {{ set_data(\"test.entered\", id); }}\n\
+                 fn record_leave(id, ev) {{ set_data(\"test.left\", id); }}"
+            )
+            .unwrap();
+        }
+        let config_path = dir.path().join("app.xml");
+        {
+            let mut f = std::fs::File::create(&config_path).unwrap();
+            write!(
+                f,
+                r#"<nemo>
+  <app title="t"/>
+  <script src="./scripts"/>
+  <layout type="stack">
+    <router id="main" default="/home">
+      <route path="/home" on-leave="record_leave"></route>
+      <route path="/users/:id" on-enter="record_enter"></route>
+      <route path="*"></route>
+    </router>
+  </layout>
+</nemo>"#
+            )
+            .unwrap();
+        }
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+        rt.initialize().unwrap();
+
+        // Lazily initialize the router to its default so the old path (/home)
+        // is known and its on-leave hook can fire on the next navigation.
+        assert_eq!(rt.router_current_path("main", "/home"), "/home");
+
+        rt.enqueue_navigation(None, "/users/42".to_string());
+        assert!(rt.apply_pending_navigations());
+
+        // Current path advanced; path + params were projected into the repo.
+        assert_eq!(rt.router_current_path("main", "/home"), "/users/42");
+        let get = |p: &str| {
+            rt.data_engine
+                .repository
+                .get(&nemo_data::DataPath::parse(p).unwrap())
+        };
+        assert_eq!(
+            get("data.route.main.path").and_then(|v| v.as_str().map(String::from)),
+            Some("/users/42".to_string())
+        );
+        assert_eq!(
+            get("data.route.main.params.id").and_then(|v| v.as_str().map(String::from)),
+            Some("42".to_string())
+        );
+
+        // Both lifecycle hooks fired (running Rhai via call_handler from the
+        // apply point, which holds no extension lock).
+        assert_eq!(
+            get("data.test.left").and_then(|v| v.as_str().map(String::from)),
+            Some("main".to_string())
+        );
+        assert_eq!(
+            get("data.test.entered").and_then(|v| v.as_str().map(String::from)),
+            Some("main".to_string())
+        );
+
+        // back() returns to the previous path.
+        rt.push_nav_intent(NavIntent::Back { router: None });
+        assert!(rt.apply_pending_navigations());
+        assert_eq!(rt.router_current_path("main", "/home"), "/home");
+
+        // Stale params from the /users/:id route were cleared on the way back.
+        assert!(get("data.route.main.params.id").is_none());
     }
 
     #[test]
@@ -3545,6 +4037,7 @@ mod error_path_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
         assert_eq!(ctx.get_config("any.path"), None);
     }

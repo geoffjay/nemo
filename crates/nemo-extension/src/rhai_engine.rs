@@ -488,7 +488,7 @@ impl RhaiEngine {
             },
         );
 
-        let ctx = context;
+        let ctx = context.clone();
         self.engine.register_fn(
             "set_component_label",
             move |component_id: &str, label: &str| {
@@ -501,6 +501,53 @@ impl RhaiEngine {
                 }
             },
         );
+
+        // Router navigation. `navigate(path)` targets the primary router;
+        // `navigate(router, path)` targets an explicit one. `back`/`forward`
+        // move through history. All are deferred (applied off the extension
+        // lock), so calling them from inside a handler is safe.
+        let ctx = context.clone();
+        self.engine.register_fn("navigate", move |path: &str| {
+            if let Err(e) = ctx.navigate(None, path) {
+                tracing::warn!("navigate failed: {}", e);
+            }
+        });
+
+        let ctx = context.clone();
+        self.engine
+            .register_fn("navigate", move |router: &str, path: &str| {
+                if let Err(e) = ctx.navigate(Some(router), path) {
+                    tracing::warn!("navigate failed: {}", e);
+                }
+            });
+
+        let ctx = context.clone();
+        self.engine.register_fn("back", move || {
+            if let Err(e) = ctx.back(None) {
+                tracing::warn!("back failed: {}", e);
+            }
+        });
+
+        let ctx = context.clone();
+        self.engine.register_fn("back", move |router: &str| {
+            if let Err(e) = ctx.back(Some(router)) {
+                tracing::warn!("back failed: {}", e);
+            }
+        });
+
+        let ctx = context.clone();
+        self.engine.register_fn("forward", move || {
+            if let Err(e) = ctx.forward(None) {
+                tracing::warn!("forward failed: {}", e);
+            }
+        });
+
+        let ctx = context;
+        self.engine.register_fn("forward", move |router: &str| {
+            if let Err(e) = ctx.forward(Some(router)) {
+                tracing::warn!("forward failed: {}", e);
+            }
+        });
     }
 
     /// Registers HTTP request functions (`http_get`, `http_post`, `http_put`,

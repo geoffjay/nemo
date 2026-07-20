@@ -25,7 +25,7 @@ use crate::components::{
     SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch, TabItemData,
     Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
-use crate::containers::AppShell;
+use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
 use crate::theme::tokens::{FontSize, Space, TokenStyled};
 use nemo_layout::BuiltComponent;
@@ -52,7 +52,11 @@ impl App {
         let data_notify = Arc::clone(&runtime.data_notify);
         let _data_task = cx.spawn(async move |this: WeakEntity<App>, cx: &mut AsyncApp| loop {
             data_notify.notified().await;
-            if poll_runtime.apply_pending_data_updates() {
+            // Apply queued navigations first so any route path/param projections
+            // they flag are picked up by the data-update pass that follows.
+            let navigated = poll_runtime.apply_pending_navigations();
+            let data_updated = poll_runtime.apply_pending_data_updates();
+            if navigated || data_updated {
                 let _ = this.update(cx, |_app: &mut App, cx: &mut Context<App>| {
                     cx.notify();
                 });
@@ -1166,8 +1170,83 @@ impl App {
                     .runtime(Arc::clone(&self.runtime))
                     .into_any_element()
             }
-            // Region/leaf markers of app_shell are rendered by their parent.
-            "app_sidenav" | "app_content" | "app_footer" | "sidenav_item" | "page" => {
+            "router" => {
+                let router_id = component.id.clone();
+                let default_path = component
+                    .properties
+                    .get("default")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("/")
+                    .to_string();
+
+                // Collect <route> children in document order.
+                let routes: Vec<BuiltComponent> = component
+                    .children
+                    .iter()
+                    .filter_map(|id| components.get(id))
+                    .filter(|c| c.component_type == "route")
+                    .cloned()
+                    .collect();
+                let patterns: Vec<String> = routes
+                    .iter()
+                    .map(|r| {
+                        r.properties
+                            .get("path")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string()
+                    })
+                    .collect();
+
+                let current = self.runtime.router_current_path(&router_id, &default_path);
+                let resolved = crate::containers::router::resolve_route(&patterns, &current);
+                let params = resolved
+                    .as_ref()
+                    .map(|(_, p)| p.clone())
+                    .unwrap_or_default();
+                // Keep data.route.<id>.* in sync for get_data / bindings.
+                self.runtime
+                    .sync_route_projection(&router_id, &current, &params);
+
+                // Render only the active route's body (empty if nothing matches).
+                let body = resolved
+                    .and_then(|(idx, _)| routes.get(idx).cloned())
+                    .map(|route| self.render_children(&route, components, entity_id, window, cx))
+                    .unwrap_or_default();
+
+                Router::new(body).into_any_element()
+            }
+            "nav_link" => {
+                let route = component
+                    .properties
+                    .get("route")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                let router_ref = component
+                    .properties
+                    .get("router")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
+
+                // Active when this link's route is the target router's current
+                // path. Uses a non-initializing peek so it never creates routers.
+                let router_id = router_ref
+                    .clone()
+                    .or_else(|| self.runtime.primary_router_id());
+                let is_active = router_id
+                    .and_then(|rid| self.runtime.router_current_path_peek(&rid))
+                    .map(|current| current == route)
+                    .unwrap_or(false);
+
+                NavLink::new(component)
+                    .active(is_active)
+                    .entity_id(entity_id)
+                    .runtime(Arc::clone(&self.runtime))
+                    .into_any_element()
+            }
+            // Region/leaf markers rendered by their parent (app_shell, router).
+            "app_sidenav" | "app_content" | "app_footer" | "sidenav_item" | "page" | "route" => {
                 div().into_any_element()
             }
             "spinner" => Spinner::new(component.clone()).into_any_element(),

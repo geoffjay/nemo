@@ -8,7 +8,13 @@
 //!
 //! The first container is [`AppShell`] — a standard app frame with a left
 //! sidenav, a switchable content area, and a full-width footer.
+//!
+//! [`Router`] is a lower-level, chrome-free switching primitive: it renders one
+//! of its `<route>` children by URL-style path, with history, params, and
+//! lifecycle hooks. See [`router`].
 
 mod app_shell;
+pub mod router;
 
 pub use app_shell::AppShell;
+pub use router::{NavLink, Router};

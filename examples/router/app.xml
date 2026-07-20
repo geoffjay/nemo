@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Page Router -->
+<!-- Demonstrates the chrome-free <router>/<route>/<nav-link> primitive:        -->
+<!--   * a top nav bar of declarative <nav-link>s (no handler needed),          -->
+<!--   * URL-style routes with a :param (/users/:id) read via data.route.*,     -->
+<!--   * Rhai navigate()/back() driving the same router from on-click handlers,  -->
+<!--   * a nested <router> inside the /settings route,                          -->
+<!--   * an on-enter lifecycle hook, and                                        -->
+<!--   * a "*" not-found fallback.                                              -->
+<nemo>
+  <app title="Nemo Router Demo">
+    <window title="Router Demo" width="900" height="640">
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/router"
+                  theme-toggle="true" />
+    </window>
+    <theme name="nord" mode="dark" />
+  </app>
+
+  <script src="./scripts" />
+
+  <layout type="stack">
+    <stack id="root" direction="vertical" flex="1">
+
+      <!-- Declarative navigation: each link navigates its router to a route
+           path and highlights when that path is active. No script involved. -->
+      <stack id="navbar" direction="horizontal" spacing="4" padding="12"
+             border-bottom="1" border-color="theme.border">
+        <nav-link router="main" route="/home" label="Home" />
+        <nav-link router="main" route="/users/42" label="User 42" />
+        <nav-link router="main" route="/settings" label="Settings" />
+        <nav-link router="main" route="/does-not-exist" label="Broken Link" />
+      </stack>
+
+      <!-- The primary router. Only the matching route's body is mounted. -->
+      <router id="main" default="/home" primary="true" flex="1">
+
+        <route path="/home">
+          <stack direction="vertical" spacing="12" padding="24">
+            <label text="Home" size="xl" />
+            <label text="Welcome to the router demo. Use the nav bar above, or the button below." />
+            <button id="go_user_button" label="Go to User 7 (via navigate())"
+                    variant="primary" on-click="go_user_7" />
+          </stack>
+        </route>
+
+        <!-- A :param route. The captured id is projected to
+             data.route.main.params.id and shown here via a binding. -->
+        <route id="user_route" path="/users/:id" on-enter="on_user_enter">
+          <stack direction="vertical" spacing="12" padding="24">
+            <label text="User Detail" size="xl" />
+            <label id="user_id_label" text="User #—" bind-text="data.route.main.params.id" />
+            <button id="back_button" label="Back (via back())" on-click="nav_back" />
+          </stack>
+        </route>
+
+        <!-- A route hosting its own nested router. -->
+        <route path="/settings">
+          <stack direction="vertical" spacing="12" padding="24">
+            <label text="Settings" size="xl" />
+            <stack direction="horizontal" spacing="4">
+              <nav-link router="settings" route="/general" label="General" />
+              <nav-link router="settings" route="/advanced" label="Advanced" />
+            </stack>
+            <router id="settings" default="/general" flex="1">
+              <route path="/general">
+                <label text="General settings live here." padding="12" />
+              </route>
+              <route path="/advanced">
+                <label text="Advanced settings live here." padding="12" />
+              </route>
+            </router>
+          </stack>
+        </route>
+
+        <!-- Not-found fallback: matches anything the routes above did not. -->
+        <route path="*">
+          <stack direction="vertical" spacing="12" padding="24">
+            <label text="404 — Not Found" size="xl" />
+            <nav-link router="main" route="/home" label="Go Home" />
+          </stack>
+        </route>
+
+      </router>
+    </stack>
+  </layout>
+</nemo>

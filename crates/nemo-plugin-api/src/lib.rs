@@ -88,6 +88,10 @@ pub enum PluginError {
     /// Permission denied.
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
+
+    /// The requested operation is not supported by this host/context.
+    #[error("Operation not supported: {0}")]
+    Unsupported(String),
 }
 
 /// A configuration value (simplified for FFI safety).
@@ -313,6 +317,28 @@ pub trait PluginContext: Send + Sync {
         property: &str,
         value: PluginValue,
     ) -> Result<(), PluginError>;
+
+    /// Navigates a `<router>` to `path`. When `router` is `None` the host's
+    /// primary router is used. The navigation is applied asynchronously (the
+    /// host defers it so calling this from inside an event handler is safe).
+    ///
+    /// The default implementation reports the operation as unsupported so
+    /// existing plugin SDKs continue to compile without change.
+    fn navigate(&self, _router: Option<&str>, _path: &str) -> Result<(), PluginError> {
+        Err(PluginError::Unsupported("navigate".to_string()))
+    }
+
+    /// Moves a router back one entry in its history (primary router when
+    /// `router` is `None`). Applied asynchronously; see [`Self::navigate`].
+    fn back(&self, _router: Option<&str>) -> Result<(), PluginError> {
+        Err(PluginError::Unsupported("back".to_string()))
+    }
+
+    /// Moves a router forward one entry in its history (primary router when
+    /// `router` is `None`). Applied asynchronously; see [`Self::navigate`].
+    fn forward(&self, _router: Option<&str>) -> Result<(), PluginError> {
+        Err(PluginError::Unsupported("forward".to_string()))
+    }
 }
 
 /// Log level.

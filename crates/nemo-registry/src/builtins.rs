@@ -200,6 +200,41 @@ fn register_container_components(registry: &ComponentRegistry) {
         "A content page inside an AppShell's content region, shown when its id is the active target",
         ConfigSchema::new("page"),
     );
+
+    reg(
+        registry,
+        "router",
+        ComponentCategory::Layout,
+        "Router",
+        "A chrome-free page router: renders one of its route children by URL-style path, with history and params",
+        ConfigSchema::new("router")
+            .property("default", PropertySchema::string().with_default("/"))
+            .property("primary", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
+        "route",
+        ComponentCategory::Layout,
+        "Route",
+        "A single route inside a router; its body renders when its path pattern matches the current path",
+        ConfigSchema::new("route")
+            .property("path", PropertySchema::string())
+            .property("on_enter", PropertySchema::string())
+            .property("on_leave", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "nav_link",
+        ComponentCategory::Navigation,
+        "Nav Link",
+        "A clickable link that navigates a router to a route path; highlights when active",
+        ConfigSchema::new("nav_link")
+            .property("route", PropertySchema::string())
+            .property("router", PropertySchema::string())
+            .property("label", PropertySchema::string()),
+    );
 }
 
 fn register_basic_components(registry: &ComponentRegistry) {
