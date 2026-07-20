@@ -82,6 +82,8 @@ to touch the KB on every edit.
 * [Design tokens and active redesign](plans/design-tokens.md) - centralized spacing/radius/typography/semantic-color tokens (gpui-free `nemo-tokens` crate); full chrome migration with screenshot verification.
 * [Design-system export](plans/design-system-export.md) - `cargo xtask design-export` emits tokens + themes + component structure as a pencil.dev-friendly JSON intermediate.
 * [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
+* [Page router](plans/page-router.md) - a general chrome-free `<router>`/`<route>` primitive (URL-path routes + params, history, lifecycle hooks, nested routers, `navigate()` Rhai API) replacing the fragile visibility-toggle page-switching pattern.
+* [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery.
 
 ## References
 

@@ -8,3 +8,5 @@ Forward-looking plans for the project.
 * [Devtools inspector](devtools-inspector.md) - what a nemo-devtools crate would take; the introspection surfaces already exist, in-process panel recommended over an external client.
 * [Design tokens and active redesign](design-tokens.md) - centralized spacing/radius/typography/semantic-color tokens (gpui-free `nemo-tokens` crate); full chrome migration with screenshot verification.
 * [Design-system export](design-system-export.md) - `cargo xtask design-export` emits tokens + themes + component structure as a pencil.dev-friendly JSON intermediate.
+* [Page router](page-router.md) - a general chrome-free `<router>`/`<route>` primitive (URL-path routes + params, history, lifecycle hooks, nested routers, `navigate()` Rhai API) replacing the fragile visibility-toggle page-switching pattern.
+* [Single-file components (`.nemo` SFCs)](sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery (no render-dispatch change).
