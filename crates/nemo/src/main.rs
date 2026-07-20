@@ -173,6 +173,7 @@ pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
         app_config_path: args.app_config.clone(),
         ws_args: WorkspaceArgs {
             extension_dirs: args.extension_dirs.clone(),
+            initial_route: args.route.clone(),
         },
         watch,
         size_override: None,
@@ -264,7 +265,11 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
 
     // If app_config provided, create runtime early so we can read window dimensions
     let early_runtime = app_config_path.as_ref().and_then(|config_path| {
-        match create_runtime(config_path, &ws_args.extension_dirs) {
+        match create_runtime(
+            config_path,
+            &ws_args.extension_dirs,
+            ws_args.initial_route.as_deref(),
+        ) {
             Ok(rt) => Some(rt),
             Err(e) => {
                 tracing::error!("Failed to load project: {}", e);

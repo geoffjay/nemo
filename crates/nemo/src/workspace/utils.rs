@@ -13,6 +13,7 @@ use crate::theme::tokens::{Space, TokenStyled};
 pub fn create_runtime(
     config_path: &std::path::Path,
     extension_dirs: &[PathBuf],
+    initial_route: Option<&str>,
 ) -> Result<Arc<runtime::NemoRuntime>> {
     let rt = runtime::NemoRuntime::new(config_path)?;
 
@@ -22,6 +23,12 @@ pub fn create_runtime(
 
     rt.load_config()?;
     rt.initialize()?;
+
+    // A `--route` override must be recorded before the first render so a router
+    // picks it up on lazy init.
+    if let Some(route) = initial_route {
+        rt.set_initial_route(route);
+    }
 
     #[allow(clippy::arc_with_non_send_sync)]
     Ok(Arc::new(rt))

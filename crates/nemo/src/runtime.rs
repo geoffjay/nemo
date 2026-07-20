@@ -83,6 +83,14 @@ struct RouteInfo {
     on_leave: Option<String>,
 }
 
+/// A launch-time override of a router's starting path (from `--route`).
+#[derive(Debug, Clone)]
+struct InitialRoute {
+    /// Target router id; `None` applies to the primary router.
+    router: Option<String>,
+    path: String,
+}
+
 /// Sink configuration for outbound data publishing.
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -160,6 +168,9 @@ pub struct NemoRuntime {
     /// Queued navigation intents, applied outside the extension lock by
     /// [`Self::apply_pending_navigations`].
     nav_intents: Arc<Mutex<Vec<NavIntent>>>,
+    /// Launch-time router starting-path override (from `--route`); consulted
+    /// once when a router is first initialized.
+    initial_route: Arc<Mutex<Option<InitialRoute>>>,
 }
 
 impl NemoRuntime {
@@ -204,6 +215,7 @@ impl NemoRuntime {
             plugin_dirty_paths: Arc::new(RwLock::new(HashSet::new())),
             router_states: Arc::new(RwLock::new(HashMap::new())),
             nav_intents: Arc::new(Mutex::new(Vec::new())),
+            initial_route: Arc::new(Mutex::new(None)),
         })
     }
 
@@ -866,8 +878,37 @@ impl NemoRuntime {
         self.data_notify.notify_one();
     }
 
+    /// Records a launch-time starting-path override for a router (from
+    /// `--route`). `spec` is `<path>` (primary router) or `<router-id>=<path>`.
+    /// Consulted once, when the target router is first initialized, so it must
+    /// be set before the first render.
+    pub fn set_initial_route(&self, spec: &str) {
+        let (router, path) = match spec.split_once('=') {
+            Some((r, p)) => (Some(r.trim().to_string()), p.trim().to_string()),
+            None => (None, spec.trim().to_string()),
+        };
+        if path.is_empty() {
+            return;
+        }
+        if let Ok(mut ir) = self.initial_route.lock() {
+            *ir = Some(InitialRoute { router, path });
+        }
+    }
+
+    /// The launch-time starting path for `router_id`, if a `--route` override
+    /// targets it (explicitly by id, or the primary router when unscoped).
+    fn initial_path_for(&self, router_id: &str) -> Option<String> {
+        let ir = self.initial_route.lock().ok().and_then(|g| g.clone())?;
+        let applies = match &ir.router {
+            Some(rid) => rid == router_id,
+            None => self.primary_router_id().as_deref() == Some(router_id),
+        };
+        applies.then_some(ir.path)
+    }
+
     /// Returns the current path for `router_id`, lazily initializing the router
-    /// to `default_path` on first access. Called from the render pass.
+    /// on first access — to a `--route` override if one targets it, else
+    /// `default_path`. Called from the render pass.
     pub fn router_current_path(&self, router_id: &str, default_path: &str) -> String {
         {
             let states = self.router_states.read().expect("router_states poisoned");
@@ -877,19 +918,19 @@ impl NemoRuntime {
                 }
             }
         }
+        let init_path = self
+            .initial_path_for(router_id)
+            .unwrap_or_else(|| default_path.to_string());
         let mut states = self.router_states.write().expect("router_states poisoned");
         let st = states
             .entry(router_id.to_string())
             .or_insert_with(|| RouterState {
-                history: vec![default_path.to_string()],
+                history: vec![init_path.clone()],
                 index: 0,
                 params: HashMap::new(),
                 projected: false,
             });
-        st.history
-            .get(st.index)
-            .cloned()
-            .unwrap_or_else(|| default_path.to_string())
+        st.history.get(st.index).cloned().unwrap_or(init_path)
     }
 
     /// Returns the current path for `router_id` without initializing it. Used
@@ -4016,6 +4057,35 @@ mod error_path_tests {
 
         // Stale params from the /users/:id route were cleared on the way back.
         assert!(get("data.route.main.params.id").is_none());
+    }
+
+    /// `--route settings=/general` (explicit router id) overrides that router's
+    /// starting path on lazy init, and leaves other routers on their default.
+    #[test]
+    fn test_initial_route_override_explicit_router() {
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
+        rt.set_initial_route("main=/table");
+        // Explicit id matches without needing a component tree.
+        assert_eq!(rt.router_current_path("main", "/button"), "/table");
+        // A router the override does not name keeps its default.
+        assert_eq!(rt.router_current_path("other", "/home"), "/home");
+    }
+
+    /// An unscoped `--route /settings` targets the primary router (resolved from
+    /// the component tree).
+    #[test]
+    fn test_initial_route_override_primary_router() {
+        let rt = NemoRuntime::new(Path::new("/tmp/test.xml")).unwrap();
+        {
+            let mut lm = rt.layout_manager.write().unwrap();
+            let root = LayoutNode::new("router")
+                .with_id("main")
+                .with_prop("default", s("/home"));
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+        rt.set_initial_route("/settings");
+        assert_eq!(rt.router_current_path("main", "/home"), "/settings");
     }
 
     #[test]

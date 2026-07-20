@@ -45,6 +45,9 @@ use crate::theme::tokens::{Space, TokenStyled};
 #[derive(Clone)]
 pub struct WorkspaceArgs {
     pub extension_dirs: Vec<PathBuf>,
+    /// Launch-time `<router>` starting-path override (`--route`). Applies only
+    /// to the CLI-launched app, not projects later opened via the loader.
+    pub initial_route: Option<String>,
 }
 
 /// The root workspace entity that manages the application state.
@@ -81,7 +84,9 @@ impl Workspace {
         recent.add(app_config_path.clone());
         recent.save();
 
-        match create_runtime(&app_config_path, &self.ws_args.extension_dirs) {
+        // A project opened via the loader is a different app than the one the
+        // CLI `--route` targeted, so don't apply the launch override here.
+        match create_runtime(&app_config_path, &self.ws_args.extension_dirs, None) {
             Ok(rt) => {
                 apply_theme_from_runtime(&rt, cx);
                 let header_bar = self.create_header_bar(&rt, window, cx);
@@ -169,7 +174,9 @@ impl Workspace {
 
         tracing::info!("Reloading configuration from: {:?}", config_path);
 
-        match create_runtime(&config_path, &self.ws_args.extension_dirs) {
+        // Hot-reload recreates the runtime (router state resets to defaults);
+        // `--route` is a launch-time override, not reapplied on reload.
+        match create_runtime(&config_path, &self.ws_args.extension_dirs, None) {
             Ok(rt) => {
                 self.shutdown(cx);
                 apply_theme_from_runtime(&rt, cx);

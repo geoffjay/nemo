@@ -32,4 +32,7 @@ cargo run -- --app-config examples/components/app.xml
     - **Image** -- image display with alt text
 - The router mounts only the active route's body — pages are unmounted when not
   shown, rather than built-and-hidden
+- Jump straight to any page with `--route` (routes mirror the page ids), e.g.
+  `nemo dev --route /table examples/components/app.xml` or
+  `nemo screenshot --app-config examples/components/app.xml --route /charts --out charts.png`
 - Modal open/close toggling through `get_component_property` and `set_component_property`

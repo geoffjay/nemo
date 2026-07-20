@@ -7,6 +7,10 @@ Run it:
 
 ```sh
 cargo run -p nemo -- dev examples/router/app.xml
+
+# Start on a specific route instead of the default (this launch only):
+cargo run -p nemo -- dev --route /users/42 examples/router/app.xml
+cargo run -p nemo -- dev --route settings=/advanced examples/router/app.xml
 ```
 
 ## What it shows

@@ -49,6 +49,14 @@ pub struct Args {
     /// compatibility with the default (no-subcommand) run path.
     #[arg(long)]
     pub validate_only: bool,
+
+    /// Start a `<router>` at this route instead of its `default`.
+    ///
+    /// `--route /users/42` targets the primary router; `--route settings=/general`
+    /// targets the router with id `settings`. Equivalent to overriding that
+    /// router's `default` for this launch only.
+    #[arg(long)]
+    pub route: Option<String>,
 }
 
 /// Nemo subcommands.
@@ -111,6 +119,11 @@ pub struct DevArgs {
     /// Debounce window for coalescing rapid file changes, in milliseconds.
     #[arg(long, default_value_t = 200)]
     pub debounce_ms: u64,
+
+    /// Start a `<router>` at this route instead of its `default` (see the
+    /// top-level `--route`). Format: `<path>` or `<router-id>=<path>`.
+    #[arg(long)]
+    pub route: Option<String>,
 }
 
 /// Arguments for `nemo validate`.
@@ -189,6 +202,12 @@ pub struct ScreenshotArgs {
     /// Theme mode override: `light`, `dark`, or `system`.
     #[arg(long)]
     pub mode: Option<String>,
+
+    /// Capture a `<router>` at this route instead of its `default` (see the
+    /// top-level `--route`). Format: `<path>` or `<router-id>=<path>`. Handy for
+    /// screenshotting a specific page.
+    #[arg(long)]
+    pub route: Option<String>,
 }
 
 impl Args {

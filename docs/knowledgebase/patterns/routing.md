@@ -30,6 +30,13 @@ back(); forward();
 let id = get_data("route.main.params.id");   // "42"
 ```
 
+```sh
+# Start a router somewhere other than its `default` (this launch only):
+nemo dev --route /table examples/components/app.xml   # primary router
+nemo dev --route settings=/advanced app.xml           # explicit router id
+nemo screenshot --app-config app.xml --route /charts --out out.png
+```
+
 # State model
 
 Router state is **host-side and authoritative**, in a `router_states` registry
@@ -99,3 +106,17 @@ body is reached by the recursion when that route is active. `"nav_link"` reads
 no-op marker rendered by its parent router. Registered in
 `nemo-registry::builtins` (`register_container_components`). Example:
 `examples/router/`.
+
+# Launch override (`--route`)
+
+`--route <path>` (or `--route <router-id>=<path>`) starts a router somewhere
+other than its `default`, for that launch only — no config edit. It is a flag on
+the run path (`nemo`/`nemo dev`) and on `nemo screenshot` (handy for capturing a
+specific page). The CLI value flows `Args`/`DevArgs`/`ScreenshotArgs` →
+`WorkspaceArgs.initial_route` → `create_runtime` → `NemoRuntime::set_initial_route`,
+which records an `InitialRoute { router, path }` before the first render.
+`router_current_path` consults it once on lazy init (`initial_path_for`): an
+explicit id matches directly; an unscoped override targets the primary router
+(`primary_router_id`). It is **not** reapplied on hot-reload or when opening a
+different project via the loader — both pass `None` — so it stays a launch-time
+override, equivalent to temporarily changing that router's `default`.

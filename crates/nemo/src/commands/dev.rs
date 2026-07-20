@@ -21,6 +21,9 @@ pub fn run(mut args: Args, dev: DevArgs) -> Result<()> {
     if !dev.extension_dirs.is_empty() {
         args.extension_dirs = dev.extension_dirs;
     }
+    if dev.route.is_some() {
+        args.route = dev.route;
+    }
 
     if args.app_config.is_none() {
         bail!("`nemo dev` requires --app-config <app.xml> (or NEMO_APP_CONFIG)");

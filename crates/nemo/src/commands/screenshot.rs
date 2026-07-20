@@ -53,6 +53,7 @@ pub fn run(args: ScreenshotArgs) -> Result<()> {
         app_config_path: Some(args.app_config.clone()),
         ws_args: WorkspaceArgs {
             extension_dirs: Vec::new(),
+            initial_route: args.route.clone(),
         },
         watch: None,
         size_override,
