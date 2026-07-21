@@ -20,10 +20,17 @@ families, structural elements). Wired via the `Schema` subcommand in
 # Usage
 
 ```sh
-nemo schema                 # pretty JSON to stdout
-nemo schema --compact       # single-line JSON
-nemo schema -o schema.json  # write to a file
+nemo schema                        # pretty JSON to stdout
+nemo schema --compact              # single-line JSON
+nemo schema -o schema.json         # write to a file
+nemo schema --app-config app.xml   # also include the app's single-file components
 ```
+
+With `--app-config`, the config is loaded and a `ComponentDescriptor` is
+synthesized for each imported single-file component (category `custom`; typed
+`<props>` → schema properties with `required`; `<slot>`s → `SlotSpec`s), so SFC
+tags appear in `components` alongside the built-ins. Without it, the export is the
+registry-only surface.
 
 Output is **deterministic** (components/data-sources/transforms/actions sorted by
 name; `properties` keep schema declaration order via `IndexMap`; no timestamp),

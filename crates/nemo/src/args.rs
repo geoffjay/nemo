@@ -153,6 +153,11 @@ pub enum ValidateFormat {
 /// Arguments for `nemo schema`.
 #[derive(clap::Args, Debug)]
 pub struct SchemaArgs {
+    /// Optional project config (`app.xml`). When given, single-file components
+    /// it imports are synthesized into descriptors and included in the schema.
+    #[arg(long, env = "NEMO_APP_CONFIG")]
+    pub app_config: Option<PathBuf>,
+
     /// Write the schema to this file instead of stdout.
     #[arg(short, long)]
     pub output: Option<PathBuf>,

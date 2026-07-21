@@ -33,6 +33,20 @@ pub struct SfcDefinition {
     /// Declared props from an optional `<props>` block. Empty when omitted (props
     /// are then stringly-typed and have no defaults).
     pub props: Vec<SfcProp>,
+    /// Slots declared by `<slot [name] [required] [multiple]/>` in the template,
+    /// in document order. Used for slot validation and schema export.
+    pub slots: Vec<SfcSlot>,
+}
+
+/// A slot declared in an SFC template via `<slot name="…" required multiple/>`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SfcSlot {
+    /// Slot name; `"default"` for an unnamed `<slot/>`.
+    pub name: String,
+    /// Whether at least one child must target this slot (`nemo validate` checks it).
+    pub required: bool,
+    /// Whether more than one child may target this slot (default `true`).
+    pub multiple: bool,
 }
 
 /// A single declared SFC prop from `<props><prop name type default required/></props>`.
@@ -772,6 +786,7 @@ impl XmlParser {
         let mut style: Option<String> = None;
         let mut script: Option<String> = None;
         let mut props: Vec<SfcProp> = Vec::new();
+        let mut slots: Vec<SfcSlot> = Vec::new();
 
         for child in &children {
             let obj = match child.as_object() {
@@ -858,6 +873,9 @@ impl XmlParser {
                         ));
                     }
                     let root_child = element_children[0].as_object().unwrap();
+                    // Collect declared slots from the raw element tree (before
+                    // flattening loses the `required`/`multiple` attributes).
+                    Self::collect_slot_specs(root_child, &mut slots);
                     template = Some(self.process_component_element(root_child));
                 }
                 Some("style") => {
@@ -891,7 +909,43 @@ impl XmlParser {
             style,
             script,
             props,
+            slots,
         })
+    }
+
+    /// Recursively walks a raw parsed element tree collecting `<slot>` elements
+    /// and their `name`/`required`/`multiple` attributes.
+    fn collect_slot_specs(elem: &IndexMap<String, Value>, out: &mut Vec<SfcSlot>) {
+        let children = match elem.get("__children__").and_then(|v| v.as_array()) {
+            Some(c) => c,
+            None => return,
+        };
+        for child in children {
+            let co = match child.as_object() {
+                Some(o) => o,
+                None => continue,
+            };
+            if co.get("__type__").and_then(|v| v.as_str()) == Some("slot") {
+                let name = co
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
+                    .unwrap_or("default")
+                    .to_string();
+                let required = co
+                    .get("required")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let multiple = co.get("multiple").and_then(|v| v.as_bool()).unwrap_or(true);
+                out.push(SfcSlot {
+                    name,
+                    required,
+                    multiple,
+                });
+            } else {
+                Self::collect_slot_specs(co, out);
+            }
+        }
     }
 
     /// Processes an `<import src="…" [as="tag"]>` element: parses the referenced
@@ -991,6 +1045,20 @@ impl XmlParser {
                 })
                 .collect();
             entry.insert("props".to_string(), Value::Array(props));
+        }
+        if !sfc.slots.is_empty() {
+            let slots: Vec<Value> = sfc
+                .slots
+                .into_iter()
+                .map(|s| {
+                    let mut m = IndexMap::new();
+                    m.insert("name".to_string(), Value::String(s.name));
+                    m.insert("required".to_string(), Value::Bool(s.required));
+                    m.insert("multiple".to_string(), Value::Bool(s.multiple));
+                    Value::Object(m)
+                })
+                .collect();
+            entry.insert("slots".to_string(), Value::Array(slots));
         }
         entry.insert(
             "source_path".to_string(),
@@ -1607,6 +1675,29 @@ mod tests {
         let title = &def.props[2];
         assert!(title.required);
         assert_eq!(title.default, None);
+    }
+
+    #[test]
+    fn test_parse_sfc_slot_specs() {
+        let sfc = r#"
+        <template name="card">
+          <panel>
+            <stack id="head"><slot name="header" required="true" multiple="false" /></stack>
+            <stack id="body"><slot /></stack>
+          </panel>
+        </template>
+        "#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        assert_eq!(def.slots.len(), 2);
+
+        let header = def.slots.iter().find(|s| s.name == "header").unwrap();
+        assert!(header.required);
+        assert!(!header.multiple);
+
+        // Unnamed slot → "default", not required, multiple by default.
+        let default = def.slots.iter().find(|s| s.name == "default").unwrap();
+        assert!(!default.required);
+        assert!(default.multiple);
     }
 
     #[test]

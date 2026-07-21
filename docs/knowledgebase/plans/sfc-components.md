@@ -230,20 +230,24 @@ indistinguishable from author-written inline attributes.
 
 # Phase 4 — Typed props & auto-discovery
 
-**Status: mostly implemented.** `<props><prop name type default required/></props>`
+**Status: implemented.** `<props><prop name type default required/></props>`
 is parsed in `parse_sfc` into `SfcDefinition.props` (types `string`/`int`/`float`/
 `bool` mirroring the derive-macro scalar model; `default` coerced up front via
 `coerce_typed_value`) and stored under `config["sfc"][tag]["props"]`. At expand
 time `sfc_node_to_instance` fills each declared prop's default (into both the
 overlay attrs and the `${}` vars) when the instance omits it; supplied attrs
-override. `nemo validate --strict` reads the props and emits `missing-required`
-for omitted `required` props (`SfcLintInfo`). `<components dir="./components"/>`
-auto-discovery globs `*.nemo` (sorted, deterministic) and registers each under its
-`<template name>`/filename-stem tag. **Still open:** synthesizing a per-SFC
-`ComponentDescriptor` so `nemo schema` emits SFC tags and the declared `SlotSpec`
-(names/`required`/`multiple`) validates slot usage — that's the remaining
-"reconcile with the derive model / register a descriptor" bullet below, and folds
-in the P2-deferred slot validation.
+override. `<components dir="./components"/>` auto-discovery globs `*.nemo` (sorted,
+deterministic) and registers each under its `<template name>`/filename-stem tag.
+Slots are captured too: `<slot name required multiple/>` → `SfcDefinition.slots`
+(stored under `config["sfc"][tag]["slots"]`).
+
+`nemo validate --strict` (`SfcLintInfo`) emits `missing-required` for omitted
+`required` props, and validates slot usage: `unknown-slot` / `missing-slot`
+(required) / `slot-cardinality` (`multiple="false"`). `nemo schema --app-config
+app.xml` synthesizes a `ComponentDescriptor` per SFC (category `custom`; props →
+`ConfigSchema` properties incl. `required`; slots → `SlotSpec`s) and registers it
+so SFC tags appear in the export alongside built-ins. This folds in the
+P2-deferred slot validation.
 
 * `<props><prop name type default/></props>` inside the SFC; coerce/validate in
   `parse_sfc`; reconcile with the scalar `#[derive(NemoComponent)]` model

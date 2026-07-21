@@ -17,11 +17,11 @@
 use std::io::Write as _;
 
 use anyhow::{Context, Result};
-use nemo_config::{PropertySchema, ValidationRule, Value};
+use nemo_config::{ConfigSchema, PropertySchema, ValidationRule, Value};
 use nemo_registry::{
     attribute_families, register_all_builtins, structural_elements, universal_style_attributes,
-    ActionDescriptor, ComponentCategory, ComponentDescriptor, ComponentRegistry,
-    DataSourceDescriptor, TransformDescriptor,
+    ActionDescriptor, ComponentCategory, ComponentDescriptor, ComponentMetadata, ComponentRegistry,
+    DataSourceDescriptor, SlotSpec, TransformDescriptor,
 };
 use serde::Serialize;
 
@@ -30,6 +30,18 @@ use crate::args::{SchemaArgs, SchemaFormat};
 pub fn run(args: SchemaArgs) -> Result<()> {
     let registry = ComponentRegistry::new();
     register_all_builtins(&registry);
+
+    // When an app config is supplied, synthesize a descriptor for each imported
+    // single-file component so the schema includes SFC tags alongside builtins.
+    if let Some(path) = &args.app_config {
+        let loader = nemo_config::ConfigurationLoader::new(std::sync::Arc::new(
+            nemo_config::SchemaRegistry::new(),
+        ));
+        let config = loader
+            .load(path)
+            .with_context(|| format!("loading {}", path.display()))?;
+        register_sfc_descriptors(&registry, &config);
+    }
 
     let export = build_export(&registry);
 
@@ -54,6 +66,70 @@ pub fn run(args: SchemaArgs) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Synthesizes and registers a `ComponentDescriptor` for each single-file
+/// component in the config, so the schema export includes SFC tags (with their
+/// typed props and declared slots) alongside the builtins.
+fn register_sfc_descriptors(registry: &ComponentRegistry, config: &Value) {
+    let sfc = match config.get("sfc").and_then(|v| v.as_object()) {
+        Some(s) => s,
+        None => return,
+    };
+    for (tag, def) in sfc {
+        let mut schema = ConfigSchema::new(tag.clone());
+        if let Some(props) = def.get("props").and_then(|v| v.as_array()) {
+            for p in props {
+                let name = match p.get("name").and_then(|v| v.as_str()) {
+                    Some(n) => n,
+                    None => continue,
+                };
+                let ty = p.get("type").and_then(|v| v.as_str()).unwrap_or("string");
+                let mut ps = match ty {
+                    "int" | "integer" | "i64" => PropertySchema::integer(),
+                    "float" | "number" | "f64" => PropertySchema::float(),
+                    "bool" | "boolean" => PropertySchema::boolean(),
+                    _ => PropertySchema::string(),
+                };
+                if let Some(default) = p.get("default") {
+                    ps = ps.with_default(default.clone());
+                }
+                schema = schema.property(name, ps);
+                if p.get("required").and_then(|v| v.as_bool()).unwrap_or(false) {
+                    schema = schema.require(name);
+                }
+            }
+        }
+
+        let slots: Vec<SlotSpec> = def
+            .get("slots")
+            .and_then(|v| v.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|s| {
+                        Some(SlotSpec {
+                            name: s.get("name").and_then(|v| v.as_str())?.to_string(),
+                            accepts: Vec::new(),
+                            multiple: s.get("multiple").and_then(|v| v.as_bool()).unwrap_or(true),
+                            required: s.get("required").and_then(|v| v.as_bool()).unwrap_or(false),
+                        })
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let metadata = ComponentMetadata {
+            display_name: tag.clone(),
+            description: "Single-file component.".to_string(),
+            slots,
+            ..Default::default()
+        };
+        let descriptor = ComponentDescriptor::new(tag.clone(), ComponentCategory::Custom)
+            .schema(schema)
+            .metadata(metadata);
+        // A tag colliding with a builtin keeps the builtin (register fails → ignore).
+        let _ = registry.register_component(descriptor);
+    }
 }
 
 /// Builds the full schema export from a populated registry. Factored out so tests
@@ -355,6 +431,51 @@ mod tests {
         let e = export();
         assert!(e.components.iter().any(|c| c.name == "button"));
         assert!(e.components.iter().any(|c| c.name == "app_shell"));
+    }
+
+    #[test]
+    fn includes_synthesized_sfc_descriptor() {
+        let dir = std::env::temp_dir().join(format!("nemo_schema_sfc_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("widget.nemo"),
+            r#"<props><prop name="title" type="string" required="true" /></props>
+               <template name="widget">
+                 <panel><stack id="h"><slot name="header" required="true" /></stack></panel>
+               </template>"#,
+        )
+        .unwrap();
+        let xml = r#"<nemo>
+            <imports><import src="./widget.nemo" /></imports>
+            <layout type="stack"><widget id="w" title="x" /></layout>
+        </nemo>"#;
+        let config = nemo_config::ConfigurationLoader::new(std::sync::Arc::new(
+            nemo_config::SchemaRegistry::new(),
+        ))
+        .load_xml_string(xml, "t.xml", Some(dir.as_path()))
+        .unwrap();
+
+        let registry = ComponentRegistry::new();
+        register_all_builtins(&registry);
+        register_sfc_descriptors(&registry, &config);
+        let e = build_export(&registry);
+
+        let widget = e
+            .components
+            .iter()
+            .find(|c| c.name == "widget")
+            .expect("SFC tag present in schema");
+        assert_eq!(widget.category, "custom");
+        assert!(
+            widget
+                .properties
+                .iter()
+                .any(|p| p.name == "title" && p.required),
+            "required prop emitted"
+        );
+        assert!(widget.slots.iter().any(|s| s == "header"), "slot emitted");
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

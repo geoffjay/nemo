@@ -14,7 +14,8 @@
 <template name="card">
   <panel border="1" border-color="theme.border">
     <stack id="head" direction="vertical" spacing="4">
-      <slot name="header" />
+      <!-- Required, single-value: every card must supply exactly one header. -->
+      <slot name="header" required="true" multiple="false" />
     </stack>
     <stack id="body" direction="vertical" spacing="12">
       <slot />

@@ -81,8 +81,11 @@ SFC `<script>` bodies are loaded under `sfc:<tag>` ids in
 first-`::` split resolving `sfc:<tag>::<fn>` to (script id `sfc:<tag>`, fn).
 Declared props' defaults are filled per-instance at expand time (`sfc_node_to_instance`)
 for any prop the usage omits. The strict linter treats registered SFC tags as
-known component types (skipping `unknown-component`) and emits `missing-required`
-for an omitted `required` prop.
+known component types (skipping `unknown-component`), emits `missing-required`
+for an omitted `required` prop, and validates slot usage
+(`unknown-slot`/`missing-slot`/`slot-cardinality`) against the SFC's declared
+`<slot>`s. `nemo schema --app-config app.xml` synthesizes a `ComponentDescriptor`
+per SFC (props → schema, slots → `SlotSpec`) so SFC tags appear in the export.
 
 # Schema and validation
 

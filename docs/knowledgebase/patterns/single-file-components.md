@@ -118,8 +118,16 @@ Import components individually, or auto-discover a whole directory:
   type; an omitted prop with a `default` is filled at expand time (into both the
   interpolation vars and the overlay attrs). `required` props are enforced by
   `nemo validate --strict` (a `missing-required` error). Supplied instance
-  attributes always override defaults. (Full `nemo schema` emission of SFC tags
-  and `SlotSpec` validation remain — they need a per-SFC `ComponentDescriptor`.)
+  attributes always override defaults.
+* **Slot declaration & validation.** `<slot name="x" required="true" multiple="false"/>`
+  declares a slot's cardinality. `nemo validate --strict` checks each usage:
+  `unknown-slot` (targets a slot the SFC doesn't declare), `missing-slot` (a
+  `required` slot got no children), and `slot-cardinality` (a non-`multiple` slot
+  got more than one). `multiple` defaults to `true`.
+* **Schema visibility.** `nemo schema --app-config app.xml` synthesizes a
+  `ComponentDescriptor` per imported SFC (category `custom`, props → schema
+  properties, `<slot>`s → `SlotSpec`s) so SFC tags appear in the exported schema
+  alongside built-ins.
 * **Handler scoping.** A **template-authored** bare `on-click="fn"` is rewritten
   to `sfc:<tag>::fn` and routes to the SFC's own `<script>`. An **instance**
   handler (`<labeled-button on-click="globalFn"/>`) stays bare and routes to the
@@ -132,12 +140,10 @@ Import components individually, or auto-discover a whole directory:
 
 # Status
 
-Phase 0 (import, tag rewrite, default slot, interpolation props), Phase 1
-(scoped `<script>`), Phase 2 (named/multiple slots), Phase 3 (scoped `<style>`
-folding), and Phase 4 (typed props with defaults/required + `<components dir>`
-auto-discovery) are implemented. Still open from P4: a per-SFC
-`ComponentDescriptor` so `nemo schema` emits SFC tags and `SlotSpec` validates
-slots. A build/cache format (P5, superseded by the
-[build system](../plans/build-system.md)) and a raw-text `.nemo` parser that drops
-the CDATA requirement (P6) are planned — see [the SFC plan](../plans/sfc-components.md).
-Worked example: `examples/sfc/`.
+Phases 0–4 are implemented: import/tag-rewrite/default-slot/interpolation (P0),
+scoped `<script>` (P1), named/multiple slots (P2), scoped `<style>` folding (P3),
+and typed props with defaults/required + `<components dir>` auto-discovery + per-SFC
+descriptor for `nemo schema` + slot validation (P4). A build/cache format (P5,
+superseded by the [build system](../plans/build-system.md)) and a raw-text `.nemo`
+parser that drops the CDATA requirement (P6) are planned — see
+[the SFC plan](../plans/sfc-components.md). Worked example: `examples/sfc/`.

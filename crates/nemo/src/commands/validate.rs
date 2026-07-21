@@ -185,17 +185,27 @@ fn strict_lints(root: &Value) -> Vec<Diagnostic> {
     lint_config(root, &registry)
 }
 
+/// A declared SFC slot, for slot-usage validation.
+struct SfcSlotLint {
+    name: String,
+    required: bool,
+    multiple: bool,
+}
+
 /// SFC info needed for linting: the set of registered tags (valid component
-/// types that expand to built-ins) and each tag's required prop names.
+/// types that expand to built-ins), each tag's required prop names, and each
+/// tag's declared slots.
 struct SfcLintInfo {
     tags: std::collections::HashSet<String>,
     required: std::collections::HashMap<String, Vec<String>>,
+    slots: std::collections::HashMap<String, Vec<SfcSlotLint>>,
 }
 
 impl SfcLintInfo {
     fn from_config(root: &Value) -> Self {
         let mut tags = std::collections::HashSet::new();
         let mut required = std::collections::HashMap::new();
+        let mut slots = std::collections::HashMap::new();
         if let Some(sfc) = root.get("sfc").and_then(|v| v.as_object()) {
             for (tag, def) in sfc {
                 tags.insert(tag.clone());
@@ -214,9 +224,36 @@ impl SfcLintInfo {
                     })
                     .unwrap_or_default();
                 required.insert(tag.clone(), reqs);
+
+                let declared: Vec<SfcSlotLint> = def
+                    .get("slots")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|s| {
+                                Some(SfcSlotLint {
+                                    name: s.get("name").and_then(|v| v.as_str())?.to_string(),
+                                    required: s
+                                        .get("required")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(false),
+                                    multiple: s
+                                        .get("multiple")
+                                        .and_then(|v| v.as_bool())
+                                        .unwrap_or(true),
+                                })
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                slots.insert(tag.clone(), declared);
             }
         }
-        SfcLintInfo { tags, required }
+        SfcLintInfo {
+            tags,
+            required,
+            slots,
+        }
     }
 }
 
@@ -313,6 +350,7 @@ fn lint_component(
                 }
             }
         }
+        lint_sfc_slots(id, ctype, component, sfc, diagnostics);
     }
 
     // Component/attribute checks only apply to non-templated components (a
@@ -413,6 +451,70 @@ fn lint_component(
     lint_component_children(component, registry, sfc, diagnostics, template_refs);
 }
 
+/// Validates an SFC usage's slotted children against the tag's declared slots:
+/// a child targeting an undeclared slot, an unfilled `required` slot, and a
+/// non-`multiple` slot filled by more than one child. Skipped when the SFC
+/// declares no slots (children then sibling-merge, so `slot=` targeting is moot).
+fn lint_sfc_slots(
+    id: &str,
+    ctype: &str,
+    component: &Value,
+    sfc: &SfcLintInfo,
+    diagnostics: &mut Vec<Diagnostic>,
+) {
+    let declared = match sfc.slots.get(ctype) {
+        Some(s) if !s.is_empty() => s,
+        _ => return,
+    };
+
+    // Count consumer children per target slot (`slot="…"`, else "default").
+    let mut counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
+    if let Some(children) = component.get("component").and_then(|c| c.as_object()) {
+        for child in children.values() {
+            let target = child
+                .get("slot")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .unwrap_or("default")
+                .to_string();
+            *counts.entry(target).or_insert(0) += 1;
+        }
+    }
+
+    for target in counts.keys() {
+        if !declared.iter().any(|d| &d.name == target) {
+            diagnostics.push(Diagnostic::error(
+                "unknown-slot",
+                format!(
+                    "SFC '{ctype}' (id '{id}') has children targeting undeclared slot '{target}'"
+                ),
+            ));
+        }
+    }
+
+    for slot in declared {
+        let n = counts.get(&slot.name).copied().unwrap_or(0);
+        if slot.required && n == 0 {
+            diagnostics.push(Diagnostic::error(
+                "missing-slot",
+                format!(
+                    "SFC '{ctype}' (id '{id}') is missing content for required slot '{}'",
+                    slot.name
+                ),
+            ));
+        }
+        if !slot.multiple && n > 1 {
+            diagnostics.push(Diagnostic::error(
+                "slot-cardinality",
+                format!(
+                    "SFC '{ctype}' (id '{id}') puts {n} children in single-value slot '{}'",
+                    slot.name
+                ),
+            ));
+        }
+    }
+}
+
 fn render_human(
     path: &Path,
     source: &str,
@@ -498,6 +600,64 @@ mod tests {
         let value = parse(r#"<nemo><layout type="stack"><notacomponent id="x" /></layout></nemo>"#);
         let diags = lint_config(&value, &builtins());
         assert!(codes(&diags).contains(&"unknown-component"), "{diags:?}");
+    }
+
+    #[test]
+    fn flags_sfc_slot_violations() {
+        let dir = std::env::temp_dir().join(format!("nemo_validate_slots_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        // header: required + single; default: optional + multiple.
+        std::fs::write(
+            dir.join("card.nemo"),
+            r#"<template name="card">
+                 <panel>
+                   <stack id="h"><slot name="header" required="true" multiple="false" /></stack>
+                   <stack id="b"><slot /></stack>
+                 </panel>
+               </template>"#,
+        )
+        .unwrap();
+
+        let load = |xml: &str| {
+            ConfigurationLoader::new(std::sync::Arc::new(SchemaRegistry::new()))
+                .load_xml_string(xml, "t.xml", Some(dir.as_path()))
+                .unwrap()
+        };
+
+        // Missing required header slot + a child targeting an undeclared slot.
+        let bad = r#"<nemo><imports><import src="./card.nemo" /></imports>
+            <layout type="stack"><card id="c">
+              <label slot="nope" text="x" />
+            </card></layout></nemo>"#;
+        let diags = lint_config(&load(bad), &builtins());
+        let cs = codes(&diags);
+        assert!(cs.contains(&"missing-slot"), "{diags:?}");
+        assert!(cs.contains(&"unknown-slot"), "{diags:?}");
+
+        // Two children in the single-value header slot.
+        let over = r#"<nemo><imports><import src="./card.nemo" /></imports>
+            <layout type="stack"><card id="c">
+              <label slot="header" text="a" />
+              <label slot="header" text="b" />
+            </card></layout></nemo>"#;
+        assert!(
+            codes(&lint_config(&load(over), &builtins())).contains(&"slot-cardinality"),
+            "expected slot-cardinality"
+        );
+
+        // A valid usage produces none of the slot diagnostics.
+        let ok = r#"<nemo><imports><import src="./card.nemo" /></imports>
+            <layout type="stack"><card id="c">
+              <label slot="header" text="Title" />
+              <text content="body" />
+            </card></layout></nemo>"#;
+        let ok_diags = lint_config(&load(ok), &builtins());
+        let cs = codes(&ok_diags);
+        assert!(!cs.contains(&"missing-slot"), "{cs:?}");
+        assert!(!cs.contains(&"unknown-slot"), "{cs:?}");
+        assert!(!cs.contains(&"slot-cardinality"), "{cs:?}");
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
