@@ -63,13 +63,16 @@ Parsing/compilation touches three places:
    `labeled_button`). The **resolver skips the `sfc` subtree** — SFC bodies use
    bare `${prop}` placeholders on the *runtime* vars/interpolation path, not
    `${var.x}`/`${env.x}` load-time resolution.
-3. **`parse_layout_config`** (`runtime.rs`) merges each SFC template into the
-   `TemplateMap` keyed by tag (rewriting template-authored bare `on_*` handlers to
-   `sfc:<tag>::<fn>` and any nested SFC tags), then `rewrite_sfc_tags` converts
-   every `<tag>` usage in the layout into a `template = "tag"` instance **before**
-   `expand_children`. From there the existing template pipeline (deep-merge, slot
-   injection, `__anon`/id scoping) applies unchanged, so an expanded SFC is
-   ordinary built-in components by the time it reaches the layout builder.
+3. **`parse_layout_config`** (`runtime.rs`) folds each SFC's `<style>` block onto
+   its template nodes as inline attributes (`fold_sfc_styles`; type + `#id`
+   selectors, constrained to the universal style attributes), then merges the
+   template into the `TemplateMap` keyed by tag (rewriting template-authored bare
+   `on_*` handlers to `sfc:<tag>::<fn>` and any nested SFC tags), then
+   `rewrite_sfc_tags` converts every `<tag>` usage in the layout into a
+   `template = "tag"` instance **before** `expand_children`. From there the
+   existing template pipeline (deep-merge, named/default slot injection,
+   `__anon`/id scoping) applies unchanged, so an expanded SFC is ordinary
+   built-in components by the time it reaches the layout builder.
 
 SFC `<script>` bodies are loaded under `sfc:<tag>` ids in
 `load_scripts_from_config`; the single-colon prefix keeps `call_handler`'s

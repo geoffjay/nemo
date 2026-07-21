@@ -85,7 +85,7 @@ to touch the KB on every edit.
 * [Design-system export](plans/design-system-export.md) - `cargo xtask design-export` emits tokens + themes + component structure as a pencil.dev-friendly JSON intermediate.
 * [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
 * [Page router](plans/page-router.md) - a general chrome-free `<router>`/`<route>` primitive (URL-path routes + params, history, lifecycle hooks, nested routers, `navigate()` Rhai API) replacing the fragile visibility-toggle page-switching pattern. **Implemented** — see [routing](patterns/routing.md).
-* [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery. **Phase 0–2 implemented** — see [single-file components](patterns/single-file-components.md).
+* [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery. **Phase 0–3 implemented** — see [single-file components](patterns/single-file-components.md).
 * [Build system](plans/build-system.md) - a `nemo build` command with a `nemo.toml` manifest, compiled `.nemo` component artifacts, opt-in `dist/` project builds, and Go-style remote component libraries in `.nemo/packages`; expands and supersedes SFC "Phase 5". **Phase 0+1 implemented** — see [single-file components](patterns/single-file-components.md).
 
 ## References

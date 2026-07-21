@@ -2201,6 +2201,238 @@ fn rewrite_sfc_handlers(value: &Value, tag: &str) -> Value {
     }
 }
 
+// ── SFC scoped `<style>` folding ───────────────────────────────────────────
+//
+// There is no runtime style cascade in nemo — styling is inline attributes
+// consumed by `apply_layout_styles`. So an SFC `<style>` block is folded at
+// compile time into inline props on the template nodes its selectors match,
+// after which the styles are indistinguishable from author-written attributes.
+// Folding is inherently scoped: it only touches this SFC's own template subtree.
+//
+// v1 selectors: type (`button {}`) and id (`#btn {}`). No class/combinator/
+// pseudo/media. Declarations are constrained to the universal style attributes
+// `apply_layout_styles` understands; unknown props warn and drop. Precedence
+// (low→high): `<style>` rule → template inline attr → instance attr — achieved
+// by folding only where the attr is absent (id rules before type rules), then
+// letting `deep_merge_values` overlay instance attrs at expand time.
+
+/// A parsed CSS-subset selector.
+#[derive(Debug, Clone)]
+enum StyleSelector {
+    /// `button {}` — matches a node whose `type` equals this (snake-cased) name.
+    Type(String),
+    /// `#btn {}` — matches the node whose id (component-map key) equals this.
+    Id(String),
+}
+
+/// A parsed style rule: one selector plus its already-normalized declarations
+/// (attribute name → coerced value).
+struct StyleRule {
+    selector: StyleSelector,
+    decls: Vec<(String, Value)>,
+}
+
+/// Normalizes a CSS property name to a nemo universal-style attribute name.
+/// A few CSS names alias to nemo's (e.g. `border-radius` → `rounded`); the rest
+/// are just kebab→snake. Returns `None` for names not in the universal set.
+fn normalize_style_prop(name: &str) -> Option<String> {
+    let normalized = match name {
+        "border-radius" => "rounded".to_string(),
+        "background-color" => "background".to_string(),
+        other => other.replace('-', "_"),
+    };
+    nemo_registry::universal_style_attributes()
+        .iter()
+        .find(|a| a.name == normalized)
+        .map(|a| a.name.to_string())
+}
+
+/// Coerces a CSS declaration value to the `Value` shape the attribute expects,
+/// per the universal attribute's `value_type`. Strips a `px` suffix for
+/// integers. Returns `None` if the value can't be coerced (caller warns/drops).
+fn coerce_style_value(attr: &str, raw: &str) -> Option<Value> {
+    let raw = raw.trim();
+    let value_type = nemo_registry::universal_style_attributes()
+        .iter()
+        .find(|a| a.name == attr)
+        .map(|a| a.value_type)
+        .unwrap_or("string");
+    match value_type {
+        "integer" => {
+            let n = raw.trim_end_matches("px").trim();
+            n.parse::<i64>().ok().map(Value::Integer)
+        }
+        "float" => raw.parse::<f64>().ok().map(Value::Float),
+        "boolean" => raw.parse::<bool>().ok().map(Value::Bool),
+        // Colors, `rounded`, `shadow`: kept as strings; `apply_layout_styles`
+        // resolves them (incl. `theme.*` / semantic roles) at render time.
+        _ => Some(Value::String(raw.to_string())),
+    }
+}
+
+/// Parses a CSS-subset `<style>` body into style rules. Comments are stripped;
+/// each `sel[, sel2] { prop: val; … }` block is parsed. Unsupported selectors
+/// and declarations are warned about and skipped. `tag` is only for diagnostics.
+fn parse_style_rules(css: &str, tag: &str) -> Vec<StyleRule> {
+    // Strip /* … */ comments.
+    let mut cleaned = String::with_capacity(css.len());
+    let mut rest = css;
+    while let Some(start) = rest.find("/*") {
+        cleaned.push_str(&rest[..start]);
+        match rest[start + 2..].find("*/") {
+            Some(end) => rest = &rest[start + 2 + end + 2..],
+            None => {
+                rest = "";
+                break;
+            }
+        }
+    }
+    cleaned.push_str(rest);
+
+    let mut rules = Vec::new();
+    let mut remaining = cleaned.as_str();
+    while let Some(open) = remaining.find('{') {
+        let selectors_part = remaining[..open].trim().to_string();
+        let after = &remaining[open + 1..];
+        let close = match after.find('}') {
+            Some(c) => c,
+            None => break, // unterminated rule; stop
+        };
+        let body = &after[..close];
+        remaining = &after[close + 1..];
+
+        // Parse declarations once for this block.
+        let mut decls = Vec::new();
+        for decl in body.split(';') {
+            let decl = decl.trim();
+            if decl.is_empty() {
+                continue;
+            }
+            let (name, value) = match decl.split_once(':') {
+                Some((n, v)) => (n.trim(), v.trim()),
+                None => {
+                    tracing::warn!(
+                        "sfc '{}': ignoring malformed style declaration '{}'",
+                        tag,
+                        decl
+                    );
+                    continue;
+                }
+            };
+            match normalize_style_prop(name) {
+                Some(attr) => match coerce_style_value(&attr, value) {
+                    Some(v) => decls.push((attr, v)),
+                    None => tracing::warn!(
+                        "sfc '{}': ignoring style value '{}: {}' (not coercible)",
+                        tag,
+                        name,
+                        value
+                    ),
+                },
+                None => tracing::warn!(
+                    "sfc '{}': ignoring unsupported style property '{}'",
+                    tag,
+                    name
+                ),
+            }
+        }
+        if decls.is_empty() {
+            continue;
+        }
+
+        // A block may list several comma-separated selectors; each shares decls.
+        for sel in selectors_part.split(',') {
+            let sel = sel.trim();
+            if sel.is_empty() {
+                continue;
+            }
+            if let Some(id) = sel.strip_prefix('#') {
+                rules.push(StyleRule {
+                    selector: StyleSelector::Id(id.trim().to_string()),
+                    decls: decls.clone(),
+                });
+            } else if sel
+                .chars()
+                .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+            {
+                rules.push(StyleRule {
+                    selector: StyleSelector::Type(sel.replace('-', "_")),
+                    decls: decls.clone(),
+                });
+            } else {
+                tracing::warn!(
+                    "sfc '{}': ignoring unsupported style selector '{}' (v1 supports type and #id)",
+                    tag,
+                    sel
+                );
+            }
+        }
+    }
+    rules
+}
+
+/// Folds an SFC `<style>` block onto its template body: parses the CSS subset,
+/// then walks the template applying each matching rule's declarations as inline
+/// props where the attribute is absent (so template inline attrs win). Returns
+/// the template unchanged when there are no applicable rules.
+fn fold_sfc_styles(body: &Value, css: &str, tag: &str) -> Value {
+    let rules = parse_style_rules(css, tag);
+    if rules.is_empty() {
+        return body.clone();
+    }
+    apply_style_rules(body, None, &rules)
+}
+
+/// Recursively applies style rules to a template node. `id` is the node's
+/// component-map key (its id), used for `#id` selectors; the root has none.
+/// Id rules are applied before type rules so id specificity wins under the
+/// fold-if-absent policy.
+fn apply_style_rules(node: &Value, id: Option<&str>, rules: &[StyleRule]) -> Value {
+    let mut obj = match node.as_object() {
+        Some(o) => o.clone(),
+        None => return node.clone(),
+    };
+    let node_type = obj.get("type").and_then(|v| v.as_str()).map(String::from);
+
+    let matches = |sel: &StyleSelector| match sel {
+        StyleSelector::Id(want) => id == Some(want.as_str()),
+        StyleSelector::Type(want) => node_type.as_deref() == Some(want.as_str()),
+    };
+    // Two passes: id selectors first (higher specificity), then type selectors.
+    for want_id in [true, false] {
+        for rule in rules {
+            let is_id = matches!(rule.selector, StyleSelector::Id(_));
+            if is_id != want_id || !matches(&rule.selector) {
+                continue;
+            }
+            for (attr, value) in &rule.decls {
+                obj.entry(attr.clone()).or_insert_with(|| value.clone());
+            }
+        }
+    }
+
+    // Recurse into component children (object id→node, or anonymous array).
+    match obj.get("component").cloned() {
+        Some(Value::Object(children)) => {
+            let mut new_children = indexmap::IndexMap::new();
+            for (cid, child) in &children {
+                new_children.insert(cid.clone(), apply_style_rules(child, Some(cid), rules));
+            }
+            obj.insert("component".to_string(), Value::Object(new_children));
+        }
+        Some(Value::Array(children)) => {
+            let new_children: Vec<Value> = children
+                .iter()
+                .map(|c| apply_style_rules(c, None, rules))
+                .collect();
+            obj.insert("component".to_string(), Value::Array(new_children));
+        }
+        _ => {}
+    }
+
+    Value::Object(obj)
+}
+
 // ── Layout parsing ───────────────────────────────────────────────────────
 
 /// Parses layout configuration from a Value.
@@ -2228,7 +2460,14 @@ fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<
         if let Some(sfc_map) = config.get("sfc").and_then(|v| v.as_object()) {
             for (tag, def) in sfc_map {
                 if let Some(body) = def.get("template") {
-                    let body = rewrite_sfc_tags(body, &sfc_tags);
+                    // Fold the scoped `<style>` block onto matching template
+                    // nodes as inline props (before tag/handler rewrites so
+                    // type/id selectors match the raw markup).
+                    let body = match def.get("style").and_then(|v| v.as_str()) {
+                        Some(css) => fold_sfc_styles(body, css, tag),
+                        None => body.clone(),
+                    };
+                    let body = rewrite_sfc_tags(&body, &sfc_tags);
                     let body = rewrite_sfc_handlers(&body, tag);
                     templates.entry(tag.clone()).or_insert(body);
                 }
@@ -2799,6 +3038,81 @@ mod sfc_tests {
             .collect();
         assert!(texts.contains(&"A".to_string()));
         assert!(texts.contains(&"B".to_string()));
+    }
+
+    #[test]
+    fn test_sfc_style_folding_and_precedence() {
+        // Template: a panel (with an inline padding=20) wrapping a button #inner.
+        let template = obj(vec![
+            ("type", s("panel")),
+            ("padding", Value::Integer(20)),
+            (
+                "component",
+                obj(vec![("inner", obj(vec![("type", s("button"))]))]),
+            ),
+        ]);
+        // Style: type + id selectors, a size with `px`, and an unsupported prop.
+        let css = "panel { padding: 8; background: theme.card; } \
+                   button { height: 32px; color: red; } \
+                   #inner { rounded: lg; }";
+
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![(
+                    "styled_box",
+                    obj(vec![("template", template), ("style", s(css))]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![("box1", obj(vec![("type", s("styled_box"))]))]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let panel = &layout.root.children[0];
+        assert_eq!(panel.component_type, "panel");
+
+        // Inline attr wins over the `panel { padding }` rule (fold-if-absent).
+        assert_eq!(
+            panel.config.properties.get("padding"),
+            Some(&Value::Integer(20))
+        );
+        // Absent attr is folded from the type rule (string, resolved at render).
+        assert_eq!(
+            panel
+                .config
+                .properties
+                .get("background")
+                .and_then(|v| v.as_str()),
+            Some("theme.card")
+        );
+
+        let button = &panel.children[0];
+        assert_eq!(button.component_type, "button");
+        // `32px` coerced to an integer for the `height` universal attr.
+        assert_eq!(
+            button.config.properties.get("height"),
+            Some(&Value::Integer(32))
+        );
+        // Id selector folded onto the (pre-scoping) `inner` node.
+        assert_eq!(
+            button
+                .config
+                .properties
+                .get("rounded")
+                .and_then(|v| v.as_str()),
+            Some("lg")
+        );
+        // Unsupported CSS property (`color` is not a universal style attr) dropped.
+        assert!(!button.config.properties.contains_key("color"));
     }
 
     #[test]

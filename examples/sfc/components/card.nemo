@@ -1,18 +1,19 @@
 <!--
-  A reusable card container SFC with two slots.
+  A reusable card container SFC with two slots and scoped styling.
 
-  The `header` named slot receives consumer children tagged `slot="header"`; the
-  default slot receives everything else. Each usage is expanded onto the existing
-  template machinery, so the `head`/`body` stack ids are scoped per instance
-  (e.g. body -> <instance>_body) — two cards never collide.
+  Slots: the `header` named slot receives consumer children tagged
+  slot="header"; the default slot receives everything else. Each usage is
+  expanded onto the template machinery, so the `head`/`body` stack ids are scoped
+  per instance (e.g. body -> <instance>_body) — two cards never collide.
 
-  Note: XML has no raw-text elements, so a style body containing "<" must be
-  wrapped in CDATA (as below). Scoped-style folding (Phase 3) is not wired yet;
-  this block is captured but not yet applied.
+  Styling: the <style> block below is folded at compile time onto matching
+  template nodes as inline attributes (type selector `panel`, id selector
+  `#head`). It only reaches this SFC's own subtree. XML has no raw-text elements,
+  so a style body containing "<" must be wrapped in CDATA.
 -->
 <template name="card">
-  <panel padding="20" border="1" border-color="theme.border" rounded="lg">
-    <stack id="head" direction="vertical" spacing="4" padding-bottom="8">
+  <panel border="1" border-color="theme.border">
+    <stack id="head" direction="vertical" spacing="4">
       <slot name="header" />
     </stack>
     <stack id="body" direction="vertical" spacing="12">
@@ -21,5 +22,7 @@
   </panel>
 </template>
 <style><![CDATA[
-  panel { padding: 20px; }
+  /* Folded onto the panel and #head at compile time; scoped to this card. */
+  panel { padding: 20px; border-radius: lg; }
+  #head { padding-bottom: 8px; }
 ]]></style>

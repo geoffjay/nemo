@@ -192,6 +192,20 @@ until then the only check is the undeclared-slot warning.
 
 # Phase 3 — Scoped `<style>`
 
+**Status: implemented.** `fold_sfc_styles` (runtime.rs) runs in the
+`parse_layout_config` SFC loop, *before* `rewrite_sfc_tags`/`rewrite_sfc_handlers`
+(so type/id selectors match raw markup): `parse_style_rules` parses the CSS
+subset (type + `#id` selectors, comma lists, `/* */` comments), `normalize_style_prop`
+maps CSS names to universal attrs (special-casing `border-radius`→`rounded`,
+`background-color`→`background`; else kebab→snake) and drops unknown props,
+`coerce_style_value` coerces per the attr's `value_type` (strips `px` for
+integers), and `apply_style_rules` folds each matching rule's decls onto nodes
+**only where the attr is absent** (id rules before type rules), so precedence is
+`<style>` → template inline attr → instance attr. Colors are kept as strings and
+resolved at render by `apply_layout_styles` (no fold-time `resolve_color` needed —
+that would lose `theme.*`/role strings). Verified by
+`test_sfc_style_folding_and_precedence` and `examples/sfc/card.nemo`.
+
 Compile-time **selector→prop folding** (there is no runtime cascade — see
 [layout sizing and centering](../patterns/layout-sizing-and-centering.md)).
 Compile the `<style>` block into inline props on matching template nodes at
@@ -238,6 +252,68 @@ indistinguishable from author-written inline attributes.
 * **Risks:** cache invalidation must hash every input (app.xml, all imported
   `.nemo`, all scripts); version skew; bypasses error-surfacing paths. Keep
   strictly optional.
+
+# Phase 6 — Raw-text `.nemo` parser (drop the CDATA requirement)
+
+**Independent of every other phase** — this is a parser-layer change with no
+ordering dependency; it can land before or after any SFC/build phase. Motivated
+by the observation that `.nemo` today is *pure XML*, so `<style>`/`<script>`
+bodies containing `<` or `&` (Rhai `&&`, generics, CSS `>` combinators) must be
+wrapped in `<![CDATA[ … ]]>`. This is **not** something [`nemo build`](build-system.md)
+removes — build reuses `XmlParser::parse_sfc` verbatim, so the CDATA rule is
+upstream of the whole build pipeline. Dropping it is what makes a `.nemo` file
+genuinely Vue-like rather than XML-with-extra-steps.
+
+**Root cause.** `.nemo` is parsed with `quick-xml` (`xml_parser.rs`), a general
+XML reader. XML has no *raw-text elements*, so every `<`/`&` inside any element
+body is markup until escaped. HTML, by contrast, designates `<script>` and
+`<style>` as raw-text elements whose contents are read verbatim to the matching
+close tag — which is exactly why Vue's `@vue/compiler-sfc` (an HTML-flavored
+parser) never needs CDATA.
+
+**Approach — a raw-text pre-splitter in front of `quick-xml`.** `parse_sfc`
+gains a lightweight top-level block scanner that runs *before* the XML reader:
+
+1. Scan the `.nemo` source for the top-level blocks `<template>`, `<script>`,
+   `<style>` (top-level only — nested tags inside `<template>` are untouched).
+2. Treat `<script>`/`<style>` as **raw-text**: capture everything between the
+   open tag and the literal matching `</script>`/`</style>` verbatim, and hand it
+   straight to `SfcDefinition.{script,style}` — never to the XML reader. This also
+   dissolves the current "one contiguous text/CDATA run only" limit (the
+   pattern's [Rules that bite](../patterns/single-file-components.md) note and
+   Phase 0's body-limit caveat), since the whole block is captured literally.
+3. Feed **only** the `<template>` block to `quick-xml`. Template markup stays XML
+   — that half was never the problem; Vue templates are HTML too and `${prop}`
+   interpolation continues to live there unchanged.
+
+**Scope / non-goals.**
+
+* **Backward compatible.** CDATA-wrapped bodies must keep parsing — strip a
+  leading `<![CDATA[`/trailing `]]>` from a captured raw-text block if present, so
+  existing `examples/sfc/*.nemo` (and any authored file) load unchanged. No forced
+  migration; CDATA becomes optional, not forbidden.
+* **`.nemo` only.** `app.xml` and `<include>`d documents stay on the plain XML
+  path. This splitter is specific to the SFC file type (single `<template>` root +
+  optional sibling `<script>`/`<style>`), so it does not touch `process_root`.
+* **Not HTML.** We adopt HTML's raw-text *rule* for two known element names, not
+  an HTML parser. No attribute-value quirks, no implicit tag closing, no entity
+  table beyond what the template's XML path already does.
+* **Edge cases to test:** a `</script>` appearing inside a Rhai string literal
+  (documented limitation — HTML has the same one; a v1 literal-scan close is
+  acceptable, note it), CRLF bodies, an empty/missing block, and a `<template>`
+  containing text that looks like `<script>` (must not be captured — only
+  top-level blocks are).
+
+**Critical files:** `crates/nemo-config/src/xml_parser.rs` (`parse_sfc` gains the
+pre-splitter; template still flows through `process_component_element`). No
+runtime, build, or render changes — `SfcDefinition` shape is unchanged, so
+`parse_layout_config` and everything downstream is untouched.
+
+**Verify:** a `.nemo` with an un-escaped `&&`/`<`-bearing Rhai `<script>` and a
+`>`-combinator CSS `<style>`, no CDATA, parses to the same `SfcDefinition` as the
+CDATA-wrapped equivalent; existing CDATA examples still parse (round-trip
+equality); the `</script>`-in-string edge case is covered or its limitation
+documented.
 
 # Cross-cutting risks & decisions
 

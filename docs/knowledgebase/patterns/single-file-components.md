@@ -20,9 +20,10 @@ A `.nemo` file is **not** wrapped in `<nemo>`. Its top-level children are:
 * `<template>` — **required, exactly one root element**. Its body is flattened
   the same way layout components are. Use `${prop}` placeholders for interpolation
   props and a `<slot />` for consumer content.
-* `<style>` — optional. **Captured but not yet applied** (scoped-style folding is
-  a later phase). XML has no raw-text elements, so a style/script body containing
-  `<` or `&` must be wrapped in `<![CDATA[ … ]]>`.
+* `<style>` — optional. A CSS subset (type + `#id` selectors) folded onto matching
+  template nodes as inline attributes at compile time (see **Scoped styles**
+  below). XML has no raw-text elements, so a style/script body containing `<` or
+  `&` must be wrapped in `<![CDATA[ … ]]>`.
 * `<script>` — optional Rhai. Loaded under the id `sfc:<tag>`. Bodies must be one
   contiguous block (the parser keeps only the first text/CDATA run).
 
@@ -88,6 +89,19 @@ fn handleClick(component_id, event_data) {
   <text content="Body" />                 <!-- → default slot -->
 </card>
 ```
+* **Scoped styles.** The `<style>` block is a CSS subset folded onto template
+  nodes at compile time — there is no runtime cascade. v1 selectors: **type**
+  (`button { … }` matches nodes with that `type`) and **id** (`#head { … }`
+  matches the node with that id). No class/combinator/pseudo/media. Declarations
+  are limited to the universal style attributes `apply_layout_styles` consumes
+  (`padding`, `border`, `rounded`, `background`, `width`, …); CSS names normalize
+  to nemo's (`border-radius`→`rounded`, `background-color`→`background`, else
+  kebab→snake), sizes drop `px` (`32px`→`32`), and colors stay strings resolved
+  (incl. `theme.*`) at render. Unknown properties/selectors warn and drop.
+  Precedence, low→high: **`<style>` rule → template inline attr → instance attr**
+  (folding only fills attrs that are absent; id rules beat type rules). Folding is
+  inherently scoped — it only touches this SFC's own subtree, so `button { … }`
+  can't reach other components; no scope-hash needed.
 * **Handler scoping.** A **template-authored** bare `on-click="fn"` is rewritten
   to `sfc:<tag>::fn` and routes to the SFC's own `<script>`. An **instance**
   handler (`<labeled-button on-click="globalFn"/>`) stays bare and routes to the
@@ -101,7 +115,8 @@ fn handleClick(component_id, event_data) {
 # Status
 
 Phase 0 (import, tag rewrite, default slot, interpolation props), Phase 1
-(scoped `<script>`), and Phase 2 (named/multiple slots) are implemented. Scoped
-`<style>` folding (P3), typed props/auto-discovery (P4), and a build/cache format
-(P5) are planned — see [the SFC plan](../plans/sfc-components.md). Worked example:
-`examples/sfc/`.
+(scoped `<script>`), Phase 2 (named/multiple slots), and Phase 3 (scoped
+`<style>` folding) are implemented. Typed props/auto-discovery (P4), a build/cache
+format (P5, superseded by the [build system](../plans/build-system.md)), and a
+raw-text `.nemo` parser that drops the CDATA requirement (P6) are planned — see
+[the SFC plan](../plans/sfc-components.md). Worked example: `examples/sfc/`.
