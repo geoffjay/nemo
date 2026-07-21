@@ -2065,16 +2065,59 @@ fn collect_sfc_tags(config: &Value) -> HashSet<String> {
         .unwrap_or_default()
 }
 
+/// A declared SFC prop, read back from `config["sfc"][tag]["props"]`.
+#[derive(Debug, Clone)]
+struct SfcPropSpec {
+    name: String,
+    default: Option<Value>,
+}
+
+/// Reads declared props per SFC tag from `config["sfc"]`. Only the fields the
+/// runtime needs (name + coerced default) are kept; `type`/`required` are for
+/// `nemo validate`. Tags without a `<props>` block map to an empty vec.
+fn read_sfc_props(config: &Value) -> HashMap<String, Vec<SfcPropSpec>> {
+    let mut map = HashMap::new();
+    if let Some(sfc) = config.get("sfc").and_then(|v| v.as_object()) {
+        for (tag, def) in sfc {
+            let specs = def
+                .get("props")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|p| {
+                            let name = p.get("name").and_then(|v| v.as_str())?.to_string();
+                            Some(SfcPropSpec {
+                                name,
+                                default: p.get("default").cloned(),
+                            })
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            map.insert(tag.clone(), specs);
+        }
+    }
+    map
+}
+
 /// Recursively rewrites SFC tag usages into template instances. Children are
 /// rewritten first (bottom-up) so a node that is itself an SFC tag keeps its
 /// already-rewritten children.
-fn rewrite_sfc_tags(value: &Value, sfc_tags: &HashSet<String>) -> Value {
+fn rewrite_sfc_tags(
+    value: &Value,
+    sfc_tags: &HashSet<String>,
+    sfc_props: &HashMap<String, Vec<SfcPropSpec>>,
+) -> Value {
     let obj = match value.as_object() {
         Some(o) => o,
         None => {
             // Arrays of anonymous components can appear under `component`.
             if let Value::Array(arr) = value {
-                return Value::Array(arr.iter().map(|v| rewrite_sfc_tags(v, sfc_tags)).collect());
+                return Value::Array(
+                    arr.iter()
+                        .map(|v| rewrite_sfc_tags(v, sfc_tags, sfc_props))
+                        .collect(),
+                );
             }
             return value.clone();
         }
@@ -2086,7 +2129,7 @@ fn rewrite_sfc_tags(value: &Value, sfc_tags: &HashSet<String>) -> Value {
     if let Some(children) = obj.get("component") {
         result.insert(
             "component".to_string(),
-            rewrite_sfc_tags(children, sfc_tags),
+            rewrite_sfc_tags(children, sfc_tags, sfc_props),
         );
     }
     // Object maps that are NOT the `component` key still need recursion when
@@ -2099,7 +2142,7 @@ fn rewrite_sfc_tags(value: &Value, sfc_tags: &HashSet<String>) -> Value {
         let mut changed = false;
         for (k, v) in obj {
             if v.as_object().and_then(|o| o.get("type")).is_some() {
-                rewritten.insert(k.clone(), rewrite_sfc_tags(v, sfc_tags));
+                rewritten.insert(k.clone(), rewrite_sfc_tags(v, sfc_tags, sfc_props));
                 changed = true;
             } else {
                 rewritten.insert(k.clone(), v.clone());
@@ -2114,7 +2157,8 @@ fn rewrite_sfc_tags(value: &Value, sfc_tags: &HashSet<String>) -> Value {
     if let Some(t) = result.get("type").and_then(|v| v.as_str()) {
         if sfc_tags.contains(t) {
             let tag = t.to_string();
-            return sfc_node_to_instance(&Value::Object(result), &tag);
+            let props = sfc_props.get(&tag).map(|v| v.as_slice()).unwrap_or(&[]);
+            return sfc_node_to_instance(&Value::Object(result), &tag, props);
         }
     }
 
@@ -2127,8 +2171,9 @@ fn rewrite_sfc_tags(value: &Value, sfc_tags: &HashSet<String>) -> Value {
 /// Scalar attributes are kept at the top level (so `deep_merge_values` overlays
 /// them onto the template body) *and* folded into a `vars` map (so `${attr}`
 /// interpolation works). The `type` key is dropped — the template body supplies
-/// the real component type.
-fn sfc_node_to_instance(node: &Value, tag: &str) -> Value {
+/// the real component type. Declared props the instance omits are filled from
+/// their (already type-coerced) defaults, into both the overlay attrs and vars.
+fn sfc_node_to_instance(node: &Value, tag: &str, props: &[SfcPropSpec]) -> Value {
     let obj = match node.as_object() {
         Some(o) => o,
         None => return node.clone(),
@@ -2152,6 +2197,20 @@ fn sfc_node_to_instance(node: &Value, tag: &str) -> Value {
             }
         }
     }
+
+    // Fill defaults for declared props the instance did not supply.
+    for spec in props {
+        if inst.contains_key(&spec.name) {
+            continue;
+        }
+        if let Some(default) = &spec.default {
+            inst.insert(spec.name.clone(), default.clone());
+            if let Some(s) = scalar_to_string(default) {
+                vars.insert(spec.name.clone(), Value::String(s));
+            }
+        }
+    }
+
     if !vars.is_empty() {
         inst.insert("vars".to_string(), Value::Object(vars));
     }
@@ -2456,6 +2515,7 @@ fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<
     // handlers rewritten to `sfc:<tag>::<fn>` and any nested SFC tags rewritten
     // for composition. XML-defined `<templates>` take precedence on name clash.
     let sfc_tags = collect_sfc_tags(config);
+    let sfc_props = read_sfc_props(config);
     if !sfc_tags.is_empty() {
         if let Some(sfc_map) = config.get("sfc").and_then(|v| v.as_object()) {
             for (tag, def) in sfc_map {
@@ -2467,7 +2527,7 @@ fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<
                         Some(css) => fold_sfc_styles(body, css, tag),
                         None => body.clone(),
                     };
-                    let body = rewrite_sfc_tags(&body, &sfc_tags);
+                    let body = rewrite_sfc_tags(&body, &sfc_tags, &sfc_props);
                     let body = rewrite_sfc_handlers(&body, tag);
                     templates.entry(tag.clone()).or_insert(body);
                 }
@@ -2481,7 +2541,7 @@ fn parse_layout_config(config: &Value, extra_templates: &TemplateMap) -> Option<
     let layout: &Value = if sfc_tags.is_empty() {
         layout
     } else {
-        layout_owned = rewrite_sfc_tags(layout, &sfc_tags);
+        layout_owned = rewrite_sfc_tags(layout, &sfc_tags, &sfc_props);
         &layout_owned
     };
 
@@ -2895,7 +2955,7 @@ mod sfc_tests {
         tags.insert("labeled-button".to_string());
 
         let node = obj(vec![("type", s("labeled-button")), ("label", s("Save"))]);
-        let rewritten = rewrite_sfc_tags(&node, &tags);
+        let rewritten = rewrite_sfc_tags(&node, &tags, &HashMap::new());
 
         // Becomes a template instance; the `type` is dropped (template supplies it).
         assert_eq!(rewritten.get("template"), Some(&s("labeled-button")));
@@ -3038,6 +3098,67 @@ mod sfc_tests {
             .collect();
         assert!(texts.contains(&"A".to_string()));
         assert!(texts.contains(&"B".to_string()));
+    }
+
+    #[test]
+    fn test_sfc_prop_defaults() {
+        // A widget SFC with a `label` prop defaulting to "Button".
+        let template = obj(vec![("type", s("button")), ("label", s("${label}"))]);
+        let props = Value::Array(vec![obj(vec![
+            ("name", s("label")),
+            ("type", s("string")),
+            ("default", s("Button")),
+            ("required", Value::Bool(false)),
+        ])]);
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![(
+                    "widget",
+                    obj(vec![("template", template), ("props", props)]),
+                )]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            // Omits label → gets the default.
+                            ("b1", obj(vec![("type", s("widget"))])),
+                            // Supplies label → overrides the default.
+                            (
+                                "b2",
+                                obj(vec![("type", s("widget")), ("label", s("Custom"))]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let labels: Vec<Option<String>> = layout
+            .root
+            .children
+            .iter()
+            .map(|c| {
+                c.config
+                    .properties
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
+            .collect();
+        assert!(
+            labels.contains(&Some("Button".to_string())),
+            "default applied"
+        );
+        assert!(
+            labels.contains(&Some("Custom".to_string())),
+            "instance overrides"
+        );
     }
 
     #[test]

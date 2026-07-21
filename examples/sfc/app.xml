@@ -13,10 +13,9 @@
     <theme name="nord" mode="dark" />
   </app>
 
-  <imports>
-    <import src="./components/card.nemo" />
-    <import src="./components/labeled-button.nemo" />
-  </imports>
+  <!-- Auto-discover every *.nemo in ./components (tags come from <template name>
+       or the filename stem). Equivalent to listing each with <import>. -->
+  <components dir="./components" />
 
   <layout type="stack">
     <stack id="root" direction="vertical" spacing="20" padding="32">
@@ -35,6 +34,14 @@
         <label id="c2_title" slot="header" text="Second card" size="lg" />
         <text id="c2_body" content="A second instance, sharing the same .nemo definition." />
         <labeled-button id="btn_b" label="And me" />
+      </card>
+
+      <!-- Third: the button omits label/variant, so it renders the declared
+           prop defaults ("Button", primary). -->
+      <card>
+        <label id="c3_title" slot="header" text="Prop defaults" size="lg" />
+        <text id="c3_body" content="This button omits label and variant — both come from the SFC's declared prop defaults." />
+        <labeled-button id="btn_c" />
       </card>
     </stack>
   </layout>

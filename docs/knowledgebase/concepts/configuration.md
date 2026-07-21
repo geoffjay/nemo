@@ -43,12 +43,14 @@ three stages, producing a universal `Value` tree
 
 # Single-file components (`.nemo` SFCs)
 
-An `<imports>`/`<import src="…" [as="tag"]>` block pulls in reusable
-**single-file components**: one `.nemo` file bundling markup, styling, and
-behavior (see [Single-file components](../patterns/single-file-components.md) for
-the authoring pattern). `.nemo` files are **not** wrapped in `<nemo>`; their
-top-level children are `<template>` (required, exactly one root element),
-`<style>` (optional), and `<script>` (optional).
+An `<imports>`/`<import src="…" [as="tag"]>` block — or `<components dir="…"/>`,
+which globs every `*.nemo` in a directory — pulls in reusable **single-file
+components**: one `.nemo` file bundling markup, styling, and behavior (see
+[Single-file components](../patterns/single-file-components.md) for the authoring
+pattern). `.nemo` files are **not** wrapped in `<nemo>`; their top-level children
+are `<template>` (required, exactly one root element), optional `<style>`,
+optional `<script>`, and an optional `<props>` block declaring typed props
+(`<prop name type default required/>`).
 
 Parsing/compilation touches three places:
 
@@ -76,9 +78,11 @@ Parsing/compilation touches three places:
 
 SFC `<script>` bodies are loaded under `sfc:<tag>` ids in
 `load_scripts_from_config`; the single-colon prefix keeps `call_handler`'s
-first-`::` split resolving `sfc:<tag>::<fn>` to (script id `sfc:<tag>`, fn). The
-strict linter treats registered SFC tags as known component types (skipping
-`unknown-component`), like a `template=`-driven node.
+first-`::` split resolving `sfc:<tag>::<fn>` to (script id `sfc:<tag>`, fn).
+Declared props' defaults are filled per-instance at expand time (`sfc_node_to_instance`)
+for any prop the usage omits. The strict linter treats registered SFC tags as
+known component types (skipping `unknown-component`) and emits `missing-required`
+for an omitted `required` prop.
 
 # Schema and validation
 

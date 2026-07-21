@@ -20,10 +20,11 @@ Nemo currently supports:
   routers, and a Rhai `navigate()`/`back()`/`forward()` API. See
   [Routing](../patterns/routing.md).
 * Reusable **single-file components** (`.nemo` SFCs): one file with
-  `<template>`/`<style>`/`<script>`, imported via `<import>` and used as a custom
-  tag, with `${prop}` interpolation, named/multiple slots, a scoped Rhai script,
+  `<template>`/`<style>`/`<script>`, imported via `<import>` (or `<components dir>`
+  auto-discovery) and used as a custom tag, with typed `<props>` (defaults +
+  required), `${prop}` interpolation, named/multiple slots, a scoped Rhai script,
   and a scoped `<style>` block folded onto template nodes. Compiled onto the
-  template machinery (Phase 0–3). See
+  template machinery (Phase 0–4). See
   [Single-file components](../patterns/single-file-components.md).
 * Live data binding from HTTP, WebSocket, MQTT, Redis, NATS, timer, and file
   sources through a transform pipeline and central repository. See

@@ -20,6 +20,11 @@ A `.nemo` file is **not** wrapped in `<nemo>`. Its top-level children are:
 * `<template>` — **required, exactly one root element**. Its body is flattened
   the same way layout components are. Use `${prop}` placeholders for interpolation
   props and a `<slot />` for consumer content.
+* `<props>` — optional. Declares typed props: `<prop name type default required/>`.
+  `type` is `string` (default), `int`, `float`, or `bool`; `default` is coerced to
+  it and fills the prop when an instance omits it; `required="true"` makes
+  `nemo validate --strict` flag a usage that omits it. Without `<props>` a prop is
+  stringly-typed with no default.
 * `<style>` — optional. A CSS subset (type + `#id` selectors) folded onto matching
   template nodes as inline attributes at compile time (see **Scoped styles**
   below). XML has no raw-text elements, so a style/script body containing `<` or
@@ -41,13 +46,20 @@ fn handleClick(component_id, event_data) {
 
 # Using it
 
+Import components individually, or auto-discover a whole directory:
+
 ```xml
 <imports>
   <import src="./components/labeled-button.nemo" />   <!-- tag from <template name> -->
   <import src="./components/card.nemo" as="my-card" />  <!-- as= overrides the tag -->
 </imports>
+<!-- …or, equivalently, glob every *.nemo in a directory (tags from each file's
+     <template name> or filename stem): -->
+<components dir="./components" />
+
 <layout type="stack">
   <labeled-button label="Save" />        <!-- ${label} → "Save" -->
+  <labeled-button />                      <!-- omitted → declared prop default -->
   <my-card>
     <label text="Slotted content" />     <!-- injected into the card's <slot/> -->
   </my-card>
@@ -102,6 +114,12 @@ fn handleClick(component_id, event_data) {
   (folding only fills attrs that are absent; id rules beat type rules). Folding is
   inherently scoped — it only touches this SFC's own subtree, so `button { … }`
   can't reach other components; no scope-hash needed.
+* **Typed props & defaults.** Props declared in `<props>` are coerced to their
+  type; an omitted prop with a `default` is filled at expand time (into both the
+  interpolation vars and the overlay attrs). `required` props are enforced by
+  `nemo validate --strict` (a `missing-required` error). Supplied instance
+  attributes always override defaults. (Full `nemo schema` emission of SFC tags
+  and `SlotSpec` validation remain — they need a per-SFC `ComponentDescriptor`.)
 * **Handler scoping.** A **template-authored** bare `on-click="fn"` is rewritten
   to `sfc:<tag>::fn` and routes to the SFC's own `<script>`. An **instance**
   handler (`<labeled-button on-click="globalFn"/>`) stays bare and routes to the
@@ -115,8 +133,11 @@ fn handleClick(component_id, event_data) {
 # Status
 
 Phase 0 (import, tag rewrite, default slot, interpolation props), Phase 1
-(scoped `<script>`), Phase 2 (named/multiple slots), and Phase 3 (scoped
-`<style>` folding) are implemented. Typed props/auto-discovery (P4), a build/cache
-format (P5, superseded by the [build system](../plans/build-system.md)), and a
-raw-text `.nemo` parser that drops the CDATA requirement (P6) are planned — see
-[the SFC plan](../plans/sfc-components.md). Worked example: `examples/sfc/`.
+(scoped `<script>`), Phase 2 (named/multiple slots), Phase 3 (scoped `<style>`
+folding), and Phase 4 (typed props with defaults/required + `<components dir>`
+auto-discovery) are implemented. Still open from P4: a per-SFC
+`ComponentDescriptor` so `nemo schema` emits SFC tags and `SlotSpec` validates
+slots. A build/cache format (P5, superseded by the
+[build system](../plans/build-system.md)) and a raw-text `.nemo` parser that drops
+the CDATA requirement (P6) are planned — see [the SFC plan](../plans/sfc-components.md).
+Worked example: `examples/sfc/`.

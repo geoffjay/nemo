@@ -26,10 +26,40 @@ pub struct SfcDefinition {
     /// The template body: a single-root component `Value` (the shape
     /// `process_component_element` produces), ready to merge into a `TemplateMap`.
     pub template: Value,
-    /// Raw `<style>` body, if present. Not yet folded into props (Phase 3).
+    /// Raw `<style>` body, if present. Folded onto template nodes at compile time.
     pub style: Option<String>,
     /// Raw `<script>` body (Rhai), if present. Loaded under `sfc:<tag>`.
     pub script: Option<String>,
+    /// Declared props from an optional `<props>` block. Empty when omitted (props
+    /// are then stringly-typed and have no defaults).
+    pub props: Vec<SfcProp>,
+}
+
+/// A single declared SFC prop from `<props><prop name type default required/></props>`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SfcProp {
+    /// Prop name (matches the `${name}` placeholder and the instance attribute).
+    pub name: String,
+    /// Declared type: `string` (default), `int`, `float`, or `bool`.
+    pub ty: String,
+    /// Default value (already coerced to `ty`) used when an instance omits the prop.
+    pub default: Option<Value>,
+    /// Whether the prop must be supplied by the instance (checked by `nemo validate`).
+    pub required: bool,
+}
+
+/// Coerces a raw string to the given SFC prop type. Type names mirror the scalar
+/// `#[derive(NemoComponent)]` model: `string`/`int`/`float`/`bool` (with common
+/// aliases). Returns `None` if the value doesn't parse as that type.
+pub(crate) fn coerce_typed_value(ty: &str, raw: &str) -> Option<Value> {
+    let raw = raw.trim();
+    match ty {
+        "int" | "integer" | "i64" => raw.parse::<i64>().ok().map(Value::Integer),
+        "float" | "number" | "f64" => raw.parse::<f64>().ok().map(Value::Float),
+        "bool" | "boolean" => raw.parse::<bool>().ok().map(Value::Bool),
+        // "string" and anything unrecognized → string.
+        _ => Some(Value::String(raw.to_string())),
+    }
 }
 
 /// Parser for XML configuration files.
@@ -181,6 +211,9 @@ impl XmlParser {
                 }
                 "import" => {
                     self.process_import(obj, &mut result)?;
+                }
+                "components" => {
+                    self.process_components_dir(obj, &mut result)?;
                 }
                 "layout" => {
                     let layout_val = self.process_layout(obj);
@@ -738,6 +771,7 @@ impl XmlParser {
         let mut template: Option<Value> = None;
         let mut style: Option<String> = None;
         let mut script: Option<String> = None;
+        let mut props: Vec<SfcProp> = Vec::new();
 
         for child in &children {
             let obj = match child.as_object() {
@@ -745,6 +779,57 @@ impl XmlParser {
                 None => continue,
             };
             match obj.get("__type__").and_then(|v| v.as_str()) {
+                Some("props") => {
+                    if let Some(prop_children) = obj.get("__children__").and_then(|v| v.as_array())
+                    {
+                        for prop_child in prop_children {
+                            let po = match prop_child.as_object() {
+                                Some(o) => o,
+                                None => continue,
+                            };
+                            if po.get("__type__").and_then(|v| v.as_str()) != Some("prop") {
+                                continue;
+                            }
+                            let pname = match po.get("name").and_then(|v| v.as_str()) {
+                                Some(n) if !n.is_empty() => n.to_string(),
+                                _ => {
+                                    return Err(ParseError::new(
+                                        "SFC <prop> requires a non-empty name".to_string(),
+                                        SourceLocation::new(&self.source_name, 1, 1),
+                                    ))
+                                }
+                            };
+                            let ty = po
+                                .get("type")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("string")
+                                .to_string();
+                            // `default` is an attribute, so `coerce_value` may
+                            // have already typed it (e.g. `"3"` → Integer). Render
+                            // it back to a string and coerce to the declared type.
+                            let default = po.get("default").and_then(|v| {
+                                let raw = match v {
+                                    Value::String(s) => s.clone(),
+                                    Value::Integer(i) => i.to_string(),
+                                    Value::Float(f) => f.to_string(),
+                                    Value::Bool(b) => b.to_string(),
+                                    _ => return None,
+                                };
+                                coerce_typed_value(&ty, &raw)
+                            });
+                            let required = po
+                                .get("required")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
+                            props.push(SfcProp {
+                                name: pname,
+                                ty,
+                                default,
+                                required,
+                            });
+                        }
+                    }
+                }
                 Some("template") => {
                     name = obj
                         .get("name")
@@ -805,6 +890,7 @@ impl XmlParser {
             template,
             style,
             script,
+            props,
         })
     }
 
@@ -872,8 +958,15 @@ impl XmlParser {
                 )
             })?;
 
-        // Store as a plain Value under the top-level `sfc` map so the config
-        // stays a homogeneous Value tree; the runtime reads it back.
+        let entry = Self::sfc_to_value(sfc, &import_path.display().to_string());
+        Self::register_sfc(result, tag, entry);
+        Ok(())
+    }
+
+    /// Flattens an [`SfcDefinition`] into the plain `Value` stored under the
+    /// top-level `sfc` map, so the config stays a homogeneous `Value` tree that
+    /// the runtime reads back.
+    fn sfc_to_value(sfc: SfcDefinition, source_path: &str) -> Value {
         let mut entry = IndexMap::new();
         entry.insert("template".to_string(), sfc.template);
         if let Some(style) = sfc.style {
@@ -882,18 +975,95 @@ impl XmlParser {
         if let Some(script) = sfc.script {
             entry.insert("script".to_string(), Value::String(script));
         }
+        if !sfc.props.is_empty() {
+            let props: Vec<Value> = sfc
+                .props
+                .into_iter()
+                .map(|p| {
+                    let mut m = IndexMap::new();
+                    m.insert("name".to_string(), Value::String(p.name));
+                    m.insert("type".to_string(), Value::String(p.ty));
+                    if let Some(default) = p.default {
+                        m.insert("default".to_string(), default);
+                    }
+                    m.insert("required".to_string(), Value::Bool(p.required));
+                    Value::Object(m)
+                })
+                .collect();
+            entry.insert("props".to_string(), Value::Array(props));
+        }
         entry.insert(
             "source_path".to_string(),
-            Value::String(import_path.display().to_string()),
+            Value::String(source_path.to_string()),
         );
+        Value::Object(entry)
+    }
 
+    /// Inserts a compiled SFC entry into the top-level `sfc` map under `tag`.
+    fn register_sfc(result: &mut IndexMap<String, Value>, tag: String, entry: Value) {
         let sfc_map = result
             .entry("sfc".to_string())
             .or_insert_with(|| Value::Object(IndexMap::new()));
         if let Value::Object(map) = sfc_map {
-            map.insert(tag, Value::Object(entry));
+            map.insert(tag, entry);
+        }
+    }
+
+    /// Processes a `<components dir="./components"/>` element: globs `*.nemo` in
+    /// the directory and registers each as an SFC. The tag is the file's
+    /// `<template name>` or its filename stem (kebab→snake normalized). Files
+    /// that fail to parse are skipped with an error return.
+    fn process_components_dir(
+        &self,
+        obj: &IndexMap<String, Value>,
+        result: &mut IndexMap<String, Value>,
+    ) -> Result<(), ParseError> {
+        let dir_attr = match obj.get("dir").and_then(|v| v.as_str()) {
+            Some(d) => d,
+            None => return Ok(()),
+        };
+        let dir = self.resolve_path(dir_attr);
+        if !dir.is_dir() {
+            return Err(ParseError::new(
+                format!("Components directory not found: {}", dir.display()),
+                SourceLocation::new(&self.source_name, 1, 1),
+            ));
         }
 
+        // Collect and sort `.nemo` paths so registration order is deterministic.
+        let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
+            .map_err(|e| {
+                ParseError::new(
+                    format!("Failed to read components dir {}: {}", dir.display(), e),
+                    SourceLocation::new(&self.source_name, 1, 1),
+                )
+            })?
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.extension().map(|e| e == "nemo").unwrap_or(false))
+            .collect();
+        paths.sort();
+
+        for path in paths {
+            let content = std::fs::read_to_string(&path).map_err(|e| {
+                ParseError::new(
+                    format!("Failed to read component {}: {}", path.display(), e),
+                    SourceLocation::new(&self.source_name, 1, 1),
+                )
+            })?;
+            let sfc_parser = XmlParser::new().with_source_name(path.display().to_string());
+            let sfc = sfc_parser.parse_sfc(&content)?;
+            let tag = sfc
+                .name
+                .clone()
+                .or_else(|| path.file_stem().map(|s| s.to_string_lossy().to_string()))
+                .filter(|s| !s.is_empty())
+                .map(|s| kebab_to_snake(&s));
+            if let Some(tag) = tag {
+                let entry = Self::sfc_to_value(sfc, &path.display().to_string());
+                Self::register_sfc(result, tag, entry);
+            }
+        }
         Ok(())
     }
 
@@ -1406,6 +1576,76 @@ mod tests {
             components.get("body").and_then(|c| c.get("slot")),
             Some(&Value::Bool(true))
         );
+    }
+
+    #[test]
+    fn test_parse_sfc_typed_props() {
+        let sfc = r#"
+        <props>
+          <prop name="label" type="string" default="Button" />
+          <prop name="count" type="int" default="3" />
+          <prop name="title" type="string" required="true" />
+        </props>
+        <template name="widget">
+          <button label="${label}" />
+        </template>
+        "#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        assert_eq!(def.props.len(), 3);
+
+        let label = &def.props[0];
+        assert_eq!(label.name, "label");
+        assert_eq!(label.ty, "string");
+        assert_eq!(label.default, Some(Value::String("Button".to_string())));
+        assert!(!label.required);
+
+        let count = &def.props[1];
+        assert_eq!(count.ty, "int");
+        // `default` is coerced to the declared type.
+        assert_eq!(count.default, Some(Value::Integer(3)));
+
+        let title = &def.props[2];
+        assert!(title.required);
+        assert_eq!(title.default, None);
+    }
+
+    #[test]
+    fn test_components_dir_auto_discovery() {
+        let dir =
+            std::env::temp_dir().join(format!("nemo_sfc_components_test_{}", std::process::id()));
+        let comp_dir = dir.join("components");
+        std::fs::create_dir_all(&comp_dir).unwrap();
+        std::fs::write(
+            comp_dir.join("card.nemo"),
+            r#"<template name="card"><panel><slot /></panel></template>"#,
+        )
+        .unwrap();
+        std::fs::write(
+            comp_dir.join("labeled-button.nemo"),
+            r#"<template name="labeled-button"><button label="${label}" /></template>"#,
+        )
+        .unwrap();
+
+        let app = r#"
+        <nemo>
+          <components dir="./components" />
+          <layout type="stack">
+            <card><labeled-button label="Hi" /></card>
+          </layout>
+        </nemo>
+        "#;
+        let value = XmlParser::new()
+            .with_source_name("app.xml")
+            .with_base_dir(&dir)
+            .parse(app)
+            .unwrap();
+
+        let sfc = value.get("sfc").unwrap();
+        // Both files discovered; tags kebab→snake normalized.
+        assert!(sfc.get("card").is_some());
+        assert!(sfc.get("labeled_button").is_some());
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]

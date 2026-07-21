@@ -1,7 +1,10 @@
 <!--
-  A button SFC with an interpolated label and a scoped click handler.
+  A button SFC with typed props, an interpolated label, and a scoped handler.
 
-  - `${label}` is filled from the instance attribute: <labeled-button label="Hi" />.
+  - <props> declares `label` and `variant` with types and defaults, so
+    <labeled-button /> renders "Button" and an omitted variant falls back to
+    "primary". Instance attributes override the defaults.
+  - `${label}`/`${variant}` are filled from the resolved props.
   - The bare `on-click="handleClick"` in the template is rewritten at compile time
     to `sfc:labeled-button::handleClick`, so it routes to THIS file's <script>
     (loaded under the id `sfc:labeled-button`) rather than the global handlers.
@@ -9,8 +12,12 @@
     concrete instance fired via `component_id` (the per-instance scoped id), so it
     can mutate just that button.
 -->
+<props>
+  <prop name="label" type="string" default="Button" />
+  <prop name="variant" type="string" default="primary" />
+</props>
 <template name="labeled-button">
-  <button label="${label}" variant="primary" on-click="handleClick" />
+  <button label="${label}" variant="${variant}" on-click="handleClick" />
 </template>
 <script><![CDATA[
 fn handleClick(component_id, event_data) {

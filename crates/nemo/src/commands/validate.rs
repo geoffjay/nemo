@@ -185,6 +185,41 @@ fn strict_lints(root: &Value) -> Vec<Diagnostic> {
     lint_config(root, &registry)
 }
 
+/// SFC info needed for linting: the set of registered tags (valid component
+/// types that expand to built-ins) and each tag's required prop names.
+struct SfcLintInfo {
+    tags: std::collections::HashSet<String>,
+    required: std::collections::HashMap<String, Vec<String>>,
+}
+
+impl SfcLintInfo {
+    fn from_config(root: &Value) -> Self {
+        let mut tags = std::collections::HashSet::new();
+        let mut required = std::collections::HashMap::new();
+        if let Some(sfc) = root.get("sfc").and_then(|v| v.as_object()) {
+            for (tag, def) in sfc {
+                tags.insert(tag.clone());
+                let reqs: Vec<String> = def
+                    .get("props")
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter(|p| {
+                                p.get("required").and_then(|v| v.as_bool()).unwrap_or(false)
+                            })
+                            .filter_map(|p| {
+                                p.get("name").and_then(|v| v.as_str()).map(String::from)
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                required.insert(tag.clone(), reqs);
+            }
+        }
+        SfcLintInfo { tags, required }
+    }
+}
+
 /// Core of [`strict_lints`], parameterized over the registry for testing.
 fn lint_config(root: &Value, registry: &ComponentRegistry) -> Vec<Diagnostic> {
     let mut diagnostics = Vec::new();
@@ -192,21 +227,11 @@ fn lint_config(root: &Value, registry: &ComponentRegistry) -> Vec<Diagnostic> {
 
     // Registered single-file-component tags are valid component types even
     // though they aren't in the registry — they expand to built-ins at runtime.
-    let sfc_tags: std::collections::HashSet<String> = root
-        .get("sfc")
-        .and_then(|v| v.as_object())
-        .map(|obj| obj.keys().cloned().collect())
-        .unwrap_or_default();
+    let sfc = SfcLintInfo::from_config(root);
 
     // Lint the live layout tree.
     if let Some(layout) = root.get("layout") {
-        lint_component_children(
-            layout,
-            registry,
-            &sfc_tags,
-            &mut diagnostics,
-            &mut template_refs,
-        );
+        lint_component_children(layout, registry, &sfc, &mut diagnostics, &mut template_refs);
     }
 
     // Lint template bodies too, and collect any template-to-template references.
@@ -220,7 +245,7 @@ fn lint_config(root: &Value, registry: &ComponentRegistry) -> Vec<Diagnostic> {
                 name,
                 body,
                 registry,
-                &sfc_tags,
+                &sfc,
                 &mut diagnostics,
                 &mut template_refs,
             );
@@ -243,13 +268,13 @@ fn lint_config(root: &Value, registry: &ComponentRegistry) -> Vec<Diagnostic> {
 fn lint_component_children(
     node: &Value,
     registry: &ComponentRegistry,
-    sfc_tags: &std::collections::HashSet<String>,
+    sfc: &SfcLintInfo,
     diagnostics: &mut Vec<Diagnostic>,
     template_refs: &mut std::collections::HashSet<String>,
 ) {
     if let Some(children) = node.get("component").and_then(|c| c.as_object()) {
         for (id, child) in children {
-            lint_component(id, child, registry, sfc_tags, diagnostics, template_refs);
+            lint_component(id, child, registry, sfc, diagnostics, template_refs);
         }
     }
 }
@@ -259,7 +284,7 @@ fn lint_component(
     id: &str,
     component: &Value,
     registry: &ComponentRegistry,
-    sfc_tags: &std::collections::HashSet<String>,
+    sfc: &SfcLintInfo,
     diagnostics: &mut Vec<Diagnostic>,
     template_refs: &mut std::collections::HashSet<String>,
 ) {
@@ -268,11 +293,26 @@ fn lint_component(
     };
 
     let ctype = obj.get("type").and_then(|v| v.as_str()).unwrap_or_default();
+    let is_sfc = sfc.tags.contains(ctype);
     // An SFC tag usage is shaped by its `.nemo` template at runtime, so — like a
     // `template=`-driven node — its component/attribute checks are skipped here.
-    let uses_template = obj.contains_key("template") || sfc_tags.contains(ctype);
+    let uses_template = obj.contains_key("template") || is_sfc;
     if let Some(name) = obj.get("template").and_then(|v| v.as_str()) {
         template_refs.insert(name.to_string());
+    }
+
+    // For an SFC usage, enforce its declared required props.
+    if is_sfc {
+        if let Some(reqs) = sfc.required.get(ctype) {
+            for req in reqs {
+                if !obj.contains_key(req) {
+                    diagnostics.push(Diagnostic::error(
+                        "missing-required",
+                        format!("SFC '{ctype}' (id '{id}') is missing required prop '{req}'"),
+                    ));
+                }
+            }
+        }
     }
 
     // Component/attribute checks only apply to non-templated components (a
@@ -370,7 +410,7 @@ fn lint_component(
         ));
     }
 
-    lint_component_children(component, registry, sfc_tags, diagnostics, template_refs);
+    lint_component_children(component, registry, sfc, diagnostics, template_refs);
 }
 
 fn render_human(
@@ -458,6 +498,45 @@ mod tests {
         let value = parse(r#"<nemo><layout type="stack"><notacomponent id="x" /></layout></nemo>"#);
         let diags = lint_config(&value, &builtins());
         assert!(codes(&diags).contains(&"unknown-component"), "{diags:?}");
+    }
+
+    #[test]
+    fn flags_missing_required_sfc_prop_but_not_supplied() {
+        let dir = std::env::temp_dir().join(format!("nemo_validate_sfc_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("widget.nemo"),
+            r#"<props><prop name="title" required="true" /></props>
+               <template name="widget"><label text="${title}" /></template>"#,
+        )
+        .unwrap();
+
+        // A usage that omits the required `title` is flagged.
+        let missing = r#"<nemo>
+            <imports><import src="./widget.nemo" /></imports>
+            <layout type="stack"><widget id="w" /></layout>
+        </nemo>"#;
+        let value = ConfigurationLoader::new(std::sync::Arc::new(SchemaRegistry::new()))
+            .load_xml_string(missing, "test.xml", Some(dir.as_path()))
+            .unwrap();
+        assert!(
+            codes(&lint_config(&value, &builtins())).contains(&"missing-required"),
+            "expected missing-required"
+        );
+
+        // Supplying it clears the diagnostic (and the SFC tag isn't unknown).
+        let ok = r#"<nemo>
+            <imports><import src="./widget.nemo" /></imports>
+            <layout type="stack"><widget id="w" title="Hi" /></layout>
+        </nemo>"#;
+        let value = ConfigurationLoader::new(std::sync::Arc::new(SchemaRegistry::new()))
+            .load_xml_string(ok, "test.xml", Some(dir.as_path()))
+            .unwrap();
+        let diags = lint_config(&value, &builtins());
+        assert!(!codes(&diags).contains(&"missing-required"), "{diags:?}");
+        assert!(!codes(&diags).contains(&"unknown-component"), "{diags:?}");
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 
     #[test]
