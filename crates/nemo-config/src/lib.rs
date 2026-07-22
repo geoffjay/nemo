@@ -6,6 +6,7 @@
 mod error;
 mod loader;
 mod location;
+mod manifest;
 mod path;
 mod registry;
 mod resolver;
@@ -17,6 +18,9 @@ mod xml_parser;
 pub use error::{ConfigError, ErrorCode, ParseError, ResolveError, SchemaError, ValidationError};
 pub use loader::ConfigurationLoader;
 pub use location::SourceLocation;
+pub use manifest::{
+    find_project_root, BuildConfig, LoadMode, ManifestError, ProjectManifest, MANIFEST_FILE,
+};
 pub use path::{ConfigPath, PathParseError, PathSegment};
 pub use registry::SchemaRegistry;
 pub use resolver::{ConfigFunction, ConfigResolver, ResolveContext};

@@ -9,6 +9,7 @@
 //! - `dev`      — Workstream C
 //! - `validate` — Workstream D
 
+pub mod build;
 pub mod dev;
 pub mod new;
 pub mod schema;

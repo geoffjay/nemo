@@ -68,6 +68,7 @@ fn main() -> Result<()> {
         Some(Command::Dev(dev_args)) => commands::dev::run(args, dev_args),
         Some(Command::Validate(validate_args)) => commands::validate::run(validate_args),
         Some(Command::Schema(schema_args)) => commands::schema::run(schema_args),
+        Some(Command::Build(build_args)) => commands::build::run(build_args),
         Some(Command::Screenshot(shot_args)) => dispatch_screenshot(shot_args),
         None => {
             let watch = args
@@ -100,8 +101,17 @@ fn dispatch_screenshot(_args: args::ScreenshotArgs) -> Result<()> {
 /// Handles headless/validate modes when `--app-config` is provided, otherwise
 /// launches the GPUI window with router-based navigation. When `watch` is
 /// `Some(debounce)`, a file watcher hot-reloads the app on config changes.
-pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
+pub(crate) fn run_app(mut args: Args, watch: Option<Duration>) -> Result<()> {
     info!("Nemo v{} starting...", env!("CARGO_PKG_VERSION"));
+
+    // Manifest-aware entry resolution: when `--app-config` is a directory or is
+    // omitted, resolve the app entry via the nearest `nemo.toml`. An explicit
+    // file path is used as-is, so existing invocations are untouched; when the
+    // path is omitted and no manifest is in scope, `app_config` stays `None` and
+    // the project-loader screen shows as before.
+    if let Some(resolved) = resolve_app_config_via_manifest(args.app_config.as_deref()) {
+        args.app_config = Some(resolved);
+    }
 
     // Load NemoConfig (config.toml)
     let nemo_config = NemoConfig::load_from(args.config.as_ref());
@@ -185,6 +195,31 @@ pub(crate) fn run_app(args: Args, watch: Option<Duration>) -> Result<()> {
 
     info!("Nemo shutdown complete");
     Ok(())
+}
+
+/// Resolves the effective `app.xml` entry via the project manifest.
+///
+/// * A path to an existing **file** is returned unchanged (today's behavior).
+/// * A path to a **directory** resolves the nearest `nemo.toml` from that
+///   directory and returns `<root>/<manifest.entry>`.
+/// * A **nonexistent** path is returned unchanged, so the caller's own
+///   not-found handling reports it.
+/// * When **omitted**, walks up from the current directory for a `nemo.toml`;
+///   returns `None` (leaving the loader screen) when none is found.
+///
+/// Any manifest read/parse error degrades gracefully to `None` on the run path;
+/// `nemo build` surfaces the same errors loudly.
+fn resolve_app_config_via_manifest(app_config: Option<&std::path::Path>) -> Option<PathBuf> {
+    let start = match app_config {
+        Some(p) if p.is_file() => return Some(p.to_path_buf()),
+        Some(p) if p.is_dir() => p.to_path_buf(),
+        Some(p) => return Some(p.to_path_buf()),
+        None => std::env::current_dir().ok()?,
+    };
+    let root = nemo_config::find_project_root(&start)?;
+    let manifest =
+        nemo_config::ProjectManifest::load(&root.join(nemo_config::MANIFEST_FILE)).ok()?;
+    Some(root.join(manifest.entry))
 }
 
 /// Parameters for building and opening the main application window.
@@ -415,4 +450,50 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         cx.new(|_cx| Root::new(ws, window, _cx))
     })
     .expect("Failed to open window")
+}
+
+#[cfg(test)]
+mod manifest_launch_tests {
+    // Import specific items (not `use super::*`) — a glob import in a nemo-bin
+    // test module blows the macro-recursion limit.
+    use super::resolve_app_config_via_manifest;
+    use std::path::PathBuf;
+
+    #[test]
+    fn directory_resolves_to_manifest_entry() {
+        let dir = std::env::temp_dir().join(format!("nemo_launch_dir_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("nemo.toml"),
+            "name = \"t\"\nentry = \"main.xml\"\n",
+        )
+        .unwrap();
+        std::fs::write(dir.join("main.xml"), "<nemo/>").unwrap();
+
+        let resolved = resolve_app_config_via_manifest(Some(&dir));
+        assert_eq!(resolved, Some(dir.join("main.xml")));
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn explicit_file_is_returned_unchanged() {
+        let dir = std::env::temp_dir().join(format!("nemo_launch_file_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("app.xml");
+        std::fs::write(&file, "<nemo/>").unwrap();
+
+        assert_eq!(
+            resolve_app_config_via_manifest(Some(&file)),
+            Some(file.clone())
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn nonexistent_path_is_returned_unchanged() {
+        let p = PathBuf::from("/no/such/path/app.xml");
+        assert_eq!(resolve_app_config_via_manifest(Some(&p)), Some(p));
+    }
 }

@@ -73,6 +73,9 @@ pub enum Command {
     Validate(ValidateArgs),
     /// Export the configuration schema for this build and exit.
     Schema(SchemaArgs),
+    /// Compile a project ahead-of-time (Phase 0: resolve the manifest and print
+    /// the build plan).
+    Build(BuildArgs),
     /// Render an application to a PNG image and exit (macOS-first).
     ///
     /// Requires a build with `--features screenshot` (enables gpui's offscreen
@@ -176,6 +179,14 @@ pub struct SchemaArgs {
 pub enum SchemaFormat {
     /// nemo-native JSON schema.
     Json,
+}
+
+/// Arguments for `nemo build`.
+#[derive(clap::Args, Debug)]
+pub struct BuildArgs {
+    /// Project directory (or a file inside it) to build. Defaults to the current
+    /// directory; the nearest `nemo.toml` walking up marks the project root.
+    pub target: Option<PathBuf>,
 }
 
 /// Arguments for `nemo screenshot`.
@@ -337,6 +348,26 @@ mod tests {
     fn verbose_is_global_after_subcommand() {
         let args = Args::try_parse_from(["nemo", "validate", "app.xml", "--verbose"]).unwrap();
         assert!(args.verbose);
+    }
+
+    #[test]
+    fn build_subcommand_parses() {
+        let args = Args::try_parse_from(["nemo", "build", "examples/foo"]).unwrap();
+        match args.command {
+            Some(Command::Build(b)) => {
+                assert_eq!(b.target, Some(PathBuf::from("examples/foo")));
+            }
+            other => panic!("expected Build, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn build_subcommand_needs_no_target() {
+        let args = Args::try_parse_from(["nemo", "build"]).unwrap();
+        match args.command {
+            Some(Command::Build(b)) => assert!(b.target.is_none()),
+            other => panic!("expected Build, got {other:?}"),
+        }
     }
 
     #[test]

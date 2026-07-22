@@ -183,6 +183,42 @@ option is an `overrides.xml` overlay to keep `app.xml` fully immutable; not yet
 implemented. Theme values are matched case-insensitively against the theme *set*
 names from `crates/nemo/src/theme/*.json` (`theme::get_theme_set_names`).
 
+# Project manifest (`nemo.toml`)
+
+A project may carry an **optional, additive** manifest at its root, parsed by
+`nemo-config`'s `manifest.rs` into `ProjectManifest { name, entry, build,
+dependencies }` (re-exported from `lib.rs`). It is distinct from the global
+`config.toml` above: `config.toml` is cross-project user prefs; `nemo.toml` is
+the per-project build/dependency manifest.
+
+```toml
+name  = "foo"
+entry = "app.xml"          # default "app.xml"
+
+[build]
+out  = "dist"              # default "dist"
+load = "source"            # "source" (default) | "dist"
+
+[dependencies]             # remote component libraries (resolution: later phase)
+"github.com/geoffjay/nemo-components" = "v1.2.0"
+```
+
+* `find_project_root(start)` walks up from a file or directory to the nearest
+  `nemo.toml` (the constant `MANIFEST_FILE`), returning the directory that holds
+  it — the project's only root marker.
+* **Manifest-aware launch** (`main.rs` `resolve_app_config_via_manifest`): when
+  `--app-config` is a **directory** or is **omitted**, the launcher resolves the
+  entry via the nearest manifest (`<root>/<entry>`). An explicit **file** path is
+  used unchanged, so existing `nemo --app-config app.xml` invocations are
+  untouched; when omitted with no manifest in scope, the project-loader screen
+  still shows. Manifest read/parse errors degrade gracefully to the loader on the
+  run path.
+* **`nemo build`** (`commands/build.rs`) resolves the root + manifest and, in
+  Phase 0, prints the build plan (a dry run). Ahead-of-time compilation and the
+  `dist/` load path are later phases. `[build] load = "dist"` and remote
+  `[dependencies]` are recorded but not yet acted on; `nemo dev` never uses
+  `dist`. See the [build-system plan](../plans/build-system.md).
+
 # Project-level custom themes
 
 Beyond selecting a shipped theme, a project can **define its own themes** and

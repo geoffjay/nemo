@@ -93,6 +93,18 @@ Each phase is independently shippable.
 
 ## Phase 0 — Manifest, project-root discovery, `nemo build` skeleton
 
+**Status: implemented.** `crates/nemo-config/src/manifest.rs` provides
+`ProjectManifest { name, entry, build: BuildConfig { out, load: LoadMode }, dependencies }`
+(serde/`toml`, `deny_unknown_fields`, defaults `entry="app.xml"`/`out="dist"`/`load=source`)
+and `find_project_root(start)` (walks up to the nearest `nemo.toml`, `MANIFEST_FILE`),
+re-exported from `lib.rs`. `nemo build [target]` (`args.rs` `BuildArgs`, `commands/build.rs`,
+main.rs dispatch) resolves the root + manifest and prints the build plan as a **dry run**
+(no compilation yet). `run_app` gained `resolve_app_config_via_manifest`: a directory or
+omitted `--app-config` resolves the entry via the nearest manifest; an explicit file path is
+unchanged (existing invocations untouched). Verified by manifest unit tests, `nemo build`
+e2e (explicit dir / walk-up / missing-entry warning / no-manifest error), and launch-path
+tests in `main.rs`.
+
 * New `crates/nemo-config/src/manifest.rs`: `ProjectManifest { name, entry, build, dependencies }`
   deserialized with `toml`; re-export from `nemo-config/src/lib.rs`.
 * `find_project_root(start) -> Option<PathBuf>`: walk up from cwd/target to find `nemo.toml`.
