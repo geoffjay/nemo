@@ -108,8 +108,9 @@ pub(crate) fn run_app(mut args: Args, watch: Option<Duration>) -> Result<()> {
     // omitted, resolve the app entry via the nearest `nemo.toml`. An explicit
     // file path is used as-is, so existing invocations are untouched; when the
     // path is omitted and no manifest is in scope, `app_config` stays `None` and
-    // the project-loader screen shows as before.
-    if let Some(resolved) = resolve_app_config_via_manifest(args.app_config.as_deref()) {
+    // the project-loader screen shows as before. With `--dist` (or the manifest's
+    // `load = "dist"`), the resolved path is the built `dist/layout.json` instead.
+    if let Some(resolved) = resolve_app_config_via_manifest(args.app_config.as_deref(), args.dist) {
         args.app_config = Some(resolved);
     }
 
@@ -197,19 +198,26 @@ pub(crate) fn run_app(mut args: Args, watch: Option<Duration>) -> Result<()> {
     Ok(())
 }
 
-/// Resolves the effective `app.xml` entry via the project manifest.
+/// Resolves the effective config path (source `app.xml` or a built
+/// `dist/layout.json`) via the project manifest.
 ///
-/// * A path to an existing **file** is returned unchanged (today's behavior).
-/// * A path to a **directory** resolves the nearest `nemo.toml` from that
-///   directory and returns `<root>/<manifest.entry>`.
+/// * A path to an existing **file** is returned unchanged (today's behavior);
+///   `force_dist` is ignored for an explicit file.
+/// * A path to a **directory** resolves the nearest `nemo.toml` from it.
 /// * A **nonexistent** path is returned unchanged, so the caller's own
 ///   not-found handling reports it.
 /// * When **omitted**, walks up from the current directory for a `nemo.toml`;
 ///   returns `None` (leaving the loader screen) when none is found.
 ///
-/// Any manifest read/parse error degrades gracefully to `None` on the run path;
-/// `nemo build` surfaces the same errors loudly.
-fn resolve_app_config_via_manifest(app_config: Option<&std::path::Path>) -> Option<PathBuf> {
+/// For the directory/omitted cases the result is `<root>/<manifest.entry>`
+/// normally, or `<root>/<manifest.build.out>/layout.json` when `force_dist` or the
+/// manifest's `load = "dist"` selects the built tree. Any manifest read/parse
+/// error degrades gracefully to `None` on the run path; `nemo build` surfaces the
+/// same errors loudly.
+fn resolve_app_config_via_manifest(
+    app_config: Option<&std::path::Path>,
+    force_dist: bool,
+) -> Option<PathBuf> {
     let start = match app_config {
         Some(p) if p.is_file() => return Some(p.to_path_buf()),
         Some(p) if p.is_dir() => p.to_path_buf(),
@@ -219,7 +227,15 @@ fn resolve_app_config_via_manifest(app_config: Option<&std::path::Path>) -> Opti
     let root = nemo_config::find_project_root(&start)?;
     let manifest =
         nemo_config::ProjectManifest::load(&root.join(nemo_config::MANIFEST_FILE)).ok()?;
-    Some(root.join(manifest.entry))
+    let use_dist = force_dist || manifest.build.load == nemo_config::LoadMode::Dist;
+    if use_dist {
+        Some(
+            root.join(&manifest.build.out)
+                .join(nemo_config::DIST_LAYOUT_FILE),
+        )
+    } else {
+        Some(root.join(manifest.entry))
+    }
 }
 
 /// Parameters for building and opening the main application window.
@@ -470,7 +486,7 @@ mod manifest_launch_tests {
         .unwrap();
         std::fs::write(dir.join("main.xml"), "<nemo/>").unwrap();
 
-        let resolved = resolve_app_config_via_manifest(Some(&dir));
+        let resolved = resolve_app_config_via_manifest(Some(&dir), false);
         assert_eq!(resolved, Some(dir.join("main.xml")));
 
         std::fs::remove_dir_all(&dir).ok();
@@ -484,7 +500,7 @@ mod manifest_launch_tests {
         std::fs::write(&file, "<nemo/>").unwrap();
 
         assert_eq!(
-            resolve_app_config_via_manifest(Some(&file)),
+            resolve_app_config_via_manifest(Some(&file), false),
             Some(file.clone())
         );
 
@@ -494,6 +510,50 @@ mod manifest_launch_tests {
     #[test]
     fn nonexistent_path_is_returned_unchanged() {
         let p = PathBuf::from("/no/such/path/app.xml");
-        assert_eq!(resolve_app_config_via_manifest(Some(&p)), Some(p));
+        assert_eq!(resolve_app_config_via_manifest(Some(&p), false), Some(p));
+    }
+
+    #[test]
+    fn dist_flag_resolves_to_built_layout() {
+        let dir = std::env::temp_dir().join(format!("nemo_launch_dist_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("nemo.toml"),
+            "name = \"t\"\n[build]\nout = \"dist\"\n",
+        )
+        .unwrap();
+        std::fs::write(dir.join("app.xml"), "<nemo/>").unwrap();
+
+        // --dist selects the built tree; source is unaffected without it.
+        assert_eq!(
+            resolve_app_config_via_manifest(Some(&dir), true),
+            Some(dir.join("dist").join("layout.json"))
+        );
+        assert_eq!(
+            resolve_app_config_via_manifest(Some(&dir), false),
+            Some(dir.join("app.xml"))
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn manifest_load_dist_selects_built_layout() {
+        let dir = std::env::temp_dir().join(format!("nemo_launch_loaddist_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("nemo.toml"),
+            "name = \"t\"\n[build]\nload = \"dist\"\n",
+        )
+        .unwrap();
+        std::fs::write(dir.join("app.xml"), "<nemo/>").unwrap();
+
+        // The manifest opts into dist even without the flag.
+        assert_eq!(
+            resolve_app_config_via_manifest(Some(&dir), false),
+            Some(dir.join("dist").join("layout.json"))
+        );
+
+        std::fs::remove_dir_all(&dir).ok();
     }
 }

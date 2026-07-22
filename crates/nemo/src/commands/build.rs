@@ -17,11 +17,13 @@
 //! composition concern deferred to load time).
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use nemo_config::{
-    find_project_root, sfc_default_tag, sfc_definition_to_value, PackageConfig, ProjectManifest,
-    Value, XmlParser, MANIFEST_FILE,
+    find_project_root, sfc_default_tag, sfc_definition_to_value, ConfigurationLoader,
+    PackageConfig, ProjectManifest, SchemaRegistry, Value, XmlParser, DIST_LAYOUT_FILE,
+    MANIFEST_FILE,
 };
 use serde::{Deserialize, Serialize};
 
@@ -51,7 +53,7 @@ pub fn run(args: BuildArgs) -> Result<()> {
 
     match &manifest.package {
         Some(pkg) => build_package(&root, &manifest, pkg),
-        None => print_project_plan(&root, &manifest),
+        None => build_project(&root, &manifest),
     }
 }
 
@@ -102,36 +104,58 @@ fn build_package(root: &Path, manifest: &ProjectManifest, pkg: &PackageConfig) -
     Ok(())
 }
 
-/// Phase-0 dry run for a plain app project (compiling to a loadable `dist/` is
-/// Phase 2).
-fn print_project_plan(root: &Path, manifest: &ProjectManifest) -> Result<()> {
+/// Builds an app project to a loadable `dist/` tree: runs the load pipeline once
+/// (parse + `${}` resolve + `<import>`/`<include>` inlining) and serializes the
+/// resolved config `Value` to `<out>/layout.json`. Loading that tree with
+/// `--dist` (or manifest `load = "dist"`) reproduces the same render, skipping
+/// the parse/resolve work — `ConfigurationLoader::load_from_dist` returns the
+/// same `Value` the source path produces.
+fn build_project(root: &Path, manifest: &ProjectManifest) -> Result<()> {
     let entry = root.join(&manifest.entry);
-    let out = root.join(&manifest.build.out);
+    if !entry.is_file() {
+        bail!("entry file {} does not exist", entry.display());
+    }
 
-    println!("Build plan (dry run — project compilation is Phase 2)");
-    println!("  project:  {}", manifest.name);
-    println!("  root:     {}", root.display());
-    println!("  entry:    {}", entry.display());
-    println!("  output:   {}", out.display());
-    println!("  load:     {:?}", manifest.build.load);
-    if !manifest.dependencies.is_empty() {
-        println!("  dependencies:");
-        for (module, version) in &manifest.dependencies {
-            println!("    {module} = {version}");
+    let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
+    let config = loader
+        .load(&entry)
+        .map_err(|e| anyhow!("loading {}: {e}", entry.display()))?;
+
+    let out = root.join(&manifest.build.out);
+    warn_external_refs(&config);
+
+    std::fs::create_dir_all(&out).with_context(|| format!("creating {}", out.display()))?;
+    let layout_path = out.join(DIST_LAYOUT_FILE);
+    let json = serde_json::to_string_pretty(&config).context("serializing resolved config")?;
+    std::fs::write(&layout_path, format!("{json}\n"))
+        .with_context(|| format!("writing {}", layout_path.display()))?;
+
+    println!("Built {} → {}", manifest.name, layout_path.display());
+    println!("Load it with:  nemo --app-config {} --dist", root.display());
+    Ok(())
+}
+
+/// Warns about config that references external files a self-contained `dist/`
+/// would need but that Phase 2 does not yet copy/rewrite. SFC `<script>` bodies
+/// are inline in the config (self-contained); named/built-in themes need no file.
+fn warn_external_refs(config: &Value) {
+    if let Some(scripts) = config.get("scripts") {
+        if scripts.get("path").is_some() || scripts.get("files").is_some() {
+            eprintln!(
+                "warning: <script path/files> references external .rhai files that are not yet \
+                 copied into dist/ — a --dist run won't find them (Phase 2 limitation). Inline \
+                 SFC <script> bodies are unaffected."
+            );
         }
     }
-    if !entry.is_file() {
-        eprintln!(
-            "\nwarning: entry file {} does not exist yet",
-            entry.display()
-        );
+    if let Some(themes) = config.get("themes").and_then(|v| v.as_array()) {
+        if themes.iter().any(|t| t.get("src").is_some()) {
+            eprintln!(
+                "warning: <themes src> references external JSON not yet copied into dist/ — a \
+                 --dist run won't find it (Phase 2 limitation)."
+            );
+        }
     }
-    println!(
-        "\nnote: this is an app project (no [package]); building it to a loadable \
-         dist/ tree is Phase 2. To compile an individual component now, run \
-         `nemo build <file.nemo>`."
-    );
-    Ok(())
 }
 
 /// Resolves the output base for a lone component file: the enclosing project's
@@ -368,5 +392,39 @@ mod tests {
             "artifact template equals the runtime's TemplateMap entry"
         );
         std::fs::remove_dir_all(dir).ok();
+    }
+
+    // Phase 2: a built dist/ must reload to the exact config Value the source
+    // path produces, so the render tree is identical.
+    #[test]
+    fn project_build_round_trips_via_dist() {
+        let root = std::env::temp_dir().join(format!("nemo_proj_{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("card.nemo"), CARD).unwrap();
+        std::fs::write(
+            root.join("app.xml"),
+            r#"<nemo>
+                 <app title="T"><theme name="nord" mode="dark" /></app>
+                 <imports><import src="./card.nemo" /></imports>
+                 <layout type="stack"><card id="c" title="hi" /></layout>
+               </nemo>"#,
+        )
+        .unwrap();
+        let manifest = nemo_config::ProjectManifest::parse("name = \"p\"\n").unwrap();
+
+        // Build → dist/layout.json.
+        build_project(&root, &manifest).unwrap();
+        assert!(root.join("dist").join("layout.json").is_file());
+
+        // Source-loaded config vs dist-loaded config must be identical.
+        let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
+        let from_source = loader.load(&root.join("app.xml")).unwrap();
+        let from_dist = loader.load_from_dist(&root.join("dist")).unwrap();
+        assert_eq!(
+            from_source, from_dist,
+            "dist reload equals the source-resolved config"
+        );
+
+        std::fs::remove_dir_all(&root).ok();
     }
 }

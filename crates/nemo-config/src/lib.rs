@@ -16,7 +16,7 @@ mod value;
 mod xml_parser;
 
 pub use error::{ConfigError, ErrorCode, ParseError, ResolveError, SchemaError, ValidationError};
-pub use loader::ConfigurationLoader;
+pub use loader::{ConfigurationLoader, DIST_LAYOUT_FILE};
 pub use location::SourceLocation;
 pub use manifest::{
     find_project_root, BuildConfig, LoadMode, ManifestError, PackageConfig, ProjectManifest,

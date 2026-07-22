@@ -134,8 +134,8 @@ tags needs no tag-rewrite). Tag derivation is the new canonical `nemo_config::sf
 supplies the `script`/`props`/`slots` in `config["sfc"]` shape. Artifact:
 `{ tag, template, script?, props?, slots?, meta: { name, source } }`. Manifest gained an
 optional `[package] exports = [...]` (`PackageConfig`); a package build with no `exports`
-falls back to every top-level `.nemo`. A plain app project (no `[package]`) still prints the
-Phase-0 dry-run plan (project→`dist/` is Phase 2). Verified: round-trip (compiled template ==
+falls back to every top-level `.nemo`. A plain app project (no `[package]`) is built to a
+loadable `dist/` (Phase 2, below). Verified: round-trip (compiled template ==
 config-path `TemplateMap` entry), JSON serialize/deserialize equality, style-fold + handler
 rewrite on a fixture, and e2e single-file/package builds against `examples/sfc/components/`.
 
@@ -153,6 +153,28 @@ rewrite on a fixture, and e2e single-file/package builds against `examples/sfc/c
 
 `nemo build examples/foo` → `examples/foo/dist/`; `nemo run foo --dist` (or manifest
 `load = "dist"`) loads the built tree, skipping parse/expand.
+
+**Status: implemented.** `nemo build <app-project>` runs `ConfigurationLoader::load` once
+(XML parse + `${}` resolve + `<import>`/`<include>` inlining) and serializes the resolved
+config `Value` to `<out>/layout.json`. `ConfigurationLoader::load_from_dist(dir)` (nemo-config)
+deserializes it back to the identical `Value`. Loading is gated by a new top-level `--dist`
+flag or the manifest's `load = "dist"`: `resolve_app_config_via_manifest(app_config,
+force_dist)` returns `<out>/layout.json` instead of the source entry, and `NemoRuntime::
+load_config` treats a `.json` config path as a dist tree (calling `load_from_dist`). Because
+the runtime keys scripts/themes off the config path's parent, a `dist/layout.json` path makes
+the built tree self-contained for the common case (inline SFC `<script>` bodies + named/built-in
+themes). **Boundary note (deviation from the sketch below):** the serialized `Value` is the
+*post-`load`* resolved config, **not** post-`expand_children`. Keeping `config["sfc"]` in the
+tree (so SFC scripts still load) makes the runtime's expand step idempotent, so pre-expanding
+buys no behavioral change; the expand-skip optimization is deferred and can move the boundary
+later without changing the load contract. **Limitation:** external `<script path/files>` and
+`<themes src>` files are **not yet copied/rewritten** into `dist/` — `nemo build` warns when it
+sees them (a Phase-2.1 follow-up); inline SFC scripts are unaffected. `dist/` + `.nemo/packages/`
+are gitignored. Verified: `load_from_dist` round-trip unit tests; a project build→reload config
+equality test; and e2e — `nemo build examples/sfc` emits `dist/layout.json`, and a headless run
+loads source and `--dist` identically (both load the `sfc:labeled_button` script and reach init
+complete). `nemo dev` never uses dist. **Deferred within Phase 2:** emitting `dist/components/`
+for a project (the layout is self-sufficient) and the post-expand serialize boundary.
 
 * Build runs the pipeline **once**: `ConfigurationLoader::load` → SFC registration +
   style-fold + `rewrite_sfc_tags` → `expand_children` → serialize the **post-`expand_children`

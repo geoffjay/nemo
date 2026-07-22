@@ -221,10 +221,18 @@ load = "source"            # "source" (default) | "dist"
   * A `[package] exports = [...]` table (`PackageConfig`) marks a **component
     library**; `nemo build <dir>` compiles each exported component (or, with no
     `exports`, every top-level `.nemo`).
-  * A plain app project (no `[package]`) prints a dry-run plan — compiling a
-    project to a loadable `dist/` tree is Phase 2. `[build] load = "dist"` and
-    remote `[dependencies]` are recorded but not yet acted on; `nemo dev` never
-    uses `dist`. See the [build-system plan](../plans/build-system.md).
+  * `nemo build <app-project>` (no `[package]`) builds the app to a loadable
+    `dist/`: it runs `ConfigurationLoader::load` once and serializes the resolved
+    config `Value` to `<out>/layout.json`. `ConfigurationLoader::load_from_dist`
+    reads it back to the identical `Value`.
+  * **Loading a built tree** is opt-in via the `--dist` flag or the manifest's
+    `[build] load = "dist"`: launch resolution then points at `<out>/layout.json`,
+    and the runtime treats a `.json` config path as a dist tree (scripts/themes
+    resolve within `dist/`, so it is self-contained for inline SFC scripts +
+    named themes). The default stays **source**, and `nemo dev` never uses dist.
+    External `<script path/files>`/`<themes src>` files aren't yet copied into
+    `dist/` (`nemo build` warns). Remote `[dependencies]` are recorded but not yet
+    resolved (Phase 3). See the [build-system plan](../plans/build-system.md).
 
 # Project-level custom themes
 

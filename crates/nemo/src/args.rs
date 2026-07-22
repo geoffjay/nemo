@@ -50,6 +50,14 @@ pub struct Args {
     #[arg(long)]
     pub validate_only: bool,
 
+    /// Load a previously built `dist/` tree instead of the source `app.xml`.
+    ///
+    /// Requires a project (`nemo.toml`) and a prior `nemo build`. Equivalent to
+    /// the manifest's `[build] load = "dist"`. Only meaningful when `--app-config`
+    /// is a project directory or omitted; ignored for an explicit file path.
+    #[arg(long)]
+    pub dist: bool,
+
     /// Start a `<router>` at this route instead of its `default`.
     ///
     /// `--route /users/42` targets the primary router; `--route settings=/general`

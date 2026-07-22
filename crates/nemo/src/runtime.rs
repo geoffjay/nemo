@@ -237,10 +237,29 @@ impl NemoRuntime {
         info!("Loading configuration...");
 
         if self.config_path.exists() {
-            let loaded = self
-                .config_loader
-                .load(&self.config_path)
-                .map_err(|e| anyhow::anyhow!("Failed to load config file: {}", e))?;
+            // A `.json` config path is a built `dist/` tree (a serialized resolved
+            // config `Value`), loaded back without re-parsing/resolving; anything
+            // else is a source `app.xml`. Scripts/themes resolve relative to the
+            // config path's parent either way, so a `dist/layout.json` path makes
+            // a built tree self-contained. See ConfigurationLoader::load_from_dist.
+            let is_dist = self
+                .config_path
+                .extension()
+                .map(|e| e == "json")
+                .unwrap_or(false);
+            let loaded = if is_dist {
+                let dir = self
+                    .config_path
+                    .parent()
+                    .unwrap_or_else(|| std::path::Path::new("."));
+                self.config_loader
+                    .load_from_dist(dir)
+                    .map_err(|e| anyhow::anyhow!("Failed to load built dist tree: {}", e))?
+            } else {
+                self.config_loader
+                    .load(&self.config_path)
+                    .map_err(|e| anyhow::anyhow!("Failed to load config file: {}", e))?
+            };
 
             {
                 let mut config = self.config.write().expect("config lock poisoned");
