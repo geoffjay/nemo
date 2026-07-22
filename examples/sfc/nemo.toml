@@ -1,0 +1,11 @@
+# Project manifest for the single-file-components demo.
+#
+# This is an app project (its app.xml is a full application), so it has no
+# [package] table. The manifest lets the app launch via project resolution
+# (`nemo --app-config examples/sfc`) and drives `nemo build`.
+name  = "sfc"
+entry = "app.xml"
+
+[build]
+out  = "dist"
+load = "source"
