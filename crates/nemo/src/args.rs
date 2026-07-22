@@ -84,6 +84,9 @@ pub enum Command {
     /// Compile a project ahead-of-time (Phase 0: resolve the manifest and print
     /// the build plan).
     Build(BuildArgs),
+    /// Fetch remote component-library dependencies into `.nemo/packages` and
+    /// write `nemo.lock`.
+    Get(GetArgs),
     /// Render an application to a PNG image and exit (macOS-first).
     ///
     /// Requires a build with `--features screenshot` (enables gpui's offscreen
@@ -194,6 +197,14 @@ pub enum SchemaFormat {
 pub struct BuildArgs {
     /// Project directory (or a file inside it) to build. Defaults to the current
     /// directory; the nearest `nemo.toml` walking up marks the project root.
+    pub target: Option<PathBuf>,
+}
+
+/// Arguments for `nemo get`.
+#[derive(clap::Args, Debug)]
+pub struct GetArgs {
+    /// Project directory (or a file inside it) whose `nemo.toml` dependencies to
+    /// fetch. Defaults to the current directory (walks up to find `nemo.toml`).
     pub target: Option<PathBuf>,
 }
 
@@ -375,6 +386,15 @@ mod tests {
         match args.command {
             Some(Command::Build(b)) => assert!(b.target.is_none()),
             other => panic!("expected Build, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn get_subcommand_parses() {
+        let args = Args::try_parse_from(["nemo", "get", "examples/foo"]).unwrap();
+        match args.command {
+            Some(Command::Get(g)) => assert_eq!(g.target, Some(PathBuf::from("examples/foo"))),
+            other => panic!("expected Get, got {other:?}"),
         }
     }
 

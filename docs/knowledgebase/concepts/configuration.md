@@ -65,6 +65,14 @@ Parsing/compilation touches three places:
    `labeled_button`). The **resolver skips the `sfc` subtree** — SFC bodies use
    bare `${prop}` placeholders on the *runtime* vars/interpolation path, not
    `${var.x}`/`${env.x}` load-time resolution.
+   - A **remote module** `src` (`github.com/owner/repo`, classified by
+     `pkg::is_module_path`) instead resolves against the `.nemo/packages` cache
+     and registers **all** the package's top-level `.nemo` (like `<components
+     dir>`); `as="nf"` becomes a tag-namespace prefix (`nf_card`). Fetch the
+     package first with **`nemo get`** — it clones each `[dependencies]` module
+     (git) into `.nemo/packages/<module>@<version>` and pins the commit in
+     `nemo.lock`; the loader threads that lock + cache dir into the parser. See
+     the [build-system plan](../plans/build-system.md).
 3. **`parse_layout_config`** (`runtime.rs`) folds each SFC's `<style>` block onto
    its template nodes as inline attributes (`fold_sfc_styles`; type + `#id`
    selectors, constrained to the universal style attributes), then merges the

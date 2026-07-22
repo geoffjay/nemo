@@ -11,6 +11,7 @@
 
 pub mod build;
 pub mod dev;
+pub mod get;
 pub mod new;
 pub mod schema;
 #[cfg(feature = "screenshot")]

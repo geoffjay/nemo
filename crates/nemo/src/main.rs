@@ -69,6 +69,7 @@ fn main() -> Result<()> {
         Some(Command::Validate(validate_args)) => commands::validate::run(validate_args),
         Some(Command::Schema(schema_args)) => commands::schema::run(schema_args),
         Some(Command::Build(build_args)) => commands::build::run(build_args),
+        Some(Command::Get(get_args)) => commands::get::run(get_args),
         Some(Command::Screenshot(shot_args)) => dispatch_screenshot(shot_args),
         None => {
             let watch = args

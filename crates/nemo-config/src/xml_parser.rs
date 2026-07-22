@@ -7,6 +7,7 @@ use indexmap::IndexMap;
 use quick_xml::events::{BytesCData, BytesStart, Event};
 use quick_xml::Reader;
 use std::cell::Cell;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 /// A parsed single-file component (`.nemo` SFC).
@@ -87,6 +88,11 @@ pub struct XmlParser {
     /// `__anon_1`) would collapse into one — the classic "all labels show the
     /// last one's text" bug. `Cell` gives interior mutability under `&self`.
     anon_counter: Cell<usize>,
+    /// The `.nemo/packages` cache dir, set when the project root is known, so a
+    /// remote module `<import src="github.com/…">` resolves against the cache.
+    packages_dir: Option<PathBuf>,
+    /// `module → version` from `nemo.lock`, used to pick the cached package dir.
+    locked_versions: BTreeMap<String, String>,
 }
 
 impl XmlParser {
@@ -96,7 +102,21 @@ impl XmlParser {
             source_name: "<input>".to_string(),
             base_dir: None,
             anon_counter: Cell::new(0),
+            packages_dir: None,
+            locked_versions: BTreeMap::new(),
         }
+    }
+
+    /// Sets the remote-package cache dir and the locked `module → version` map,
+    /// so module imports resolve against `.nemo/packages`.
+    pub fn with_packages(
+        mut self,
+        packages_dir: impl Into<PathBuf>,
+        locked_versions: BTreeMap<String, String>,
+    ) -> Self {
+        self.packages_dir = Some(packages_dir.into());
+        self.locked_versions = locked_versions;
+        self
     }
 
     /// Sets the source name for error messages.
@@ -948,10 +968,14 @@ impl XmlParser {
         }
     }
 
-    /// Processes an `<import src="…" [as="tag"]>` element: parses the referenced
-    /// `.nemo` file and stores it under the top-level `sfc` map, keyed by tag.
+    /// Processes an `<import src="…" [as="tag"]>` element.
     ///
-    /// Tag resolution order: `as=` attribute > `<template name>` > filename stem.
+    /// A **local** `src` (`./x.nemo`, or an existing file) parses that one `.nemo`
+    /// and stores it under the top-level `sfc` map, keyed by tag (resolution
+    /// order: `as=` > `<template name>` > filename stem). A **remote module**
+    /// `src` (`github.com/owner/repo`) resolves against the `.nemo/packages` cache
+    /// and brings in *all* exported components of the package (like
+    /// `<components dir>`); `as=` becomes a tag-namespace prefix (`nf` → `nf_card`).
     fn process_import(
         &self,
         obj: &IndexMap<String, Value>,
@@ -965,6 +989,24 @@ impl XmlParser {
             Some(s) => s,
             None => return Ok(()),
         };
+
+        // Remote module import: resolve against `.nemo/packages` and register the
+        // whole package. A local file with the same spelling (rare) wins if it
+        // exists, keeping local paths unambiguous.
+        if crate::pkg::is_module_path(src) && !self.resolve_path(src).exists() {
+            let dir = self.resolve_package_dir(src).ok_or_else(|| {
+                ParseError::new(
+                    format!("module '{src}' is not in the package cache — run `nemo get` first"),
+                    SourceLocation::new(&self.source_name, 1, 1),
+                )
+            })?;
+            let prefix = obj
+                .get("as")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(kebab_to_snake);
+            return self.register_components_from_dir(&dir, result, prefix.as_deref());
+        }
 
         let import_path = self.resolve_path(src);
 
@@ -986,7 +1028,9 @@ impl XmlParser {
             )
         })?;
 
-        let sfc_parser = XmlParser::new().with_source_name(import_path.display().to_string());
+        let sfc_parser = XmlParser::new()
+            .with_source_name(import_path.display().to_string())
+            .with_base_dir(import_path.parent().unwrap_or_else(|| Path::new(".")));
         let sfc = sfc_parser.parse_sfc(&content)?;
 
         // Resolve the tag: as= > <template name> > filename stem. The `as=`
@@ -1091,9 +1135,21 @@ impl XmlParser {
                 SourceLocation::new(&self.source_name, 1, 1),
             ));
         }
+        self.register_components_from_dir(&dir, result, None)
+    }
 
-        // Collect and sort `.nemo` paths so registration order is deterministic.
-        let mut paths: Vec<PathBuf> = std::fs::read_dir(&dir)
+    /// Registers every top-level `*.nemo` in `dir` as an SFC (sorted for
+    /// deterministic order). The tag is the file's `<template name>` or filename
+    /// stem (kebab→snake); when `tag_prefix` is `Some(p)`, each tag becomes
+    /// `<p>_<tag>` (the `as=` namespace for a module import). Each sub-parser gets
+    /// `dir` as its base dir so package-internal relative paths resolve locally.
+    fn register_components_from_dir(
+        &self,
+        dir: &Path,
+        result: &mut IndexMap<String, Value>,
+        tag_prefix: Option<&str>,
+    ) -> Result<(), ParseError> {
+        let mut paths: Vec<PathBuf> = std::fs::read_dir(dir)
             .map_err(|e| {
                 ParseError::new(
                     format!("Failed to read components dir {}: {}", dir.display(), e),
@@ -1113,15 +1169,50 @@ impl XmlParser {
                     SourceLocation::new(&self.source_name, 1, 1),
                 )
             })?;
-            let sfc_parser = XmlParser::new().with_source_name(path.display().to_string());
+            let sfc_parser = XmlParser::new()
+                .with_source_name(path.display().to_string())
+                .with_base_dir(path.parent().unwrap_or(dir));
             let sfc = sfc_parser.parse_sfc(&content)?;
-            let tag = sfc_default_tag(sfc.name.as_deref(), &path);
-            if let Some(tag) = tag {
+            if let Some(mut tag) = sfc_default_tag(sfc.name.as_deref(), &path) {
+                if let Some(prefix) = tag_prefix {
+                    tag = format!("{prefix}_{tag}");
+                }
                 let entry = Self::sfc_to_value(sfc, &path.display().to_string());
                 Self::register_sfc(result, tag, entry);
             }
         }
         Ok(())
+    }
+
+    /// Resolves a remote module path to its cached package directory under
+    /// `.nemo/packages`. Prefers the version pinned in `nemo.lock`; falls back to
+    /// any single cached `<module>@*` version. Returns `None` when the package
+    /// cache is unknown or the module is not cached.
+    fn resolve_package_dir(&self, module: &str) -> Option<PathBuf> {
+        let base = self.packages_dir.as_ref()?;
+        if let Some(version) = self.locked_versions.get(module) {
+            let dir = base.join(format!("{module}@{version}"));
+            if dir.is_dir() {
+                return Some(dir);
+            }
+        }
+        // Fallback: any cached version of the module (`<last-segment>@*`).
+        let (parent, last) = match module.rsplit_once('/') {
+            Some((p, l)) => (base.join(p), l.to_string()),
+            None => (base.clone(), module.to_string()),
+        };
+        let prefix = format!("{last}@");
+        std::fs::read_dir(&parent)
+            .ok()?
+            .flatten()
+            .map(|e| e.path())
+            .find(|p| {
+                p.is_dir()
+                    && p.file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|n| n.starts_with(&prefix))
+                        .unwrap_or(false)
+            })
     }
 
     /// Processes a <layout> element into the layout structure.

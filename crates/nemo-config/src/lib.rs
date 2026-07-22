@@ -8,6 +8,7 @@ mod loader;
 mod location;
 mod manifest;
 mod path;
+mod pkg;
 mod registry;
 mod resolver;
 mod schema;
@@ -23,6 +24,7 @@ pub use manifest::{
     MANIFEST_FILE,
 };
 pub use path::{ConfigPath, PathParseError, PathSegment};
+pub use pkg::{is_module_path, package_dir, packages_dir, LockedPackage, Lockfile, LOCKFILE};
 pub use registry::SchemaRegistry;
 pub use resolver::{ConfigFunction, ConfigResolver, ResolveContext};
 pub use schema::{ConfigSchema, PropertySchema, ValidationRule, ValueType};

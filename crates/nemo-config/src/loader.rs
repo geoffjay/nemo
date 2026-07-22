@@ -51,6 +51,14 @@ impl ConfigurationLoader {
         let mut parser = XmlParser::new().with_source_name(source_name);
         if let Some(dir) = base_dir {
             parser = parser.with_base_dir(dir);
+            // When the file sits inside a project, expose the `.nemo/packages`
+            // cache + `nemo.lock` versions so remote module imports resolve.
+            if let Some(root) = crate::manifest::find_project_root(dir) {
+                let versions = crate::pkg::Lockfile::load(&root.join(crate::pkg::LOCKFILE))
+                    .unwrap_or_default()
+                    .versions();
+                parser = parser.with_packages(crate::pkg::packages_dir(&root), versions);
+            }
         }
 
         let raw_value = parser.parse(content).map_err(ConfigError::Parse)?;
@@ -208,6 +216,45 @@ mod tests {
         );
 
         std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn test_module_import_resolves_from_package_cache() {
+        let loader = create_test_loader();
+        let root = std::env::temp_dir().join(format!("nemo_pkg_import_{}", std::process::id()));
+        // Marker file makes this a project root.
+        std::fs::create_dir_all(&root).unwrap();
+        std::fs::write(root.join("nemo.toml"), "name = \"app\"\n").unwrap();
+        // A cached package with one component, pinned by nemo.lock.
+        let pkg = root.join(".nemo/packages/example.com/lib@v1.0.0");
+        std::fs::create_dir_all(&pkg).unwrap();
+        std::fs::write(
+            pkg.join("card.nemo"),
+            "<template name=\"card\"><panel><slot /></panel></template>",
+        )
+        .unwrap();
+        std::fs::write(
+            root.join("nemo.lock"),
+            "[[package]]\nmodule = \"example.com/lib\"\nversion = \"v1.0.0\"\ncommit = \"abc\"\n",
+        )
+        .unwrap();
+
+        let xml = r#"<nemo>
+            <imports><import src="example.com/lib" as="nf" /></imports>
+            <layout type="stack"><nf-card id="c" /></layout>
+        </nemo>"#;
+        let config = loader
+            .load_xml_string(xml, "app.xml", Some(root.as_path()))
+            .unwrap();
+
+        let sfc = config.get("sfc").and_then(|v| v.as_object()).unwrap();
+        assert!(
+            sfc.contains_key("nf_card"),
+            "namespaced module component registered; got {:?}",
+            sfc.keys().collect::<Vec<_>>()
+        );
+
+        std::fs::remove_dir_all(&root).ok();
     }
 
     #[test]

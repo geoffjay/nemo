@@ -197,6 +197,31 @@ for a project (the layout is self-sufficient) and the post-expand serialize boun
 `.nemo/packages` dev cache and exposes its exported tags — the Go module model, XML-native.
 Grouped/multiple imports are just multiple `[dependencies]` keys / `<import>` elements.
 
+**Status: implemented.** **Deviation from the sketch below:** there is **no new `nemo-pkg`
+crate** — fetching shells out to the `git` CLI (`std::process`), so no VCS *crate* dependency
+exists to isolate, and the workspace/Cargo.lock stay unchanged. Pure logic lives in
+`nemo-config`'s new `pkg` module: `is_module_path` (a `src` is a module when its first
+`/`-segment is host-like — contains a `.` — with at least one more segment, and it isn't
+`./`/`../`/absolute); `packages_dir`/`package_dir` (`.nemo/packages/<module>@<version>`); and
+`Lockfile` (`nemo.lock`, TOML `[[package]]` array of `{module, version, commit}`, deterministic
+via module-sorted output). `nemo get` (`commands/get.rs`) reads `[dependencies]`, clones each
+`https://<module>` at its tag into the cache (`--depth 1 --branch <version>`), pins the resolved
+`git rev-parse HEAD` in `nemo.lock`, and is idempotent (re-uses an existing checkout). A
+`NEMO_PACKAGE_BASE` env seam overrides the `https://` base (offline mirrors / a local repo in
+tests). **Resolution:** `xml_parser::process_import` treats a module `src` as a package —
+resolving it against the cache (lock version, else any cached `<module>@*`) and registering
+**all** its top-level `.nemo` via the shared `register_components_from_dir`, with `as="nf"` a
+tag-namespace prefix (`nf_<tag>`); a same-named local file still wins if present. `Configuration
+Loader::load_xml_string` finds the project root from `base_dir` and threads
+`packages_dir` + `nemo.lock` versions into the parser. **Base_dir gap fixed:** the `<import>`
+and `<components dir>` SFC sub-parsers now get `with_base_dir` so package-internal relative
+paths resolve locally. Verified: `pkg` unit tests (classification, paths, lockfile round-trip),
+a loader test resolving a namespaced module import from a fixture cache, a `fetch_git` test
+against a local tagged repo (commit pinned, idempotent), and an e2e — `nemo get` from a local
+`file://` remote populates `.nemo/packages` + `nemo.lock`, then `nemo validate --strict` and
+`nemo build` resolve/emit the `nf_card` tag. **Deferred:** version-range resolution (tags are
+taken verbatim), transitive dependency resolution, and `.git` cleanup in the cache.
+
 * **Fetch** — isolate git/network in a new small crate `crates/nemo-pkg` (keeps VCS deps out
   of `nemo-config`). `nemo get` (new subcommand, or folded into `nemo build`): for each
   dependency, `git clone`/`fetch` `https://<modulepath>` at the tagged version into
