@@ -19,7 +19,8 @@ pub use error::{ConfigError, ErrorCode, ParseError, ResolveError, SchemaError, V
 pub use loader::ConfigurationLoader;
 pub use location::SourceLocation;
 pub use manifest::{
-    find_project_root, BuildConfig, LoadMode, ManifestError, ProjectManifest, MANIFEST_FILE,
+    find_project_root, BuildConfig, LoadMode, ManifestError, PackageConfig, ProjectManifest,
+    MANIFEST_FILE,
 };
 pub use path::{ConfigPath, PathParseError, PathSegment};
 pub use registry::SchemaRegistry;
@@ -27,7 +28,9 @@ pub use resolver::{ConfigFunction, ConfigResolver, ResolveContext};
 pub use schema::{ConfigSchema, PropertySchema, ValidationRule, ValueType};
 pub use validator::{ConfigValidator, ValidationResult};
 pub use value::Value;
-pub use xml_parser::{SfcDefinition, SfcProp, SfcSlot, XmlParser};
+pub use xml_parser::{
+    sfc_default_tag, sfc_definition_to_value, SfcDefinition, SfcProp, SfcSlot, XmlParser,
+};
 
 #[cfg(test)]
 mod tests {

@@ -2234,7 +2234,9 @@ fn scalar_to_string(value: &Value) -> Option<String> {
 /// `sfc:<tag>::<fn>`, so template-authored handlers route to the SFC's own
 /// script. Already-qualified refs (containing `::`) and instance-supplied
 /// handlers (overlaid later via deep-merge) are left untouched.
-fn rewrite_sfc_handlers(value: &Value, tag: &str) -> Value {
+///
+/// `pub(crate)` so `nemo build` can run this transform ahead-of-time (Phase 1).
+pub(crate) fn rewrite_sfc_handlers(value: &Value, tag: &str) -> Value {
     match value {
         Value::Object(obj) => {
             let mut result = indexmap::IndexMap::new();
@@ -2434,7 +2436,9 @@ fn parse_style_rules(css: &str, tag: &str) -> Vec<StyleRule> {
 /// then walks the template applying each matching rule's declarations as inline
 /// props where the attribute is absent (so template inline attrs win). Returns
 /// the template unchanged when there are no applicable rules.
-fn fold_sfc_styles(body: &Value, css: &str, tag: &str) -> Value {
+///
+/// `pub(crate)` so `nemo build` can run this transform ahead-of-time (Phase 1).
+pub(crate) fn fold_sfc_styles(body: &Value, css: &str, tag: &str) -> Value {
     let rules = parse_style_rules(css, tag);
     if rules.is_empty() {
         return body.clone();

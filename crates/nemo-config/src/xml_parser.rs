@@ -989,28 +989,22 @@ impl XmlParser {
         let sfc_parser = XmlParser::new().with_source_name(import_path.display().to_string());
         let sfc = sfc_parser.parse_sfc(&content)?;
 
-        // Resolve the tag: as= > <template name> > filename stem. Element names
-        // are kebab→snake normalized everywhere else (a `<labeled-button>` usage
-        // parses to type `labeled_button`), so normalize the tag the same way for
-        // a consistent match against layout node types.
-        let tag = obj
+        // Resolve the tag: as= > <template name> > filename stem. The `as=`
+        // override is kebab→snake normalized like the rest; the name/stem
+        // fallback is the canonical `sfc_default_tag` derivation.
+        let tag = match obj
             .get("as")
             .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
-            .or_else(|| sfc.name.clone())
-            .or_else(|| {
-                import_path
-                    .file_stem()
-                    .map(|s| s.to_string_lossy().to_string())
-            })
             .filter(|s| !s.is_empty())
-            .map(|s| kebab_to_snake(&s))
-            .ok_or_else(|| {
+        {
+            Some(alias) => kebab_to_snake(alias),
+            None => sfc_default_tag(sfc.name.as_deref(), &import_path).ok_or_else(|| {
                 ParseError::new(
                     format!("Could not determine a tag name for import '{}'", src),
                     SourceLocation::new(&self.source_name, 1, 1),
                 )
-            })?;
+            })?,
+        };
 
         let entry = Self::sfc_to_value(sfc, &import_path.display().to_string());
         Self::register_sfc(result, tag, entry);
@@ -1121,12 +1115,7 @@ impl XmlParser {
             })?;
             let sfc_parser = XmlParser::new().with_source_name(path.display().to_string());
             let sfc = sfc_parser.parse_sfc(&content)?;
-            let tag = sfc
-                .name
-                .clone()
-                .or_else(|| path.file_stem().map(|s| s.to_string_lossy().to_string()))
-                .filter(|s| !s.is_empty())
-                .map(|s| kebab_to_snake(&s));
+            let tag = sfc_default_tag(sfc.name.as_deref(), &path);
             if let Some(tag) = tag {
                 let entry = Self::sfc_to_value(sfc, &path.display().to_string());
                 Self::register_sfc(result, tag, entry);
@@ -1485,6 +1474,32 @@ impl Default for XmlParser {
 /// Converts kebab-case to snake_case.
 fn kebab_to_snake(s: &str) -> String {
     s.replace('-', "_")
+}
+
+/// Flattens an [`SfcDefinition`] into the `Value` stored under `config["sfc"][tag]`
+/// (`template`/`style`/`script`/`props`/`slots`/`source_path`). Public so
+/// `nemo build` produces artifacts in the same shape the runtime reads back.
+pub fn sfc_definition_to_value(sfc: SfcDefinition, source_path: &str) -> Value {
+    XmlParser::sfc_to_value(sfc, source_path)
+}
+
+/// Derives the SFC registration tag from an optional `<template name>` and the
+/// source file path (filename-stem fallback), kebab→snake normalized (a
+/// `<labeled-button>` usage parses to type `labeled_button`, so tags match).
+///
+/// This is the canonical derivation shared by `<import>` (which layers its `as=`
+/// override on top), `<components dir>`, and `nemo build`. Returns `None` when
+/// neither a template name nor a usable filename stem is available.
+pub fn sfc_default_tag(template_name: Option<&str>, source_path: &Path) -> Option<String> {
+    template_name
+        .map(|s| s.to_string())
+        .or_else(|| {
+            source_path
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+        })
+        .filter(|s| !s.is_empty())
+        .map(|s| kebab_to_snake(&s))
 }
 
 /// Coerces a string value to the appropriate Value type.

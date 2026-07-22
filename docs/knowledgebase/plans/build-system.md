@@ -123,6 +123,22 @@ tests in `main.rs`.
 `nemo build path/to/button-group.nemo` → a compiled component artifact (the unit a library
 ships).
 
+**Status: implemented.** `commands/build.rs` compiles a single `.nemo` file (or every
+exported component of a `[package]` library) to a JSON artifact at
+`<out>/components/<tag>.json`. It reuses `XmlParser::parse_sfc` → `SfcDefinition`, then runs
+the runtime's own transforms ahead-of-time — `crate::runtime::fold_sfc_styles` then
+`rewrite_sfc_handlers` (both now `pub(crate)`) — so the artifact `template` is the same
+`TemplateMap` entry `parse_layout_config` builds from source (a component with no nested SFC
+tags needs no tag-rewrite). Tag derivation is the new canonical `nemo_config::sfc_default_tag`
+(shared with `<import>`/`<components dir>`); `nemo_config::sfc_definition_to_value` (exposed)
+supplies the `script`/`props`/`slots` in `config["sfc"]` shape. Artifact:
+`{ tag, template, script?, props?, slots?, meta: { name, source } }`. Manifest gained an
+optional `[package] exports = [...]` (`PackageConfig`); a package build with no `exports`
+falls back to every top-level `.nemo`. A plain app project (no `[package]`) still prints the
+Phase-0 dry-run plan (project→`dist/` is Phase 2). Verified: round-trip (compiled template ==
+config-path `TemplateMap` entry), JSON serialize/deserialize equality, style-fold + handler
+rewrite on a fixture, and e2e single-file/package builds against `examples/sfc/components/`.
+
 * Reuse `parse_sfc` → `SfcDefinition`; run style-fold (SFC Phase 3) and handler-ref rewrite
   (SFC Phase 1) ahead-of-time via the factored transforms.
 * Artifact JSON: `{ tag, template (style-folded Value), script?, meta: { name, source } }`,

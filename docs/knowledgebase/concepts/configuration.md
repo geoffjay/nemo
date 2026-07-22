@@ -213,11 +213,18 @@ load = "source"            # "source" (default) | "dist"
   untouched; when omitted with no manifest in scope, the project-loader screen
   still shows. Manifest read/parse errors degrade gracefully to the loader on the
   run path.
-* **`nemo build`** (`commands/build.rs`) resolves the root + manifest and, in
-  Phase 0, prints the build plan (a dry run). Ahead-of-time compilation and the
-  `dist/` load path are later phases. `[build] load = "dist"` and remote
-  `[dependencies]` are recorded but not yet acted on; `nemo dev` never uses
-  `dist`. See the [build-system plan](../plans/build-system.md).
+* **`nemo build`** (`commands/build.rs`):
+  * `nemo build <file.nemo>` compiles one component to a JSON artifact at
+    `<out>/components/<tag>.json` — reusing `parse_sfc` then the runtime's own
+    `fold_sfc_styles` + `rewrite_sfc_handlers` ahead-of-time, so the artifact's
+    `template` equals the `TemplateMap` entry the runtime builds from source.
+  * A `[package] exports = [...]` table (`PackageConfig`) marks a **component
+    library**; `nemo build <dir>` compiles each exported component (or, with no
+    `exports`, every top-level `.nemo`).
+  * A plain app project (no `[package]`) prints a dry-run plan — compiling a
+    project to a loadable `dist/` tree is Phase 2. `[build] load = "dist"` and
+    remote `[dependencies]` are recorded but not yet acted on; `nemo dev` never
+    uses `dist`. See the [build-system plan](../plans/build-system.md).
 
 # Project-level custom themes
 

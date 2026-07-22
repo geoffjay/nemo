@@ -34,6 +34,13 @@ pub struct ProjectManifest {
     #[serde(default)]
     pub build: BuildConfig,
 
+    /// Component-library settings (`[package]`). Present when this project is a
+    /// reusable component library rather than (or in addition to) an app;
+    /// `nemo build` on such a project emits a compiled artifact per exported
+    /// component. Absent for a plain app project.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub package: Option<PackageConfig>,
+
     /// Remote component-library dependencies (`[dependencies]`), keyed by module
     /// path (e.g. `github.com/geoffjay/nemo-components`) → version. Resolution is
     /// a later phase; Phase 0 only records them. `BTreeMap` keeps the order
@@ -73,6 +80,16 @@ impl Default for BuildConfig {
             load: LoadMode::default(),
         }
     }
+}
+
+/// The `[package]` table — marks a project as a reusable component library.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, Default)]
+#[serde(deny_unknown_fields)]
+pub struct PackageConfig {
+    /// The component tags this library exports. When empty, the build falls back
+    /// to the convention of every top-level `.nemo` file in the project root.
+    #[serde(default)]
+    pub exports: Vec<String>,
 }
 
 /// Where the launcher loads the resolved layout from.
@@ -182,6 +199,29 @@ mod tests {
         assert_eq!(m.build.out, "dist");
         assert_eq!(m.build.load, LoadMode::Source);
         assert!(m.dependencies.is_empty());
+        assert!(m.package.is_none());
+    }
+
+    #[test]
+    fn parses_package_exports() {
+        let m = ProjectManifest::parse(
+            r#"name = "lib"
+               [package]
+               exports = ["button_group", "labeled_card"]"#,
+        )
+        .unwrap();
+        let pkg = m.package.expect("package table");
+        assert_eq!(pkg.exports, ["button_group", "labeled_card"]);
+    }
+
+    #[test]
+    fn package_defaults_to_empty_exports() {
+        let m = ProjectManifest::parse(
+            r#"name = "lib"
+               [package]"#,
+        )
+        .unwrap();
+        assert!(m.package.unwrap().exports.is_empty());
     }
 
     #[test]
