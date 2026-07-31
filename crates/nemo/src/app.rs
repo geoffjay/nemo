@@ -20,10 +20,10 @@ use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
     ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
-    HeatmapChart, Icon, Image, Label, LineChart, List, Modal, Notification, OptionData, Panel,
-    PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select,
-    SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch, TabItemData,
-    Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    HeatmapChart, Icon, Image, Label, LineChart, List, MenuItem, Modal, Notification, OptionData,
+    Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart,
+    Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch,
+    TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1023,21 +1023,26 @@ impl App {
                     .into_any_element()
             }
             "dropdown_button" => {
-                let items: Vec<String> = component
+                let items: Vec<MenuItem> = component
                     .children
                     .iter()
                     .filter_map(|id| components.get(id))
                     .filter(|c| c.component_type == "menu_item")
-                    .map(|c| {
-                        c.properties
+                    .map(|c| MenuItem {
+                        id: c.id.clone(),
+                        label: c
+                            .properties
                             .get("label")
                             .and_then(|v| v.as_str())
                             .unwrap_or("")
-                            .to_string()
+                            .to_string(),
+                        on_click: c.handlers.get("click").cloned(),
                     })
                     .collect();
                 DropdownButton::new(component.clone())
                     .items(items)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
                     .into_any_element()
             }
             "radio" => {

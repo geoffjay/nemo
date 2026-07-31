@@ -907,9 +907,9 @@
                 <label id="dropdown_section_variants" text="Variants" size="sm" />
                 <stack id="dropdown_row" direction="horizontal" spacing="8">
                   <dropdown-button id="dropdown_default" label="Actions">
-                    <menu-item label="Copy" />
-                    <menu-item label="Paste" />
-                    <menu-item label="Cut" />
+                    <menu-item id="dropdown_item_copy" label="Copy" on-click="on_dropdown_select" />
+                    <menu-item id="dropdown_item_paste" label="Paste" on-click="on_dropdown_select" />
+                    <menu-item id="dropdown_item_cut" label="Cut" on-click="on_dropdown_select" />
                   </dropdown-button>
                   <dropdown-button id="dropdown_primary" label="Save" variant="primary">
                     <menu-item label="Save as Draft" />
@@ -921,6 +921,8 @@
                     <menu-item label="Delete Permanently" />
                   </dropdown-button>
                 </stack>
+                <label id="dropdown_section_actionable" text="Actionable menu (on-click)" size="sm" />
+                <text id="dropdown_status" content="No action selected yet — open Actions and pick an item." />
               </stack>
             </tab-item>
             <tab-item id="dropdown_tabs_code" label="Code">

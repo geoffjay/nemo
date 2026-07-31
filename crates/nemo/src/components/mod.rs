@@ -200,7 +200,7 @@ pub use clustered_column_chart::ClusteredColumnChart;
 pub use code_editor::CodeEditor;
 pub use collapsible::Collapsible;
 pub use column_chart::ColumnChart;
-pub use dropdown_button::DropdownButton;
+pub use dropdown_button::{DropdownButton, MenuItem};
 pub use funnel_chart::FunnelChart;
 pub use heatmap_chart::HeatmapChart;
 pub use icon::Icon;
