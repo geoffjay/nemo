@@ -11,6 +11,10 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
 
 ```xml
 <nemo>
+  <themes>                                   <!-- optional: register project theme files -->
+    <theme-set src="themes/aurora.json" />
+  </themes>
+
   <app title="App Title">
     <window title="Window Title" width="1200" height="800"
             min-width="400" min-height="300">
@@ -22,6 +26,11 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
   <variable name="key" type="string" default="value" />
   <script src="./scripts" on-load="init_handler" />
   <template name="card"> ... </template>
+
+  <imports>                                  <!-- optional: single-file components (.nemo) -->
+    <import src="./components/card.nemo" />
+  </imports>
+  <components dir="./components" />           <!-- or auto-discover every *.nemo in a dir -->
 
   <data>
     <source name="..." type="..." ... />
@@ -36,17 +45,55 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
 </nemo>
 ```
 
+Top-level blocks are order-tolerant. `<themes>`, `<imports>`/`<components>`, and
+routing primitives are documented in their own sections below.
+
 ## Themes
 
-| Name | Description |
-|------|-------------|
+`<theme name="…" mode="…">` under `<app>` selects a **theme set**. The seven
+built-in sets (match on the set name, case-insensitive):
+
+| `name` | Description |
+|--------|-------------|
 | `kanagawa` | Warm, muted palette inspired by Japanese art |
+| `kanagawa-dragon` | Darker Kanagawa variant |
 | `tokyo-night` | Cool, modern dark theme |
 | `nord` | Arctic-inspired pastel scheme |
-| `catppuccin` | Soft pastel theme (Latte light / Frappé / Macchiato / Mocha) |
+| `catppuccin` | Soft pastel theme |
+| `catppuccin-macchiato` | Warmer Catppuccin variant |
 | `gruvbox` | Retro warm palette with high contrast |
 
-Modes: `dark`, `light`
+Modes: `dark`, `light` (each set supplies the variants it defines).
+
+### Project-defined themes
+
+Ship your own theme sets and register them with a top-level `<themes>` block.
+Each `<theme-set src="…">` points at a JSON file using the same schema as the
+built-ins (copy a shipped `crates/nemo/src/theme/*.json` and edit its colors).
+Registered sets are then selectable by name and appear in the settings picker:
+
+```xml
+<themes>
+  <theme-set src="themes/aurora.json" />
+</themes>
+<app>
+  <theme name="aurora" mode="dark" />
+</app>
+```
+
+### Color overrides (`<extend>`)
+
+Override individual colors on top of the selected theme (overrides win over the
+base). Keys are dotted color roles; values are hex or a `theme.*` reference:
+
+```xml
+<theme name="aurora" mode="dark">
+  <extend>
+    <color key="primary.background" value="#ff7a45" />
+    <color key="primary.hover.background" value="#ff9466" />
+  </extend>
+</theme>
+```
 
 ## Expression Syntax
 
@@ -149,11 +196,15 @@ Reference Rhai function names:
 <input id="search" on-change="handle_search_change" />
 ```
 
-The `<script>` element accepts an `on-load` attribute naming a Rhai function run once at startup (the only lifecycle hook nemo exposes):
+The `<script>` element accepts an `on-load` attribute naming a Rhai function run once at startup:
 
 ```xml
 <script src="./scripts" on-load="init_handler" />
 ```
+
+`on-load` is the app-level lifecycle hook; `<route>` elements additionally expose
+per-route `on-enter` / `on-leave` hooks (see **Routing** below). All are invoked
+with the same `(component_id, event_data)` signature.
 
 ### Handler signature: every handler takes `(component_id, event_data)`
 
@@ -169,6 +220,180 @@ fn init_handler(component_id, event_data) { ... }
 `on-load` is no exception: it is dispatched as `call_handler(handler, "app", "load")`
 (`crates/nemo/src/app.rs`), so `component_id` is `"app"` and `event_data` is
 `"load"`.
+
+## Single-File Components (`.nemo` SFCs)
+
+Package a reusable piece of UI into one `.nemo` file (template + optional scoped
+script/style), then import it and use it as a custom tag — Vue-like. An SFC is
+expanded onto the template machinery, so by render time it is ordinary built-in
+components.
+
+### Importing
+
+```xml
+<imports>
+  <import src="./components/card.nemo" />            <!-- tag from <template name> or filename -->
+  <import src="./components/button.nemo" as="my-btn" />  <!-- as= overrides the tag -->
+  <import src="github.com/user/nemo-widgets" as="nw" />  <!-- remote library (see Build below) -->
+</imports>
+
+<components dir="./components" />                     <!-- OR auto-discover every *.nemo in a dir -->
+```
+
+The tag is resolved `as=` > `<template name>` > filename stem, then kebab→snake
+normalized (write `<labeled-button>`; it matches internally as `labeled_button`).
+A remote `src` (a `github.com/…` module path) resolves against the fetched
+package cache and brings in **all** the package's exported tags; `as=` becomes a
+tag-name prefix.
+
+### Authoring a `.nemo` file
+
+A `.nemo` file is **not** wrapped in `<nemo>`. Its top-level children:
+
+* `<props>` — optional. Declares typed props with defaults; instance attributes
+  override them.
+* `<template>` — **required, exactly one root element**. Use `${prop}`
+  placeholders for interpolation and `<slot />` for consumer content.
+* `<style>` — optional scoped CSS subset (folded onto template nodes at compile
+  time; there is no runtime cascade).
+* `<script>` — optional Rhai, loaded under the id `sfc:<tag>`.
+
+```xml
+<!-- components/labeled-button.nemo -->
+<props>
+  <prop name="label" type="string" default="Button" />
+  <prop name="variant" type="string" default="primary" />
+</props>
+<template name="labeled-button">
+  <button label="${label}" variant="${variant}" on-click="handleClick" />
+</template>
+<script><![CDATA[
+fn handleClick(component_id, event_data) {
+    set_component_property(component_id, "label", "Clicked!");
+}
+]]></script>
+```
+
+Used in `app.xml`:
+
+```xml
+<labeled-button label="Save" />        <!-- ${label} → "Save"; variant → default "primary" -->
+```
+
+### Slots
+
+The default `<slot />` receives consumer children; a named `<slot name="header"
+required="true" multiple="false" />` receives children tagged `slot="header"`.
+Slots inject **component children, not raw text** — provide text via a child
+component (`<label text="…"/>`) or a `${prop}`.
+
+```xml
+<!-- card.nemo template -->
+<template name="card">
+  <panel>
+    <stack id="head"><slot name="header" required="true" /></stack>
+    <stack id="body"><slot /></stack>
+  </panel>
+</template>
+```
+```xml
+<!-- usage -->
+<card>
+  <label slot="header" text="Title" />   <!-- → header slot -->
+  <text content="Body" />                 <!-- → default slot -->
+</card>
+```
+
+### Scoped `<style>`
+
+A CSS subset folded onto matching template nodes at compile time, scoped to the
+SFC's own subtree. v1 selectors: **type** (`panel { … }` matches nodes with that
+`type`) and **id** (`#head { … }`). No class/combinator/pseudo/media.
+Declarations are limited to the universal style attributes below; CSS names
+normalize to nemo's (`border-radius`→`rounded`, `background-color`→`background`),
+sizes drop `px` (`20px`→`20`), colors stay strings (incl. `theme.*`).
+
+```xml
+<style><![CDATA[
+  panel { padding: 20px; border-radius: lg; }
+  #head { padding-bottom: 8px; }
+]]></style>
+```
+
+### Rules that bite
+
+* **CDATA for `<`/`&`.** `.nemo` is parsed as XML, which has no raw-text
+  elements, so a `<script>`/`<style>` body containing `<` or `&` (Rhai `&&`,
+  generics, a CSS `>` combinator) **must** be wrapped in `<![CDATA[ … ]]>`. The
+  body must also be one contiguous block.
+* **Handler scoping.** A **template-authored** bare `on-click="fn"` routes to the
+  SFC's own `<script>` (rewritten to `sfc:<tag>::fn`). An **instance** handler
+  (`<labeled-button on-click="globalFn"/>`) stays bare and routes to the global
+  `handlers` script. One SFC script serves every instance; the handler receives
+  the per-instance scoped `component_id`, so it mutates only the instance that
+  fired.
+* **Id scoping is automatic.** Template-owned child ids are prefixed with the
+  instance id (`body` → `<instance>_body`), so multiple instances never collide.
+  Slot-injected children keep their own ids.
+* **Two `${}` systems.** SFC props use bare `${label}` (runtime interpolation,
+  string-only), distinct from load-time `${var.x}`/`${env.x}`. Data still flows
+  through `bind-*`/`<binding>`.
+
+## Routing (`<router>` / `<route>` / `<nav-link>`)
+
+A chrome-free page-routing primitive. A `<router>` mounts only the matching
+route's body; navigation is either declarative (`<nav-link>`) or scripted
+(`navigate()` in Rhai).
+
+```xml
+<!-- Declarative nav bar: no handler needed. `router` is optional if the target
+     router has primary="true". A link highlights when its route is active. -->
+<stack direction="horizontal">
+  <nav-link router="main" route="/home" label="Home" />
+  <nav-link router="main" route="/users/42" label="User 42" />
+  <nav-link router="main" route="/settings" label="Settings" />
+</stack>
+
+<router id="main" default="/home" primary="true" flex="1">
+  <route path="/home">
+    <label text="Home" size="xl" />
+  </route>
+
+  <!-- :param capture → data.route.<router-id>.params.<name> -->
+  <route id="user_route" path="/users/:id" on-enter="on_user_enter" on-leave="on_user_leave">
+    <label bind-text="data.route.main.params.id" />
+  </route>
+
+  <!-- A route may host its own nested <router>. -->
+  <route path="/settings"> … </route>
+
+  <!-- Trailing "*" is the not-found fallback (routes match in document order). -->
+  <route path="*"><label text="Not found" /></route>
+</router>
+```
+
+| Element | Key attributes |
+|---------|----------------|
+| `router` | `id`, `default` (initial path), `primary` (target of `router`-less nav-links / bare `navigate()`), plus layout props (`flex`, height, `scroll`) |
+| `route` | `path` (`/x`, `/x/:param`, or `*`), optional `id`, `on-enter`, `on-leave` |
+| `nav-link` | `route` (required), `router` (optional if a primary router exists), `label` |
+
+* **Params** are projected to `data.route.<router-id>.path` and
+  `data.route.<router-id>.params.<name>` — read them with `bind-text` /
+  `<binding>` (e.g. `bind-text="data.route.main.params.id"`).
+* **Rhai API:** `navigate("/path")` (primary router) / `navigate("router-id",
+  "/path")` (explicit); `back()` / `forward()` (optionally `back("router-id")`).
+* **Launch flag:** `--route <path>` (or `--route <router-id>=<path>`) starts a
+  router at a specific route instead of its `default`, for this launch only.
+* **Sizing:** the router renders content-sized (not `size_full`). For a tall,
+  scrolling page, wrap the router in a `scroll` stack and leave the router itself
+  content-sized.
+
+> **Gotcha — router inside an SFC.** A `<router>` nested inside an SFC
+> `<template>` has its `id` scoped per instance (`main` → `<instance>_main`), but
+> `<nav-link router="main">` / `navigate("main", …)` targets are **not yet**
+> rewritten to the scoped id — navigation to such a router silently fails. Until
+> that follow-up lands, keep routers at the top level, not inside a reused SFC.
 
 ## Components — Layout
 
@@ -552,3 +777,55 @@ from content:
 <!-- Or set an explicit height on the widget -->
 <table id="rows" height="400"> <binding source="data.rows" target="data" /> </table>
 ```
+
+## Project Manifest & Build (`nemo.toml`, `nemo build`, `nemo get`)
+
+A nemo *project* is a directory with a `nemo.toml` manifest at its root. Any
+`nemo`/`nemo dev`/`nemo build` invocation walks up from the target to find that
+root, so relative paths (entry, `<import src>`, `dir=`, theme `src`) resolve
+against it consistently.
+
+```toml
+# nemo.toml — an application project
+name = "my-app"
+entry = "app.xml"          # the config the app launches
+
+[build]
+out = "dist"               # build output directory
+load = "source"            # "source" (default) parses .nemo at launch;
+                           # "dist" loads pre-compiled artifacts from out/
+```
+
+```toml
+# nemo.toml — a reusable component library (published for others to import)
+name = "nemo-widgets"
+
+[package]
+exports = ["components/*.nemo"]   # which .nemo files this package exposes
+```
+
+**`nemo build`** compiles `.nemo` components to JSON artifacts:
+
+* `nemo build path/to/card.nemo` — compile one component.
+* `nemo build` in a `[package]` project — compile the whole exported library.
+* `nemo build` in an app project — build the app to a loadable `out/` (`dist/`).
+  Launch it with `nemo --dist` (or set `load = "dist"` in the manifest) to load
+  the pre-compiled artifacts instead of re-parsing `.nemo` at startup.
+
+**Remote component libraries** (Go-style): import a library by module path and
+fetch it with `nemo get`.
+
+```xml
+<imports>
+  <import src="github.com/user/nemo-widgets" as="nw" />
+</imports>
+```
+```sh
+nemo get                    # fetch every module <import> into .nemo/packages/,
+                            # pinning resolved versions in nemo.lock
+```
+
+`nemo get` clones each `github.com/…` module (git) into `.nemo/packages/`,
+records exact versions in `nemo.lock`, and module `<import>`s then resolve
+against that cache. Commit `nemo.lock`; the `.nemo/packages/` cache is generated
+(gitignore it).
