@@ -13,6 +13,22 @@ fn on_toggle_modal(component_id, event_data) {
     }
 }
 
+// Dropdown menu-item handler: proves <menu-item on-click> is wired.
+// `component_id` is the clicked menu item's id, so the same handler can
+// report which entry fired.
+fn on_dropdown_select(component_id, event_data) {
+    let action = if component_id == "dropdown_item_copy" {
+        "Copy"
+    } else if component_id == "dropdown_item_paste" {
+        "Paste"
+    } else if component_id == "dropdown_item_cut" {
+        "Cut"
+    } else {
+        component_id
+    };
+    set_component_property("dropdown_status", "content", "Selected: " + action);
+}
+
 // Sidenav toggle handler: toggles collapsed state of the center demo sidenav
 fn on_toggle_sidenav(component_id, event_data) {
     let current = get_component_property("sidenav_center_expanded", "collapsed");
