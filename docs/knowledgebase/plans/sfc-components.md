@@ -274,65 +274,13 @@ P2-deferred slot validation.
 
 # Phase 6 — Raw-text `.nemo` parser (drop the CDATA requirement)
 
-**Independent of every other phase** — this is a parser-layer change with no
-ordering dependency; it can land before or after any SFC/build phase. Motivated
-by the observation that `.nemo` today is *pure XML*, so `<style>`/`<script>`
-bodies containing `<` or `&` (Rhai `&&`, generics, CSS `>` combinators) must be
-wrapped in `<![CDATA[ … ]]>`. This is **not** something [`nemo build`](build-system.md)
-removes — build reuses `XmlParser::parse_sfc` verbatim, so the CDATA rule is
-upstream of the whole build pipeline. Dropping it is what makes a `.nemo` file
-genuinely Vue-like rather than XML-with-extra-steps.
-
-**Root cause.** `.nemo` is parsed with `quick-xml` (`xml_parser.rs`), a general
-XML reader. XML has no *raw-text elements*, so every `<`/`&` inside any element
-body is markup until escaped. HTML, by contrast, designates `<script>` and
-`<style>` as raw-text elements whose contents are read verbatim to the matching
-close tag — which is exactly why Vue's `@vue/compiler-sfc` (an HTML-flavored
-parser) never needs CDATA.
-
-**Approach — a raw-text pre-splitter in front of `quick-xml`.** `parse_sfc`
-gains a lightweight top-level block scanner that runs *before* the XML reader:
-
-1. Scan the `.nemo` source for the top-level blocks `<template>`, `<script>`,
-   `<style>` (top-level only — nested tags inside `<template>` are untouched).
-2. Treat `<script>`/`<style>` as **raw-text**: capture everything between the
-   open tag and the literal matching `</script>`/`</style>` verbatim, and hand it
-   straight to `SfcDefinition.{script,style}` — never to the XML reader. This also
-   dissolves the current "one contiguous text/CDATA run only" limit (the
-   pattern's [Rules that bite](../patterns/single-file-components.md) note and
-   Phase 0's body-limit caveat), since the whole block is captured literally.
-3. Feed **only** the `<template>` block to `quick-xml`. Template markup stays XML
-   — that half was never the problem; Vue templates are HTML too and `${prop}`
-   interpolation continues to live there unchanged.
-
-**Scope / non-goals.**
-
-* **Backward compatible.** CDATA-wrapped bodies must keep parsing — strip a
-  leading `<![CDATA[`/trailing `]]>` from a captured raw-text block if present, so
-  existing `examples/sfc/*.nemo` (and any authored file) load unchanged. No forced
-  migration; CDATA becomes optional, not forbidden.
-* **`.nemo` only.** `app.xml` and `<include>`d documents stay on the plain XML
-  path. This splitter is specific to the SFC file type (single `<template>` root +
-  optional sibling `<script>`/`<style>`), so it does not touch `process_root`.
-* **Not HTML.** We adopt HTML's raw-text *rule* for two known element names, not
-  an HTML parser. No attribute-value quirks, no implicit tag closing, no entity
-  table beyond what the template's XML path already does.
-* **Edge cases to test:** a `</script>` appearing inside a Rhai string literal
-  (documented limitation — HTML has the same one; a v1 literal-scan close is
-  acceptable, note it), CRLF bodies, an empty/missing block, and a `<template>`
-  containing text that looks like `<script>` (must not be captured — only
-  top-level blocks are).
-
-**Critical files:** `crates/nemo-config/src/xml_parser.rs` (`parse_sfc` gains the
-pre-splitter; template still flows through `process_component_element`). No
-runtime, build, or render changes — `SfcDefinition` shape is unchanged, so
-`parse_layout_config` and everything downstream is untouched.
-
-**Verify:** a `.nemo` with an un-escaped `&&`/`<`-bearing Rhai `<script>` and a
-`>`-combinator CSS `<style>`, no CDATA, parses to the same `SfcDefinition` as the
-CDATA-wrapped equivalent; existing CDATA examples still parse (round-trip
-equality); the `</script>`-in-string edge case is covered or its limitation
-documented.
+**Promoted to its own plan:** [Raw-text `.nemo` parser](sfc-raw-text-parser.md).
+A parser-layer pre-splitter in front of `quick-xml` that treats `<script>` and
+`<style>` as HTML-style raw-text elements, so SFC bodies no longer need
+`<![CDATA[ … ]]>`. Independent of every other SFC/build phase — it can land in any
+order — which is why it lives in a standalone plan rather than as a phase here.
+`nemo build` does **not** remove the CDATA requirement (it reuses
+`XmlParser::parse_sfc` verbatim), so this is its own concern.
 
 # Cross-cutting risks & decisions
 
@@ -368,17 +316,24 @@ the codebase in disjoint places:
 The one genuine interaction is **composition, not dependency**: nesting a
 `<router>` inside an SFC `<template>`. SFC ID-scoping (`scope_template_children`)
 renames the router's `id` per instance (e.g. `main` → `foo_main`), so any
-`<nav-link router="main">` / `navigate("main", …)` *inside that SFC* must be
-rewritten to the scoped id — the same rewrite the SFC pass already does for handler
-refs (Phase 1) and should extend to `router=`/nav targets. This is a small,
-containable follow-up owned by **whichever plan lands second**, plus one test. The
-reverse case — an SFC used inside a `<route>` body — works for free, since the SFC
-is expanded to built-ins before the router renders the route.
+`<nav-link router="main">` / `navigate("main", …)` *inside that SFC* must resolve
+to the scoped id, or navigation silently targets a router that no longer exists.
+**This is now its own plan — [Scope nested routers inside SFCs](router-in-sfc-scoping.md)
+— and it is NOT implemented** (both this plan and the router landed without it; it
+is latent until an SFC actually nests a router). It is **not** a one-line extension
+of the handler rewrite as first sketched: the `<nav-link router=>` attribute needs
+a *static rewrite at scope time* (in `scope_owned_descendants`, where the
+per-instance prefix is applied — not in the compile-time SFC pass, which doesn't
+know the prefix), while `navigate("main", …)` **cannot** be statically rewritten
+(one shared `sfc:<tag>` script serves every instance) and needs *instance-relative
+runtime resolution* in the `navigate`/`back`/`forward` host fns. See the plan for
+both mechanisms. The reverse case — an SFC used inside a `<route>` body — works for
+free, since the SFC is expanded to built-ins before the router renders the route.
 
 **Suggested ordering** (they're independent, so this is value/risk, not a
 requirement): router first (self-contained, proven `app-shell` pattern, bounded
-scope) then SFCs, folding the "scope nested router ids" item into the SFC work. If
-SFCs are the higher-priority capability, doing them first costs the router nothing.
+scope) then SFCs. The "scope nested router ids" item is deferred to its own plan
+([router-in-SFC scoping](router-in-sfc-scoping.md)) rather than folded into either.
 
 # Critical files
 

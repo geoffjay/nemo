@@ -143,7 +143,8 @@ Import components individually, or auto-discover a whole directory:
 Phases 0–4 are implemented: import/tag-rewrite/default-slot/interpolation (P0),
 scoped `<script>` (P1), named/multiple slots (P2), scoped `<style>` folding (P3),
 and typed props with defaults/required + `<components dir>` auto-discovery + per-SFC
-descriptor for `nemo schema` + slot validation (P4). A build/cache format (P5,
-superseded by the [build system](../plans/build-system.md)) and a raw-text `.nemo`
-parser that drops the CDATA requirement (P6) are planned — see
-[the SFC plan](../plans/sfc-components.md). Worked example: `examples/sfc/`.
+descriptor for `nemo schema` + slot validation (P4); the build/cache format is the
+implemented [build system](../plans/build-system.md) (superseding SFC P5). Still
+planned: a [raw-text `.nemo` parser](../plans/sfc-raw-text-parser.md) that drops
+the CDATA requirement (was SFC Phase 6). See [the SFC plan](../plans/sfc-components.md).
+Worked example: `examples/sfc/`.

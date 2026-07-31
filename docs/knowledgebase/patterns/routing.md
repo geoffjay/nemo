@@ -100,7 +100,11 @@ Forcing `size_full` would pin the body to the parent's height and defeat an
 enclosing `scroll` stack — so to scroll a tall page, wrap the router in a
 `scroll` container and leave the router itself content-sized (no `flex`), as
 `examples/components` does. Nested routers fall out for free — a `<router>` inside a route
-body is reached by the recursion when that route is active. `"nav_link"` reads
+body is reached by the recursion when that route is active. (This "for free" is
+the `<router>`-in-`<route>` case only. A `<router>` nested inside an *SFC
+`<template>`* is a different, **unhandled** case — its id is scoped per instance
+but nav-link `router=` / Rhai `navigate()` targets are not yet resolved to the
+scoped id; see [Scope nested routers inside SFCs](../plans/router-in-sfc-scoping.md).) `"nav_link"` reads
 `route`/`router`/`label`, computes `is_active` against the router's current path
 (a non-initializing peek), and on click enqueues a `NavIntent`. `"route"` is a
 no-op marker rendered by its parent router. Registered in

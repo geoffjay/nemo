@@ -221,8 +221,11 @@ router never touches `xml_parser.rs`, the template-expansion pipeline, or the
 The only shared file is `runtime.rs`, in different functions (a mechanical merge).
 The one interaction is composition: a `<router>` nested inside an SFC `<template>`
 gets its `id` scoped per instance (`main` → `foo_main`), so nav references inside
-that SFC must be rewritten to the scoped id — a small follow-up owned by whichever
-plan lands second. See [SFC ↔ router](sfc-components.md) for the full write-up.
+that SFC must resolve to the scoped id. This is its **own plan**,
+[Scope nested routers inside SFCs](router-in-sfc-scoping.md), and is **not
+implemented** — it landed with neither plan and is a latent break until an SFC
+nests a router. It is two mechanisms, not one (static `router=` rewrite at scope
+time + instance-relative runtime resolution for Rhai `navigate()`); see that plan.
 
 ## Suggested sequencing
 
