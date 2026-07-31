@@ -4,6 +4,17 @@ use gpui_component::button::{
 };
 use gpui_component::menu::PopupMenuItem;
 use nemo_layout::BuiltComponent;
+use std::sync::Arc;
+
+use crate::runtime::NemoRuntime;
+
+/// A single menu entry carried through from a `<menu-item>` child.
+#[derive(Clone)]
+pub struct MenuItem {
+    pub id: String,
+    pub label: String,
+    pub on_click: Option<String>,
+}
 
 /// A button with a dropdown menu component.
 ///
@@ -11,8 +22,8 @@ use nemo_layout::BuiltComponent;
 ///
 /// ```xml
 /// <dropdown-button id="actions" label="Actions" variant="primary">
-///   <menu-item label="Edit" />
-///   <menu-item label="Delete" />
+///   <menu-item label="Edit" on-click="edit" />
+///   <menu-item label="Delete" on-click="delete" />
 /// </dropdown-button>
 /// ```
 ///
@@ -23,12 +34,15 @@ use nemo_layout::BuiltComponent;
 /// | `label` | string | Button text label |
 /// | `variant` | string | Button style variant |
 ///
-/// Menu entries are declared as `<menu-item>` children (`label`).
+/// Menu entries are declared as `<menu-item>` children (`label`, optional
+/// `on-click` handler invoked with the usual `(component_id, event_data)`).
 #[derive(IntoElement)]
 #[allow(dead_code)]
 pub struct DropdownButton {
     source: BuiltComponent,
-    items: Vec<String>,
+    items: Vec<MenuItem>,
+    runtime: Option<Arc<NemoRuntime>>,
+    entity_id: Option<EntityId>,
 }
 
 impl DropdownButton {
@@ -36,11 +50,23 @@ impl DropdownButton {
         Self {
             source,
             items: Vec::new(),
+            runtime: None,
+            entity_id: None,
         }
     }
 
-    pub fn items(mut self, items: Vec<String>) -> Self {
+    pub fn items(mut self, items: Vec<MenuItem>) -> Self {
         self.items = items;
+        self
+    }
+
+    pub fn runtime(mut self, runtime: Arc<NemoRuntime>) -> Self {
+        self.runtime = Some(runtime);
+        self
+    }
+
+    pub fn entity_id(mut self, entity_id: EntityId) -> Self {
+        self.entity_id = Some(entity_id);
         self
     }
 }
@@ -67,14 +93,26 @@ impl RenderOnce for DropdownButton {
         };
 
         let menu_items = self.items;
+        let runtime = self.runtime;
+        let entity_id = self.entity_id;
 
         let mut dropdown = GpuiDropdownButton::new(id).button(button);
 
         if !menu_items.is_empty() {
             dropdown = dropdown.dropdown_menu(move |menu, _window, _cx| {
                 let mut m = menu;
-                for item_label in &menu_items {
-                    m = m.item(PopupMenuItem::new(SharedString::from(item_label.clone())));
+                for item in &menu_items {
+                    let mut menu_item = PopupMenuItem::new(SharedString::from(item.label.clone()));
+                    if let (Some(handler), Some(runtime), Some(entity_id)) =
+                        (item.on_click.clone(), runtime.clone(), entity_id)
+                    {
+                        let item_id = item.id.clone();
+                        menu_item = menu_item.on_click(move |_event, _window, cx| {
+                            runtime.call_handler(&handler, &item_id, "click");
+                            cx.notify(entity_id);
+                        });
+                    }
+                    m = m.item(menu_item);
                 }
                 m
             });
