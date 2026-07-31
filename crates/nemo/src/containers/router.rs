@@ -58,10 +58,7 @@ pub fn match_route(pattern: &str, path: &str) -> Option<HashMap<String, String>>
         if *pat == "*" {
             return Some(params);
         }
-        let seg = match path_segs.get(i) {
-            Some(seg) => *seg,
-            None => return None,
-        };
+        let seg = *path_segs.get(i)?;
         if let Some(name) = pat.strip_prefix(':') {
             params.insert(name.to_string(), seg.to_string());
         } else if *pat != seg {
