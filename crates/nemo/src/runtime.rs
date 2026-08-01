@@ -171,6 +171,10 @@ pub struct NemoRuntime {
     /// Launch-time router starting-path override (from `--route`); consulted
     /// once when a router is first initialized.
     initial_route: Arc<Mutex<Option<InitialRoute>>>,
+    /// Router ids that were just seeded to their default/`--route` path by the
+    /// render pass and still owe a one-shot initial `on-enter`. Drained outside
+    /// the extension lock by [`Self::fire_pending_initial_enters`].
+    pending_initial_enters: Arc<Mutex<Vec<String>>>,
 }
 
 impl NemoRuntime {
@@ -216,6 +220,7 @@ impl NemoRuntime {
             router_states: Arc::new(RwLock::new(HashMap::new())),
             nav_intents: Arc::new(Mutex::new(Vec::new())),
             initial_route: Arc::new(Mutex::new(None)),
+            pending_initial_enters: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -984,14 +989,30 @@ impl NemoRuntime {
             .initial_path_for(router_id)
             .unwrap_or_else(|| default_path.to_string());
         let mut states = self.router_states.write().expect("router_states poisoned");
-        let st = states
-            .entry(router_id.to_string())
-            .or_insert_with(|| RouterState {
-                history: vec![init_path.clone()],
-                index: 0,
-                params: HashMap::new(),
-                projected: false,
-            });
+        // A concurrent render may have raced us to initialize this router; only
+        // the render that actually seeds the state owes the initial `on-enter`.
+        if !states.contains_key(router_id) {
+            states.insert(
+                router_id.to_string(),
+                RouterState {
+                    history: vec![init_path.clone()],
+                    index: 0,
+                    params: HashMap::new(),
+                    projected: false,
+                },
+            );
+            drop(states);
+            // The default route (or `--route` override) is seeded without a
+            // path *change*, so `apply_one_navigation` never fires its
+            // `on-enter`. Queue it to fire once from the poll loop, outside the
+            // render pass and the extension lock.
+            if let Ok(mut q) = self.pending_initial_enters.lock() {
+                q.push(router_id.to_string());
+            }
+            self.data_notify.notify_one();
+            return init_path;
+        }
+        let st = states.get(router_id).expect("router state just checked");
         st.history.get(st.index).cloned().unwrap_or(init_path)
     }
 
@@ -1143,6 +1164,55 @@ impl NemoRuntime {
         let mut any = false;
         for intent in intents {
             if self.apply_one_navigation(intent) {
+                any = true;
+            }
+        }
+        any
+    }
+
+    /// Fires the one-shot `on-enter` hook for routers that the render pass just
+    /// seeded to their default (or `--route`) path. A router's initial path is
+    /// set through lazy initialization ([`Self::router_current_path`]) without a
+    /// path *change*, so [`Self::apply_one_navigation`] never fires it; draining
+    /// the queue here makes the initial mount consistent with later navigations
+    /// (issue #81). Runs on the UI thread from the poll loop, **outside** the
+    /// extension lock. Returns `true` if any hook fired (so the caller
+    /// re-renders).
+    pub fn fire_pending_initial_enters(&self) -> bool {
+        let router_ids: Vec<String> = {
+            let mut q = self
+                .pending_initial_enters
+                .lock()
+                .expect("pending_initial_enters poisoned");
+            if q.is_empty() {
+                return false;
+            }
+            std::mem::take(&mut *q)
+        };
+
+        let mut any = false;
+        for router_id in router_ids {
+            let info = match self.router_info(&router_id) {
+                Some(info) => info,
+                None => continue,
+            };
+            let path = match self.router_current_path_peek(&router_id) {
+                Some(path) => path,
+                None => continue,
+            };
+            let patterns: Vec<String> = info.routes.iter().map(|r| r.pattern.clone()).collect();
+            let (idx, params) = match crate::containers::router::resolve_route(&patterns, &path) {
+                Some(resolved) => resolved,
+                None => continue,
+            };
+
+            // Project path + params before firing the hook, mirroring the order
+            // in `apply_one_navigation`, so the handler can read route params.
+            self.write_route_to_repo(&router_id, &path, &params);
+            self.mark_route_dirty(&router_id, &params);
+
+            if let Some(handler) = info.routes.get(idx).and_then(|r| r.on_enter.clone()) {
+                self.call_handler(&handler, &router_id, "enter");
                 any = true;
             }
         }
@@ -5126,6 +5196,67 @@ mod error_path_tests {
 
         // Stale params from the /users/:id route were cleared on the way back.
         assert!(get("data.route.main.params.id").is_none());
+    }
+
+    /// Regression guard for issue #81: the default route's `on-enter` fires
+    /// once at startup. The render pass seeds the router to its `default` via
+    /// [`NemoRuntime::router_current_path`], which queues the initial enter;
+    /// draining the queue fires the hook — with no prior navigation.
+    #[test]
+    fn test_initial_default_route_fires_on_enter() {
+        use std::io::Write;
+        let dir = tempfile::tempdir().unwrap();
+        let scripts_dir = dir.path().join("scripts");
+        std::fs::create_dir(&scripts_dir).unwrap();
+        {
+            let mut f = std::fs::File::create(scripts_dir.join("handlers.rhai")).unwrap();
+            writeln!(f, "fn check(id, ev) {{ set_data(\"test.entered\", id); }}").unwrap();
+        }
+        let config_path = dir.path().join("app.xml");
+        {
+            let mut f = std::fs::File::create(&config_path).unwrap();
+            write!(
+                f,
+                r#"<nemo>
+  <app title="t"/>
+  <script src="./scripts"/>
+  <layout type="stack">
+    <router id="main" default="/connect" primary="true">
+      <route path="/connect" on-enter="check"></route>
+      <route path="/other"></route>
+    </router>
+  </layout>
+</nemo>"#
+            )
+            .unwrap();
+        }
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+        rt.initialize().unwrap();
+
+        // Nothing queued and no enter fired until the render pass seeds the
+        // router to its default.
+        assert!(!rt.fire_pending_initial_enters());
+
+        // The render pass lazily initializes the router to its `default`.
+        assert_eq!(rt.router_current_path("main", "/connect"), "/connect");
+
+        // Draining the queue fires the default route's `on-enter` — no prior
+        // navigation required.
+        assert!(rt.fire_pending_initial_enters());
+        let get = |p: &str| {
+            rt.data_engine
+                .repository
+                .get(&nemo_data::DataPath::parse(p).unwrap())
+        };
+        assert_eq!(
+            get("data.test.entered").and_then(|v| v.as_str().map(String::from)),
+            Some("main".to_string())
+        );
+
+        // It fires exactly once — a second drain is a no-op.
+        assert!(!rt.fire_pending_initial_enters());
     }
 
     /// `--route settings=/general` (explicit router id) overrides that router's

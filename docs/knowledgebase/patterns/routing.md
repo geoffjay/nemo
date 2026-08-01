@@ -77,7 +77,19 @@ through a **deferred queue**, mirroring the `plugin_dirty_paths` reactivity path
 
 `on-enter`/`on-leave` are parsed as normal handlers (kebab→snake `on_*` →
 `handlers["enter"]`/`handlers["leave"]`) and fire with `(router_id, "enter" |
-"leave")`. They fire only on an actual path change.
+"leave")`. On a navigation they fire only on an actual path change.
+
+The **initial** route is a special case (issue #81). Its path is seeded through
+lazy initialization (`router_current_path`, called from the render pass) without
+a path *change*, so `apply_one_navigation` never sees it and would skip its
+`on-enter`. Instead, when the render pass first seeds a router to its `default`
+(or `--route` override), it enqueues the router id in `pending_initial_enters`
+and pings `data_notify`; the poll loop then calls
+`NemoRuntime::fire_pending_initial_enters()` (right after
+`apply_pending_navigations`, before the data-update pass) to project the route
+and fire that route's `on-enter` **once**, outside the extension lock. So the
+default route's `on-enter` fires at startup, consistent with later navigations —
+each route's `on-enter` fires exactly once when it becomes active.
 
 # Path matching
 
