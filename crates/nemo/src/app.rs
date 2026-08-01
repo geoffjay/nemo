@@ -55,8 +55,12 @@ impl App {
             // Apply queued navigations first so any route path/param projections
             // they flag are picked up by the data-update pass that follows.
             let navigated = poll_runtime.apply_pending_navigations();
+            // Fire the initial `on-enter` for any router the render pass just
+            // seeded to its default path, before the data-update pass picks up
+            // the route projection it flags (issue #81).
+            let initial_enters = poll_runtime.fire_pending_initial_enters();
             let data_updated = poll_runtime.apply_pending_data_updates();
-            if navigated || data_updated {
+            if navigated || initial_enters || data_updated {
                 let _ = this.update(cx, |_app: &mut App, cx: &mut Context<App>| {
                     cx.notify();
                 });
