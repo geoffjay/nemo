@@ -40,6 +40,7 @@ ignore = [
     "RUSTSEC-2026-0149",
     "RUSTSEC-2026-0182",
     "RUSTSEC-2026-0188",
+    "RUSTSEC-2026-0222",
 
     # --- rustls-webpki / quinn-proto: via the `zed-reqwest` fork behind
     # gpui-component-assets. No upgrade path without forking upstream.
