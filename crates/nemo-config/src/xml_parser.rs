@@ -467,13 +467,66 @@ impl XmlParser {
                         .get("__type__")
                         .and_then(|v| v.as_str())
                         .unwrap_or("");
-                    if !child_type.is_empty() {
+                    if child_type == "header_bar" {
+                        // `<header-bar>` needs dedicated handling so its repeated
+                        // `<menu-item>` children survive as a list rather than
+                        // collapsing into a single key.
+                        block.insert("header_bar".to_string(), self.process_header_bar(child_obj));
+                    } else if !child_type.is_empty() {
                         block.insert(
                             kebab_to_snake(child_type),
                             self.process_nested_block(child_obj),
                         );
                     }
                 }
+            }
+        }
+
+        Value::Object(block)
+    }
+
+    /// Processes a `<header-bar>` element: copies its attributes and collects any
+    /// `<menu-item>` children into a `menu_items` array. The generic
+    /// `process_nested_block` would otherwise collapse repeated `menu-item`
+    /// children into a single `menu_item` key, losing all but the last.
+    fn process_header_bar(&self, obj: &IndexMap<String, Value>) -> Value {
+        let mut block = IndexMap::new();
+
+        for (key, val) in obj {
+            match key.as_str() {
+                "__type__" | "__children__" => continue,
+                _ => {
+                    block.insert(key.clone(), val.clone());
+                }
+            }
+        }
+
+        if let Some(children) = obj.get("__children__").and_then(|v| v.as_array()) {
+            let mut menu_items = Vec::new();
+            for child in children {
+                if let Some(child_obj) = child.as_object() {
+                    let child_type = child_obj
+                        .get("__type__")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("");
+                    if child_type == "menu_item" {
+                        // Attribute keys are already kebab→snake normalized at
+                        // parse time (`on-click` → `on_click`).
+                        let mut item = IndexMap::new();
+                        for (k, v) in child_obj {
+                            match k.as_str() {
+                                "__type__" | "__children__" => continue,
+                                _ => {
+                                    item.insert(k.clone(), v.clone());
+                                }
+                            }
+                        }
+                        menu_items.push(Value::Object(item));
+                    }
+                }
+            }
+            if !menu_items.is_empty() {
+                block.insert("menu_items".to_string(), Value::Array(menu_items));
             }
         }
 
@@ -1941,6 +1994,62 @@ mod tests {
         assert_eq!(
             theme.get("name"),
             Some(&Value::String("kanagawa".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_header_bar_menu_items() {
+        let xml = r#"
+        <nemo>
+            <app title="My App">
+                <window title="Test">
+                    <header-bar theme-toggle="true">
+                        <menu-item label="Preferences" icon="settings" on-click="open_prefs" />
+                        <menu-item separator="true" />
+                        <menu-item label="About" on-click="show_about" />
+                    </header-bar>
+                </window>
+            </app>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let header_bar = value
+            .get("app")
+            .and_then(|a| a.get("window"))
+            .and_then(|w| w.get("header_bar"))
+            .unwrap();
+        assert_eq!(header_bar.get("theme_toggle"), Some(&Value::Bool(true)));
+
+        let items = header_bar
+            .get("menu_items")
+            .and_then(|v| v.as_array())
+            .unwrap();
+        assert_eq!(items.len(), 3);
+
+        // First item: label + icon + on_click (kebab→snake normalized).
+        assert_eq!(
+            items[0].get("label"),
+            Some(&Value::String("Preferences".to_string()))
+        );
+        assert_eq!(
+            items[0].get("icon"),
+            Some(&Value::String("settings".to_string()))
+        );
+        assert_eq!(
+            items[0].get("on_click"),
+            Some(&Value::String("open_prefs".to_string()))
+        );
+
+        // Second item: a separator.
+        assert_eq!(items[1].get("separator"), Some(&Value::Bool(true)));
+
+        // Third item preserved (repeated `menu-item` did not collapse).
+        assert_eq!(
+            items[2].get("label"),
+            Some(&Value::String("About".to_string()))
         );
     }
 

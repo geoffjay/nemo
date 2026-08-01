@@ -288,6 +288,34 @@ pub fn structural_elements() -> &'static [StructuralElement] {
                     description: "Show a light/dark theme toggle.",
                 },
             ],
+            child_elements: &["menu-item"],
+        },
+        StructuralElement {
+            element: "menu-item",
+            description: "An entry in the header-bar dropdown menu (opt-in). \
+                          Use `separator` for a divider between entries.",
+            attributes: &[
+                AttrDef {
+                    name: "label",
+                    value_type: "string",
+                    description: "Menu entry text.",
+                },
+                AttrDef {
+                    name: "icon",
+                    value_type: "string",
+                    description: "Optional leading icon name (e.g. `settings`).",
+                },
+                AttrDef {
+                    name: "on-click",
+                    value_type: "string",
+                    description: "Handler invoked when the entry is selected.",
+                },
+                AttrDef {
+                    name: "separator",
+                    value_type: "boolean",
+                    description: "Render a divider instead of a clickable entry.",
+                },
+            ],
             child_elements: &[],
         },
         StructuralElement {

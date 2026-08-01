@@ -35,3 +35,17 @@ fn on_form_submit(component_id, event_data) {
 fn on_input_change(component_id, event_data) {
     log_debug("Input changed: " + component_id + " = " + event_data);
 }
+
+// Header-bar menu handlers. Each is invoked with (component_id, event_data)
+// where component_id is "header-bar" and event_data is "click".
+fn on_menu_preferences(component_id, event_data) {
+    log_info("Header menu: Preferences selected");
+}
+
+fn on_menu_docs(component_id, event_data) {
+    log_info("Header menu: Documentation selected");
+}
+
+fn on_menu_about(component_id, event_data) {
+    log_info("Header menu: About selected");
+}
