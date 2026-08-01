@@ -41,6 +41,22 @@ three stages, producing a universal `Value` tree
 3. **Validate** (optional) — `ConfigValidator::validate()` (`validator.rs:22`)
    checks a `Value` against a `ConfigSchema`, returning errors and warnings.
 
+## `<header-bar>` and its opt-in menu
+
+`<window>` children are flattened generically by `process_nested_block`
+(`xml_parser.rs`), which collapses repeated child element types into a single
+key. `<header-bar>` is the one special case: `process_header_bar` copies its
+attributes (`github_url`, `theme_toggle`) and collects any `<menu-item>`
+children into a `menu_items` **array** at
+`app.window.header_bar.menu_items` (each item an object of its snake-cased
+attributes: `label`, `icon`, `on_click`, `separator`). Without that special
+case the repeated `<menu-item>` elements would collapse and all but the last
+would be lost. The header renders this as an opt-in far-left hamburger menu
+(`crates/nemo/src/workspace/header_bar.rs`, `menu_items_from_config` →
+`DropdownButton` + `PopupMenuItem`, each wired to `runtime.call_handler`); the
+element is also declared in the schema surface
+(`crates/nemo-registry/src/schema_surface.rs`).
+
 # Single-file components (`.nemo` SFCs)
 
 An `<imports>`/`<import src="…" [as="tag"]>` block — or `<components dir="…"/>`,

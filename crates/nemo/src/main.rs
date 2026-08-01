@@ -394,8 +394,18 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
                         .get_config("app.window.header_bar.theme_toggle")
                         .and_then(|v| v.as_bool())
                         .unwrap_or(false);
-                    let header_bar =
-                        cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx));
+                    let menu_items = workspace::menu_items_from_config(&rt);
+                    let header_bar = cx.new(|cx| {
+                        HeaderBar::new(
+                            title,
+                            github_url,
+                            theme_toggle,
+                            menu_items,
+                            Arc::clone(&rt),
+                            window,
+                            cx,
+                        )
+                    });
                     let footer_bar_enabled = rt
                         .get_config("app.window.footer_bar.enabled")
                         .and_then(|v| v.as_bool())

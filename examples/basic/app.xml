@@ -2,7 +2,12 @@
   <app title="My Nemo App">
     <window title="Nemo Example">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/basic"
-                  theme-toggle="true" />
+                  theme-toggle="true">
+        <menu-item label="Preferences" icon="settings" on-click="on_menu_preferences" />
+        <menu-item label="Documentation" icon="book" on-click="on_menu_docs" />
+        <menu-item separator="true" />
+        <menu-item label="About" icon="info" on-click="on_menu_about" />
+      </header-bar>
     </window>
     <theme name="kanagawa" mode="dark" />
   </app>

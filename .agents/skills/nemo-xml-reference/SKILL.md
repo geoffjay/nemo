@@ -48,6 +48,31 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
 Top-level blocks are order-tolerant. `<themes>`, `<imports>`/`<components>`, and
 routing primitives are documented in their own sections below.
 
+## Header bar (`<header-bar>`)
+
+The title-bar chrome at the top of the window. All contents are opt-in:
+
+```xml
+<header-bar github-url="https://github.com/you/app" theme-toggle="true">
+  <menu-item label="Preferences" icon="settings" on-click="open_prefs" />
+  <menu-item label="Documentation" icon="book" on-click="open_docs" />
+  <menu-item separator="true" />
+  <menu-item label="About" icon="info" on-click="show_about" />
+</header-bar>
+```
+
+| Attribute / child | Description |
+|-------------------|-------------|
+| `github-url` | Optional external link shown as an icon on the right. |
+| `theme-toggle` | `true` shows the light/dark toggle icon on the right. |
+| `<menu-item>` children | **Opt-in** dropdown menu. When any `<menu-item>` is present, a hamburger icon appears on the **far left** (before the title) and opens a native dropdown built from these items. |
+
+`<menu-item>` attributes: `label` (entry text), `icon` (optional Lucide icon
+name), `on-click` (handler name), `separator="true"` (renders a divider instead
+of a clickable entry — no `label`/`on-click` needed). Handlers receive the
+standard `(component_id, event_data)`; `component_id` is `"header-bar"` and
+`event_data` is `"click"`.
+
 ## Themes
 
 `<theme name="…" mode="…">` under `<app>` selects a **theme set**. The seven

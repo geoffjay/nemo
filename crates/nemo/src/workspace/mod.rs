@@ -27,7 +27,7 @@ use actions::{
     ShowKeyboardShortcuts, ToggleTheme,
 };
 pub use footer_bar::FooterBar;
-pub use header_bar::HeaderBar;
+pub use header_bar::{menu_items_from_config, HeaderBar};
 use layout::AppLayout;
 use project_loader::{ProjectLoaderView, ProjectSelected};
 use settings::SettingsView;
@@ -129,7 +129,19 @@ impl Workspace {
             .get_config("app.window.header_bar.theme_toggle")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        cx.new(|cx| HeaderBar::new(title, github_url, theme_toggle, window, cx))
+        let menu_items = menu_items_from_config(runtime);
+        let runtime = Arc::clone(runtime);
+        cx.new(|cx| {
+            HeaderBar::new(
+                title,
+                github_url,
+                theme_toggle,
+                menu_items,
+                runtime,
+                window,
+                cx,
+            )
+        })
     }
 
     fn create_footer_bar(
