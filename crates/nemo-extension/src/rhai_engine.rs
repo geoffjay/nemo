@@ -535,6 +535,30 @@ impl RhaiEngine {
             }
         });
 
+        // Global UI roundness: a named preset (none/square/sharp/default/round)
+        // or a raw pixel base radius. Deferred + applied with the gpui Theme.
+        let ctx = context.clone();
+        self.engine
+            .register_fn("set_roundness", move |value: &str| {
+                if let Err(e) = ctx.set_roundness(value) {
+                    tracing::warn!("set_roundness failed: {}", e);
+                }
+            });
+
+        let ctx = context.clone();
+        self.engine.register_fn("set_roundness", move |value: i64| {
+            if let Err(e) = ctx.set_roundness(&value.to_string()) {
+                tracing::warn!("set_roundness failed: {}", e);
+            }
+        });
+
+        let ctx = context.clone();
+        self.engine.register_fn("set_roundness", move |value: f64| {
+            if let Err(e) = ctx.set_roundness(&value.to_string()) {
+                tracing::warn!("set_roundness failed: {}", e);
+            }
+        });
+
         let ctx = context.clone();
         self.engine.register_fn("forward", move || {
             if let Err(e) = ctx.forward(None) {

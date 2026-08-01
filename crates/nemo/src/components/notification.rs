@@ -2,7 +2,7 @@ use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
-use crate::theme::tokens::{Space, TokenStyled};
+use crate::theme::tokens::{radius_of, Space, TokenStyled};
 
 /// A toast notification component.
 ///
@@ -54,12 +54,9 @@ impl RenderOnce for Notification {
             .get("rounded")
             .and_then(|v| v.as_str())
         {
-            Some("sm") => el.rounded_sm(),
-            Some("lg") => el.rounded_lg(),
-            Some("xl") => el.rounded_xl(),
-            Some("full") => el.rounded(px(9999.)),
             Some("none") => el,
-            _ => el.rounded_md(),
+            Some(name) => el.rounded(radius_of(name, cx)),
+            _ => el.rounded(radius_of("md", cx)),
         };
 
         el.child(self.message)

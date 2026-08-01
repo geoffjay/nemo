@@ -8,7 +8,7 @@ use tracing::info;
 
 use crate::config::recent::RecentProjects;
 use crate::config::NemoConfig;
-use crate::theme::tokens::{FontSize, Space, TokenStyled};
+use crate::theme::tokens::{radius_of, FontSize, Space, TokenStyled};
 
 /// Action emitted when a project is selected (carries the config file path).
 #[derive(Clone, Debug)]
@@ -166,6 +166,7 @@ impl ProjectLoaderView {
 
 impl Render for ProjectLoaderView {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let card_radius = radius_of("md", cx);
         let theme = cx.theme();
         let muted = theme.colors.muted_foreground;
         let border_color = theme.colors.border;
@@ -194,7 +195,7 @@ impl Render for ProjectLoaderView {
                 div()
                     .px_t(Space::Lg)
                     .py_t(Space::Md)
-                    .rounded_md()
+                    .rounded(card_radius)
                     .border_1()
                     .border_color(border_color)
                     .text_color(muted)
@@ -212,7 +213,7 @@ impl Render for ProjectLoaderView {
                         .id(SharedString::from(format!("recent-{}", path_display)))
                         .px_t(Space::Lg)
                         .py_t(Space::Sm)
-                        .rounded_md()
+                        .rounded(card_radius)
                         .cursor_pointer()
                         .hover(|s| s.bg(list_active_bg))
                         .child(
@@ -250,7 +251,7 @@ impl Render for ProjectLoaderView {
                 div()
                     .px_t(Space::Lg)
                     .py_t(Space::Sm)
-                    .rounded_md()
+                    .rounded(card_radius)
                     .bg(red())
                     .text_color(white())
                     .text_t(FontSize::Sm)

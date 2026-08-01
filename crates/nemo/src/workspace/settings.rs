@@ -21,7 +21,7 @@ use std::sync::{Arc, Mutex};
 use crate::config::NemoConfig;
 use crate::runtime::NemoRuntime;
 use crate::theme;
-use crate::theme::tokens::{Space, TokenStyled};
+use crate::theme::tokens::{radius_of, Space, TokenStyled};
 use crate::workspace::xml_edit;
 
 /// Callback invoked when a settings dropdown item is chosen. Receives the
@@ -196,6 +196,7 @@ impl SettingsView {
         let border_color = cx.theme().colors.border;
         let selected_bg = cx.theme().colors.list_active;
         let hover_bg = cx.theme().colors.list_hover;
+        let item_radius = radius_of("md", cx);
 
         let mut sidebar = v_flex()
             .w(px(200.))
@@ -222,7 +223,7 @@ impl SettingsView {
                     .px_t(Space::Md)
                     .py_1p5()
                     .mx_t(Space::Sm)
-                    .rounded_md()
+                    .rounded(item_radius)
                     .cursor_pointer()
                     .bg(item_bg)
                     .child(Label::new(label).text_size(px(14.)))
@@ -254,7 +255,7 @@ impl SettingsView {
                     .px_t(Space::Md)
                     .py_1p5()
                     .mx_t(Space::Sm)
-                    .rounded_md()
+                    .rounded(item_radius)
                     .cursor_pointer()
                     .bg(item_bg)
                     .child(Label::new(name).text_size(px(14.)))
@@ -613,12 +614,13 @@ impl SettingsView {
                 });
 
                 let border_color = cx.theme().colors.border;
+                let panel_radius = radius_of("md", cx);
                 let mut panel = v_flex()
                     .gap_t(Space::Md)
                     .p_t(Space::Lg)
                     .border_1()
                     .border_color(border_color)
-                    .rounded_md();
+                    .rounded(panel_radius);
 
                 if let Some(t) = title {
                     panel = panel.child(

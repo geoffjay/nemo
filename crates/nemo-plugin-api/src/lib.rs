@@ -339,6 +339,17 @@ pub trait PluginContext: Send + Sync {
     fn forward(&self, _router: Option<&str>) -> Result<(), PluginError> {
         Err(PluginError::Unsupported("forward".to_string()))
     }
+
+    /// Sets the global UI corner roundness at runtime. `value` is a named preset
+    /// (`none`/`square`/`sharp`/`default`/`round`) or a raw pixel base radius
+    /// (e.g. `"3"`). Applied asynchronously (the host defers it so calling this
+    /// from inside an event handler is safe); unrecognized values are ignored.
+    ///
+    /// The default implementation reports the operation as unsupported so
+    /// existing plugin SDKs continue to compile without change.
+    fn set_roundness(&self, _value: &str) -> Result<(), PluginError> {
+        Err(PluginError::Unsupported("set_roundness".to_string()))
+    }
 }
 
 /// Log level.

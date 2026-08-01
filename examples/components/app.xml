@@ -7,10 +7,15 @@
       <plugin name="demo-settings" />
     </plugins>
     <window title="Component Gallery" width="1200" height="800">
-      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/components" theme-toggle="true" />
+      <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/components" theme-toggle="true">
+        <menu-item label="Roundness - Square" icon="settings" on-click="on_menu_roundness_square" />
+        <menu-item label="Roundness - Sharp" icon="settings" on-click="on_menu_roundness_sharp" />
+        <menu-item label="Roundness - Default" icon="settings" on-click="on_menu_roundness_default" />
+        <menu-item label="Roundness - Round" icon="settings" on-click="on_menu_roundness_round" />
+      </header-bar>
       <footer-bar enabled="false" />
     </window>
-    <theme name="kanagawa" mode="dark" />
+    <theme name="nord" mode="dark" />
   </app>
 
   <script src="./scripts" />

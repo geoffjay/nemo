@@ -60,8 +60,14 @@ impl App {
             // the route projection it flags (issue #81).
             let initial_enters = poll_runtime.fire_pending_initial_enters();
             let data_updated = poll_runtime.apply_pending_data_updates();
-            if navigated || initial_enters || data_updated {
+            // A runtime `set_roundness()` call needs the gpui `Theme` (an `App`),
+            // which only exists inside `this.update`; apply it there.
+            let roundness = poll_runtime.take_pending_roundness();
+            if navigated || initial_enters || data_updated || roundness.is_some() {
                 let _ = this.update(cx, |_app: &mut App, cx: &mut Context<App>| {
+                    if let Some(value) = roundness {
+                        crate::theme::apply_roundness(&value, cx);
+                    }
                     cx.notify();
                 });
             }
@@ -743,7 +749,7 @@ impl App {
 
             // Decoration
             wrapper = apply_shadow(wrapper, shadow);
-            wrapper = apply_rounded(wrapper, rounded);
+            wrapper = apply_rounded(wrapper, rounded, cx);
             if let Some(bg) = background.and_then(|v| crate::components::resolve_color(v, cx)) {
                 wrapper = wrapper.bg(bg);
             }

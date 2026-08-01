@@ -1,4 +1,4 @@
-use crate::theme::tokens::{Space, TokenStyled};
+use crate::theme::tokens::{radius_of, Space, TokenStyled};
 use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_layout::BuiltComponent;
@@ -48,7 +48,7 @@ impl RenderOnce for List {
                 div()
                     .px_t(Space::Sm)
                     .py_t(Space::Xs)
-                    .rounded_sm()
+                    .rounded(radius_of("sm", cx))
                     .hover(move |s| s.bg(list_hover))
                     .children(body),
             );

@@ -88,7 +88,25 @@ a pure refactor (confirmed by screenshots + 203 tests):
    `settings`, `project_loader`, `header_bar`, `utils`, `mod`; `containers/app_shell`;
    `app.rs` fallback) now use tokens. Repo-wide grep confirms no convertible
    literal remains outside doc comments. Screenshots pixel-neutral; 203 tests pass.
-4. **Future:** deliberate redesign passes can now adjust *token values* once and
+4. **Done — runtime radius is config-driven (global roundness):** corner
+   rounding now has a single *runtime* source. `nemo-tokens` gained
+   `radius_scaled(preset, base)` (the scale is proportional to a base `md`
+   radius; `full` stays a fixed pill) and `resolve_roundness(&str)` (named
+   presets `none`/`square`/`sharp`/`default`/`round`, or a raw pixel number).
+   `theme/tokens.rs` adds `radius_for(preset, cx) -> Option<Pixels>` and the
+   infallible `radius_of(preset, cx) -> Pixels`, both scaling the preset to the
+   live `cx.theme().radius`. `apply_rounded` now takes `cx`. Every nemo-drawn
+   chrome radius (the category-a literals in `list`/`select`/`modal`/
+   `sidenav_bar`/`router`/`app_shell`/`project_loader`/`settings` and the
+   override handlers in `notification`/`label`/`panel`) routes through these, so
+   they follow the same base as the gpui-component built-ins (which already read
+   `cx.theme().radius`; `button`'s `ButtonRounded::Small/Medium/Large` map to
+   `radius*{0.5,1,2}` and needed no change). The base is set from the new
+   app-level `roundness` config (`AppConfig.roundness`) via
+   `theme::apply_roundness`, applied *after* theme application in `main.rs`
+   (TOML) and `workspace/utils.rs` (XML `app.theme.roundness` / `app.roundness`).
+   Default (unset) is byte-identical to before (base == `radius::MD` == 6px).
+5. **Future:** deliberate redesign passes can now adjust *token values* once and
    have the whole UI follow.
 
 # Verification

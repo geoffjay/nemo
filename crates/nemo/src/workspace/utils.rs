@@ -97,6 +97,16 @@ pub fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gp
     {
         gpui_component::Theme::global_mut(cx).font_family = font_family.into();
     }
+
+    // Apply per-project roundness override (after theme so it isn't reset).
+    // Accepts `app.theme.roundness` (consistent with font_family) or `app.roundness`.
+    if let Some(roundness) = runtime
+        .get_config("app.theme.roundness")
+        .or_else(|| runtime.get_config("app.roundness"))
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+    {
+        theme::apply_roundness(&roundness, cx);
+    }
 }
 
 /// Render a single row for the keyboard shortcuts dialog.

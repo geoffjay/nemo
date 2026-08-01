@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::components::icon::map_icon_name;
 use crate::runtime::NemoRuntime;
-use crate::theme::tokens::{FontSize, Space, TokenStyled};
+use crate::theme::tokens::{radius_of, FontSize, Space, TokenStyled};
 
 /// A standard application shell: a left sidenav of icon+label items, a
 /// switchable content area, and a full-width status footer.
@@ -119,6 +119,7 @@ impl RenderOnce for AppShell {
             .unwrap_or(false);
 
         let active = self.active_state.lock().unwrap().clone();
+        let item_radius = radius_of("md", cx);
 
         // ── Sidenav column ────────────────────────────────────────────────
         let items: Vec<AnyElement> = self
@@ -149,7 +150,7 @@ impl RenderOnce for AppShell {
                     .flex()
                     .flex_row()
                     .items_center()
-                    .rounded_md()
+                    .rounded(item_radius)
                     .mx_t(Space::Xs)
                     .cursor_pointer()
                     .text_color(sidebar_fg)

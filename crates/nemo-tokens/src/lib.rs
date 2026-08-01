@@ -74,6 +74,11 @@ impl Space {
 /// Corner-radius scale, in logical pixels. Values match the gpui-component
 /// rounded presets (`sm`/`md`/`lg`/`xl`, Tailwind rems × 16px) so adopting the
 /// tokens is visually neutral; `full` is a pill.
+///
+/// These are the *default look*, anchored to a base radius of [`radius::MD`]
+/// (6px, the gpui-component `Theme.radius` default). The whole scale can be
+/// rescaled at runtime from a single base radius via [`radius_scaled`] — the
+/// constants here are the `base == MD` case.
 pub mod radius {
     pub const SM: f32 = 4.0;
     pub const MD: f32 = 6.0;
@@ -82,14 +87,29 @@ pub mod radius {
     pub const FULL: f32 = 9999.0;
 }
 
-/// Maps an XML rounded-preset name to a radius token value in pixels.
-/// `None` for unknown names (callers fall back to their own default).
+/// Maps an XML rounded-preset name to a radius token value in pixels, using the
+/// default base radius ([`radius::MD`]). `None` for unknown names (callers fall
+/// back to their own default).
+///
+/// Prefer [`radius_scaled`] where a runtime base radius is available, so the
+/// preset scales with the app's configured roundness.
 pub fn radius_px(preset: &str) -> Option<f32> {
+    radius_scaled(preset, radius::MD)
+}
+
+/// Maps an XML rounded-preset name to a radius in pixels, scaled to `base`.
+///
+/// The scale is *proportional* to `base` (which is the `md` step): `sm` is ⅔,
+/// `lg` is 4/3, `xl` is 2×. `full` is always a fixed pill regardless of `base`.
+/// With `base == `[`radius::MD`] (6px) the results are byte-identical to the
+/// static [`radius`] constants, so wiring a runtime base is visually neutral by
+/// default. `None` for unknown preset names.
+pub fn radius_scaled(preset: &str, base: f32) -> Option<f32> {
     match preset {
-        "sm" => Some(radius::SM),
-        "md" => Some(radius::MD),
-        "lg" => Some(radius::LG),
-        "xl" => Some(radius::XL),
+        "sm" => Some(base * (radius::SM / radius::MD)),
+        "md" => Some(base),
+        "lg" => Some(base * (radius::LG / radius::MD)),
+        "xl" => Some(base * (radius::XL / radius::MD)),
         "full" => Some(radius::FULL),
         _ => None,
     }
@@ -97,6 +117,31 @@ pub fn radius_px(preset: &str) -> Option<f32> {
 
 /// Radius preset names, in ascending order (for enumeration/export).
 pub const RADIUS_NAMES: [&str; 5] = ["sm", "md", "lg", "xl", "full"];
+
+/// Named global-roundness presets, mapping to a base radius (the `md` step) in
+/// logical pixels. `default` is the gpui-component default (6px).
+pub const ROUNDNESS_PRESETS: [(&str, f32); 5] = [
+    ("none", 0.0),
+    ("square", 0.0),
+    ("sharp", 2.0),
+    ("default", radius::MD),
+    ("round", 10.0),
+];
+
+/// Resolves an app-level `roundness` config value to a base radius in pixels.
+///
+/// Accepts a named preset ([`ROUNDNESS_PRESETS`]: `none`/`square`/`sharp`/
+/// `default`/`round`) or a raw number of pixels (e.g. `"3"`, `"4.5"`).
+/// Returns `None` for unrecognized values so callers keep the default.
+pub fn resolve_roundness(value: &str) -> Option<f32> {
+    let trimmed = value.trim();
+    for (name, base) in ROUNDNESS_PRESETS {
+        if trimmed.eq_ignore_ascii_case(name) {
+            return Some(base);
+        }
+    }
+    trimmed.parse::<f32>().ok().filter(|n| *n >= 0.0)
+}
 
 /// Typography scale: font size + line height, in logical pixels. Sizes match the
 /// gpui text helpers exactly (`text_xs`=12, `text_sm`=14, base=16, `text_lg`=18,
@@ -213,6 +258,44 @@ mod tests {
         assert_eq!(radius_px("md"), Some(radius::MD));
         assert_eq!(radius_px("full"), Some(radius::FULL));
         assert_eq!(radius_px("bogus"), None);
+    }
+
+    #[test]
+    fn radius_scaled_default_base_matches_static_tokens() {
+        // base == MD must reproduce the static scale exactly (neutral migration).
+        assert_eq!(radius_scaled("sm", radius::MD), Some(radius::SM));
+        assert_eq!(radius_scaled("md", radius::MD), Some(radius::MD));
+        assert_eq!(radius_scaled("lg", radius::MD), Some(radius::LG));
+        assert_eq!(radius_scaled("xl", radius::MD), Some(radius::XL));
+        assert_eq!(radius_scaled("full", radius::MD), Some(radius::FULL));
+        assert_eq!(radius_scaled("bogus", radius::MD), None);
+    }
+
+    #[test]
+    fn radius_scaled_scales_proportionally_but_full_is_fixed() {
+        // base 3 → half the default scale.
+        assert_eq!(radius_scaled("sm", 3.0), Some(2.0));
+        assert_eq!(radius_scaled("md", 3.0), Some(3.0));
+        assert_eq!(radius_scaled("lg", 3.0), Some(4.0));
+        assert_eq!(radius_scaled("xl", 3.0), Some(6.0));
+        // full is a pill regardless of base.
+        assert_eq!(radius_scaled("full", 3.0), Some(radius::FULL));
+        assert_eq!(radius_scaled("full", 0.0), Some(radius::FULL));
+    }
+
+    #[test]
+    fn resolve_roundness_named_and_numeric() {
+        assert_eq!(resolve_roundness("default"), Some(radius::MD));
+        assert_eq!(resolve_roundness("DEFAULT"), Some(radius::MD));
+        assert_eq!(resolve_roundness("none"), Some(0.0));
+        assert_eq!(resolve_roundness("square"), Some(0.0));
+        assert_eq!(resolve_roundness("sharp"), Some(2.0));
+        assert_eq!(resolve_roundness("round"), Some(10.0));
+        assert_eq!(resolve_roundness(" 3 "), Some(3.0));
+        assert_eq!(resolve_roundness("4.5"), Some(4.5));
+        // Negative and non-numeric are rejected.
+        assert_eq!(resolve_roundness("-2"), None);
+        assert_eq!(resolve_roundness("bogus"), None);
     }
 
     #[test]

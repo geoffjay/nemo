@@ -1,4 +1,4 @@
-use crate::theme::tokens::{FontSize, Space, TokenStyled};
+use crate::theme::tokens::{radius_of, FontSize, Space, TokenStyled};
 use gpui::*;
 use gpui_component::ActiveTheme;
 use nemo_macros::NemoComponent;
@@ -52,7 +52,7 @@ impl RenderOnce for Modal {
                     .flex_col()
                     .gap_t(Space::Lg)
                     .p_t(Space::Xl)
-                    .rounded_lg()
+                    .rounded(radius_of("lg", cx))
                     .bg(bg)
                     .border_1()
                     .border_color(border)

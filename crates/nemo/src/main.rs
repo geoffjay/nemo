@@ -285,6 +285,11 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         gpui_component::Theme::global_mut(cx).font_family = font_family.clone().into();
     }
 
+    // Apply global roundness from TOML config (after theme so it isn't reset)
+    if let Some(ref roundness) = nemo_config.app.roundness {
+        theme::apply_roundness(roundness, cx);
+    }
+
     // Wrap config in Arc<Mutex<>> for sharing with settings view
     let nemo_config = Arc::new(Mutex::new(nemo_config));
 

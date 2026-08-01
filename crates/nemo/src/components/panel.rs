@@ -43,7 +43,7 @@ impl RenderOnce for Panel {
             return div().into_any_element();
         }
 
-        use crate::theme::tokens::{radius, radius_px};
+        use crate::theme::tokens::radius_of;
 
         let props = &self.source.properties;
 
@@ -56,8 +56,8 @@ impl RenderOnce for Panel {
         // Rounding comes from the radius design tokens (single source); default md.
         el = match props.get("rounded").and_then(|v| v.as_str()) {
             Some("none") => el,
-            Some(name) => el.rounded(px(radius_px(name).unwrap_or(radius::MD))),
-            None => el.rounded(px(radius::MD)),
+            Some(name) => el.rounded(radius_of(name, cx)),
+            None => el.rounded(radius_of("md", cx)),
         };
 
         el = crate::components::apply_shadow(el, props.get("shadow").and_then(|v| v.as_str()));

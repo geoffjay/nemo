@@ -2,7 +2,7 @@ use gpui::*;
 use gpui_component::label::Label as GpuiLabel;
 use nemo_macros::NemoComponent;
 
-use crate::theme::tokens::{FontSize, TokenStyled};
+use crate::theme::tokens::{radius_for, FontSize, TokenStyled};
 
 /// A text display component.
 ///
@@ -29,7 +29,7 @@ pub struct Label {
 }
 
 impl RenderOnce for Label {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let label = GpuiLabel::new(SharedString::from(self.text));
 
         let label = match self.size.as_str() {
@@ -46,11 +46,11 @@ impl RenderOnce for Label {
             .get("rounded")
             .and_then(|v| v.as_str())
         {
-            Some("sm") => label.rounded_sm(),
-            Some("md") => label.rounded_md(),
-            Some("lg") => label.rounded_lg(),
-            Some("full") => label.rounded(px(9999.)),
-            _ => label,
+            Some(name) => match radius_for(name, cx) {
+                Some(r) => label.rounded(r),
+                None => label,
+            },
+            None => label,
         }
     }
 }

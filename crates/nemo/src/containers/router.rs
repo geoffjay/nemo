@@ -33,7 +33,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::runtime::NemoRuntime;
-use crate::theme::tokens::{FontSize, Space, TokenStyled};
+use crate::theme::tokens::{radius_of, FontSize, Space, TokenStyled};
 
 /// Matches a `<route>` `path` pattern against a concrete path.
 ///
@@ -180,7 +180,7 @@ impl RenderOnce for NavLink {
             .flex()
             .flex_row()
             .items_center()
-            .rounded_md()
+            .rounded(radius_of("md", cx))
             .cursor_pointer()
             .px_t(Space::Sm)
             .py_t(Space::Xs)

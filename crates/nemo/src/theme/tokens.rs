@@ -18,7 +18,8 @@
 // API. (Binary crate: `pub` alone does not suppress dead-code warnings.)
 #![allow(dead_code)]
 
-use gpui::{px, Pixels, Styled};
+use gpui::{px, App, Pixels, Styled};
+use gpui_component::ActiveTheme;
 
 // Re-export the gpui-free token data so existing `crate::theme::tokens::*` paths
 // keep working (scales, radius, `radius_px`, semantic roles, `resolve_role_alias`).
@@ -27,6 +28,28 @@ pub use nemo_tokens::*;
 /// A spacing step as GPUI `Pixels`, for use in render code.
 pub fn space(step: Space) -> Pixels {
     px(step.value())
+}
+
+/// Runtime corner radius for a preset name, scaled to the app's configured base
+/// radius (`cx.theme().radius`, set from the `roundness` config).
+///
+/// This is the runtime counterpart of [`radius_px`]: instead of the static
+/// `md == 6px` scale, it scales the preset proportionally to the live theme
+/// radius, so a single `roundness` value re-rounds all nemo-drawn chrome along
+/// with the gpui-component built-ins. `None` for unknown preset names. With the
+/// default theme radius (6px) results are byte-identical to [`radius_px`].
+pub fn radius_for(preset: &str, cx: &App) -> Option<Pixels> {
+    let base = f32::from(cx.theme().radius);
+    radius_scaled(preset, base).map(px)
+}
+
+/// Infallible [`radius_for`], for nemo-drawn chrome that hardcodes a fixed
+/// preset (replacing bare `.rounded_md()`/`.rounded_sm()` literals). An unknown
+/// preset falls back to the base radius — only reachable via a code typo, not
+/// user input.
+pub fn radius_of(preset: &str, cx: &App) -> Pixels {
+    let base = f32::from(cx.theme().radius);
+    px(radius_scaled(preset, base).unwrap_or(base))
 }
 
 /// Font size as GPUI `Pixels`.

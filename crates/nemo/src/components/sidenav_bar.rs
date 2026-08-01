@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use super::icon::map_icon_name;
 use crate::runtime::NemoRuntime;
-use crate::theme::tokens::{FontSize, Space, TokenStyled};
+use crate::theme::tokens::{radius_of, FontSize, Space, TokenStyled};
 
 /// A vertical navigation sidebar that displays icon+label items.
 ///
@@ -237,7 +237,7 @@ impl RenderOnce for SidenavBarItem {
             .flex()
             .flex_row()
             .items_center()
-            .rounded_md()
+            .rounded(radius_of("md", cx))
             .cursor_pointer()
             .text_color(fg)
             .hover(move |s| s.bg(hover_bg));

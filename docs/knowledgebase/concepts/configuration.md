@@ -187,14 +187,24 @@ settings view (`ctrl+p`, `crates/nemo/src/workspace/settings.rs`):
 
 1. **Global** — a TOML file at `~/.config/nemo/config.toml`, deserialized into
    `NemoConfig` (`crates/nemo/src/config/`). Holds cross-project user prefs:
-   `app.theme_name`, `app.theme_mode`, `app.font_family`. Writable via
-   `NemoConfig::save()`. Applied at startup in `main.rs`.
+   `app.theme_name`, `app.theme_mode`, `app.font_family`, `app.roundness`.
+   Writable via `NemoConfig::save()`. Applied at startup in `main.rs`.
 2. **Project** — the per-project `app.xml` (`<app><theme name mode/></app>`),
    read via `runtime.get_config("app.theme.name" | ".mode")`. The **project
    layer wins**: `apply_theme_from_runtime` (`workspace/utils.rs`) re-applies the
    XML theme after the global one, so a project's `<theme>` overrides the global
    default. If neither layer sets a theme, gpui-component's built-in default is
    used.
+
+**Global roundness** (`app.roundness`, both layers): sets the base corner
+radius for the whole UI — a named preset (`none`/`square`/`sharp`/`default`/
+`round`) or a raw pixel number. Applied via `theme::apply_roundness` *after*
+theme application (`main.rs` for TOML, `workspace/utils.rs` reading
+`app.theme.roundness`/`app.roundness` for XML). It sets the gpui-component
+`Theme.radius`, and all nemo-drawn chrome scales from it via
+`theme::tokens::radius_for`/`radius_of` — see the
+[design-tokens plan](../plans/design-tokens.md). Default (unset) is unchanged
+(6px). Per-component XML `rounded="…"` still wins and scales with the base.
 
 The settings view has a **Global** page (persists to `config.toml` via
 `NemoConfig::save()`) and a **Project** page (persists to the loaded `app.xml`).

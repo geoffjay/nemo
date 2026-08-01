@@ -355,6 +355,27 @@ pub fn apply_theme(name: &str, cx: &mut App) {
     }
 }
 
+/// Apply the global `roundness` config to the live theme.
+///
+/// `value` is a named preset (`none`/`square`/`sharp`/`default`/`round`) or a
+/// raw pixel base radius. It sets the gpui-component `Theme.radius` (the base
+/// every widget and all nemo-drawn chrome scale from) and `radius_lg`
+/// (proportionally, matching the `lg` token step). Unrecognized values are
+/// ignored, leaving the theme default. Call *after* any theme application so it
+/// is not overwritten — `apply_config` only touches radius when the theme JSON
+/// declares one, which the shipped themes do not.
+pub fn apply_roundness(value: &str, cx: &mut App) {
+    let Some(base) = nemo_tokens::resolve_roundness(value) else {
+        warn!("ignoring unrecognized roundness value: {value:?}");
+        return;
+    };
+    let theme = Theme::global_mut(cx);
+    theme.radius = px(base);
+    // Scale the large radius proportionally to the base (lg == 8/6 of md).
+    let lg = nemo_tokens::radius_scaled("lg", base).unwrap_or(base);
+    theme.radius_lg = px(lg);
+}
+
 /// Toggle the color mode using the already-stored light/dark theme configs.
 pub fn change_color_mode(mode: ThemeMode, _win: &mut Window, cx: &mut App) {
     let theme = Theme::global_mut(cx);

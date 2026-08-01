@@ -4,7 +4,7 @@ use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
 use crate::runtime::NemoRuntime;
-use crate::theme::tokens::{Space, TokenStyled};
+use crate::theme::tokens::{radius_of, Space, TokenStyled};
 
 /// A selectable option, built by the render dispatch from an `<option>` child.
 /// `value` is the canonical string (passed to handlers); `label` is the display
@@ -92,7 +92,7 @@ impl RenderOnce for Select {
             .gap_t(Space::Xs)
             .px_t(Space::Md)
             .py_t(Space::Sm)
-            .rounded_md()
+            .rounded(radius_of("md", cx))
             .border_1()
             .border_color(border_color);
 
@@ -112,7 +112,7 @@ impl RenderOnce for Select {
                 ))))
                 .px_t(Space::Sm)
                 .py_t(Space::Xs)
-                .rounded_sm()
+                .rounded(radius_of("sm", cx))
                 .cursor_pointer()
                 .child(option.label.clone());
 

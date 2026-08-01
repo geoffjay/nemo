@@ -175,6 +175,10 @@ pub struct NemoRuntime {
     /// render pass and still owe a one-shot initial `on-enter`. Drained outside
     /// the extension lock by [`Self::fire_pending_initial_enters`].
     pending_initial_enters: Arc<Mutex<Vec<String>>>,
+    /// Queued global-roundness changes (a preset name or pixel string) from
+    /// `set_roundness()` Rhai calls / plugins. Applied with `cx` by the App poll
+    /// loop via [`Self::take_pending_roundness`] (needs the gpui `Theme`).
+    roundness_intents: Arc<Mutex<Vec<String>>>,
 }
 
 impl NemoRuntime {
@@ -221,6 +225,7 @@ impl NemoRuntime {
             nav_intents: Arc::new(Mutex::new(Vec::new())),
             initial_route: Arc::new(Mutex::new(None)),
             pending_initial_enters: Arc::new(Mutex::new(Vec::new())),
+            roundness_intents: Arc::new(Mutex::new(Vec::new())),
         })
     }
 
@@ -551,6 +556,7 @@ impl NemoRuntime {
             Arc::clone(&self.data_notify),
             Arc::clone(&self.plugin_dirty_paths),
             Arc::clone(&self.nav_intents),
+            Arc::clone(&self.roundness_intents),
         ));
 
         {
@@ -1168,6 +1174,22 @@ impl NemoRuntime {
             }
         }
         any
+    }
+
+    /// Drains queued global-roundness changes from `set_roundness()`. Returns the
+    /// latest requested value (a preset name or pixel string), or `None` if none
+    /// are pending. Only the last wins — intermediate values would just be
+    /// overwritten before the next render. The caller applies it with `cx`
+    /// (needs the gpui `Theme`), outside the extension lock.
+    pub fn take_pending_roundness(&self) -> Option<String> {
+        let pending: Vec<String> = {
+            let mut q = self
+                .roundness_intents
+                .lock()
+                .expect("roundness_intents poisoned");
+            std::mem::take(&mut *q)
+        };
+        pending.into_iter().next_back()
     }
 
     /// Fires the one-shot `on-enter` hook for routers that the render pass just
@@ -2827,6 +2849,7 @@ pub struct RuntimeContext {
     data_notify: Arc<tokio::sync::Notify>,
     plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
     nav_intents: Arc<Mutex<Vec<NavIntent>>>,
+    roundness_intents: Arc<Mutex<Vec<String>>>,
 }
 
 impl RuntimeContext {
@@ -2841,6 +2864,7 @@ impl RuntimeContext {
         data_notify: Arc<tokio::sync::Notify>,
         plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
         nav_intents: Arc<Mutex<Vec<NavIntent>>>,
+        roundness_intents: Arc<Mutex<Vec<String>>>,
     ) -> Self {
         Self {
             config,
@@ -2851,6 +2875,7 @@ impl RuntimeContext {
             data_notify,
             plugin_dirty_paths,
             nav_intents,
+            roundness_intents,
         }
     }
 
@@ -2961,6 +2986,15 @@ impl PluginContext for RuntimeContext {
         self.enqueue(NavIntent::Forward {
             router: router.map(String::from),
         });
+        Ok(())
+    }
+
+    fn set_roundness(&self, value: &str) -> Result<(), PluginError> {
+        if let Ok(mut q) = self.roundness_intents.lock() {
+            q.push(value.to_string());
+        }
+        self.data_dirty.store(true, Ordering::Release);
+        self.data_notify.notify_one();
         Ok(())
     }
 }
@@ -3964,6 +3998,7 @@ mod runtime_tests {
             notify,
             Arc::new(RwLock::new(HashSet::new())),
             Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
 
         // set_data should store and mark dirty
@@ -3996,6 +4031,7 @@ mod runtime_tests {
             notify,
             Arc::new(RwLock::new(HashSet::new())),
             Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
         assert_eq!(ctx.get_data("nonexistent"), None);
     }
@@ -4024,6 +4060,7 @@ mod runtime_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
             Arc::new(Mutex::new(Vec::new())),
         );
 
@@ -4065,6 +4102,7 @@ mod runtime_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
             Arc::new(Mutex::new(Vec::new())),
         );
 
@@ -5102,6 +5140,7 @@ mod error_path_tests {
             notify,
             Arc::new(RwLock::new(HashSet::new())),
             Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
         );
 
         // Setting property on a nonexistent component should return error
@@ -5307,6 +5346,7 @@ mod error_path_tests {
             dirty,
             notify,
             Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
             Arc::new(Mutex::new(Vec::new())),
         );
         assert_eq!(ctx.get_config("any.path"), None);

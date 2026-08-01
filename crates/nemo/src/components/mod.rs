@@ -177,10 +177,12 @@ pub(crate) fn apply_shadow(base: Div, shadow: Option<&str>) -> Div {
 /// Applies a rounded corner preset to a div element.
 ///
 /// Supported sizes: "sm", "md", "lg", "xl", "full". Values come from the radius
-/// design tokens (`theme::tokens::radius`) so rounding has a single source.
-pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>) -> Div {
-    match crate::theme::tokens::radius_px(rounded.unwrap_or("")) {
-        Some(r) => base.rounded(px(r)),
+/// design tokens scaled to the app's configured base radius
+/// (`theme::tokens::radius_for`), so rounding has a single runtime source that
+/// follows the `roundness` config.
+pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>, cx: &App) -> Div {
+    match rounded.and_then(|name| crate::theme::tokens::radius_for(name, cx)) {
+        Some(r) => base.rounded(r),
         None => base,
     }
 }

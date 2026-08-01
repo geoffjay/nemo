@@ -8,6 +8,11 @@ pub struct AppConfig {
     /// Color mode for the global theme: "dark", "light", or "system".
     pub theme_mode: Option<String>,
     pub font_family: Option<String>,
+    /// Global corner-roundness for the whole UI. A named preset
+    /// (`none`/`square`/`sharp`/`default`/`round`) or a raw pixel base radius
+    /// (e.g. `"3"`). Sets the gpui-component `Theme.radius`, which every widget
+    /// and all nemo-drawn chrome scale from. `None` keeps the theme default.
+    pub roundness: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -16,6 +21,7 @@ impl Default for AppConfig {
             theme_name: "default".to_string(),
             theme_mode: None,
             font_family: None,
+            roundness: None,
         }
     }
 }
