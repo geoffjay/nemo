@@ -80,6 +80,7 @@ to touch the KB on every edit.
 * [Roadmap](plans/roadmap.md) - current capabilities, phase-2 status, remaining roadmap items, and pointers to full planning docs.
 * [Declarative children over JSON-string properties](plans/declarative-children-migration.md) - migrate collection components from JSON-string attributes to nested child elements, piloted on accordion.
 * [Headless renderer and screenshots](plans/headless-screenshots.md) - `nemo screenshot` implemented on macOS via gpui's offscreen `Window::render_to_image`; Linux capture remains open.
+* [Screenshot as a plugin](plans/screenshot-as-plugin.md) - move `nemo screenshot` off the feature-gated host build onto a stock release binary via an OS-native capture plugin; needs `Capability::Command` (plugin-contributed CLI subcommands) + a host `capture_app_window` bootstrap primitive. **Planned.**
 * [Devtools inspector](plans/devtools-inspector.md) - what a nemo-devtools crate would take; the introspection surfaces already exist, in-process panel recommended over an external client.
 * [Design tokens and active redesign](plans/design-tokens.md) - centralized spacing/radius/typography/semantic-color tokens (gpui-free `nemo-tokens` crate); full chrome migration with screenshot verification.
 * [Design-system export](plans/design-system-export.md) - `cargo xtask design-export` emits tokens + themes + component structure as a pencil.dev-friendly JSON intermediate.

@@ -763,7 +763,17 @@ impl NemoRuntime {
                 }
             }
 
-            // Start all registered sources
+            // Subscribe the update loops *before* starting sources. A source's
+            // `start()` broadcasts its initial `full` value immediately, and a
+            // tokio broadcast channel drops messages sent while no receiver is
+            // attached — so subscribing after `start_all()` loses the first
+            // value, leaving the repository unseeded until some later event
+            // (e.g. a file-watcher change) re-delivers it. Interactive runs
+            // usually get such a follow-up; a one-shot `nemo screenshot` does
+            // not, so bound values render as placeholders (issue #82).
+            self.start_data_update_loop().await;
+
+            // Start all registered sources (now that receivers are attached).
             let results = self.data_engine.start_all().await;
             for (id, result) in &results {
                 match result {
@@ -771,9 +781,6 @@ impl NemoRuntime {
                     Err(e) => tracing::warn!("Failed to start data source '{}': {}", id, e),
                 }
             }
-
-            // Start the data update loop for each source
-            self.start_data_update_loop().await;
 
             Ok::<(), anyhow::Error>(())
         })?;

@@ -34,6 +34,16 @@ created via `nemo_data::create_source()`, registered and started by the
 `DataFlowEngine`, then consumed by tokio tasks the runtime spawns
 (`crates/nemo/src/runtime.rs`, source setup ~520, update loop ~594).
 
+**Startup ordering is load-bearing.** A source's `start()` broadcasts its
+initial `full` value *immediately*, and a tokio `broadcast` channel drops
+messages sent while no receiver is attached. So the runtime subscribes the
+update loops (`start_data_update_loop()`) **before** `data_engine.start_all()`;
+subscribing afterward loses each source's first value, leaving the repository
+unseeded until some later event (e.g. a file-watcher change) re-delivers it.
+Interactive runs usually get such a follow-up and appear to recover, but a
+one-shot `nemo screenshot` does not — that was the root cause of issue #82
+(bound values rendered as placeholders in captures).
+
 # Transforms
 
 The `Transform` trait (`crates/nemo-data/src/transform.rs:31`) and a `Pipeline`

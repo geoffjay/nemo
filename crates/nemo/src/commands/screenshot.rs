@@ -19,6 +19,7 @@ use anyhow::{bail, Context as _, Result};
 
 use crate::args::ScreenshotArgs;
 use crate::config::NemoConfig;
+use crate::project::ActiveProject;
 use crate::workspace::WorkspaceArgs;
 use crate::{build_app_window, theme, BootstrapParams};
 
@@ -75,10 +76,53 @@ pub fn run(args: ScreenshotArgs) -> Result<()> {
             let _ = window.update(cx, |_, w, _| w.refresh());
         }
 
+        // `render_to_image` reads the window's *last drawn* frame, and
+        // data-source values arrive asynchronously and reach the UI only once
+        // their bindings are propagated into the layout. In the interactive run
+        // loop `App`'s data task applies those on every `data_notify` and marks
+        // the view dirty; the one-shot capture path must drive the same loop
+        // itself, or bound values stay at their placeholders in the PNG
+        // (issue #82). Grab the active project's runtime to pump it.
+        let runtime = cx
+            .has_global::<ActiveProject>()
+            .then(|| cx.global::<ActiveProject>().runtime.clone());
+
         let out = out.clone();
         let capture_err_task = capture_err_run.clone();
         cx.spawn(async move |cx| {
-            cx.background_executor().timer(settle).await;
+            // Pump data → binding propagation across the settle window in small
+            // slices rather than sleeping it all at once. Each `timer` await
+            // yields to the executor, giving the async data sources time to
+            // deliver and letting any refresh-requested redraw actually land.
+            let tick = Duration::from_millis(50);
+            let mut remaining = settle;
+            loop {
+                let slice = remaining.min(tick);
+                cx.background_executor().timer(slice).await;
+                remaining = remaining.saturating_sub(slice);
+
+                if let Some(rt) = runtime.as_ref() {
+                    let navigated = rt.apply_pending_navigations();
+                    let updated = rt.apply_pending_data_updates();
+                    if navigated || updated {
+                        let _ = cx.update(|cx| {
+                            let _ = window.update(cx, |_, w, _| w.refresh());
+                        });
+                    }
+                }
+
+                if remaining.is_zero() {
+                    break;
+                }
+            }
+
+            // Ensure the last-applied state is committed to the drawn frame
+            // before we read it back: refresh, then yield once more so gpui
+            // draws the dirty window into `rendered_frame`.
+            let _ = cx.update(|cx| {
+                let _ = window.update(cx, |_, w, _| w.refresh());
+            });
+            cx.background_executor().timer(tick).await;
 
             let result: Result<()> = cx.update(|cx| {
                 let img = window
