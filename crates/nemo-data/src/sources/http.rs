@@ -295,6 +295,37 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_http_headers_object() {
+        use nemo_config::Value;
+        let mut obj = indexmap::IndexMap::new();
+        obj.insert("Authorization".to_string(), Value::from("Bearer abc"));
+        obj.insert("X-Count".to_string(), Value::from(3i64));
+        let value = Value::Object(obj);
+        let headers = crate::sources::parse_http_headers(Some(&value));
+        assert_eq!(
+            headers.get("Authorization").map(String::as_str),
+            Some("Bearer abc")
+        );
+        assert_eq!(headers.get("X-Count").map(String::as_str), Some("3"));
+    }
+
+    #[test]
+    fn test_parse_http_headers_json_string() {
+        use nemo_config::Value;
+        let value = Value::from(r#"{"Authorization":"Bearer xyz"}"#);
+        let headers = crate::sources::parse_http_headers(Some(&value));
+        assert_eq!(
+            headers.get("Authorization").map(String::as_str),
+            Some("Bearer xyz")
+        );
+    }
+
+    #[test]
+    fn test_parse_http_headers_none() {
+        assert!(crate::sources::parse_http_headers(None).is_empty());
+    }
+
+    #[test]
     fn test_http_source_creation() {
         let config = HttpSourceConfig {
             id: "test".into(),

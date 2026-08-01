@@ -561,9 +561,17 @@ impl RhaiEngine {
     /// # Functions registered
     ///
     /// - `http_get(url: &str) -> Dynamic` — GET request, returns parsed JSON or string
+    /// - `http_get(url: &str, headers: Map) -> Dynamic` — GET with request headers
     /// - `http_post(url: &str, body: &str) -> Dynamic` — POST with JSON body
+    /// - `http_post(url: &str, body: &str, headers: Map) -> Dynamic` — POST with headers
     /// - `http_put(url: &str, body: &str) -> Dynamic` — PUT with JSON body
+    /// - `http_put(url: &str, body: &str, headers: Map) -> Dynamic` — PUT with headers
     /// - `http_delete(url: &str) -> Dynamic` — DELETE request
+    /// - `http_delete(url: &str, headers: Map) -> Dynamic` — DELETE with headers
+    ///
+    /// The `headers` map lets scripts send arbitrary request headers, e.g.
+    /// `http_get(url, #{ "Authorization": "Bearer " + token })`. A caller-supplied
+    /// `Content-Type` overrides the JSON default applied to request bodies.
     ///
     /// All functions return a map with `{status, body, ok}` on success, or
     /// a map with `{error}` on failure.
@@ -575,32 +583,79 @@ impl RhaiEngine {
         let c = client.clone();
         self.engine
             .register_fn("http_get", move |url: &str| -> Dynamic {
-                execute_http_request(&h, &c, reqwest::Method::GET, url, None)
+                execute_http_request(&h, &c, reqwest::Method::GET, url, None, None)
             });
+
+        // http_get(url, headers) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine.register_fn(
+            "http_get",
+            move |url: &str, headers: rhai::Map| -> Dynamic {
+                execute_http_request(&h, &c, reqwest::Method::GET, url, None, Some(headers))
+            },
+        );
 
         // http_post(url, body) -> Dynamic
         let h = handle.clone();
         let c = client.clone();
         self.engine
             .register_fn("http_post", move |url: &str, body: &str| -> Dynamic {
-                execute_http_request(&h, &c, reqwest::Method::POST, url, Some(body))
+                execute_http_request(&h, &c, reqwest::Method::POST, url, Some(body), None)
             });
+
+        // http_post(url, body, headers) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine.register_fn(
+            "http_post",
+            move |url: &str, body: &str, headers: rhai::Map| -> Dynamic {
+                execute_http_request(
+                    &h,
+                    &c,
+                    reqwest::Method::POST,
+                    url,
+                    Some(body),
+                    Some(headers),
+                )
+            },
+        );
 
         // http_put(url, body) -> Dynamic
         let h = handle.clone();
         let c = client.clone();
         self.engine
             .register_fn("http_put", move |url: &str, body: &str| -> Dynamic {
-                execute_http_request(&h, &c, reqwest::Method::PUT, url, Some(body))
+                execute_http_request(&h, &c, reqwest::Method::PUT, url, Some(body), None)
             });
+
+        // http_put(url, body, headers) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine.register_fn(
+            "http_put",
+            move |url: &str, body: &str, headers: rhai::Map| -> Dynamic {
+                execute_http_request(&h, &c, reqwest::Method::PUT, url, Some(body), Some(headers))
+            },
+        );
 
         // http_delete(url) -> Dynamic
         let h = handle.clone();
         let c = client.clone();
         self.engine
             .register_fn("http_delete", move |url: &str| -> Dynamic {
-                execute_http_request(&h, &c, reqwest::Method::DELETE, url, None)
+                execute_http_request(&h, &c, reqwest::Method::DELETE, url, None, None)
             });
+
+        // http_delete(url, headers) -> Dynamic
+        let h = handle.clone();
+        let c = client.clone();
+        self.engine.register_fn(
+            "http_delete",
+            move |url: &str, headers: rhai::Map| -> Dynamic {
+                execute_http_request(&h, &c, reqwest::Method::DELETE, url, None, Some(headers))
+            },
+        );
     }
 
     /// Lists all loaded script IDs.
@@ -698,16 +753,46 @@ fn execute_http_request(
     method: reqwest::Method,
     url: &str,
     body: Option<&str>,
+    headers: Option<rhai::Map>,
 ) -> Dynamic {
     let url_string = url.to_string();
     let body = body.map(|s| s.to_string());
     let client = client.clone();
     let method_clone = method.clone();
 
+    // Flatten the header map to owned string pairs before crossing the async
+    // boundary (rhai::Map/Dynamic are not `Send`). Non-string values are
+    // stringified so callers can pass e.g. numeric header values.
+    let header_pairs: Vec<(String, String)> = headers
+        .map(|map| {
+            map.into_iter()
+                .map(|(k, v)| {
+                    let value = if v.is_string() {
+                        v.into_string().unwrap_or_default()
+                    } else {
+                        v.to_string()
+                    };
+                    (k.to_string(), value)
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let has_content_type = header_pairs
+        .iter()
+        .any(|(k, _)| k.eq_ignore_ascii_case("content-type"));
+
     let result = handle.block_on(async move {
         let mut builder = client.request(method_clone, &url_string);
         if let Some(b) = body {
-            builder = builder.header("Content-Type", "application/json").body(b);
+            // Default the body content type to JSON unless the caller set it.
+            if !has_content_type {
+                builder = builder.header("Content-Type", "application/json");
+            }
+            builder = builder.body(b);
+        }
+        for (key, value) in header_pairs {
+            builder = builder.header(key, value);
         }
         builder.send().await
     });

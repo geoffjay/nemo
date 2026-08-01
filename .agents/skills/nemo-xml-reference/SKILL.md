@@ -142,6 +142,8 @@ Expressions use `${...}` in attribute values:
 <data>
   <source name="ticker" type="timer" interval="1" />                 <!-- tick every 1 second -->
   <source name="api" type="http" url="https://api.example.com" interval="30" />  <!-- poll every 30 seconds -->
+  <source name="secure" type="http" url="https://api.example.com/me"
+          headers='{"Authorization":"Bearer ${env.API_TOKEN}"}' />  <!-- headers: object or JSON string; ${env.X}/${var.x} resolved at load -->
   <source name="live" type="websocket" url="ws://localhost:8080" />
   <source name="events" type="mqtt" url="mqtt://localhost:1883" topic="sensors/#" />
   <source name="cache" type="redis" url="redis://localhost:6379" channel="updates" />

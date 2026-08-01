@@ -24,7 +24,10 @@ Sources implement the async `DataSource` trait
 `sources/mod.rs`):
 
 * **Polling** — `timer` (periodic ticks), `http` (one-shot, or polling when
-  `interval` is set; reqwest).
+  `interval` is set; reqwest). The `http` source accepts `method`, `body`, and a
+  `headers` map (config object or JSON-string attribute) for per-request auth —
+  header values may use `${env.X}`/`${var.x}` (resolved at config load time).
+  Parsed in `create_source` (`crates/nemo-data/src/sources/mod.rs`).
 * **Streaming** — `websocket` (tokio-tungstenite, auto-reconnect), `mqtt`
   (rumqttc), `redis` (pub/sub), `nats` (subjects).
 * **Hybrid** — `file` (JSON/YAML/TOML/CSV/lines/raw, optional `notify` watch).

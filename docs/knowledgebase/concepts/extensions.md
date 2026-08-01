@@ -114,6 +114,14 @@ behind Cargo features on `nemo-extension`:
 | `science` | [`rhai-sci`](https://crates.io/crates/rhai-sci) | `pkg-sci` | `mean`, `std`, `median`, `linspace`, matrix ops, regression, SVD, … (compiled with `default-features = false` to avoid polars/nalgebra) |
 | `network` | _(reserved)_ | — | HTTP is already available via built-in `http_get`/`http_post`/`http_put`/`http_delete` |
 
+The built-in HTTP helpers each take an optional trailing `headers` map, so
+scripts can send auth/custom headers:
+`http_get(url, #{ "Authorization": "Bearer " + token })` and
+`http_post(url, body, #{ ... })` (likewise `http_put`/`http_delete`). A
+caller-supplied `Content-Type` overrides the `application/json` default applied
+to request bodies. The wiring lives in `execute_http_request` /
+`register_http_functions` (`crates/nemo-extension/src/rhai_engine.rs`).
+
 `rhai-chrono` (date/time) is **always** registered — it is pure and touches no
 host state. `json_parse` / `json_stringify` are also always available.
 

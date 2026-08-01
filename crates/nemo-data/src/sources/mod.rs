@@ -9,7 +9,7 @@ mod timer;
 mod websocket;
 
 pub use self::file::{FileFormat, FileSource, FileSourceConfig};
-pub use self::http::{HttpSource, HttpSourceConfig};
+pub use self::http::{HttpMethod, HttpSource, HttpSourceConfig};
 pub use self::mqtt::{MqttSource, MqttSourceConfig};
 pub use self::nats::{NatsSource, NatsSourceConfig};
 pub use self::redis::{RedisSource, RedisSourceConfig};
@@ -18,6 +18,55 @@ pub use self::websocket::{WebSocketSource, WebSocketSourceConfig};
 
 use crate::source::DataSource;
 use nemo_config::Value;
+use std::collections::HashMap;
+
+/// Parses the `headers` property of an HTTP source into a string map.
+///
+/// Accepts either a config object (`<headers Authorization="Bearer …" />`-style
+/// nested attributes) or a JSON-string attribute
+/// (`headers='{"Authorization":"Bearer …"}'`). Non-string values are stringified
+/// so numeric header values are tolerated. Header values authored as
+/// `${env.TOKEN}` / `${var.x}` are already resolved by the config resolver before
+/// reaching here.
+fn parse_http_headers(value: Option<&Value>) -> HashMap<String, String> {
+    let mut headers = HashMap::new();
+
+    let obj = match value {
+        Some(v) => {
+            if let Some(obj) = v.as_object() {
+                obj.clone()
+            } else if let Some(s) = v.as_str() {
+                // JSON-string form: parse and recurse on the parsed object.
+                match serde_json::from_str::<serde_json::Value>(s) {
+                    Ok(json) if json.is_object() => {
+                        return parse_http_headers(Some(&Value::from(json)));
+                    }
+                    _ => return headers,
+                }
+            } else {
+                return headers;
+            }
+        }
+        None => return headers,
+    };
+
+    for (key, val) in obj {
+        // Header values are strings; tolerate scalar JSON values by stringifying.
+        let s = if let Some(s) = val.as_str() {
+            s.to_string()
+        } else if let Some(i) = val.as_i64() {
+            i.to_string()
+        } else if let Some(f) = val.as_f64() {
+            f.to_string()
+        } else if let Some(b) = val.as_bool() {
+            b.to_string()
+        } else {
+            continue;
+        };
+        headers.insert(key, s);
+    }
+    headers
+}
 
 /// Creates a DataSource from a type name and XML configuration.
 ///
@@ -49,9 +98,29 @@ pub fn create_source(name: &str, source_type: &str, config: &Value) -> Option<Bo
                 .and_then(|v| v.as_i64())
                 .map(|secs| std::time::Duration::from_secs(secs as u64));
 
+            let method = match config
+                .get("method")
+                .and_then(|v| v.as_str())
+                .unwrap_or("GET")
+                .to_ascii_uppercase()
+                .as_str()
+            {
+                "POST" => HttpMethod::Post,
+                "PUT" => HttpMethod::Put,
+                "PATCH" => HttpMethod::Patch,
+                "DELETE" => HttpMethod::Delete,
+                _ => HttpMethod::Get,
+            };
+
+            let headers = parse_http_headers(config.get("headers"));
+            let body = config.get("body").cloned();
+
             let cfg = HttpSourceConfig {
                 id: name.to_string(),
                 url,
+                method,
+                headers,
+                body,
                 interval,
                 ..Default::default()
             };

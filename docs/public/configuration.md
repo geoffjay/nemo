@@ -130,7 +130,7 @@ access. The `features` attribute opts in to host-access packages:
 | `file-io` | [`rhai-fs`](https://crates.io/crates/rhai-fs) | File read/write (`open_file`, `read_string`, `write`, `exists`, `create_dir`, `cwd`, `path`, …) |
 | `system` | [`rhai-env`](https://crates.io/crates/rhai-env), [`rhai-process`](https://crates.io/crates/rhai-process) | Environment variables (`env`, `envs`, `set_env`) and subprocess execution (`cmd([...]).pipe(...).build().run()`) |
 | `science` | [`rhai-sci`](https://crates.io/crates/rhai-sci) | Scientific computing (`mean`, `std`, `median`, `linspace`, matrix ops, regression, SVD, …) |
-| `network` | _(reserved)_ | HTTP is already available via built-in `http_get`/`http_post`/`http_put`/`http_delete` |
+| `network` | _(reserved)_ | HTTP is already available via built-in `http_get`/`http_post`/`http_put`/`http_delete`, each with an optional trailing `headers` map (e.g. `http_get(url, #{ "Authorization": "Bearer " + token })`) |
 
 The [`rhai-chrono`](https://crates.io/crates/rhai-chrono) package (date/time
 arithmetic: `datetime_utc`, `datetime_parse`, `format`, `timedelta_days`, …)

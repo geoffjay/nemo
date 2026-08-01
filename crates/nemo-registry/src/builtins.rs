@@ -1030,6 +1030,11 @@ pub fn register_builtin_data_sources(registry: &ComponentRegistry) {
         .property("url", PropertySchema::string())
         .property("method", PropertySchema::string().with_default("GET"))
         .property("interval", PropertySchema::integer().with_default(0i64))
+        // Free-form request headers, e.g. `Authorization: Bearer …`. Accepts a
+        // config object or a JSON-string attribute; values may use `${env.X}` /
+        // `${var.x}` interpolation resolved at config load time.
+        .property("headers", PropertySchema::any())
+        .property("body", PropertySchema::any())
         .require("url");
     let _ = registry.register_data_source(http);
 
