@@ -1523,6 +1523,19 @@ impl XmlParser {
             None
         };
 
+        // Embedded SVG: capture the element's raw markup verbatim instead of
+        // recursing its children into the component tree. A standard SVG body
+        // holds elements (`<path>`, `<circle>`) and hyphenated attributes
+        // (`stroke-width`) that the generic component parser would either
+        // reject as unknown component types or mangle via kebab->snake. We
+        // re-serialize the subtree into a `content` string for the `svg`
+        // component to rasterize, keeping only the nemo-relevant attributes.
+        if element_name.as_deref() == Some("svg") {
+            if let Some(tag) = start_tag {
+                return self.capture_svg_element(reader, tag, obj);
+            }
+        }
+
         // Read events until we hit the closing tag or EOF
         loop {
             match reader.read_event() {
@@ -1574,6 +1587,89 @@ impl XmlParser {
             obj.insert("__cdata__".to_string(), Value::String(cdata));
         }
 
+        Ok(Value::Object(obj))
+    }
+
+    /// Re-serializes an embedded `<svg>` element (start tag through its
+    /// matching end tag) into a single verbatim markup string, stored under
+    /// `content`. `attrs` carries the already-parsed start-tag attributes; only
+    /// the nemo-relevant ones (`id`, `src`, `width`, `height`) are retained as
+    /// component properties — the SVG's own presentation attributes stay inside
+    /// `content`, so they neither pollute the component's property set nor trip
+    /// the `unknown-attribute` lint.
+    fn capture_svg_element(
+        &self,
+        reader: &mut Reader<&[u8]>,
+        start_tag: &BytesStart,
+        attrs: IndexMap<String, Value>,
+    ) -> Result<Value, String> {
+        use quick_xml::Writer;
+
+        let mut writer = Writer::new(Vec::new());
+        writer
+            .write_event(Event::Start(start_tag.borrow()))
+            .map_err(|e| format!("Failed to serialize <svg>: {}", e))?;
+
+        let mut depth = 1usize;
+        loop {
+            match reader.read_event() {
+                Ok(Event::Start(e)) => {
+                    depth += 1;
+                    writer
+                        .write_event(Event::Start(e))
+                        .map_err(|e| format!("Failed to serialize <svg> child: {}", e))?;
+                }
+                Ok(Event::End(e)) => {
+                    depth -= 1;
+                    writer
+                        .write_event(Event::End(e))
+                        .map_err(|e| format!("Failed to serialize <svg> child: {}", e))?;
+                    if depth == 0 {
+                        break;
+                    }
+                }
+                Ok(Event::Empty(e)) => {
+                    writer
+                        .write_event(Event::Empty(e))
+                        .map_err(|e| format!("Failed to serialize <svg> child: {}", e))?;
+                }
+                Ok(Event::Text(e)) => {
+                    writer
+                        .write_event(Event::Text(e))
+                        .map_err(|e| format!("Failed to serialize <svg> text: {}", e))?;
+                }
+                Ok(Event::CData(e)) => {
+                    writer
+                        .write_event(Event::CData(e))
+                        .map_err(|e| format!("Failed to serialize <svg> cdata: {}", e))?;
+                }
+                Ok(Event::Comment(_)) => continue,
+                Ok(Event::Eof) => return Err("Unexpected end of file inside <svg>".to_string()),
+                Ok(_) => continue,
+                Err(e) => return Err(format!("XML parse error: {}", e)),
+            }
+        }
+
+        let raw = String::from_utf8(writer.into_inner())
+            .map_err(|e| format!("Invalid UTF-8 in <svg> content: {}", e))?;
+
+        let mut obj = IndexMap::new();
+        obj.insert("__type__".to_string(), Value::String("svg".to_string()));
+        // Retain nemo-relevant attributes: identity/source/size, plus event
+        // handlers (`on_*`) and data bindings (`bind_*`). The SVG's own
+        // presentation attributes (`viewBox`, `fill`, `stroke-width`, ...) stay
+        // inside `content`, so they neither pollute the property set nor trip
+        // the `unknown-attribute` lint.
+        const KEEP: [&str; 4] = ["id", "src", "width", "height"];
+        for (key, value) in &attrs {
+            if key == "__type__" {
+                continue;
+            }
+            if KEEP.contains(&key.as_str()) || key.starts_with("on_") || key.starts_with("bind_") {
+                obj.insert(key.clone(), value.clone());
+            }
+        }
+        obj.insert("content".to_string(), Value::String(raw));
         Ok(Value::Object(obj))
     }
 
@@ -2336,6 +2432,57 @@ mod tests {
             btn.get("on_click"),
             Some(&Value::String("on_button_click".to_string()))
         );
+    }
+
+    #[test]
+    fn test_parse_embedded_svg_captures_raw_content() {
+        let xml = r##"
+        <nemo>
+            <layout type="stack">
+                <svg id="logo" width="120" height="120" viewBox="0 0 100 100" on-click="on_logo_click">
+                    <circle cx="50" cy="50" r="40" fill="#ff0000" stroke-width="2" />
+                </svg>
+            </layout>
+        </nemo>
+        "##;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let components = value
+            .get("layout")
+            .and_then(|l| l.get("component"))
+            .unwrap();
+        let svg = components.get("logo").unwrap();
+
+        assert_eq!(svg.get("type"), Some(&Value::String("svg".to_string())));
+
+        // Nemo-relevant attributes are retained as component properties.
+        assert_eq!(svg.get("width"), Some(&Value::Integer(120)));
+        assert_eq!(svg.get("height"), Some(&Value::Integer(120)));
+
+        // Event-handler attributes survive so the component stays interactive.
+        assert_eq!(
+            svg.get("on_click"),
+            Some(&Value::String("on_logo_click".to_string()))
+        );
+
+        // Raw SVG markup is captured verbatim under `content`, including the
+        // nested element and its hyphenated attribute — neither of which the
+        // component parser could otherwise represent (unknown component /
+        // kebab->snake mangling).
+        let content = svg.get("content").and_then(|v| v.as_str()).unwrap();
+        assert!(content.starts_with("<svg"));
+        assert!(content.contains("<circle"));
+        assert!(content.contains("stroke-width=\"2\""));
+        assert!(content.contains("viewBox=\"0 0 100 100\""));
+        assert!(content.contains("fill=\"#ff0000\""));
+
+        // The nested <circle> must NOT leak into the component tree, and the
+        // SVG's presentation attributes must NOT surface as component props.
+        assert!(svg.get("component").is_none());
+        assert!(svg.get("view_box").is_none());
+        assert!(svg.get("fill").is_none());
     }
 
     #[test]

@@ -297,6 +297,7 @@
         <xs:element ref="text" />
         <xs:element ref="icon" />
         <xs:element ref="image" />
+        <xs:element ref="svg" />
         <xs:element ref="spinner" />
         <xs:element ref="progress" />
         <xs:element ref="tag" />
@@ -392,6 +393,28 @@
   <xs:element name="text" type="componentType" />
   <xs:element name="icon" type="componentType" />
   <xs:element name="image" type="componentType" />
+
+  <!-- `svg` renders vector graphics from a file/URL (`src`) or from embedded
+       standard SVG markup. The embedded form carries arbitrary SVG children
+       (`path`, `circle`, `defs`, ...) and text, which are outside the nemo
+       component model, so its content is left unconstrained (mixed text +
+       skip-validated any-elements) rather than reusing `componentType`. -->
+  <xs:element name="svg">
+    <xs:complexType mixed="true">
+      <xs:sequence>
+        <xs:any processContents="skip" minOccurs="0" maxOccurs="unbounded" />
+      </xs:sequence>
+      <xs:attributeGroup ref="identifiable" />
+      <xs:attributeGroup ref="layout-attrs" />
+      <xs:attributeGroup ref="border-attrs" />
+      <xs:attributeGroup ref="decoration-attrs" />
+      <xs:attributeGroup ref="event-attrs" />
+      <xs:attributeGroup ref="binding-attrs" />
+      <xs:attributeGroup ref="visibility-attrs" />
+      <xs:attributeGroup ref="template-attrs" />
+      <xs:anyAttribute processContents="lax" />
+    </xs:complexType>
+  </xs:element>
   <xs:element name="spinner" type="componentType" />
   <xs:element name="progress" type="componentType" />
   <xs:element name="tag" type="componentType" />

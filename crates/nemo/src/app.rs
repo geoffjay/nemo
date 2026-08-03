@@ -22,7 +22,7 @@ use crate::components::{
     ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
     HeatmapChart, Icon, Image, Label, LineChart, List, MenuItem, Modal, Notification, OptionData,
     Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart,
-    Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Switch,
+    Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Svg, Switch,
     TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
@@ -843,6 +843,10 @@ impl App {
             }
             "progress" => Progress::new(component.clone()).into_any_element(),
             "image" => Image::new(component.clone()).into_any_element(),
+            "svg" => Svg::new(component.clone())
+                .runtime(Arc::clone(&self.runtime))
+                .entity_id(entity_id)
+                .into_any_element(),
             "notification" => Notification::new(component.clone()).into_any_element(),
             "tabs" => {
                 // Each <tab-item> child becomes one tab; its label comes from the

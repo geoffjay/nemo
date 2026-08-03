@@ -4122,6 +4122,90 @@ mod runtime_tests {
         );
     }
 
+    #[test]
+    fn test_svg_click_handler_rewrites_content() {
+        // End-to-end proof that a click handler can restyle an SVG: a real Rhai
+        // handler, invoked exactly as `call_handler` invokes it, rewrites the
+        // svg component's `content` property through the same host function the
+        // click path uses. Individual SVG child elements are not addressable, so
+        // recolor/rotate is done by rewriting the whole markup.
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root").with_child(
+                LayoutNode::new("svg").with_id("embedded").with_prop(
+                    "content",
+                    s("<svg viewBox=\"0 0 100 100\"><rect fill=\"url(#grad)\" /></svg>"),
+                ),
+            );
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let context: Arc<dyn PluginContext> = Arc::new(RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        ));
+
+        let script = r###"
+            fn on_svg_click(component_id, event_data) {
+                let angle = 45;
+                let fill = "#a3be8c";
+                let svg = "<svg viewBox=\"0 0 100 100\"><rect fill=\"" + fill
+                    + "\" transform=\"rotate(" + angle + " 50 50)\" /></svg>";
+                set_component_property(component_id, "content", svg);
+            }
+        "###;
+
+        let mut ext = ExtensionManager::new();
+        ext.register_context(context);
+        ext.load_script_source("handlers", script).unwrap();
+
+        // Before the click: original markup, no rotation.
+        {
+            let lm = layout_manager.read().unwrap();
+            let content = lm
+                .get_property("embedded", "content")
+                .and_then(|v| v.as_str())
+                .unwrap();
+            assert!(content.contains("url(#grad)"));
+            assert!(!content.contains("rotate("));
+        }
+
+        // Fire the handler with the same (component_id, event_data) arguments the
+        // click dispatch uses.
+        ext.call_script::<()>(
+            "handlers",
+            "on_svg_click",
+            ("embedded".to_string(), "click".to_string()),
+        )
+        .unwrap();
+
+        // After the click: the SVG content is recolored and rotated.
+        let lm = layout_manager.read().unwrap();
+        let content = lm
+            .get_property("embedded", "content")
+            .and_then(|v| v.as_str())
+            .unwrap();
+        assert!(content.contains("#a3be8c"), "content: {content}");
+        assert!(content.contains("rotate(45 50 50)"), "content: {content}");
+    }
+
     // ── Value conversion roundtrips ───────────────────────────────────
 
     #[test]

@@ -608,6 +608,17 @@ fn register_display_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "svg",
+        ComponentCategory::Display,
+        "SVG",
+        "Renders SVG vector graphics from a file/URL (`src`) or embedded inline markup",
+        ConfigSchema::new("svg")
+            .property("src", PropertySchema::string())
+            .property("content", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
         "text",
         ComponentCategory::Display,
         "Text",
