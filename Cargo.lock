@@ -4663,7 +4663,7 @@ dependencies = [
 
 [[package]]
 name = "nemo"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4699,7 +4699,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-config"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "indexmap",
  "miette",
@@ -4716,7 +4716,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-data"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "async-nats",
  "async-trait",
@@ -4740,7 +4740,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-events"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "async-trait",
  "futures",
@@ -4754,7 +4754,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-extension"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "indexmap",
  "libloading",
@@ -4782,7 +4782,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-integration"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "async-nats",
  "async-trait",
@@ -4803,7 +4803,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-layout"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "indexmap",
  "nemo-config",
@@ -4817,7 +4817,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-macros"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4826,7 +4826,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-plugin"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "indexmap",
  "nemo-plugin-api",
@@ -4834,7 +4834,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-plugin-api"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "indexmap",
  "semver",
@@ -4845,7 +4845,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-registry"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "indexmap",
  "nemo-config",
@@ -4858,11 +4858,11 @@ dependencies = [
 
 [[package]]
 name = "nemo-tokens"
-version = "0.9.2"
+version = "0.9.3"
 
 [[package]]
 name = "nemo-wasm"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "indexmap",
  "nemo-plugin-api",
@@ -4876,7 +4876,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-wasm-guest"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "wit-bindgen 0.36.0",
 ]
@@ -11076,7 +11076,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.9.2"
+version = "0.9.3"
 dependencies = [
  "anyhow",
  "clap",
