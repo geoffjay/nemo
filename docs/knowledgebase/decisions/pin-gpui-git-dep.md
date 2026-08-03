@@ -35,6 +35,16 @@ build.
   The workaround is to embed templates via `include_str!` (a compile-time
   builtin, zero new dependencies) instead of `include_dir`. See
   `crates/nemo/src/commands/new.rs`.
+* **Bumping a direct workspace dep's major version is safe when done narrowly.**
+  Raising a `[workspace.dependencies]` requirement (e.g. `thiserror "1" → "2"`,
+  `dirs "5" → "6"`) does not drift the gpui pins: Cargo happily keeps multiple
+  majors side by side, so nemo crates resolve to the new major while transitive
+  deps keep the old one (`async-nats` still pulls `thiserror` 1.x). Edit
+  `Cargo.toml`, build, and confirm `git diff Cargo.lock` touches only the target
+  crate's nodes and leaves the `zed-industries/zed#3bd9d13…` revision unchanged.
+  Do **not** use a blanket `cargo update` to pick these up — it re-resolves the
+  git dep. A plain `cargo build` after the `Cargo.toml` edit is enough when the
+  target version already exists in the lock transitively.
 * **Enabling a gpui *feature* is safe if it stays additive.** Turning on the
   `screenshot` feature (→ `gpui_platform/test-support`) added only `proptest`
   (a git dep of test-support), `proptest-macro`, and `convert_case` to

@@ -1,6 +1,6 @@
 <nemo>
   <app title="SVG Demo">
-    <window title="SVG Component" width="640" height="520">
+    <window title="SVG Component" width="640" height="560">
       <header-bar theme-toggle="true" />
     </window>
     <theme name="nord" mode="dark" />
@@ -10,12 +10,14 @@
 
   <layout type="stack">
     <label id="title" text="SVG Component" size="xl" />
+    <label id="hint" text="Hover the first graphic to highlight it; click to rotate + recolor." />
 
-    <panel id="embedded_panel" title="Embedded (click to recolor + rotate)" padding="16">
+    <panel id="embedded_panel" title="Embedded (on-hover + on-click)" padding="16">
       <!-- Standard SVG syntax embedded directly in the config. The parser
-           captures this subtree verbatim and the component rasterizes it. The
-           on-click handler rewrites the whole `content` markup to restyle it. -->
-      <svg id="embedded" width="120" height="120" viewBox="0 0 100 100" on-click="on_svg_click">
+           captures this subtree verbatim and the component rasterizes it.
+           on-hover highlights the graphic; on-click toggles rotation/color. -->
+      <svg id="embedded" width="120" height="120" viewBox="0 0 100 100"
+           on-click="on_svg_click" on-hover="on_svg_hover">
         <defs>
           <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#bf616a" />
@@ -28,8 +30,9 @@
       </svg>
     </panel>
 
-    <panel id="file_panel" title="From file (src=...)" padding="16">
-      <svg id="from_file" src="assets/rust-logo.svg" width="120" height="120" />
+    <panel id="file_panel" title="From file (src=..., on-hover)" padding="16">
+      <svg id="from_file" src="assets/rust-logo.svg" width="120" height="120"
+           on-hover="on_file_hover" />
     </panel>
   </layout>
 </nemo>

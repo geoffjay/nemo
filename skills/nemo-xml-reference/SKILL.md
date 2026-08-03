@@ -497,14 +497,20 @@ SVG's intrinsic size is used.
 </svg>
 ```
 
-`on-click` makes the SVG interactive. Because the graphic rasterizes to a
-single image, its child elements (`<path>`, `<circle>`, ...) are not
-individually hit-testable — the handler fires for the SVG as a whole. To
-recolor or rotate, rewrite the whole markup from the handler:
+`on-click` and `on-hover` make the SVG interactive. Because the graphic
+rasterizes to a single image, its child elements (`<path>`, `<circle>`, ...)
+are not individually hit-testable — the handler fires for the SVG as a whole.
+To recolor, scale, or rotate, rewrite the whole markup from the handler:
 `set_component_property(id, "content", "<svg…>")` (or swap `src`); it
 re-rasterizes on the next render.
+
+| Event | `event_data` |
+|-------|-------------|
+| `on-click` | `"click"` |
+| `on-hover` | `"hover"` (enter), `"hover_end"` (leave) |
 ```xml
-<svg id="badge" width="64" height="64" viewBox="0 0 100 100" on-click="recolor">
+<svg id="badge" width="64" height="64" viewBox="0 0 100 100"
+     on-click="recolor" on-hover="highlight">
   <circle cx="50" cy="50" r="40" fill="#4c566a" />
 </svg>
 ```

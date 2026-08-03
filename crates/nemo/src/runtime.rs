@@ -4206,6 +4206,89 @@ mod runtime_tests {
         assert!(content.contains("rotate(45 50 50)"), "content: {content}");
     }
 
+    #[test]
+    fn test_svg_hover_handler_rewrites_content() {
+        // A hover handler is dispatched with event_data "hover" on enter and
+        // "hover_end" on leave (the values the on_hover wiring passes). This
+        // proves both directions restyle the SVG via `content`.
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root").with_child(
+                LayoutNode::new("svg")
+                    .with_id("embedded")
+                    .with_prop("content", s("<svg><rect fill=\"#4c566a\" /></svg>")),
+            );
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let context: Arc<dyn PluginContext> = Arc::new(RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        ));
+
+        let script = r###"
+            fn on_svg_hover(component_id, event_data) {
+                let highlight = event_data == "hover";
+                let fill = if highlight { "#ebcb8b" } else { "#4c566a" };
+                let svg = "<svg><rect fill=\"" + fill + "\" /></svg>";
+                set_component_property(component_id, "content", svg);
+            }
+        "###;
+
+        let mut ext = ExtensionManager::new();
+        ext.register_context(context);
+        ext.load_script_source("handlers", script).unwrap();
+
+        // Hover enter -> highlighted fill.
+        ext.call_script::<()>(
+            "handlers",
+            "on_svg_hover",
+            ("embedded".to_string(), "hover".to_string()),
+        )
+        .unwrap();
+        let enter = layout_manager
+            .read()
+            .unwrap()
+            .get_property("embedded", "content")
+            .and_then(|v| v.as_str())
+            .unwrap()
+            .to_string();
+        assert!(enter.contains("#ebcb8b"), "on enter: {enter}");
+
+        // Hover leave -> restored fill.
+        ext.call_script::<()>(
+            "handlers",
+            "on_svg_hover",
+            ("embedded".to_string(), "hover_end".to_string()),
+        )
+        .unwrap();
+        let leave = layout_manager
+            .read()
+            .unwrap()
+            .get_property("embedded", "content")
+            .and_then(|v| v.as_str())
+            .unwrap()
+            .to_string();
+        assert!(leave.contains("#4c566a"), "on leave: {leave}");
+    }
+
     // ── Value conversion roundtrips ───────────────────────────────────
 
     #[test]

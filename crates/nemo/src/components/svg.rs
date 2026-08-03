@@ -33,16 +33,18 @@ use crate::runtime::NemoRuntime;
 /// | `src` | string | File path or `http(s)` URL of an SVG. Takes precedence over embedded markup. |
 /// | `content` | string | Embedded SVG markup (populated automatically from an inline `<svg>` body). |
 /// | `width` / `height` | int | Optional render size in px; otherwise the SVG's intrinsic size is used. |
-/// | `on-click` | string | Handler invoked when the SVG is clicked. |
+/// | `on-click` | string | Handler invoked when the SVG is clicked (`event_data` = `"click"`). |
+/// | `on-hover` | string | Handler invoked on hover enter/leave (`event_data` = `"hover"` / `"hover_end"`). |
 ///
 /// # Interactivity
 ///
 /// The SVG rasterizes to a single image, so its child elements (`<path>`,
 /// `<circle>`, ...) are not individually addressable or hit-testable. An
-/// `on-click` handler fires for the SVG as a whole; a handler can then recolor
+/// `on-click`/`on-hover` handlers fire for the SVG as a whole; a handler can then recolor
 /// or transform the graphic by rewriting the whole markup via
 /// `set_component_property(id, "content", "<svg…>")` (or swapping `src`), which
 /// re-rasterizes on the next render.
+///
 #[derive(IntoElement, NemoComponent)]
 pub struct Svg {
     #[property(default = "")]
@@ -159,23 +161,41 @@ impl RenderOnce for Svg {
             element = element.h(px(h as f32));
         }
 
-        // Wrap in an interactive div when an `on-click` handler is wired, so the
-        // whole graphic is clickable. The handler receives the component id and
-        // can restyle the SVG by rewriting its `content`/`src` property.
+        // Wrap in an interactive div when a click and/or hover handler is
+        // wired, so the whole graphic is hit-testable. `on-click` fires on press;
+        // `on-hover` fires on enter (event_data "hover") and leave ("hover_end").
         let click_handler = self.source.handlers.get("click").cloned();
+        let hover_handler = self.source.handlers.get("hover").cloned();
         let component_id = self.source.id.clone();
-        if let (Some(handler), Some(runtime), Some(entity_id)) =
-            (click_handler, self.runtime, self.entity_id)
-        {
-            return div()
-                .id(SharedString::from(component_id.clone()))
-                .cursor_pointer()
-                .child(element)
-                .on_click(move |_event, _window, cx| {
-                    runtime.call_handler(&handler, &component_id, "click");
-                    cx.notify(entity_id);
-                })
-                .into_any_element();
+        if click_handler.is_some() || hover_handler.is_some() {
+            if let (Some(runtime), Some(entity_id)) = (self.runtime, self.entity_id) {
+                let mut wrapper = div().id(SharedString::from(component_id.clone()));
+                if click_handler.is_some() {
+                    wrapper = wrapper.cursor_pointer();
+                }
+                wrapper = wrapper.child(element);
+                if let Some(handler) = click_handler {
+                    let rt = Arc::clone(&runtime);
+                    let id = component_id.clone();
+                    wrapper = wrapper.on_click(move |_event, _window, cx| {
+                        rt.call_handler(&handler, &id, "click");
+                        cx.notify(entity_id);
+                    });
+                }
+                if let Some(handler) = hover_handler {
+                    let rt = Arc::clone(&runtime);
+                    let id = component_id.clone();
+                    wrapper = wrapper.on_hover(move |hovered, _window, cx| {
+                        rt.call_handler(
+                            &handler,
+                            &id,
+                            if *hovered { "hover" } else { "hover_end" },
+                        );
+                        cx.notify(entity_id);
+                    });
+                }
+                return wrapper.into_any_element();
+            }
         }
 
         element.into_any_element()
