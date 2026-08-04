@@ -490,6 +490,8 @@ impl Workspace {
                 size(px(900.), px(650.)),
                 cx,
             ))),
+            titlebar: Some(gpui_component::TitleBar::title_bar_options()),
+            window_decorations: Some(WindowDecorations::Client),
             is_movable: true,
             is_resizable: true,
             is_minimizable: true,
