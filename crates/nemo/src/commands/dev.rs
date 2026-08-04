@@ -33,5 +33,5 @@ pub fn run(mut args: Args, dev: DevArgs) -> Result<()> {
     args.headless = false;
     args.validate_only = false;
 
-    crate::run_app(args, Some(Duration::from_millis(dev.debounce_ms)))
+    crate::run_app(args, Some(Duration::from_millis(dev.debounce_ms)), true)
 }

@@ -60,7 +60,7 @@ pub fn run(args: BuildArgs) -> Result<()> {
 /// Compiles one `.nemo` file to `<out>/components/<tag>.json`. When the file
 /// lives inside a project, `<out>` is the manifest's build dir; otherwise it is
 /// `<file-parent>/dist`.
-fn build_single_component(file: &Path) -> Result<()> {
+pub(crate) fn build_single_component(file: &Path) -> Result<()> {
     let out_base = out_base_for(file);
     let component = compile_component(file)?;
     let written = write_artifact(&out_base, &component)?;
@@ -70,7 +70,11 @@ fn build_single_component(file: &Path) -> Result<()> {
 
 /// Compiles every exported component of a library project. With no `exports`
 /// listed, the convention is every top-level `.nemo` file in the project root.
-fn build_package(root: &Path, manifest: &ProjectManifest, pkg: &PackageConfig) -> Result<()> {
+pub(crate) fn build_package(
+    root: &Path,
+    manifest: &ProjectManifest,
+    pkg: &PackageConfig,
+) -> Result<()> {
     let out_base = root.join(&manifest.build.out);
     let files = top_level_nemo_files(root)?;
     if files.is_empty() {
@@ -110,7 +114,7 @@ fn build_package(root: &Path, manifest: &ProjectManifest, pkg: &PackageConfig) -
 /// `--dist` (or manifest `load = "dist"`) reproduces the same render, skipping
 /// the parse/resolve work — `ConfigurationLoader::load_from_dist` returns the
 /// same `Value` the source path produces.
-fn build_project(root: &Path, manifest: &ProjectManifest) -> Result<()> {
+pub(crate) fn build_project(root: &Path, manifest: &ProjectManifest) -> Result<()> {
     let entry = root.join(&manifest.entry);
     if !entry.is_file() {
         bail!("entry file {} does not exist", entry.display());

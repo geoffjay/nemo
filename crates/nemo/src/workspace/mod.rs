@@ -13,6 +13,7 @@ use std::time::Duration;
 use tracing::info;
 
 pub mod actions;
+mod dev_panel;
 mod footer_bar;
 mod header_bar;
 pub mod layout;
@@ -21,10 +22,9 @@ pub mod project_loader;
 pub mod settings;
 pub mod utils;
 pub mod xml_edit;
-
 use actions::{
     CloseProject, CloseSettings, OpenProject, OpenSettings, QuitApp, ReloadConfig,
-    ShowKeyboardShortcuts, ToggleTheme,
+    ShowKeyboardShortcuts, ToggleDevPanel, ToggleTheme,
 };
 pub use footer_bar::FooterBar;
 pub use header_bar::{menu_items_from_config, HeaderBar};
@@ -68,6 +68,9 @@ pub struct Workspace {
     pub pending_reload: bool,
     /// File watcher kept alive for the app's lifetime; not read directly.
     pub(crate) _watcher: Option<notify::RecommendedWatcher>,
+    /// Whether the app was launched via `nemo dev` (enables the dev panel).
+    pub dev_mode: bool,
+    pub dev_panel_window: Option<WindowHandle<gpui_component::Root>>,
 }
 
 impl Workspace {
@@ -138,6 +141,7 @@ impl Workspace {
                 theme_toggle,
                 menu_items,
                 runtime,
+                self.dev_mode,
                 window,
                 cx,
             )
@@ -409,6 +413,18 @@ impl Workspace {
         }
     }
 
+    fn toggle_dev_panel(
+        &mut self,
+        _: &ToggleDevPanel,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        if !self.dev_mode {
+            return;
+        }
+        self.process_dev_panel_toggle(window, cx);
+    }
+
     fn show_keyboard_shortcuts(
         &mut self,
         _: &ShowKeyboardShortcuts,
@@ -429,9 +445,82 @@ impl Workspace {
                         .child(shortcut_row("Toggle Light/Dark Theme", "ctrl-shift-t"))
                         .child(shortcut_row("Settings", "ctrl-p"))
                         .child(shortcut_row("Keyboard Shortcuts", "f10"))
+                        .child(shortcut_row("Toggle Dev Panel (dev mode)", "ctrl-shift-e"))
                         .child(shortcut_row("Quit Application", "ctrl-q")),
                 )
         });
+    }
+
+    /// Toggles the dev panel builder window. When no builder window is open,
+    /// opens one. When the builder window is already open, focuses it.
+    /// Only acts in dev mode with a loaded project.
+    fn process_dev_panel_toggle(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.dev_mode {
+            return;
+        }
+
+        // If the builder window is already open, focus it.
+        if let Some(handle) = self.dev_panel_window.as_ref() {
+            let _ = handle.update(cx, |_, window, _| {
+                window.activate_window();
+            });
+            return;
+        }
+
+        // Need a project root for the file tree.
+        let root = self
+            .current_config_path
+            .as_ref()
+            .and_then(|p| p.parent())
+            .map(|p| p.to_path_buf());
+        let Some(project_root) = root else {
+            window.push_notification("Open a project first", cx);
+            return;
+        };
+        let runtime = match cx.try_global::<ActiveProject>() {
+            Some(p) => Arc::clone(&p.runtime),
+            None => return,
+        };
+        let panel = cx.new(|cx| dev_panel::DevPanel::new(project_root, runtime, window, cx));
+
+        // Open the builder in a separate window.
+        let dev_window_options = WindowOptions {
+            window_bounds: Some(WindowBounds::Windowed(Bounds::centered(
+                None,
+                size(px(900.), px(650.)),
+                cx,
+            ))),
+            is_movable: true,
+            is_resizable: true,
+            is_minimizable: true,
+            window_min_size: Some(size(px(500.), px(400.))),
+            ..Default::default()
+        };
+
+        match cx.open_window(dev_window_options, |window, cx| {
+            cx.new(|cx| gpui_component::Root::new(panel.clone(), window, cx))
+        }) {
+            Ok(handle) => {
+                self.dev_panel_window = Some(handle);
+            }
+            Err(e) => {
+                tracing::error!("Failed to open dev panel window: {}", e);
+                window.push_notification(
+                    Toast::new()
+                        .message(format!("Failed to open dev panel: {e}"))
+                        .with_type(NotificationType::Error),
+                    cx,
+                );
+            }
+        }
+        cx.notify();
+    }
+
+    /// Called when the dev panel window is closed (e.g. by the user clicking the
+    /// window's close button). Cleans up the handle and focuses the main window.
+    pub fn handle_dev_panel_window_closed(&mut self, cx: &mut Context<Self>) {
+        self.dev_panel_window = None;
+        cx.notify();
     }
 
     /// Create a ProjectLoaderView and subscribe to its events.
@@ -570,6 +659,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::show_keyboard_shortcuts))
             .on_action(cx.listener(Self::open_settings))
             .on_action(cx.listener(Self::close_settings))
+            .on_action(cx.listener(Self::toggle_dev_panel))
             .child(routes);
 
         if let Some(dialog_layer) = Root::render_dialog_layer(window, cx) {

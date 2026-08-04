@@ -11,5 +11,6 @@ actions!(
         ShowKeyboardShortcuts,
         OpenSettings,
         CloseSettings,
+        ToggleDevPanel,
     ]
 );

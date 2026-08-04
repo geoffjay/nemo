@@ -299,3 +299,28 @@ Beyond selecting a shipped theme, a project can **define its own themes** and
   resolved base theme (overrides always win). (Both `<themes>`/`<theme-set>` and
   `<extend>`/`<color>` are registered in `nemo_registry::schema_surface` so
   `nemo validate` doesn't flag them and `nemo schema` publishes them.)
+
+# In-app configuration dev environment
+
+Under `nemo dev`, a **dev panel** (`workspace/dev_panel.rs`) provides an in-app
+configuration editor — a file tree (left), a syntax-highlighted code editor
+(center), and compile actions, opened in a **separate GPUI window**. It is
+gated to dev mode only (`BootstrapParams.dev_mode`, set `true` by
+`commands::dev::run`); the default run path does not show it. See the
+[config dev env plan](../plans/config-dev-env.md).
+
+* **Toggle** — `ctrl-shift-e` dispatches `ToggleDevPanel`, or the header-bar
+  code button (`HeaderBar.dev_mode`). When no builder window is open, a new
+  window is created. When the builder window is already open, it is focused.
+  Closing the builder window returns focus to the main window.
+* **File tree** — walks the config file's parent directory (depth-limited,
+  `target`/`.git`/`dist`/`.nemo` filtered), built as `TreeItem` list with
+  `TreeState`. Selecting a file leaf loads it into the editor.
+* **Code editor** — `InputState` in `code_editor` mode with tree-sitter
+  highlighting (`html` for `.nemo`/`.xml`, `toml` for `nemo.toml`, `rust` for
+  `.rs`/`.rhai`). `set_value` loads; `value()` reads for save (ctrl-s / Save
+  button). Dirty indicator (accent dot) shows unsaved changes.
+* **Compile** — "Compile File" runs `commands::build::build_single_component`
+  on the open `.nemo`; "Build Project" resolves the nearest `nemo.toml` and
+  runs `build_project` (or `build_package` for a `[package]` library). Toasts
+  report success/failure. Output goes to the same `<out>/` the CLI uses.

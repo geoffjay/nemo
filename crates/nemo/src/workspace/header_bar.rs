@@ -11,6 +11,7 @@ use gpui_component::{
 };
 use tracing::debug;
 
+use super::actions::ToggleDevPanel;
 use crate::components::icon::map_icon_name;
 use crate::runtime::NemoRuntime;
 use crate::theme::change_color_mode;
@@ -77,6 +78,8 @@ pub struct HeaderBar {
     theme_toggle: bool,
     menu_items: Vec<MenuItemConfig>,
     runtime: Arc<NemoRuntime>,
+    /// Whether the app was launched via `nemo dev` (shows the dev-panel button).
+    dev_mode: bool,
 }
 
 impl HeaderBar {
@@ -86,6 +89,7 @@ impl HeaderBar {
         theme_toggle: bool,
         menu_items: Vec<MenuItemConfig>,
         runtime: Arc<NemoRuntime>,
+        dev_mode: bool,
         _window: &mut Window,
         _cx: &mut Context<Self>,
     ) -> Self {
@@ -95,6 +99,7 @@ impl HeaderBar {
             theme_toggle,
             menu_items,
             runtime,
+            dev_mode,
         }
     }
 
@@ -113,6 +118,7 @@ impl Render for HeaderBar {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let title = self.title.clone();
         let github_url = self.github_url.clone();
+        let show_dev_button = self.dev_mode;
         let show_theme_toggle = self.theme_toggle;
 
         // Far-left hamburger menu, shown only when the app declared entries.
@@ -167,6 +173,17 @@ impl Render for HeaderBar {
                 .ghost()
                 .on_click(cx.listener(Self::change_mode));
             actions = actions.child(toggle);
+        }
+
+        if show_dev_button {
+            let dev_button = Button::new("dev-panel")
+                .icon(IconName::SquareTerminal)
+                .small()
+                .ghost()
+                .on_click(move |_, window, cx| {
+                    window.dispatch_action(Box::new(ToggleDevPanel), cx);
+                });
+            actions = actions.child(dev_button);
         }
 
         if let Some(url) = github_url {
