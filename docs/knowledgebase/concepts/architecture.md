@@ -57,6 +57,17 @@ path and the `screenshot` command so both render an identical window. In the
 window, `create_runtime()` builds an `Arc<NemoRuntime>`, the theme is applied,
 and an `App` entity is created (`cx.new(|cx| App::new(runtime, window, cx))`).
 
+Before opening the window, `build_app_window` binds keys, then calls
+`cx.activate(true)` (brings the app to the foreground — required or the process
+never takes focus when launched from a terminal) and installs the native
+application menu bar via `cx.set_menus(workspace::menu::app_menus(title,
+dev_mode))`. The menu items dispatch the existing `nemo` actions
+(`workspace::actions`); selection routes through the active window to the
+`Workspace` root element's `.on_action` listeners, so no separate handlers are
+needed. Accelerators are auto-derived from the keymap, so `bind_keys` must run
+first. Primary shortcut modifier is `cmd` on macOS (native ⌘ accelerators) and
+`ctrl` elsewhere, selected via `cfg(target_os = "macos")`.
+
 The `screenshot` command reuses `build_app_window`, then captures the rendered
 frame off-screen via gpui's `Window::render_to_image()` (macOS Metal readback).
 See [screenshot via test-support feature](../decisions/screenshot-via-test-support-feature.md).

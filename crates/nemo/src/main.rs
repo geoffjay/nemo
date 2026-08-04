@@ -297,16 +297,23 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
     // Wrap config in Arc<Mutex<>> for sharing with settings view
     let nemo_config = Arc::new(Mutex::new(nemo_config));
 
+    // Primary modifier: cmd on macOS (so native menu accelerators render as ⌘),
+    // ctrl elsewhere (x11/wayland).
+    #[cfg(target_os = "macos")]
+    const PRIMARY: &str = "cmd";
+    #[cfg(not(target_os = "macos"))]
+    const PRIMARY: &str = "ctrl";
+
     cx.bind_keys([
-        KeyBinding::new("ctrl-shift-r", ReloadConfig, None),
-        KeyBinding::new("ctrl-q", QuitApp, None),
-        KeyBinding::new("ctrl-w", CloseProject, None),
-        KeyBinding::new("ctrl-o", OpenProject, None),
-        KeyBinding::new("ctrl-shift-t", ToggleTheme, None),
-        KeyBinding::new("ctrl-p", OpenSettings, None),
+        KeyBinding::new(&format!("{PRIMARY}-shift-r"), ReloadConfig, None),
+        KeyBinding::new(&format!("{PRIMARY}-q"), QuitApp, None),
+        KeyBinding::new(&format!("{PRIMARY}-w"), CloseProject, None),
+        KeyBinding::new(&format!("{PRIMARY}-o"), OpenProject, None),
+        KeyBinding::new(&format!("{PRIMARY}-shift-t"), ToggleTheme, None),
+        KeyBinding::new(&format!("{PRIMARY}-p"), OpenSettings, None),
         KeyBinding::new("escape", CloseSettings, None),
         KeyBinding::new("f10", ShowKeyboardShortcuts, None),
-        KeyBinding::new("ctrl-shift-e", ToggleDevPanel, None),
+        KeyBinding::new(&format!("{PRIMARY}-shift-e"), ToggleDevPanel, None),
     ]);
 
     // Store workspace entity + main window ID for window close handler.
@@ -389,6 +396,20 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         Some((w, h)) => (Some(w), Some(h)),
         None => (win_w, win_h),
     };
+
+    // Bring the app to the foreground and install the native menu bar before the
+    // window opens. Without `activate` the process never takes focus (esp. when
+    // launched from a terminal); without `set_menus` macOS shows no app menu.
+    // `set_menus` reads the keymap bound above, so accelerators resolve here.
+    let app_title = early_runtime
+        .as_ref()
+        .and_then(|rt| {
+            rt.get_config("app.window.title")
+                .and_then(|v| v.as_str().map(|s| s.to_string()))
+        })
+        .unwrap_or_else(|| "Nemo".to_string());
+    cx.activate(true);
+    cx.set_menus(workspace::menu::app_menus(app_title, dev_mode));
 
     let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h);
 

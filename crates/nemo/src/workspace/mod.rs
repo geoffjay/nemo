@@ -18,6 +18,7 @@ mod footer_bar;
 mod header_bar;
 pub mod layout;
 pub mod main_view;
+pub mod menu;
 pub mod project_loader;
 pub mod settings;
 pub mod utils;

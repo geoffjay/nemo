@@ -84,10 +84,7 @@ impl DevPanel {
                 &editor_state,
                 window,
                 move |this: &mut DevPanel, _state, event: &InputEvent, _window, cx| {
-                    if matches!(
-                        event,
-                        InputEvent::Change | InputEvent::PressEnter { .. }
-                    ) {
+                    if matches!(event, InputEvent::Change | InputEvent::PressEnter { .. }) {
                         this.dirty = true;
                         cx.notify();
                     }
