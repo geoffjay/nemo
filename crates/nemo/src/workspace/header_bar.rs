@@ -90,8 +90,6 @@ impl HeaderBar {
         menu_items: Vec<MenuItemConfig>,
         runtime: Arc<NemoRuntime>,
         dev_mode: bool,
-        _window: &mut Window,
-        _cx: &mut Context<Self>,
     ) -> Self {
         Self {
             title,

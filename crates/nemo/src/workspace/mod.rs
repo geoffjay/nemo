@@ -119,7 +119,7 @@ impl Workspace {
     fn create_header_bar(
         &self,
         runtime: &Arc<runtime::NemoRuntime>,
-        window: &mut Window,
+        _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Entity<HeaderBar> {
         let title = runtime
@@ -135,7 +135,7 @@ impl Workspace {
             .unwrap_or(false);
         let menu_items = menu_items_from_config(runtime);
         let runtime = Arc::clone(runtime);
-        cx.new(|cx| {
+        cx.new(|_cx| {
             HeaderBar::new(
                 title,
                 github_url,
@@ -143,8 +143,6 @@ impl Workspace {
                 menu_items,
                 runtime,
                 self.dev_mode,
-                window,
-                cx,
             )
         })
     }
