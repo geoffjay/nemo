@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Single-File Components (.nemo SFCs) demo -->
-<!-- Two reusable components live in ./components/*.nemo. Each is imported and    -->
-<!-- used as a custom tag. <card> shows default-slot composition and per-instance -->
-<!-- id scoping; <labeled-button> shows ${prop} interpolation and a scoped        -->
-<!-- <script> handler that mutates the clicked instance.                          -->
+<!-- Single-File Components (.nemo SFCs) + control-flow directives demo -->
+<!-- Cards 1-3 show SFC composition (slots, ${prop} interpolation, scoped     -->
+<!-- <script> handlers, prop defaults). Card 4 shows runtime component         -->
+<!-- creation. Cards 5-7 show the n:if / n:for control-flow directives:        -->
+<!--   5. static n:for  — compile-time iteration over a literal array          -->
+<!--   6. n:if          — visibility bound to a data comparison                 -->
+<!--   7. live-data n:for — runtime list expansion over a data source, with    -->
+<!--                        n:key for stable identity across reorders.          -->
 <nemo>
   <app title="Nemo — Single-File Components">
     <window title="SFC Demo">
@@ -16,12 +19,10 @@
   <!-- Auto-discover every *.nemo in ./components (tags come from <template name>
        or the filename stem). Equivalent to listing each with <import>. -->
   <components dir="./components" />
-  <script src="./scripts" />
+  <script src="./scripts" on-load="on_load" />
 
   <layout type="stack">
     <stack id="root" direction="vertical" spacing="20" padding="32">
-      <label id="title" text="Single-File Components" size="xl" />
-
       <!-- First card: the title targets the named `header` slot; the rest fill
            the default slot. -->
       <card>
@@ -56,6 +57,49 @@
         <stack direction="horizontal" spacing="8">
           <button id="btn_add" label="Add label" variant="primary" on-click="on_add_label" />
           <button id="btn_remove" label="Remove last" variant="secondary" on-click="on_remove_label" />
+        </stack>
+      </card>
+
+      <!-- Fifth: static n:for (compile-time). The tag row is generated from a
+           literal array — the compiler expands the labelled element into one
+           node per item, substituting ${tag}. No data source, no runtime cost. -->
+      <card>
+        <label id="c5_title" slot="header" text="Static n:for" size="lg" />
+        <text id="c5_body" content="The chips below are expanded at compile time from a literal array with n:for." />
+        <stack direction="horizontal" spacing="8">
+          <label id="chip" n:for="tag in ['config', 'sfc', 'runtime']" n:key="tag"
+                 text="#${tag}" background="theme.muted" padding="6" rounded="md" />
+        </stack>
+      </card>
+
+      <!-- Sixth: n:if (compile-time binding). The panel's `visible` property is
+           bound to the comparison `data.ui.show_details == 'yes'`. The toggle
+           button flips the data; no handler touches `visible` directly. -->
+      <card>
+        <label id="c6_title" slot="header" text="Conditional with n:if" size="lg" />
+        <text id="c6_body" content="The details panel below is shown only while data.ui.show_details == 'yes'. Toggle it — the binding drives visibility." />
+        <button id="btn_toggle" label="Toggle details" variant="primary" on-click="on_toggle_details" />
+        <panel id="details" n:if="data.ui.show_details == 'yes'"
+               background="theme.muted" padding="12" rounded="md">
+          <text id="details_text" content="Now you see me. Toggle again and n:if hides this whole panel." />
+        </panel>
+      </card>
+
+      <!-- Seventh: live-data n:for (runtime). Each item in data.tasks becomes a
+           row; adding/removing items creates/removes component instances, and
+           n:key="task.id" keeps a row's identity stable across a reverse. -->
+      <card>
+        <label id="c7_title" slot="header" text="Live-data n:for" size="lg" />
+        <text id="c7_body" content="One row per task in data.tasks. Add/Remove create and tear down instances; Reverse reorders them by key." />
+        <stack id="task_list" n:for="task in data.tasks" n:key="task.id"
+               direction="horizontal" spacing="8">
+          <label text="•" />
+          <text content="${task.name}" />
+        </stack>
+        <stack direction="horizontal" spacing="8">
+          <button id="btn_add_task" label="Add task" variant="primary" on-click="on_add_task" />
+          <button id="btn_remove_task" label="Remove task" variant="secondary" on-click="on_remove_task" />
+          <button id="btn_reverse_tasks" label="Reverse" variant="secondary" on-click="on_reverse_tasks" />
         </stack>
       </card>
     </stack>

@@ -15,6 +15,10 @@ pub struct LayoutNode {
     pub config: ComponentConfig,
     /// Child nodes.
     pub children: Vec<LayoutNode>,
+    /// List binding spec (for live-data `n:for` containers). `None` for
+    /// ordinary nodes; `Some` marks this node as a list container whose
+    /// children are created/removed at runtime by `ListBindingManager`.
+    pub list_binding: Option<ListBindingSpec>,
     /// Layout hints.
     pub layout_hints: LayoutHints,
     /// Event handlers.
@@ -29,6 +33,7 @@ impl LayoutNode {
             id: None,
             config: ComponentConfig::default(),
             children: Vec::new(),
+            list_binding: None,
             layout_hints: LayoutHints::default(),
             handlers: HashMap::new(),
         }
@@ -149,6 +154,28 @@ impl BindingSpec {
         self.transform = Some(transform.into());
         self
     }
+}
+
+/// Specification for a live-data list binding (runtime `n:for`).
+///
+/// A node carrying a `ListBindingSpec` is a **list container**: it has no
+/// static children. At runtime, `ListBindingManager` watches `source`, diffs
+/// the array, and creates/removes component instances by expanding `template`
+/// per item.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListBindingSpec {
+    /// Data source path (e.g. `data.api.users`).
+    pub source: String,
+    /// Loop variable name (e.g. `user`).
+    pub item_var: String,
+    /// Key expression for stable identity (e.g. `user.id`), or `None` for
+    /// index-based matching.
+    pub key: Option<String>,
+    /// The loop body template: a `Value` tree with `${item_var}` placeholders
+    /// left intact, expanded per instance at runtime.
+    pub template: Value,
+    /// Optional `n:if` condition evaluated per instance.
+    pub n_if: Option<String>,
 }
 
 /// Binding mode.

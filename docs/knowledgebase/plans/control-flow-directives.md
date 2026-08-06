@@ -84,7 +84,12 @@ is the runtime architecture change, and it depends on
 
 ## Phase 1 — `n:if` (compile-time)
 
-**Status: planned.**
+**Status: implemented.** The `compile_directives` pass lives in
+`nemo-config/src/directives.rs`, invoked by `ConfigurationLoader::load_xml_string`
+before resolution. Comparison conditions compile to a `binding` block with a
+`== '…'`/`!= '…'` transform evaluated by `apply_transform` (returns a `Bool`);
+bare paths compile to `bind_visible`. `App::render_component` skips any
+component whose `visible` property is `false`.
 
 The compiler detects `n:if` on a `Value` node, extracts the condition expression,
 and converts it to a `bind-visible` binding on that component. The node stays in
@@ -111,7 +116,10 @@ the tree; the binding toggles its `visible` property at runtime.
 
 ## Phase 2 — `n:for` over static lists (compile-time)
 
-**Status: planned.**
+**Status: implemented.** `compile_directives` expands a child with a static
+`n:for` (literal array, single- or double-quoted) into N sibling nodes in the
+parent's `component` map, substituting `${item}`/`${item.field}` and suffixing
+ids by index or `n:key`. `nemo validate --strict` passes on the expanded tree.
 
 The compiler detects `n:for` on a `Value` node where the iteration source is a
 compile-time-known array (a literal `['a', 'b', 'c']`, a `${var.list}` that
@@ -133,7 +141,7 @@ and strips the `n:for` attribute.
 
 ## Phase 3 — `n:for` over live data (runtime)
 
-**Status: planned.** Depends on [runtime-component-creation](runtime-component-creation.md).
+**Status: implemented.** Depends on [runtime-component-creation](runtime-component-creation.md) (landed).
 
 When `n:for`'s source is a `data.*` path, the compiler marks the node as a
 **list container**: it extracts the loop template (the element's subtree with

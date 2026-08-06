@@ -205,7 +205,8 @@ fn compile_component(file: &Path) -> Result<CompiledComponent> {
         Some(css) => crate::runtime::fold_sfc_styles(&sfc.template, css, &tag),
         None => sfc.template.clone(),
     };
-    let template = crate::runtime::rewrite_sfc_handlers(&template, &tag);
+    let mut template = crate::runtime::rewrite_sfc_handlers(&template, &tag);
+    nemo_config::compile_directives_node(&mut template);
 
     // Reuse the canonical flatten for script/props/slots so they match the
     // `config["sfc"][tag]` shape a loader reads back.

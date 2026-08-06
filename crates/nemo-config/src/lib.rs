@@ -3,6 +3,7 @@
 //! This crate provides the configuration system for Nemo applications,
 //! including XML parsing, schema validation, and expression resolution.
 
+mod directives;
 mod error;
 mod loader;
 mod location;
@@ -13,6 +14,7 @@ mod registry;
 mod resolver;
 mod schema;
 mod validator;
+pub use directives::{compile_directives, compile_directives_node};
 mod value;
 mod xml_parser;
 

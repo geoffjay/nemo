@@ -3,6 +3,7 @@
 use crate::binding::{BindingManager, BindingUpdate, ComponentProperty};
 use crate::builder::{BuildResult, LayoutBuilder};
 use crate::error::LayoutError;
+use crate::list_binding::ListBindingManager;
 use crate::node::{LayoutConfig, LayoutNode};
 use crate::state::StateCoordinator;
 use nemo_config::Value;
@@ -16,6 +17,8 @@ pub struct LayoutManager {
     builder: LayoutBuilder,
     /// Binding manager.
     bindings: BindingManager,
+    /// List binding manager (runtime n:for).
+    list_bindings: ListBindingManager,
     /// State coordinator.
     state: StateCoordinator,
     /// Built components by ID.
@@ -49,6 +52,7 @@ impl LayoutManager {
         Self {
             builder: LayoutBuilder::new(registry),
             bindings: BindingManager::new(),
+            list_bindings: ListBindingManager::new(),
             state: StateCoordinator::new(),
             components: HashMap::new(),
             current_config: None,
@@ -61,6 +65,7 @@ impl LayoutManager {
         Self {
             builder: LayoutBuilder::new(registry),
             bindings: BindingManager::new(),
+            list_bindings: ListBindingManager::new(),
             state,
             components: HashMap::new(),
             current_config: None,
@@ -82,8 +87,22 @@ impl LayoutManager {
         // Set up bindings from the config
         self.setup_bindings_from_node(&config.root)?;
 
+        // Register list bindings (runtime n:for containers).
+        self.setup_list_bindings_from_node(&config.root);
+
         self.current_config = Some(config);
         Ok(())
+    }
+
+    /// Recursively registers list bindings from layout nodes.
+    fn setup_list_bindings_from_node(&mut self, node: &LayoutNode) {
+        let component_id = node.effective_id();
+        if let Some(lb) = &node.list_binding {
+            self.list_bindings.register(&component_id, lb.clone());
+        }
+        for child in &node.children {
+            self.setup_list_bindings_from_node(child);
+        }
     }
 
     /// Applies a build result recursively.
@@ -139,6 +158,7 @@ impl LayoutManager {
     pub fn clear(&mut self) {
         self.components.clear();
         self.bindings = BindingManager::new();
+        self.list_bindings = ListBindingManager::new();
         self.current_config = None;
     }
 
@@ -175,6 +195,28 @@ impl LayoutManager {
         self.bindings.on_data_changed(source_path, value)
     }
 
+    /// Processes a data change for list bindings (runtime `n:for`). Diffs the
+    /// array and creates/removes component instances. Returns `true` if any
+    /// structural changes were made.
+    pub fn on_list_data_changed(&mut self, source_path: &str, value: &Value) -> bool {
+        // Split the borrow: temporarily move `list_bindings` out of `self`
+        // so we can pass `self` (for insert/remove/bind) without aliasing.
+        let mut lbm = std::mem::take(&mut self.list_bindings);
+        let changed = lbm.on_data_changed(source_path, value, self);
+        self.list_bindings = lbm;
+        changed
+    }
+
+    /// Returns the list binding manager.
+    pub fn list_bindings(&self) -> &ListBindingManager {
+        &self.list_bindings
+    }
+
+    /// Returns the mutable list binding manager.
+    pub fn list_bindings_mut(&mut self) -> &mut ListBindingManager {
+        &mut self.list_bindings
+    }
+
     /// Applies binding updates to components.
     pub fn apply_updates(&mut self, updates: Vec<BindingUpdate>) {
         for update in updates {
@@ -183,6 +225,28 @@ impl LayoutManager {
                     .properties
                     .insert(update.target.property_path, update.value);
             }
+        }
+    }
+
+    /// Reorders a container's children to match `order`. Only ids that are
+    /// already children are reordered; any current children not named in
+    /// `order` are appended after (preserving them). Used by list bindings to
+    /// reflect keyed reorders without recreating instances.
+    pub fn set_children_order(&mut self, container_id: &str, order: &[String]) {
+        if let Some(container) = self.components.get_mut(container_id) {
+            let current: std::collections::HashSet<&String> = container.children.iter().collect();
+            let mut reordered: Vec<String> = order
+                .iter()
+                .filter(|id| current.contains(id))
+                .cloned()
+                .collect();
+            // Append any existing children not mentioned in `order`.
+            for child in &container.children {
+                if !order.contains(child) {
+                    reordered.push(child.clone());
+                }
+            }
+            container.children = reordered;
         }
     }
 

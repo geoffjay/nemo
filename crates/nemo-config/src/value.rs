@@ -79,6 +79,22 @@ impl Value {
         }
     }
 
+    /// Returns the value as a mutable object, if it is one.
+    pub fn as_object_mut(&mut self) -> Option<&mut IndexMap<String, Value>> {
+        match self {
+            Value::Object(obj) => Some(obj),
+            _ => None,
+        }
+    }
+
+    /// Returns the value as a mutable array, if it is one.
+    pub fn as_array_mut(&mut self) -> Option<&mut Vec<Value>> {
+        match self {
+            Value::Array(arr) => Some(arr),
+            _ => None,
+        }
+    }
+
     /// Gets a value by key if this is an object.
     pub fn get(&self, key: &str) -> Option<&Value> {
         match self {

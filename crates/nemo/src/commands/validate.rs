@@ -154,7 +154,7 @@ fn config_error_to_diagnostics(err: ConfigError) -> Vec<Diagnostic> {
 fn is_structural_key(key: &str) -> bool {
     matches!(
         key,
-        "type" | "component" | "binding" | "slot" | "vars" | "template"
+        "type" | "component" | "binding" | "slot" | "vars" | "template" | "list_binding"
     )
 }
 
@@ -394,6 +394,7 @@ fn lint_component(
                     || is_universal_style(key)
                     || key.starts_with("on_")
                     || key.starts_with("bind_")
+                    || key.starts_with("n:")
                 {
                     continue;
                 }

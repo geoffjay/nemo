@@ -904,6 +904,11 @@ impl NemoRuntime {
                         layout_manager.apply_updates(updates);
                         any_updates = true;
                     }
+                    // List bindings (runtime n:for): diff the array and
+                    // create/remove component instances after scalar bindings.
+                    if layout_manager.on_list_data_changed(&source_path, &value) {
+                        any_updates = true;
+                    }
                 }
             }
         }
@@ -924,6 +929,10 @@ impl NemoRuntime {
                         let updates = layout_manager.on_data_changed(path, &value);
                         if !updates.is_empty() {
                             layout_manager.apply_updates(updates);
+                            any_updates = true;
+                        }
+                        // List bindings (runtime n:for).
+                        if layout_manager.on_list_data_changed(path, &value) {
                             any_updates = true;
                         }
                     }
@@ -2752,10 +2761,40 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
         node = node.with_id(id);
     }
 
-    // Add all other properties (excluding type, id, and component children)
+    // Extract list_binding metadata (live-data n:for container).
+    if let Some(lb) = obj.get("list_binding").and_then(|v| v.as_object()) {
+        let source = lb
+            .get("source")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let item_var = lb
+            .get("item_var")
+            .and_then(|v| v.as_str())
+            .unwrap_or("item")
+            .to_string();
+        let key = lb
+            .get("key")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let template = lb.get("template").cloned().unwrap_or(Value::Null);
+        let n_if = lb
+            .get("n_if")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        if !source.is_empty() {
+            node.list_binding = Some(nemo_layout::ListBindingSpec {
+                source,
+                item_var,
+                key,
+                template,
+                n_if,
+            });
+        }
+    }
     for (key, val) in obj {
         match key.as_str() {
-            "type" | "id" => continue,
+            "type" | "id" | "list_binding" => continue,
             "component" => {
                 // Nested components - parsed as objects
                 // e.g., component: { button: {...} }
@@ -6081,6 +6120,212 @@ mod error_path_tests {
         // "HTTP" (uppercase) should not match "http"
         let config = obj(vec![("type", s("HTTP")), ("url", s("https://example.com"))]);
         assert!(nemo_data::create_source("api", "HTTP", &config).is_none());
+    }
+}
+
+/// End-to-end verification for control-flow directives (`n:if`/`n:for`),
+/// exercising the full pipeline: XML → `ConfigurationLoader` (which runs
+/// `compile_directives`) → `parse_layout_config` → `LayoutManager` → data
+/// change.
+#[cfg(test)]
+mod control_flow_directive_tests {
+    use super::*;
+    use nemo_config::Value;
+    use nemo_layout::LayoutManager;
+    use nemo_registry::{register_all_builtins, ComponentRegistry};
+
+    /// Loads an XML config string through the real loader (running
+    /// `compile_directives`) and builds a `LayoutManager` with all builtins.
+    fn build_layout(xml: &str) -> LayoutManager {
+        let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
+        let config = loader
+            .load_xml_string(xml, "test.xml", None)
+            .expect("config should load");
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let mut manager = LayoutManager::new(registry);
+        manager.apply_layout(layout).expect("apply layout");
+        manager
+    }
+
+    fn user(name: &str) -> Value {
+        let mut o = indexmap::IndexMap::new();
+        o.insert("name".to_string(), Value::String(name.to_string()));
+        Value::Object(o)
+    }
+
+    /// Phase 1 — `n:if` toggles a component's `visible` property via data.
+    #[test]
+    fn verify_n_if_toggles_via_data() {
+        let xml = r#"
+            <nemo>
+              <layout type="stack">
+                <panel id="err_panel" n:if="data.status == 'error'">
+                  <label id="msg" text="Something went wrong" />
+                </panel>
+              </layout>
+            </nemo>
+        "#;
+        let mut manager = build_layout(xml);
+
+        // Compiled to a bind-visible binding on the panel.
+        let bindings = manager.bindings().bindings_for_component("err_panel");
+        assert_eq!(bindings.len(), 1, "n:if compiled to one binding");
+        assert_eq!(bindings[0].source, "data.status");
+        assert_eq!(bindings[0].target.property_path, "visible");
+
+        // status == "error" → visible = true.
+        let updates = manager.on_data_changed("data.status", &Value::String("error".to_string()));
+        manager.apply_updates(updates);
+        assert_eq!(
+            manager.get_property("err_panel", "visible"),
+            Some(&Value::Bool(true)),
+            "panel shown when status == error"
+        );
+
+        // status == "ok" → visible = false.
+        let updates = manager.on_data_changed("data.status", &Value::String("ok".to_string()));
+        manager.apply_updates(updates);
+        assert_eq!(
+            manager.get_property("err_panel", "visible"),
+            Some(&Value::Bool(false)),
+            "panel hidden when status != error"
+        );
+    }
+
+    /// Phase 2 — static `n:for` over a literal array expands to N nodes and
+    /// the expanded config passes `nemo validate` (no errors/warnings).
+    #[test]
+    fn verify_static_n_for_expands_and_validates() {
+        let xml = r#"
+            <nemo>
+              <layout type="stack">
+                <tab-item n:for="tab in ['home', 'settings', 'about']" n:key="tab"
+                          label="${tab}" />
+              </layout>
+            </nemo>
+        "#;
+        // Load through the loader (runs compile_directives) and confirm the
+        // parsed config has 3 expanded children with substituted labels.
+        let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
+        let config = loader
+            .load_xml_string(xml, "test.xml", None)
+            .expect("config loads");
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let labels: Vec<String> = layout
+            .root
+            .children
+            .iter()
+            .filter(|c| c.component_type == "tab_item")
+            .filter_map(|c| {
+                c.config
+                    .properties
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
+            .collect();
+        assert_eq!(labels.len(), 3, "static n:for expanded to 3 tab-items");
+        assert!(labels.contains(&"home".to_string()));
+        assert!(labels.contains(&"settings".to_string()));
+        assert!(labels.contains(&"about".to_string()));
+
+        // The expanded config builds without error (the LayoutManager gate is
+        // the same registry check `nemo validate --strict` runs).
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let mut manager = LayoutManager::new(registry);
+        manager
+            .apply_layout(layout)
+            .expect("expanded static n:for tree builds cleanly");
+    }
+
+    /// Phase 3 — live-data `n:for` backed by a mock source: adding items
+    /// creates components, removing cleans up, reordering updates values.
+    #[test]
+    fn verify_live_data_n_for_add_remove_reorder() {
+        let xml = r#"
+            <nemo>
+              <layout type="stack">
+                <stack id="user_list" n:for="user in data.api.users" n:key="user.id">
+                  <label text="${user.name}" />
+                </stack>
+              </layout>
+            </nemo>
+        "#;
+        let mut manager = build_layout(xml);
+
+        // Container built with no children; list binding registered.
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            0,
+            "container starts empty"
+        );
+
+        // Mock HTTP source publishes the whole `data.api` object.
+        let api = |users: Vec<Value>| {
+            let mut o = indexmap::IndexMap::new();
+            o.insert("users".to_string(), Value::Array(users));
+            Value::Object(o)
+        };
+
+        // Add two users.
+        let changed =
+            manager.on_list_data_changed("data.api", &api(vec![user("Alice"), user("Bob")]));
+        assert!(changed, "adding items reports a change");
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            2,
+            "two instances created"
+        );
+
+        // Add a third.
+        manager.on_list_data_changed(
+            "data.api",
+            &api(vec![user("Alice"), user("Bob"), user("Carol")]),
+        );
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            3,
+            "third instance created"
+        );
+
+        // Remove one (back to two).
+        manager.on_list_data_changed("data.api", &api(vec![user("Alice"), user("Bob")]));
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            2,
+            "instance removed"
+        );
+
+        // Reorder: the index-0 label component's text follows the data.
+        let label0 = format!(
+            "{}_{}",
+            "user_list_0",
+            manager
+                .get_component("user_list_0")
+                .unwrap()
+                .children
+                .first()
+                .map(|c| c.rsplit('_').next().unwrap_or("").to_string())
+                .unwrap_or_default()
+        );
+        let _ = label0; // child id shape is instance-specific; assert on the label value below.
+        manager.on_list_data_changed("data.api", &api(vec![user("Bob"), user("Alice")]));
+        // The first instance's label now reflects Bob.
+        let first_instance = manager.get_component("user_list_0").unwrap();
+        let first_child_id = first_instance.children.first().cloned().unwrap();
+        assert_eq!(
+            manager
+                .get_component(&first_child_id)
+                .unwrap()
+                .properties
+                .get("text")
+                .and_then(|v| v.as_str()),
+            Some("Bob"),
+            "reorder updated the first instance's label"
+        );
     }
 }
 

@@ -61,7 +61,12 @@ impl ConfigurationLoader {
             }
         }
 
-        let raw_value = parser.parse(content).map_err(ConfigError::Parse)?;
+        let mut raw_value = parser.parse(content).map_err(ConfigError::Parse)?;
+
+        // Compile control-flow directives (n:if / n:for) in the layout and
+        // SFC templates before resolution — the pass rewrites the Value tree
+        // into ordinary nodes (or list-container nodes for live-data n:for).
+        crate::compile_directives(&mut raw_value);
 
         // Build resolve context from the parsed config
         let context = self.build_context(&raw_value);
