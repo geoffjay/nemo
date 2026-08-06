@@ -80,10 +80,6 @@ pub struct AppBlocks {
     /// through verbatim so an `app.nemo` supports the same top-level surface as
     /// the old `app.xml`. An empty `Object` when there are none.
     pub extra: Value,
-    /// The `id` of the `<template>` root element, used as the key in the
-    /// `layout.component` map (matching `process_layout`'s child-keying). Empty
-    /// for a component `.nemo` (no app blocks).
-    pub layout_root_id: String,
 }
 
 /// A slot declared in an SFC template via `<slot name="…" required multiple/>`.
@@ -1096,12 +1092,9 @@ impl XmlParser {
         // process_* logic process_root uses, so compile_app_sfc can assemble
         // the identical Value tree.
         let mut app_result: IndexMap<String, Value> = IndexMap::new();
-        let mut layout_root_id = String::new();
-
         // Pre-scan: detect whether this is an app.nemo (has app-level blocks)
-        // before processing, so the <template> arm knows whether to capture the
-        // root id for layout wrapping. App-level blocks may appear after
-        // <template> in document order.
+        // before processing. App-level blocks may appear after <template> in
+        // document order.
         let has_app_blocks = children.iter().any(|child| {
             child
                 .as_object()
@@ -1206,16 +1199,6 @@ impl XmlParser {
                         ));
                     }
                     let root_child = element_children[0].as_object().unwrap();
-                    // Capture the root id for app SFC layout wrapping (the id
-                    // is stripped by process_component_element but needed as the
-                    // key in layout.component, matching process_layout).
-                    if has_app_blocks {
-                        layout_root_id = root_child
-                            .get("id")
-                            .and_then(|v| v.as_str())
-                            .unwrap_or("root")
-                            .to_string();
-                    }
                     // Collect declared slots from the raw element tree (before
                     // flattening loses the `required`/`multiple` attributes).
                     Self::collect_slot_specs(root_child, &mut slots);
@@ -1329,7 +1312,6 @@ impl XmlParser {
                     sfc_imports,
                     scripts,
                     extra,
-                    layout_root_id,
                 })
             } else {
                 None
@@ -2084,28 +2066,44 @@ impl XmlParser {
         let mut result = IndexMap::new();
 
         // The <template> body is the layout tree. In app.xml, <layout type=…>
-        // wraps its children in a `component` map; the SFC <template>'s single
-        // root child IS the layout root, so we wrap it the same way: the root's
-        // `type` becomes the layout type, and the processed component value
-        // goes under `component[<root_id>]` — matching process_layout exactly.
-        let layout_type = sfc
-            .template
-            .get("type")
-            .and_then(|v| v.as_str())
-            .unwrap_or("stack")
-            .to_string();
-        let root_id = sfc
-            .app_blocks
-            .as_ref()
-            .map(|b| b.layout_root_id.as_str())
-            .filter(|s| !s.is_empty())
-            .unwrap_or("root")
-            .to_string();
+        // carries the layout type and its children under a `component` map; the
+        // SFC <template>'s single root child IS that layout root, so we flatten
+        // it: the root's `type` becomes the layout type, its other attributes
+        // (direction, spacing, padding, …) become layout attributes, and its
+        // `component` map becomes the layout's children — matching process_layout
+        // exactly. Without flattening, the template root nests as a single
+        // content-sized child of the synthetic layout root, so a child opting
+        // into `flex="1"` (e.g. the calculator's button stack) cannot grow: the
+        // intermediate wrapper has no `flex` and eats the viewport.
+        let empty = IndexMap::new();
+        let template_obj = sfc.template.as_object().unwrap_or(&empty);
         let mut layout = IndexMap::new();
-        layout.insert("type".to_string(), Value::String(layout_type));
-        let mut component_map = IndexMap::new();
-        component_map.insert(root_id, sfc.template);
-        layout.insert("component".to_string(), Value::Object(component_map));
+        // `type` → layout type (defaults to "stack", matching process_layout's
+        // fallback in the runtime).
+        layout.insert(
+            "type".to_string(),
+            template_obj
+                .get("type")
+                .cloned()
+                .unwrap_or(Value::String("stack".to_string())),
+        );
+        // Copy every remaining attribute the template root carries, except
+        // `type` (already emitted), `id` (the template root's id is a document-
+        // unique key for the SFC, not a layout property — process_layout never
+        // sees one), and `component` (children — emitted separately below).
+        for (key, val) in template_obj {
+            match key.as_str() {
+                "type" | "id" | "component" => continue,
+                _ => {
+                    layout.insert(key.clone(), val.clone());
+                }
+            }
+        }
+        // The template root's children become the layout's `component` map,
+        // matching process_layout's `children_to_component_map`.
+        if let Some(component) = template_obj.get("component") {
+            layout.insert("component".to_string(), component.clone());
+        }
         result.insert("layout".to_string(), Value::Object(layout));
         if let Some(blocks) = sfc.app_blocks {
             if let Some(app) = blocks.app {
@@ -3373,11 +3371,25 @@ mod tests {
         assert!(value.get("app").is_some());
         assert!(value.get("layout").is_some());
         let layout = value.get("layout").unwrap();
+        // The SFC template root (<stack id="root" direction="vertical"
+        // spacing="6" padding="8">) is flattened into the layout, matching
+        // process_layout: its type/attrs are layout-level, and its children
+        // live directly under layout.component — no intermediate "root" wrapper
+        // that would prevent the button stack's `flex="1"` from growing.
+        assert_eq!(layout.get("type").and_then(|v| v.as_str()), Some("stack"));
+        assert_eq!(
+            layout.get("direction").and_then(|v| v.as_str()),
+            Some("vertical")
+        );
         let components = layout.get("component").unwrap();
-        // The app.nemo layout wraps its children in a single `root` stack.
-        let inner = components.get("root").unwrap().get("component").unwrap();
-        assert!(inner.get("display").is_some());
-        assert!(inner.get("buttons").is_some());
+        assert!(components.get("display").is_some());
+        assert!(components.get("buttons").is_some());
+        // The template root's id ("root") must NOT appear as a child — it has
+        // been flattened, not nested.
+        assert!(
+            components.get("root").is_none(),
+            "template root id must not survive as a layout child after flattening"
+        );
     }
 
     #[test]
@@ -3408,8 +3420,9 @@ mod tests {
         assert!(value.get("layout").is_some());
         let layout = value.get("layout").unwrap();
         let components = layout.get("component").unwrap();
-        let root = components.get("root_panel").unwrap();
-        let main = root.get("component").unwrap().get("main_content").unwrap();
+        // The SFC template root (root_panel) is flattened into the layout, so
+        // main_content is a direct child of layout.component.
+        let main = components.get("main_content").unwrap();
         let motor1 = main.get("component").unwrap().get("motor1_pid").unwrap();
         assert_eq!(
             motor1.get("template"),
@@ -3751,10 +3764,8 @@ button:hover { opacity: 0.8; }
     <source name="api" type="http" url="https://api.example.com" interval="30" />
   </data>
   <script src="./scripts" on-load="on_load" />
-  <layout type="stack">
-    <stack id="root" direction="vertical" spacing="20" padding="32">
-      <label id="title" text="Dashboard" size="xl" />
-    </stack>
+  <layout type="stack" direction="vertical" spacing="20" padding="32">
+    <label id="title" text="Dashboard" size="xl" />
   </layout>
 </nemo>"#;
 
@@ -3793,7 +3804,7 @@ button:hover { opacity: 0.8; }
     fn test_app_sfc_inline_script_equals_cdata() {
         let app_xml = r#"<nemo>
   <layout type="stack">
-    <stack id="root"><label id="hi" text="Hi" /></stack>
+    <label id="hi" text="Hi" />
   </layout>
   <script><![CDATA[
     fn init(component_id, event_data) { log_info("loaded"); }
@@ -3843,7 +3854,7 @@ button:hover { opacity: 0.8; }
     <import src="./card.nemo" />
   </imports>
   <layout type="stack">
-    <stack id="root"><card /></stack>
+    <card />
   </layout>
 </nemo>"#
             .to_string();

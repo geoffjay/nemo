@@ -19,9 +19,9 @@
   <script src="./scripts" />
 
   <!-- Multi-file includes: templates and data sources from separate files -->
-  <include href="templates/nav.xml" />
-  <include href="templates/cards.xml" />
-  <include href="templates/data.xml" />
+  <include href="templates/nav.nemo" />
+  <include href="templates/cards.nemo" />
+  <include href="templates/data.nemo" />
 
   <template name="app">
     <stack id="main" direction="horizontal" spacing="0">

@@ -1,0 +1,5 @@
+<!-- Data source definitions for the complete example -->
+<data>
+  <source name="ticker" type="timer" interval="1" />
+  <source name="stats" type="timer" interval="5" />
+</data>

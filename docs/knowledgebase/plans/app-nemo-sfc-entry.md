@@ -246,11 +246,13 @@ source entry so `dist/` stays a faithful compile. Works for both `.nemo` and
   `calculator`, `data-binding`, `complete`) are `app.nemo` SFCs; each has a
   `nemo.toml`. `new.rs` `tfile!` paths, `render_readme`, and the "Next steps"
   message reference `app.nemo`. The `complete` template keeps its multi-file
-  `<include href="templates/*.xml"/>` — the `<include>` and `<templates>` arms
+  `<include href="templates/*.nemo"/>` — the `<include>` and `<templates>` arms
   were added to `parse_sfc` (delegating to the existing `process_include`/
   `process_template`), and `AppBlocks` gained an `extra` passthrough so
   include-merged / `<templates>` keys reach the compiled `Value`. The
-  `<include>`-target files stay XML (they are `<nemo>` merge fragments).
+  `<include>`-target files are `.nemo` merge fragments (bare top-level
+  `<templates>`/`<data>`; `process_include` parses them via the same
+  `<nemo>`-unwrapping `parse` path, so no `<nemo>` wrapper is required).
 * `project_loader.rs` `CONFIG_CANDIDATES`: `["app.nemo", ".nemo/app.nemo"]` —
   no `app.xml` candidates.
 * `dev_panel.rs` auto-load: `app.nemo` only (no `app.xml` fallback).

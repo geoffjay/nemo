@@ -70,9 +70,9 @@ static TEMPLATES: &[Template] = &[
             tfile!("complete/app.nemo"),
             tfile!("complete/scripts/handlers.rhai"),
             tfile!("complete/scripts/transforms.rhai"),
-            tfile!("complete/templates/nav.xml"),
-            tfile!("complete/templates/cards.xml"),
-            tfile!("complete/templates/data.xml"),
+            tfile!("complete/templates/nav.nemo"),
+            tfile!("complete/templates/cards.nemo"),
+            tfile!("complete/templates/data.nemo"),
         ],
     },
 ];
@@ -146,14 +146,7 @@ pub fn run(args: NewArgs) -> Result<()> {
     println!("\nCreated Nemo project at {}", target.display());
     println!("\nNext steps:");
     println!("  cd {}", target.display());
-    // The `complete` template still uses app.xml (multi-file <include>); the
-    // others are .nemo SFC entries.
-    let entry = if args.template == "complete" {
-        "app.xml"
-    } else {
-        "app.nemo"
-    };
-    println!("  nemo dev --app-config {entry}");
+    println!("  nemo dev --app-config app.nemo");
     Ok(())
 }
 
@@ -176,23 +169,18 @@ fn scaffold_extras(dest: &Path, project_name: &str, template: &str) -> Result<()
     Ok(())
 }
 fn render_readme(project_name: &str, template: &str) -> String {
-    let entry = if template == "complete" {
-        "app.xml"
-    } else {
-        "app.nemo"
-    };
     format!(
         "# {project_name}\n\n\
          A [Nemo](https://github.com/geoffjay/nemo) application scaffolded from the \
          `{template}` template.\n\n\
          ## Run\n\n\
          ```bash\n\
-         nemo dev --app-config {entry}\n\
+         nemo dev --app-config app.nemo\n\
          ```\n\n\
-         `nemo dev` hot-reloads the app when you edit `{entry}` or files under `scripts/`.\n\n\
+         `nemo dev` hot-reloads the app when you edit `app.nemo` or files under `scripts/`.\n\n\
          ## Validate\n\n\
          ```bash\n\
-         nemo validate {entry} --strict\n\
+         nemo validate app.nemo --strict\n\
          ```\n"
     )
 }
