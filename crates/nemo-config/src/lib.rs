@@ -33,7 +33,7 @@ pub use schema::{ConfigSchema, PropertySchema, ValidationRule, ValueType};
 pub use validator::{ConfigValidator, ValidationResult};
 pub use value::Value;
 pub use xml_parser::{
-    sfc_default_tag, sfc_definition_to_value, SfcDefinition, SfcProp, SfcSlot, XmlParser,
+    sfc_default_tag, sfc_definition_to_value, AppBlocks, SfcDefinition, SfcProp, SfcSlot, XmlParser,
 };
 
 #[cfg(test)]

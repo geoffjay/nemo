@@ -26,6 +26,10 @@ pub struct SfcDefinition {
     pub name: Option<String>,
     /// The template body: a single-root component `Value` (the shape
     /// `process_component_element` produces), ready to merge into a `TemplateMap`.
+    ///
+    /// For an `app.nemo` SFC, this is the layout tree (what `<layout>` carries in
+    /// `app.xml`); [`compile_app_sfc`](crate::compile_app_sfc) maps it to the
+    /// `layout` key.
     pub template: Value,
     /// Raw `<style>` body, if present. Folded onto template nodes at compile time.
     pub style: Option<String>,
@@ -37,6 +41,44 @@ pub struct SfcDefinition {
     /// Slots declared by `<slot [name] [required] [multiple]/>` in the template,
     /// in document order. Used for slot validation and schema export.
     pub slots: Vec<SfcSlot>,
+    /// App-level blocks (an `app.nemo` SFC). `None` for a component `.nemo`.
+    ///
+    /// * `app` — the `<app>` block processed by `process_app` (window/theme/etc).
+    /// * `data` — the accumulated `<data>` blocks processed by `process_data`.
+    /// * `variables` — the accumulated `<variable>` blocks processed by
+    ///   `process_variable`.
+    /// * `sfc_imports` — the `sfc` sub-map built from `<imports>`/`<import>`
+    ///   blocks (the same map `process_import` populates under the `sfc` key).
+    /// * `scripts` — XML `<script src=… on-load=… />` elements processed by
+    ///   `process_script` (the raw-text `<script>` body lives in
+    ///   [`script`](Self::script) and is folded into `scripts.inline` by
+    ///   `compile_app_sfc`).
+    pub app_blocks: Option<AppBlocks>,
+}
+
+/// App-level blocks parsed from an `app.nemo` SFC — the SFC equivalent of the
+/// top-level `<nemo>` children that `process_root` handles in `app.xml`.
+///
+/// Each field holds the same `Value` the corresponding `process_*` function
+/// produces, so [`compile_app_sfc`](crate::compile_app_sfc) can assemble them
+/// into the identical `Value` tree without re-running the processing logic.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct AppBlocks {
+    /// The `<app>` block → `config["app"]`.
+    pub app: Option<Value>,
+    /// Accumulated `<data>` blocks → `config["data"]`.
+    pub data: Value,
+    /// Accumulated `<variable>` blocks → `config["variable"]`.
+    pub variables: Value,
+    /// The `sfc` sub-map from `<imports>`/`<import>` → `config["sfc"]`.
+    pub sfc_imports: Value,
+    /// XML `<script src=… />` blocks → `config["scripts"]` (without the raw-text
+    /// inline body, which is merged separately).
+    pub scripts: Value,
+    /// The `id` of the `<template>` root element, used as the key in the
+    /// `layout.component` map (matching `process_layout`'s child-keying). Empty
+    /// for a component `.nemo` (no app blocks).
+    pub layout_root_id: String,
 }
 
 /// A slot declared in an SFC template via `<slot name="…" required multiple/>`.
@@ -753,14 +795,18 @@ impl XmlParser {
                 }
             }
 
-            // CDATA content → inline key
+            // CDATA content → inline key. Trimmed to match the raw-text
+            // splitter's behavior (split_sfc_blocks trims script bodies), so
+            // an app.nemo's raw-text <script> and an app.xml's CDATA <script>
+            // produce identical scripts.inline values.
             if let Some(cdata) = obj.get("__cdata__").and_then(|v| v.as_str()) {
-                if !cdata.trim().is_empty() {
+                let trimmed = cdata.trim();
+                if !trimmed.is_empty() {
                     let inline = scripts_obj
                         .entry("inline".to_string())
                         .or_insert_with(|| Value::Array(Vec::new()));
                     if let Value::Array(arr) = inline {
-                        arr.push(Value::String(cdata.to_string()));
+                        arr.push(Value::String(trimmed.to_string()));
                     }
                 }
             }
@@ -1041,6 +1087,34 @@ impl XmlParser {
         let mut template: Option<Value> = None;
         let mut props: Vec<SfcProp> = Vec::new();
         let mut slots: Vec<SfcSlot> = Vec::new();
+        // App-level block accumulators (app.nemo). Each is built with the same
+        // process_* logic process_root uses, so compile_app_sfc can assemble
+        // the identical Value tree.
+        let mut app_result: IndexMap<String, Value> = IndexMap::new();
+        let mut layout_root_id = String::new();
+
+        // Pre-scan: detect whether this is an app.nemo (has app-level blocks)
+        // before processing, so the <template> arm knows whether to capture the
+        // root id for layout wrapping. App-level blocks may appear after
+        // <template> in document order.
+        let has_app_blocks = children.iter().any(|child| {
+            child
+                .as_object()
+                .and_then(|o| o.get("__type__").and_then(|v| v.as_str()))
+                .map(|t| {
+                    matches!(
+                        t,
+                        "app"
+                            | "data"
+                            | "variable"
+                            | "imports"
+                            | "import"
+                            | "components"
+                            | "themes"
+                    ) || (t == "script" && child.as_object().unwrap().get("__children__").is_none())
+                })
+                .unwrap_or(false)
+        });
 
         for child in &children {
             let obj = match child.as_object() {
@@ -1127,10 +1201,66 @@ impl XmlParser {
                         ));
                     }
                     let root_child = element_children[0].as_object().unwrap();
+                    // Capture the root id for app SFC layout wrapping (the id
+                    // is stripped by process_component_element but needed as the
+                    // key in layout.component, matching process_layout).
+                    if has_app_blocks {
+                        layout_root_id = root_child
+                            .get("id")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("root")
+                            .to_string();
+                    }
                     // Collect declared slots from the raw element tree (before
                     // flattening loses the `required`/`multiple` attributes).
                     Self::collect_slot_specs(root_child, &mut slots);
                     template = Some(self.process_component_element(root_child));
+                }
+                // App-level blocks (app.nemo). Each delegates to the same
+                // process_* function process_root uses, accumulating into
+                // app_result so compile_app_sfc can assemble the Value tree.
+                Some("app") => {
+                    let app = self.process_app(obj);
+                    app_result.insert("app".to_string(), app);
+                }
+                Some("data") => {
+                    self.process_data(obj, &mut app_result);
+                }
+                Some("variable") => {
+                    self.process_variable(obj, &mut app_result);
+                }
+                Some("script") => {
+                    // An XML <script src=… on-load=… /> (self-closing, so
+                    // split_sfc_blocks left it for the reader). The raw-text
+                    // <script> body is in blocks.script and folded in by
+                    // compile_app_sfc. process_script writes to scripts.*.
+
+                    self.process_script(obj, &mut app_result);
+                }
+                Some("imports") => {
+                    if let Some(import_children) =
+                        obj.get("__children__").and_then(|v| v.as_array())
+                    {
+                        for import_child in import_children {
+                            if let Some(import_obj) = import_child.as_object() {
+                                if import_obj.get("__type__").and_then(|v| v.as_str())
+                                    == Some("import")
+                                {
+                                    self.process_import(import_obj, &mut app_result)?;
+                                }
+                            }
+                        }
+                    }
+                }
+                Some("import") => {
+                    self.process_import(obj, &mut app_result)?;
+                }
+                Some("components") => {
+                    self.process_components_dir(obj, &mut app_result)?;
+                }
+                Some("themes") => {
+                    let themes_val = self.process_themes_block(obj);
+                    app_result.insert("themes".to_string(), themes_val);
                 }
                 _ => {}
             }
@@ -1150,6 +1280,31 @@ impl XmlParser {
             script: blocks.script,
             props,
             slots,
+            app_blocks: if has_app_blocks {
+                let app = app_result.shift_remove("app");
+                let data = app_result
+                    .shift_remove("data")
+                    .unwrap_or(Value::Object(IndexMap::new()));
+                let variables = app_result
+                    .shift_remove("variable")
+                    .unwrap_or(Value::Object(IndexMap::new()));
+                let sfc_imports = app_result
+                    .shift_remove("sfc")
+                    .unwrap_or(Value::Object(IndexMap::new()));
+                let scripts = app_result
+                    .shift_remove("scripts")
+                    .unwrap_or(Value::Object(IndexMap::new()));
+                Some(AppBlocks {
+                    app,
+                    data,
+                    variables,
+                    sfc_imports,
+                    scripts,
+                    layout_root_id,
+                })
+            } else {
+                None
+            },
         })
     }
 
@@ -1870,6 +2025,99 @@ impl XmlParser {
     fn decode_cdata(cdata: &BytesCData) -> String {
         String::from_utf8_lossy(cdata.as_ref()).to_string()
     }
+    /// Compiles an `app.nemo` SFC into the resolved `Value` tree — the same
+    /// shape [`process_root`](Self::process_root) produces for an equivalent
+    /// `app.xml`.
+    ///
+    /// The SFC's `<template name="app">` becomes the `layout` key; the
+    /// app-level blocks (`<app>`, `<data>`, `<imports>`, `<variable>`,
+    /// `<script>`) map to the same keys their `process_root` arms produce. A
+    /// raw-text `<script>` body (captured by [`parse_sfc`](Self::parse_sfc)
+    /// before the XML reader sees it) is folded into `scripts.inline` so the
+    /// output matches an `app.xml` that carries the same body in CDATA.
+    ///
+    /// Returns the raw parsed tree (before directive compilation or `${}`
+    /// resolution) — the caller runs [`compile_directives`](crate::compile_directives)
+    /// and the resolver as `load_xml_string` does.
+    pub fn compile_app_sfc(&self, content: &str) -> Result<Value, ParseError> {
+        let sfc = self.parse_sfc(content)?;
+        Ok(Self::app_sfc_to_value(sfc))
+    }
+
+    /// Assembles the top-level `Value` tree from a parsed `app.nemo`
+    /// [`SfcDefinition`] — the SFC counterpart of [`process_root`](Self::process_root).
+    ///
+    /// `sfc.template` → `layout`; the [`AppBlocks`] fields → their `process_root`
+    /// keys. The raw-text `sfc.script` body is merged into `scripts.inline`
+    /// (matching `process_script`'s CDATA path) so the output matches an
+    /// equivalent `app.xml`.
+    fn app_sfc_to_value(sfc: SfcDefinition) -> Value {
+        let mut result = IndexMap::new();
+
+        // The <template> body is the layout tree. In app.xml, <layout type=…>
+        // wraps its children in a `component` map; the SFC <template>'s single
+        // root child IS the layout root, so we wrap it the same way: the root's
+        // `type` becomes the layout type, and the processed component value
+        // goes under `component[<root_id>]` — matching process_layout exactly.
+        let layout_type = sfc
+            .template
+            .get("type")
+            .and_then(|v| v.as_str())
+            .unwrap_or("stack")
+            .to_string();
+        let root_id = sfc
+            .app_blocks
+            .as_ref()
+            .map(|b| b.layout_root_id.as_str())
+            .filter(|s| !s.is_empty())
+            .unwrap_or("root")
+            .to_string();
+        let mut layout = IndexMap::new();
+        layout.insert("type".to_string(), Value::String(layout_type));
+        let mut component_map = IndexMap::new();
+        component_map.insert(root_id, sfc.template);
+        layout.insert("component".to_string(), Value::Object(component_map));
+        result.insert("layout".to_string(), Value::Object(layout));
+        if let Some(blocks) = sfc.app_blocks {
+            if let Some(app) = blocks.app {
+                result.insert("app".to_string(), app);
+            }
+            // data / variable / sfc are Object maps; only insert if non-empty
+            // so the output matches process_root (which only creates them when
+            // the blocks are present).
+            if is_non_empty_map(&blocks.data) {
+                result.insert("data".to_string(), blocks.data);
+            }
+            if is_non_empty_map(&blocks.variables) {
+                result.insert("variable".to_string(), blocks.variables);
+            }
+            if is_non_empty_map(&blocks.sfc_imports) {
+                result.insert("sfc".to_string(), blocks.sfc_imports);
+            }
+            if is_non_empty_map(&blocks.scripts) {
+                result.insert("scripts".to_string(), blocks.scripts);
+            }
+        }
+
+        // Fold the raw-text <script> body into scripts.inline, matching
+        // process_script's CDATA path. If scripts already has an inline array
+        // (from an XML <script> element), append; otherwise create it.
+        if let Some(script_body) = sfc.script {
+            let scripts = result
+                .entry("scripts".to_string())
+                .or_insert_with(|| Value::Object(IndexMap::new()));
+            if let Value::Object(scripts_obj) = scripts {
+                let inline = scripts_obj
+                    .entry("inline".to_string())
+                    .or_insert_with(|| Value::Array(Vec::new()));
+                if let Value::Array(arr) = inline {
+                    arr.push(Value::String(script_body));
+                }
+            }
+        }
+
+        Value::Object(result)
+    }
 }
 
 impl Default for XmlParser {
@@ -1881,6 +2129,14 @@ impl Default for XmlParser {
 /// Converts kebab-case to snake_case.
 fn kebab_to_snake(s: &str) -> String {
     s.replace('-', "_")
+}
+
+/// Returns `true` if `v` is a non-empty `Value::Object` (the shape `process_root`
+/// produces for `data`/`variable`/`sfc`/`scripts`). Used by `app_sfc_to_value` to
+/// skip empty maps so the output matches `process_root` (which only inserts a key
+/// when the corresponding block is present).
+fn is_non_empty_map(v: &Value) -> bool {
+    v.as_object().map(|m| !m.is_empty()).unwrap_or(false)
 }
 
 /// Flattens an [`SfcDefinition`] into the `Value` stored under `config["sfc"][tag]`
@@ -3433,5 +3689,162 @@ button:hover { opacity: 0.8; }
                 _ => {}
             }
         }
+    }
+
+    /// Round-trip equality: an `app.nemo` SFC compiles to the same `Value` tree
+    /// as the equivalent `app.xml` — the core Phase 1 verification from the
+    /// `app-nemo-sfc-entry` plan. Covers `<app>`, `<data>`, `<variable>`,
+    /// `<template>` (→ `layout`), and both `<script>` forms (attribute-based
+    /// `src`/`on-load` and raw-text inline body).
+    #[test]
+    fn test_app_sfc_round_trip_equals_app_xml() {
+        let app_xml = r#"<nemo>
+  <app title="My Dashboard">
+    <window title="My Dashboard" width="1200" height="800">
+      <header-bar github-url="https://example.com" theme-toggle="true" />
+    </window>
+    <theme name="nord" mode="dark" />
+  </app>
+  <variable name="refresh_interval" type="string" default="30" />
+  <data>
+    <source name="api" type="http" url="https://api.example.com" interval="30" />
+  </data>
+  <script src="./scripts" on-load="on_load" />
+  <layout type="stack">
+    <stack id="root" direction="vertical" spacing="20" padding="32">
+      <label id="title" text="Dashboard" size="xl" />
+    </stack>
+  </layout>
+</nemo>"#;
+
+        let app_nemo = r#"<app title="My Dashboard">
+  <window title="My Dashboard" width="1200" height="800">
+    <header-bar github-url="https://example.com" theme-toggle="true" />
+  </window>
+  <theme name="nord" mode="dark" />
+</app>
+<variable name="refresh_interval" type="string" default="30" />
+<data>
+  <source name="api" type="http" url="https://api.example.com" interval="30" />
+</data>
+<script src="./scripts" on-load="on_load" />
+<template name="app">
+  <stack id="root" direction="vertical" spacing="20" padding="32">
+    <label id="title" text="Dashboard" size="xl" />
+  </stack>
+</template>"#;
+
+        let xml_value = XmlParser::new().parse(app_xml).unwrap();
+        let sfc_value = XmlParser::new().compile_app_sfc(app_nemo).unwrap();
+
+        assert_eq!(
+            xml_value, sfc_value,
+            "app.nemo SFC must compile to the same Value tree as the equivalent app.xml\n\
+             --- app.xml ---\n{xml_value:#?}\n\
+             --- app.nemo ---\n{sfc_value:#?}"
+        );
+    }
+
+    /// Round-trip with a raw-text inline `<script>` body: the SFC's raw-text
+    /// script must land in `scripts.inline` the same way `app.xml`'s CDATA
+    /// `<script>` does.
+    #[test]
+    fn test_app_sfc_inline_script_equals_cdata() {
+        let app_xml = r#"<nemo>
+  <layout type="stack">
+    <stack id="root"><label id="hi" text="Hi" /></stack>
+  </layout>
+  <script><![CDATA[
+    fn init(component_id, event_data) { log_info("loaded"); }
+  ]]></script>
+</nemo>"#;
+
+        let app_nemo = r#"<template name="app">
+  <stack id="root"><label id="hi" text="Hi" /></stack>
+</template>
+<script>
+    fn init(component_id, event_data) { log_info("loaded"); }
+</script>"#;
+
+        let xml_value = XmlParser::new().parse(app_xml).unwrap();
+        let sfc_value = XmlParser::new().compile_app_sfc(app_nemo).unwrap();
+
+        // The raw-text and CDATA bodies are trimmed by their respective
+        // capture paths, so the inline strings match exactly.
+        assert_eq!(
+            xml_value.get("scripts"),
+            sfc_value.get("scripts"),
+            "raw-text <script> must produce the same scripts.inline as CDATA\n\
+             xml: {:?}\nsfc: {:?}",
+            xml_value.get("scripts"),
+            sfc_value.get("scripts")
+        );
+        // The full tree matches too.
+        assert_eq!(xml_value, sfc_value);
+    }
+
+    /// Round-trip with `<imports>`: an `<import>` in app.nemo must register the
+    /// SFC under the `sfc` key the same way `<imports>` does in app.xml.
+    #[test]
+    fn test_app_sfc_imports_equals_app_xml() {
+        let dir =
+            std::env::temp_dir().join(format!("nemo_app_sfc_import_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let comp = dir.join("card.nemo");
+        std::fs::write(
+            &comp,
+            r#"<template name="card"><panel><slot /></panel></template>"#,
+        )
+        .unwrap();
+
+        let app_xml = r#"<nemo>
+  <imports>
+    <import src="./card.nemo" />
+  </imports>
+  <layout type="stack">
+    <stack id="root"><card /></stack>
+  </layout>
+</nemo>"#.to_string();
+
+        let app_nemo = r#"<imports>
+  <import src="./card.nemo" />
+</imports>
+<template name="app">
+  <stack id="root"><card /></stack>
+</template>"#.to_string();
+
+        let xml_value = XmlParser::new()
+            .with_source_name("app.xml")
+            .with_base_dir(&dir)
+            .parse(&app_xml)
+            .unwrap();
+        let sfc_value = XmlParser::new()
+            .with_source_name("app.nemo")
+            .with_base_dir(&dir)
+            .compile_app_sfc(&app_nemo)
+            .unwrap();
+
+        assert_eq!(
+            xml_value.get("sfc"),
+            sfc_value.get("sfc"),
+            "<imports> must register the same sfc map in both formats"
+        );
+        assert_eq!(xml_value, sfc_value);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    /// A component `.nemo` (no app-level blocks) must still parse unchanged —
+    /// `app_blocks` is `None` and `compile_app_sfc` is not used for components.
+    #[test]
+    fn test_component_sfc_app_blocks_none() {
+        let sfc = r#"<template name="card">
+  <panel><slot /></panel>
+</template>"#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        assert!(
+            def.app_blocks.is_none(),
+            "component SFC must have no app_blocks"
+        );
     }
 }
