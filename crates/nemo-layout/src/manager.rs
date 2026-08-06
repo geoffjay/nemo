@@ -22,6 +22,8 @@ pub struct LayoutManager {
     components: HashMap<String, BuiltComponent>,
     /// Current layout configuration.
     current_config: Option<LayoutConfig>,
+    /// Monotonic counter for runtime-generated component IDs (`__dyn_N`).
+    dynamic_id_counter: u64,
 }
 
 /// A built component instance.
@@ -50,6 +52,7 @@ impl LayoutManager {
             state: StateCoordinator::new(),
             components: HashMap::new(),
             current_config: None,
+            dynamic_id_counter: 0,
         }
     }
 
@@ -61,6 +64,7 @@ impl LayoutManager {
             state,
             components: HashMap::new(),
             current_config: None,
+            dynamic_id_counter: 0,
         }
     }
 
@@ -201,6 +205,157 @@ impl LayoutManager {
         Ok(())
     }
 
+    /// Generates a unique dynamic component ID (`__dyn_N`).
+    ///
+    /// The counter is monotonic and never resets, so IDs remain document-wide
+    /// unique across the lifetime of the manager (matching the `__anon_N`
+    /// invariant from the parser).
+    pub fn generate_dynamic_id(&mut self) -> String {
+        let id = format!("__dyn_{}", self.dynamic_id_counter);
+        self.dynamic_id_counter += 1;
+        id
+    }
+
+    /// Inserts a new built-in component instance at runtime.
+    ///
+    /// Validates the component type against the registry (same gate as
+    /// `build_node`). When `parent` is `Some`, the new component is appended
+    /// as a child of that parent; when `None`, it becomes a new root (the
+    /// existing root, if any, is left in place — Nemo renders all parentless
+    /// components). Required-property validation is skipped: props arrive
+    /// programmatically and partial initialization is a legitimate use case.
+    pub fn insert_component(
+        &mut self,
+        id: &str,
+        component_type: &str,
+        parent: Option<&str>,
+        properties: HashMap<String, Value>,
+        handlers: HashMap<String, String>,
+    ) -> Result<(), LayoutError> {
+        if !self.builder.has_component_type(component_type) {
+            return Err(LayoutError::UnknownComponent {
+                type_name: component_type.to_string(),
+            });
+        }
+
+        // If a parent is given, it must exist.
+        if let Some(parent_id) = parent {
+            if !self.components.contains_key(parent_id) {
+                return Err(LayoutError::InvalidConfig {
+                    component_id: parent_id.to_string(),
+                    reason: "Parent component not found".to_string(),
+                });
+            }
+        }
+
+        // Reject duplicate IDs to preserve the document-wide uniqueness invariant.
+        if self.components.contains_key(id) {
+            return Err(LayoutError::InvalidConfig {
+                component_id: id.to_string(),
+                reason: "Component ID already exists".to_string(),
+            });
+        }
+
+        let component = BuiltComponent {
+            id: id.to_string(),
+            component_type: component_type.to_string(),
+            properties,
+            handlers,
+            children: Vec::new(),
+            parent: parent.map(|p| p.to_string()),
+        };
+
+        if let Some(parent_id) = parent {
+            if let Some(parent_component) = self.components.get_mut(parent_id) {
+                parent_component.children.push(id.to_string());
+            }
+        }
+
+        self.components.insert(id.to_string(), component);
+        Ok(())
+    }
+
+    /// Removes a component and all its descendants recursively.
+    ///
+    /// Refuses to remove the current root (the component returned by
+    /// `root_id`) to avoid blanking the app. Removes bindings targeting the
+    /// component or any descendant. State entries owned by `App` are left
+    /// in place (lazy leak — see plan `runtime-component-creation.md`).
+    pub fn remove_component(&mut self, id: &str) -> Result<(), LayoutError> {
+        // Guard: refuse to remove the root.
+        if self.root_id().as_deref() == Some(id) {
+            return Err(LayoutError::InvalidConfig {
+                component_id: id.to_string(),
+                reason: "Cannot remove the root component".to_string(),
+            });
+        }
+
+        let parent_id = self
+            .components
+            .get(id)
+            .ok_or_else(|| LayoutError::InvalidConfig {
+                component_id: id.to_string(),
+                reason: "Component not found".to_string(),
+            })?
+            .parent
+            .clone();
+
+        // Collect the subtree (this component + all descendants) breadth-first.
+        let subtree: Vec<String> = {
+            let mut ids = Vec::new();
+            let mut queue = std::collections::VecDeque::new();
+            queue.push_back(id.to_string());
+            while let Some(cid) = queue.pop_front() {
+                ids.push(cid.clone());
+                if let Some(c) = self.components.get(&cid) {
+                    for child in &c.children {
+                        queue.push_back(child.clone());
+                    }
+                }
+            }
+            ids
+        };
+
+        // Detach from parent's children list.
+        if let Some(parent_id) = parent_id {
+            if let Some(parent) = self.components.get_mut(&parent_id) {
+                parent.children.retain(|c| c != id);
+            }
+        }
+
+        // Remove bindings for every component in the subtree.
+        for subtree_id in &subtree {
+            self.bindings.unbind_component(subtree_id);
+        }
+
+        // Remove all components in the subtree.
+        for subtree_id in &subtree {
+            self.components.remove(subtree_id);
+        }
+
+        Ok(())
+    }
+
+    /// Bulk-sets multiple properties on a component (runtime `update_component`).
+    pub fn set_properties(
+        &mut self,
+        component_id: &str,
+        properties: HashMap<String, Value>,
+    ) -> Result<(), LayoutError> {
+        let component =
+            self.components
+                .get_mut(component_id)
+                .ok_or_else(|| LayoutError::InvalidConfig {
+                    component_id: component_id.to_string(),
+                    reason: "Component not found".to_string(),
+                })?;
+
+        for (key, value) in properties {
+            component.properties.insert(key, value);
+        }
+        Ok(())
+    }
+
     /// Gets a component property.
     pub fn get_property(&self, component_id: &str, property: &str) -> Option<&Value> {
         self.components
@@ -332,5 +487,204 @@ mod tests {
             manager.get_property("btn", "label"),
             Some(&Value::String("Updated".into()))
         );
+    }
+
+    // ── Runtime insert/remove ──────────────────────────────────────────
+
+    #[test]
+    fn test_insert_component_with_parent() {
+        let mut manager = setup_manager();
+        let root = LayoutNode::new("stack").with_id("root");
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        let mut props = HashMap::new();
+        props.insert("label".to_string(), Value::String("Click".into()));
+        manager
+            .insert_component("btn", "button", Some("root"), props, HashMap::new())
+            .unwrap();
+
+        assert_eq!(manager.component_count(), 2);
+        let btn = manager.get_component("btn").unwrap();
+        assert_eq!(btn.component_type, "button");
+        assert_eq!(btn.parent, Some("root".to_string()));
+        let root = manager.get_component("root").unwrap();
+        assert!(root.children.contains(&"btn".to_string()));
+    }
+
+    #[test]
+    fn test_insert_component_no_parent() {
+        let mut manager = setup_manager();
+        let mut props = HashMap::new();
+        props.insert("text".to_string(), Value::String("Standalone".into()));
+        manager
+            .insert_component("lonely", "label", None, props, HashMap::new())
+            .unwrap();
+        assert_eq!(manager.component_count(), 1);
+        assert!(manager.get_component("lonely").is_some());
+    }
+
+    #[test]
+    fn test_insert_component_unknown_type_rejected() {
+        let mut manager = setup_manager();
+        let root = LayoutNode::new("stack").with_id("root");
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        let result = manager.insert_component(
+            "x",
+            "no_such_type",
+            Some("root"),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        assert!(matches!(result, Err(LayoutError::UnknownComponent { .. })));
+    }
+
+    #[test]
+    fn test_insert_component_duplicate_id_rejected() {
+        let mut manager = setup_manager();
+        let root = LayoutNode::new("stack").with_id("root");
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        let result = manager.insert_component(
+            "root",
+            "label",
+            Some("root"),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        assert!(matches!(result, Err(LayoutError::InvalidConfig { .. })));
+    }
+
+    #[test]
+    fn test_insert_component_nonexistent_parent_rejected() {
+        let mut manager = setup_manager();
+        let result = manager.insert_component(
+            "x",
+            "label",
+            Some("no_parent"),
+            HashMap::new(),
+            HashMap::new(),
+        );
+        assert!(matches!(result, Err(LayoutError::InvalidConfig { .. })));
+    }
+
+    #[test]
+    fn test_remove_component_recursive() {
+        let mut manager = setup_manager();
+        let root = LayoutNode::new("stack").with_id("root");
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        // Insert a container with a child.
+        manager
+            .insert_component(
+                "panel",
+                "stack",
+                Some("root"),
+                HashMap::new(),
+                HashMap::new(),
+            )
+            .unwrap();
+        let mut child_props = HashMap::new();
+        child_props.insert("text".to_string(), Value::String("Inner".into()));
+        manager
+            .insert_component("inner", "label", Some("panel"), child_props, HashMap::new())
+            .unwrap();
+        assert_eq!(manager.component_count(), 3);
+
+        // Remove the container — the child must go too.
+        manager.remove_component("panel").unwrap();
+        assert_eq!(manager.component_count(), 1);
+        assert!(manager.get_component("panel").is_none());
+        assert!(manager.get_component("inner").is_none());
+        // Root's children list should no longer contain panel.
+        let root = manager.get_component("root").unwrap();
+        assert!(!root.children.contains(&"panel".to_string()));
+    }
+
+    #[test]
+    fn test_remove_component_root_refused() {
+        let mut manager = setup_manager();
+        let root = LayoutNode::new("stack").with_id("root");
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        let result = manager.remove_component("root");
+        assert!(matches!(result, Err(LayoutError::InvalidConfig { .. })));
+        assert_eq!(manager.component_count(), 1);
+    }
+
+    #[test]
+    fn test_remove_component_nonexistent() {
+        let mut manager = setup_manager();
+        let result = manager.remove_component("no_such");
+        assert!(matches!(result, Err(LayoutError::InvalidConfig { .. })));
+    }
+
+    #[test]
+    fn test_remove_component_cleans_bindings() {
+        let mut manager = setup_manager();
+
+        let mut button = LayoutNode::new("button")
+            .with_id("btn")
+            .with_prop("label", Value::String("Initial".into()));
+        button
+            .config
+            .bindings
+            .push(BindingSpec::one_way("data.text", "label"));
+
+        let root = LayoutNode::new("stack").with_id("root").with_child(button);
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+        assert_eq!(manager.bindings().binding_count(), 1);
+
+        manager.remove_component("btn").unwrap();
+        assert_eq!(manager.bindings().binding_count(), 0);
+    }
+
+    #[test]
+    fn test_set_properties_bulk() {
+        let mut manager = setup_manager();
+        let root = LayoutNode::new("stack").with_id("root").with_child(
+            LayoutNode::new("label")
+                .with_id("lbl")
+                .with_prop("text", Value::String("Hi".into())),
+        );
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        let mut props = HashMap::new();
+        props.insert("text".to_string(), Value::String("Updated".into()));
+        props.insert("visible".to_string(), Value::Bool(false));
+        manager.set_properties("lbl", props).unwrap();
+
+        assert_eq!(
+            manager.get_property("lbl", "text"),
+            Some(&Value::String("Updated".into()))
+        );
+        assert_eq!(
+            manager.get_property("lbl", "visible"),
+            Some(&Value::Bool(false))
+        );
+    }
+
+    #[test]
+    fn test_generate_dynamic_id_unique() {
+        let mut manager = setup_manager();
+        let id1 = manager.generate_dynamic_id();
+        let id2 = manager.generate_dynamic_id();
+        assert_ne!(id1, id2);
+        assert!(id1.starts_with("__dyn_"));
+        assert!(id2.starts_with("__dyn_"));
     }
 }

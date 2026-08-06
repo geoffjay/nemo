@@ -502,6 +502,61 @@ impl RhaiEngine {
             },
         );
 
+        // Runtime component lifecycle: create / update / remove built-in
+        // component instances. `create_component` returns the generated ID
+        // (or an empty string on failure); the others return `()` and log
+        // on error — matching the fire-and-forget convention of
+        // `set_component_property` above.
+        let ctx = context.clone();
+        self.engine.register_fn(
+            "create_component",
+            move |parent_id: &str, component_type: &str, props: Dynamic| -> String {
+                let plugin_value = dynamic_to_plugin_value(props);
+                match ctx.create_component(parent_id, component_type, plugin_value) {
+                    Ok(id) => id,
+                    Err(e) => {
+                        tracing::warn!("create_component failed: {}", e);
+                        String::new()
+                    }
+                }
+            },
+        );
+
+        let ctx = context.clone();
+        self.engine.register_fn(
+            "create_component_with_id",
+            move |parent_id: &str, component_id: &str, component_type: &str, props: Dynamic| {
+                let plugin_value = dynamic_to_plugin_value(props);
+                if let Err(e) = ctx.create_component_with_id(
+                    parent_id,
+                    component_id,
+                    component_type,
+                    plugin_value,
+                ) {
+                    tracing::warn!("create_component_with_id failed: {}", e);
+                }
+            },
+        );
+
+        let ctx = context.clone();
+        self.engine.register_fn(
+            "update_component",
+            move |component_id: &str, props: Dynamic| {
+                let plugin_value = dynamic_to_plugin_value(props);
+                if let Err(e) = ctx.update_component(component_id, plugin_value) {
+                    tracing::warn!("update_component failed: {}", e);
+                }
+            },
+        );
+
+        let ctx = context.clone();
+        self.engine
+            .register_fn("remove_component", move |component_id: &str| {
+                if let Err(e) = ctx.remove_component(component_id) {
+                    tracing::warn!("remove_component failed: {}", e);
+                }
+            });
+
         // Router navigation. `navigate(path)` targets the primary router;
         // `navigate(router, path)` targets an explicit one. `back`/`forward`
         // move through history. All are deferred (applied off the extension

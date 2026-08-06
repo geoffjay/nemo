@@ -318,6 +318,59 @@ pub trait PluginContext: Send + Sync {
         value: PluginValue,
     ) -> Result<(), PluginError>;
 
+    /// Creates a new built-in component instance under `parent_id` with the
+    /// given `component_type` and `properties`. Returns the generated unique
+    /// ID (a `__dyn_N` counter) on success.
+    ///
+    /// `properties` is a `PluginValue::Object` of initial property values.
+    /// Required-property validation is skipped — partial initialization is a
+    /// legitimate use case. Applied asynchronously (the host defers it so
+    /// calling this from inside an event handler is safe).
+    ///
+    /// The default implementation reports the operation as unsupported so
+    /// existing plugin SDKs continue to compile without change.
+    fn create_component(
+        &self,
+        _parent_id: &str,
+        _component_type: &str,
+        _properties: PluginValue,
+    ) -> Result<String, PluginError> {
+        Err(PluginError::Unsupported("create_component".to_string()))
+    }
+
+    /// Creates a new built-in component instance with an explicit `component_id`
+    /// under `parent_id`. Fails if the ID already exists. Applied
+    /// asynchronously; see [`Self::create_component`].
+    fn create_component_with_id(
+        &self,
+        _parent_id: &str,
+        _component_id: &str,
+        _component_type: &str,
+        _properties: PluginValue,
+    ) -> Result<(), PluginError> {
+        Err(PluginError::Unsupported(
+            "create_component_with_id".to_string(),
+        ))
+    }
+
+    /// Bulk-updates multiple properties on an existing component.
+    /// `properties` is a `PluginValue::Object` of property values to set.
+    /// Applied asynchronously; see [`Self::create_component`].
+    fn update_component(
+        &self,
+        _component_id: &str,
+        _properties: PluginValue,
+    ) -> Result<(), PluginError> {
+        Err(PluginError::Unsupported("update_component".to_string()))
+    }
+
+    /// Removes a component and all its descendants recursively, cleaning up
+    /// bindings. Refuses to remove the root component. Applied asynchronously;
+    /// see [`Self::create_component`].
+    fn remove_component(&self, _component_id: &str) -> Result<(), PluginError> {
+        Err(PluginError::Unsupported("remove_component".to_string()))
+    }
+
     /// Navigates a `<router>` to `path`. When `router` is `None` the host's
     /// primary router is used. The navigation is applied asynchronously (the
     /// host defers it so calling this from inside an event handler is safe).

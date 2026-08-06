@@ -82,4 +82,46 @@ impl host_api::Host for HostState {
             .set_component_property(&id, &prop, native)
             .map_err(|e| e.to_string())
     }
+
+    fn create_component(
+        &mut self,
+        parent_id: String,
+        component_type: String,
+        properties: PluginValue,
+    ) -> Result<String, String> {
+        let native = convert::from_wit(&properties);
+        self.context
+            .create_component(&parent_id, &component_type, native)
+            .map_err(|e| e.to_string())
+    }
+
+    fn create_component_with_id(
+        &mut self,
+        parent_id: String,
+        component_id: String,
+        component_type: String,
+        properties: PluginValue,
+    ) -> Result<(), String> {
+        let native = convert::from_wit(&properties);
+        self.context
+            .create_component_with_id(&parent_id, &component_id, &component_type, native)
+            .map_err(|e| e.to_string())
+    }
+
+    fn update_component(
+        &mut self,
+        component_id: String,
+        properties: PluginValue,
+    ) -> Result<(), String> {
+        let native = convert::from_wit(&properties);
+        self.context
+            .update_component(&component_id, native)
+            .map_err(|e| e.to_string())
+    }
+
+    fn remove_component(&mut self, component_id: String) -> Result<(), String> {
+        self.context
+            .remove_component(&component_id)
+            .map_err(|e| e.to_string())
+    }
 }
