@@ -145,6 +145,31 @@ Import components individually, or auto-discover a whole directory:
   instance id (`body` → `<instance>_body`), so multiple instances never collide.
   Instance-injected (slot) children keep their own ids.
 
+# Control-flow directives
+
+`n:for`/`n:if`/`n:key` work inside an SFC `<template>` exactly as in the layout
+— the `compile_directives` pass walks every SFC template body too. `n:if`
+toggles `visible`, `n:for` repeats an element (static literal arrays at compile
+time, `data.*` sources at runtime), and `n:key` gives loop items stable
+identity. They are orthogonal to props/slots and compose with `${prop}`
+interpolation.
+
+```xml
+<!-- components/user-panel.nemo -->
+<template name="user-panel">
+  <stack>
+    <label n:if="data.api.status == 'error'" text="Something went wrong" />
+    <card n:for="user in data.api.users" n:key="user.id">
+      <label slot="header" text="${user.name}" />
+      <text content="${user.email}" />
+    </card>
+  </stack>
+</template>
+```
+
+See [Control-flow directives](../concepts/configuration.md#control-flow-directives-nfor--nif)
+for the compile-time/runtime split and condition syntax.
+
 # Status
 
 Phases 0–4 are implemented: import/tag-rewrite/default-slot/interpolation (P0),

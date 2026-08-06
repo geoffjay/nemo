@@ -116,6 +116,41 @@ for an omitted `required` prop, and validates slot usage
 `<slot>`s. `nemo schema --app-config app.xml` synthesizes a `ComponentDescriptor`
 per SFC (props → schema, slots → `SlotSpec`) so SFC tags appear in the export.
 
+# Control-flow directives (`n:for` / `n:if`)
+
+Vue-style namespaced attributes add iteration and conditionals to any template
+element (layout, an SFC `<template>`, or a `<template>` definition). The
+`compile_directives` pass (`nemo-config/src/directives.rs`) runs in the loader
+**after** XML parsing and **before** resolution, so `parse_layout_config` and
+everything downstream sees ordinary `Value` nodes — or list-container nodes for
+the one runtime case.
+
+* **`n:if` (compile-time).** `parse_condition` splits the expression: a bare
+  source path (`data.api.status`) becomes `bind_visible = "<path>"`
+  (truthiness); an `==`/`!=` comparison (`data.api.status == 'error'`) becomes
+  an explicit `binding { source, target: "visible", transform: "== 'error'" }`
+  the binding system's `apply_transform` evaluates to a `Bool` at apply time.
+  `App::render_component` skips any component whose `visible` is `false`. No
+  runtime additions.
+* **`n:for` over a static list (compile-time).** `n:for="tab in ['home','settings']"`
+  (single- or double-quoted literal array) expands the element into N sibling
+  nodes in the parent's `component` map. `${item}`/`${item.field}` placeholders
+  are substituted per item; each copy's id is suffixed `_<index>`, or
+  `_<key-value>` when `n:key` is present. Output is ordinary nodes — `nemo
+  validate --strict` passes on the expanded tree.
+* **`n:for` over a live data source (runtime).** When the source is a `data.*`
+  path, the element becomes a **list container**: `n:for`/`n:key` are stripped
+  and a `list_binding` metadata field records `{ source, item_var, key,
+  template, n_if? }` (the loop body kept intact with `${item.*}` placeholders).
+  The resolver passes `list_binding` through verbatim (like `sfc`). At runtime
+  the `ListBindingManager` diffs the array and creates/removes instances — see
+  [Data flow](data-flow.md#list-bindings-runtime-nfor).
+* **`n:key`** gives the differ stable identity; without it items match by index.
+  **`n:for` + `n:if` on one node:** `n:for` wins and the `n:if` is folded in per
+  instance (into each static expansion, or into the `list_binding`).
+
+The strict linter skips every `n:`-prefixed attribute in `unknown-attribute`.
+
 # Schema and validation
 
 Schemas are defined **programmatically**, not as files (there is no `schema/`
