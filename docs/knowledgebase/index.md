@@ -14,8 +14,9 @@ It is authored by people and agents and meant to be read by both.
 ## For agents (policy)
 
 This section is the single source of truth for how agents (Claude Code,
-opencode, and others) should use this knowledge base. Tooling injects it into
-context automatically (Claude via a `SessionStart` hook, opencode via the
+oh-my-pi, opencode, and others) should use this knowledge base. Tooling
+injects it into context automatically (Claude Code via a `SessionStart` hook,
+oh-my-pi via the `.omp/extensions/kb-hooks.ts` extension, opencode via the
 `instructions` config), so it does not depend on `CLAUDE.md`/`AGENTS.md` being
 picked up.
 
