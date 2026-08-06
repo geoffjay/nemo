@@ -114,7 +114,7 @@ as today. The `<template>` is the layout tree (what today lives under
 
 ## Phase 1 — Extend `SfcDefinition` with app-level blocks
 
-**Status: planned.**
+**Status: implemented.**
 
 `parse_sfc` (`xml_parser.rs:842`) gains handling for `<app>`, `<data>`,
 `<imports>`, `<variable>` top-level blocks. `SfcDefinition` gains fields:
@@ -269,9 +269,9 @@ starts; it should be a decision doc.
 
 # Verification
 
-* **Phase 1:** an `app.nemo` compiles to the same `Value` tree as the equivalent
-  `app.xml` (round-trip equality on a fixture covering `<app>`, `<data>`,
-  `<imports>`, `<variable>`, `<template>`, `<script>`).
+* **Phase 1:** ✅ an `app.nemo` compiles to the same `Value` tree as the
+  equivalent `app.xml` (round-trip equality on a fixture covering `<app>`,
+  `<data>`, `<imports>`, `<variable>`, `<template>`, `<script>`).
 * **Phase 2:** `nemo build` on an `app.nemo` project produces `dist/layout.json`;
   `--dist` loads it identically to source.
 * **Phase 3:** `nemo --app-config app.nemo` launches; `nemo dev --app-config
