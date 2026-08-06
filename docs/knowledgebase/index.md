@@ -61,7 +61,8 @@ to touch the KB on every edit.
 * [Three-tier extension model with a unified PluginContext](decisions/three-tier-extensions.md) - Rhai, native cdylib, and WASM plugins share one host API.
 * [cargo audit ignores transitive advisories we cannot upgrade](decisions/audit-ignore-transitive-advisories.md) - .cargo/audit.toml ignores advisories pinned via the gpui/wasmtime deps; wasmtime upgrade tracked.
 * [nemo screenshot uses gpui's test-support render-to-image path](decisions/screenshot-via-test-support-feature.md) - opt-in `screenshot` feature enables offscreen capture; macOS-first, additive to Cargo.lock.
-* [Screenshots target macOS; Windows out of scope](decisions/screenshots-windows-out-of-scope.md) - macOS-first; Linux best-effort/deferred, Windows out of scope.
+* [The application entry is a `.nemo` SFC (not `app.xml`)](decisions/app-nemo-sfc-entry.md) - `app.nemo` is an SFC compiled at build time; supersedes the XML entry decision. Build output is compiled (not `dist/app.xml`).
+* [Control-flow directives use `n:for`/`n:if`; `n:for` evaluates over live data](decisions/control-flow-directives.md) - Vue-style namespaced attributes; `n:if` is compile-time, `n:for` over live data is a runtime list-binding expansion.
 
 ## Patterns
 
@@ -91,6 +92,8 @@ to touch the KB on every edit.
 * [Scope nested routers inside SFCs](plans/router-in-sfc-scoping.md) - a `<router>` nested in an SFC `<template>` has its id scoped per instance, but `<nav-link router=>` (static rewrite at scope time) and Rhai `navigate()` (instance-relative runtime resolution) targets are not — a latent break. **Planned / not implemented.**
 * [Multi-target output via crepuscularity View IR](plans/crepuscularity-multi-target.md) - reach mobile/TUI/web by lowering Nemo's `BuiltComponent` tree into crepuscularity's View IR (`IR_VERSION=7`) as an export target — NOT by adopting `.crepus` as input or swapping its GPUI runtime. Recommends vendoring the IR serde structs (avoids the gpui git-pin drift), flags coverage of Nemo's dashboard components as the go/no-go gate. **Research/design; not implemented.**
 * [Build system](plans/build-system.md) - a `nemo build` command with a `nemo.toml` manifest, compiled `.nemo` component artifacts, opt-in `dist/` project builds, and Go-style remote component libraries in `.nemo/packages`; expands and supersedes SFC "Phase 5". **Implemented** (all phases): `nemo.toml` manifest + project-root discovery + manifest-aware launch; `nemo build` compiles a `.nemo` file / `[package]` library to JSON artifacts and builds an app project to a loadable `dist/` (`--dist` / `load = "dist"` loads it); `nemo get` fetches remote `github.com/…` component libraries (git) into `.nemo/packages` pinned by `nemo.lock`, and module `<import>`s resolve against the cache.
+* [Control-flow directives (`n:for`/`n:if`) in `.nemo` templates](plans/control-flow-directives.md) - Vue-style namespaced attributes for iteration and conditionals. `n:if` and static `n:for` are compile-time; `n:for` over live data is a runtime list-binding expansion (depends on runtime component creation). **Planned.**
+* [`app.nemo` SFC as the project entry](plans/app-nemo-sfc-entry.md) - make the application entry a `.nemo` SFC (not `app.xml`), compiled at build time. Extends the SFC structure with app-level blocks, changes the manifest default, wires compile-into-load, and migrates the toolchain. **Planned.**
 
 ## References
 

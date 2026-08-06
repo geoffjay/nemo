@@ -77,6 +77,186 @@ pub(crate) fn coerce_typed_value(ty: &str, raw: &str) -> Option<Value> {
     }
 }
 
+/// The pre-split result of a `.nemo` SFC: the `<template>` half (still XML) plus
+/// the verbatim raw-text bodies of `<script>`/`<style>`, extracted *before* the
+/// XML reader sees them so their contents never need `<![CDATA[…]]>`.
+///
+/// `script`/`style` are `None` only when the block is absent or empty after
+/// trimming, matching the old `__cdata__` filter at `parse_sfc`.
+struct SfcBlocks {
+    /// The `.nemo` source with `<script>`/`<style>` blocks removed, leaving
+    /// `<template>` (and `<props>`) for `quick-xml`. Whitespace where the
+    /// blocks stood is collapsed so the XML reader sees clean siblings.
+    template_xml: String,
+    script: Option<String>,
+    style: Option<String>,
+}
+
+/// Splits a `.nemo` SFC into its `<template>`/`<props>` half (kept as XML) and
+/// the verbatim raw-text bodies of top-level `<script>`/`<style>` blocks,
+/// treating the latter as HTML-style raw-text elements — their interior is
+/// captured up to the matching close tag without XML-parsing, so `<`/`&` (Rhai
+/// `&&`, generics, CSS `>` combinators) need no escaping or CDATA wrapper.
+///
+/// A captured body that *still* carries a `<![CDATA[ … ]]>` wrapper has the
+/// leading/trailing markers stripped, so existing CDATA-wrapped files parse
+/// unchanged. CDATA becomes optional, not forbidden.
+///
+/// Top-level here means a sibling of `<template>`/`<props>`, not a descendant:
+/// a `<script>` nested inside `<template>` is left for the XML reader and is
+/// *not* captured. A single depth-aware pass tracks element nesting (skipping
+/// comments, CDATA sections, and self-closing tags) so only depth-0
+/// `<script>`/`<style>` are treated as raw-text.
+///
+/// v1 limitations (pinned by tests): a literal `</script>`/`</style>` inside a
+/// Rhai/CSS string closes the block — the same known limitation HTML has; at
+/// most one `<script>` and one `<style>` are captured (a later occurrence
+/// overwrites an earlier one).
+fn split_sfc_blocks(content: &str) -> SfcBlocks {
+    let bytes = content.as_bytes();
+    let len = bytes.len();
+    let mut script: Option<String> = None;
+    let mut style: Option<String> = None;
+    let mut removals: Vec<(usize, usize)> = Vec::new();
+    let mut depth: usize = 0;
+    let mut i = 0usize;
+
+    while i < len {
+        // Comment: `<!-- … -->` — skip, never affects depth or capture.
+        if bytes[i..].starts_with(b"<!--") {
+            i += 4;
+            while i < len && !bytes[i..].starts_with(b"-->") {
+                i += 1;
+            }
+            i = i.saturating_add(3).min(len);
+            continue;
+        }
+        // CDATA section: `<![CDATA[ … ]]>` — skip verbatim, never affects depth.
+        if bytes[i..].starts_with(b"<![CDATA[") {
+            i += 9;
+            while i < len && !bytes[i..].starts_with(b"]]>") {
+                i += 1;
+            }
+            i = i.saturating_add(3).min(len);
+            continue;
+        }
+        if bytes[i] == b'<' {
+            // Closing tag: `</name …>` — decrement depth (bounded at 0).
+            if i + 1 < len && bytes[i + 1] == b'/' {
+                depth = depth.saturating_sub(1);
+                i += 2;
+                // Skip to the tag's `>`.
+                while i < len && bytes[i] != b'>' {
+                    i += 1;
+                }
+                i = i.saturating_add(1).min(len);
+                continue;
+            }
+            // Open tag: parse the tag name.
+            let tag_start = i + 1;
+            let mut j = tag_start;
+            while j < len {
+                let c = bytes[j];
+                if c == b' ' || c == b'\t' || c == b'\n' || c == b'\r' || c == b'>' || c == b'/' {
+                    break;
+                }
+                j += 1;
+            }
+            if j == tag_start {
+                // Stray `<` with no name — skip the byte.
+                i += 1;
+                continue;
+            }
+            let name = &content[tag_start..j];
+            // Skip attributes to the end of the open tag.
+            let mut k = j;
+            while k < len && bytes[k] != b'>' {
+                k += 1;
+            }
+            let tag_end = k; // index of `>` (or `len` if unterminated)
+                             // Self-closing `<name …/>`: no depth change, no capture.
+            let self_closing = tag_end > 0 && bytes[tag_end - 1] == b'/';
+
+            if !self_closing {
+                // A raw-text element at the top level: capture its verbatim
+                // body up to the first literal `</name>` close tag.
+                if depth == 0 && (name == "script" || name == "style") {
+                    let body_start = (tag_end + 1).min(len);
+                    let close = format!("</{}>", name);
+                    let close_b = close.as_bytes();
+                    // Scan for the close tag starting at body_start.
+                    let mut m = body_start;
+                    let body_end = loop {
+                        if m + close_b.len() > len {
+                            // Unterminated raw-text block: capture to EOF.
+                            break len;
+                        }
+                        if &bytes[m..m + close_b.len()] == close_b {
+                            break m;
+                        }
+                        m += 1;
+                    };
+                    let block_end = (body_end + close_b.len()).min(len);
+                    let body = &content[body_start..body_end];
+                    let stripped = strip_cdata(body);
+                    let captured = stripped.trim().to_string();
+                    if !captured.is_empty() {
+                        match name {
+                            "script" => script = Some(captured),
+                            "style" => style = Some(captured),
+                            _ => {}
+                        }
+                    }
+                    removals.push((i, block_end));
+                    // Resume scanning after the captured block; depth stays 0.
+                    i = block_end;
+                    continue;
+                }
+                // Any other open tag: enter it (depth tracks nesting so a
+                // `<script>` inside `<template>` is not captured).
+                depth += 1;
+            }
+            i = tag_end.saturating_add(1).min(len);
+            continue;
+        }
+        i += 1;
+    }
+
+    let template_xml = remove_ranges(content, removals);
+
+    SfcBlocks {
+        template_xml,
+        script: script.filter(|s| !s.trim().is_empty()),
+        style: style.filter(|s| !s.trim().is_empty()),
+    }
+}
+
+/// Strips a single optional `<![CDATA[ … ]]>` wrapper from a raw-text body, if
+/// present. Only trims one leading marker and one trailing marker so a body
+/// that genuinely starts/ends with those literals (vanishingly rare in Rhai/CSS)
+/// is still handled by the `trim()` in the caller.
+fn strip_cdata(body: &str) -> String {
+    let trimmed = body.trim();
+    let s = trimmed.strip_prefix("<![CDATA[").unwrap_or(trimmed);
+    let s = s.strip_suffix("]]>").unwrap_or(s);
+    s.to_string()
+}
+
+/// Removes `ranges` (byte-offset spans, inclusive start, exclusive end) from
+/// `content`, replacing each with a single space so siblings don't fuse.
+/// Ranges are applied back-to-front to keep earlier indices valid.
+fn remove_ranges(content: &str, mut ranges: Vec<(usize, usize)>) -> String {
+    if ranges.is_empty() {
+        return content.to_string();
+    }
+    ranges.sort_unstable_by_key(|r| std::cmp::Reverse(r.0));
+    let mut out = content.to_string();
+    for (start, end) in ranges {
+        out.replace_range(start..end, " ");
+    }
+    out
+}
+
 /// Parser for XML configuration files.
 pub struct XmlParser {
     source_name: String,
@@ -825,7 +1005,6 @@ impl XmlParser {
 
         Ok(())
     }
-
     /// Parses a single-file component (`.nemo`) document into an
     /// [`SfcDefinition`].
     ///
@@ -835,12 +1014,16 @@ impl XmlParser {
     /// same `process_component_element` used for layout components, so an SFC is
     /// a namespaced, file-scoped superset of the existing `<template>` mechanism.
     ///
-    /// Body limits (v1): `parse_element` keeps only the **first** contiguous
-    /// text/CDATA run per element, so `<script>`/`<style>` bodies must be one
-    /// block. Rhai bodies containing `<`/`&` must be wrapped in `<![CDATA[…]]>`
-    /// so the XML reader does not treat them as markup.
+    /// `<script>`/`<style>` are parsed as HTML-style raw-text elements: a
+    /// pre-pass ([`split_sfc_blocks`]) extracts their bodies verbatim *before*
+    /// the XML reader sees them, so `<`/`&` (Rhai `&&`, generics, CSS `>`
+    /// combinators) need no `<![CDATA[…]]>` wrapper. A body that still carries
+    /// a CDATA wrapper has it stripped, so existing CDATA-wrapped files load
+    /// unchanged. The multi-line/multi-run script body is captured whole.
     pub fn parse_sfc(&self, content: &str) -> Result<SfcDefinition, ParseError> {
-        let mut reader = Reader::from_str(content);
+        let blocks = split_sfc_blocks(content);
+
+        let mut reader = Reader::from_str(&blocks.template_xml);
         reader.config_mut().trim_text(true);
 
         let root = self
@@ -856,8 +1039,6 @@ impl XmlParser {
 
         let mut name: Option<String> = None;
         let mut template: Option<Value> = None;
-        let mut style: Option<String> = None;
-        let mut script: Option<String> = None;
         let mut props: Vec<SfcProp> = Vec::new();
         let mut slots: Vec<SfcSlot> = Vec::new();
 
@@ -951,20 +1132,6 @@ impl XmlParser {
                     Self::collect_slot_specs(root_child, &mut slots);
                     template = Some(self.process_component_element(root_child));
                 }
-                Some("style") => {
-                    style = obj
-                        .get("__cdata__")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .filter(|s| !s.trim().is_empty());
-                }
-                Some("script") => {
-                    script = obj
-                        .get("__cdata__")
-                        .and_then(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .filter(|s| !s.trim().is_empty());
-                }
                 _ => {}
             }
         }
@@ -979,8 +1146,8 @@ impl XmlParser {
         Ok(SfcDefinition {
             name,
             template,
-            style,
-            script,
+            style: blocks.style,
+            script: blocks.script,
             props,
             slots,
         })
@@ -3020,5 +3187,224 @@ mod tests {
         assert!(template.get("nav_item").is_some());
         assert!(template.get("status_card").is_some());
         assert!(template.get("metric_display").is_some());
+    }
+
+    // ── Raw-text SFC: CDATA-free parsing ───────────────────────────────────
+
+    /// A `.nemo` with un-escaped `&&`/`<`-bearing Rhai `<script>` and a
+    /// `>`-combinator CSS `<style>`, **no CDATA**, parses to the *same*
+    /// `SfcDefinition` as the CDATA-wrapped equivalent. This is the core
+    /// round-trip guarantee: CDATA is now optional, and dropping it changes
+    /// nothing downstream.
+    #[test]
+    fn test_parse_sfc_raw_text_round_trip_cdata_free_equals_wrapped() {
+        let template = r#"<template name="rt">
+  <button label="${label}" on-click="handle" />
+</template>"#;
+
+        // Script body uses `<` (generics-ish), `&&`, and `>` — all of which
+        // would be markup/errors under the old XML-only path without CDATA.
+        let script_body = r#"fn handle(id, ev) {
+    let xs = [1, 2, 3];
+    if xs.len() > 0 && id != "" { log_info("hit"); }
+}"#;
+        // Style body uses the `>` combinator.
+        let style_body = "button > span { color: red; }";
+
+        let cdata_free = format!(
+            "{template}\n<script>\n{script_body}\n</script>\n<style>\n{style_body}\n</style>\n"
+        );
+        let cdata_wrapped = format!(
+            "{template}\n<script><![CDATA[\n{script_body}\n]]></script>\n<style><![CDATA[\n{style_body}\n]]></style>\n"
+        );
+
+        let free = XmlParser::new().parse_sfc(&cdata_free).unwrap();
+        let wrapped = XmlParser::new().parse_sfc(&cdata_wrapped).unwrap();
+
+        // Round-trip equality: the whole SfcDefinition matches.
+        assert_eq!(free, wrapped);
+        // And the raw-text bodies survived verbatim (whitespace-trimmed by the
+        // `trim()` in split_sfc_blocks, so compare trimmed content).
+        assert_eq!(free.script.as_deref().unwrap().trim(), script_body.trim());
+        assert_eq!(free.style.as_deref().unwrap().trim(), style_body.trim());
+    }
+
+    /// The old "first contiguous run" limit is gone: a multi-run script body
+    /// (text + CDATA + text under the old model, or just a multi-line block
+    /// now) is captured whole.
+    #[test]
+    fn test_parse_sfc_raw_text_multi_run_script_captured_whole() {
+        let sfc = r#"<template name="m"><button /></template>
+<script>
+fn a() { log_info("first"); }
+// a comment in the middle
+fn b() { log_info("second"); }
+</script>"#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        let script = def.script.unwrap();
+        assert!(script.contains("fn a()"));
+        assert!(script.contains("fn b()"));
+        assert!(script.contains("a comment in the middle"));
+    }
+
+    /// `</script>` inside a Rhai string literal closes the raw-text block at
+    /// v1 — the same known limitation HTML has. Pinned at the `split_sfc_blocks`
+    /// level (the source of the behavior) because the leftover text after the
+    /// early close is not valid XML, so `parse_sfc` would error on the
+    /// remainder; the truncation itself is what matters and is tested here.
+    /// A future literal-aware scan would update this test deliberately.
+    #[test]
+    fn test_parse_sfc_raw_text_close_tag_in_string_is_v1_limitation() {
+        // The `</script>` inside the string truncates the body; the trailing
+        // `let y = 1;` lands *outside* the captured block.
+        let sfc = r#"<template name="s"><button /></template>
+<script>
+fn f() {
+    let x = "</script>";
+    let y = 1;
+}
+</script>"#;
+        let blocks = split_sfc_blocks(sfc);
+        let script = blocks.script.unwrap();
+        assert!(script.contains("let x = "));
+        // v1 closes on the first literal `</script>`, so `let y` is lost.
+        assert!(!script.contains("let y = 1;"));
+    }
+
+    /// CRLF line endings in the captured body survive verbatim. The body must
+    /// be multi-line so *interior* CRLFs (not just leading/trailing ones, which
+    /// `trim()` removes) are exercised.
+    #[test]
+    fn test_parse_sfc_raw_text_crlf_survives() {
+        let sfc = "<template name=\"c\"><button /></template>\r\n<script>\r\nfn f() {\r\n    log_info(\"crlf\");\r\n}\r\n</script>";
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        let script = def.script.unwrap();
+        assert!(
+            script.contains("\r\n"),
+            "interior CRLF must survive verbatim in the captured body"
+        );
+        assert!(script.contains("log_info"));
+    }
+
+    /// Empty or missing `<script>`/`<style>` blocks yield `None`, matching
+    /// the old `.filter(|s| !s.trim().is_empty())` behavior.
+    #[test]
+    fn test_parse_sfc_raw_text_empty_and_missing_blocks_yield_none() {
+        // Empty bodies.
+        let empty =
+            "<template name=\"e\"><button /></template>\n<script>   </script>\n<style>\n\n</style>";
+        let def = XmlParser::new().parse_sfc(empty).unwrap();
+        assert!(
+            def.script.is_none(),
+            "whitespace-only script must yield None"
+        );
+        assert!(def.style.is_none(), "whitespace-only style must yield None");
+
+        // Missing entirely.
+        let missing = "<template name=\"e\"><button /></template>";
+        let def = XmlParser::new().parse_sfc(missing).unwrap();
+        assert!(def.script.is_none());
+        assert!(def.style.is_none());
+    }
+
+    /// Template text that looks like a block — a `<script>` nested inside
+    /// `<template>` — must *not* be captured as raw-text; only top-level
+    /// blocks (siblings of `<template>`/`<props>`) are split. Verified at the
+    /// `split_sfc_blocks` level so the test is independent of the XML reader's
+    /// tolerance for the nested element.
+    #[test]
+    fn test_parse_sfc_raw_text_template_interior_script_not_captured() {
+        // A `<script>` nested inside `<template>` is a descendant, not a
+        // top-level sibling. The splitter must leave it in `template_xml` and
+        // capture only the top-level `<script>`.
+        let sfc = r#"<template name="t">
+  <panel><script>fn nested() { }</script></panel>
+</template>
+<script>fn real() { log_info("captured"); }</script>"#;
+        let blocks = split_sfc_blocks(sfc);
+        // Top-level script captured.
+        assert_eq!(
+            blocks.script.as_deref().unwrap().trim(),
+            r#"fn real() { log_info("captured"); }"#
+        );
+        // The nested `<script>` stayed in the template half (not removed).
+        assert!(
+            blocks.template_xml.contains("nested"),
+            "nested <script> must remain in template_xml"
+        );
+        assert!(
+            blocks.template_xml.contains("<template"),
+            "template must remain in template_xml"
+        );
+    }
+
+    /// A `<style>` body containing a CSS `>` combinator and `#id` selector
+    /// parses without CDATA, and the body is captured verbatim.
+    #[test]
+    fn test_parse_sfc_raw_text_style_combinator_no_cdata() {
+        let sfc = r#"<template name="st"><button id="go" /></template>
+<style>
+#go > span { color: red; }
+button:hover { opacity: 0.8; }
+</style>"#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        let style = def.style.unwrap();
+        assert!(style.contains("#go > span"));
+        assert!(style.contains("button:hover"));
+    }
+
+    /// Last-wins: a second top-level `<script>` overwrites the first (v1
+    /// behavior, documented and pinned).
+    #[test]
+    fn test_parse_sfc_raw_text_second_script_last_wins() {
+        let sfc = r#"<template name="lw"><button /></template>
+<script>fn first() { }</script>
+<script>fn second() { }</script>"#;
+        let def = XmlParser::new().parse_sfc(sfc).unwrap();
+        let script = def.script.unwrap();
+        assert!(script.contains("fn second()"));
+        assert!(!script.contains("fn first()"));
+    }
+
+    /// Regression: the existing CDATA-wrapped `examples/sfc/*.nemo` files still
+    /// parse under the new raw-text splitter (CDATA is stripped, bodies
+    /// captured). This is the plan's "existing CDATA-wrapped examples still
+    /// parse" verification step.
+    #[test]
+    fn test_parse_sfc_cdata_wrapped_examples_still_parse() {
+        let manifest_dir = env!("CARGO_MANIFEST_DIR");
+        let sfc_dir = std::path::Path::new(manifest_dir)
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("examples")
+            .join("sfc")
+            .join("components");
+
+        for entry in std::fs::read_dir(&sfc_dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().and_then(|e| e.to_str()) != Some("nemo") {
+                continue;
+            }
+            let content = std::fs::read_to_string(&path).unwrap();
+            let def = XmlParser::new()
+                .with_source_name(path.display().to_string())
+                .parse_sfc(&content)
+                .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path.display(), e));
+            // Every example SFC has a template.
+            assert!(
+                def.template.get("type").is_some(),
+                "missing template in {}",
+                path.display()
+            );
+            // labeled-button has a <script>; card has a <style>.
+            let stem = path.file_stem().unwrap().to_str().unwrap();
+            match stem {
+                "labeled-button" => assert!(def.script.is_some(), "missing script in {}", stem),
+                "card" => assert!(def.style.is_some(), "missing style in {}", stem),
+                _ => {}
+            }
+        }
     }
 }
