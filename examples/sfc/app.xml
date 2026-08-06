@@ -16,6 +16,7 @@
   <!-- Auto-discover every *.nemo in ./components (tags come from <template name>
        or the filename stem). Equivalent to listing each with <import>. -->
   <components dir="./components" />
+  <script src="./scripts" />
 
   <layout type="stack">
     <stack id="root" direction="vertical" spacing="20" padding="32">
@@ -42,6 +43,20 @@
         <label id="c3_title" slot="header" text="Prop defaults" size="lg" />
         <text id="c3_body" content="This button omits label and variant — both come from the SFC's declared prop defaults." />
         <labeled-button id="btn_c" />
+      </card>
+
+      <!-- Fourth: runtime component creation. The "Add label" button calls
+           create_component to insert a label under this card's body stack;
+           "Remove last" calls remove_component. The dynamic components appear
+           and disappear without pre-declaring them in XML. -->
+      <card>
+        <label id="c4_title" slot="header" text="Runtime component creation" size="lg" />
+        <text id="c4_body" content="Click 'Add label' to create a label at runtime via create_component; 'Remove last' tears it down with remove_component." />
+        <stack id="c4_dynamic" direction="vertical" spacing="8" />
+        <stack direction="horizontal" spacing="8">
+          <button id="btn_add" label="Add label" variant="primary" on-click="on_add_label" />
+          <button id="btn_remove" label="Remove last" variant="secondary" on-click="on_remove_label" />
+        </stack>
       </card>
     </stack>
   </layout>

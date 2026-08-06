@@ -122,3 +122,30 @@ rendering behavior, and a plugin-registered type for dynamic/native components.
 
 Adding a built-in component touches four files. See the
 [four-file component workflow](../patterns/four-file-component-workflow.md).
+
+# Runtime component creation
+
+Handlers and scripts can create and remove *built-in* component instances at
+runtime — structural UI mutation, not just property toggling. Four Rhai/
+`PluginContext` functions are available:
+
+```rhai
+create_component(parent_id, type, props)            // returns generated __dyn_N id
+create_component_with_id(parent_id, id, type, props)
+update_component(id, props)                          // bulk property set
+remove_component(id)                                  // recursive subtree + binding teardown
+```
+
+`LayoutManager::insert_component` validates the type against the registry
+(same gate as `build_node`), inserts a `BuiltComponent`, and pushes the child
+ID onto the parent's `children`. `remove_component` refuses to remove the
+root, collects the subtree breadth-first, detaches from the parent, cleans up
+bindings via `BindingManager::unbind_component`, and removes all subtree
+components. `update_component` is a bulk `set_properties`.
+
+State entries (`ComponentStates`) are lazily leaked on removal (v1) — they are
+keyed by ID and harmless (never re-rendered), but unbounded under heavy
+create/remove churn. No `<binding>` support: a dynamic component that needs
+reactive data uses an explicit Rhai handler calling `set_component_property`,
+or sets props at creation time. See
+[runtime component creation](../patterns/runtime-component-creation.md).

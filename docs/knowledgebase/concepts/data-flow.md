@@ -98,3 +98,10 @@ params into the repository at `data.route.<id>.path` and
 `data.route.<id>.params.*` and flags those paths dirty — so pages read them via
 `get_data("route.<id>.params.x")` and `<binding source="data.route.<id>.params.x">`
 propagates them like any other data change. See [routing](../patterns/routing.md).
+
+**Runtime component creation** reuses the same signal.
+`create_component`/`create_component_with_id`/`update_component`/`remove_component`
+take the `LayoutManager` write lock, mutate the component tree, then set
+`data_dirty` and notify — so the next poll tick snapshots the new tree and
+re-renders. No new wake-up mechanism. See
+[runtime component creation](../patterns/runtime-component-creation.md).

@@ -248,6 +248,26 @@ fn init_handler(component_id, event_data) { ... }
 (`crates/nemo/src/app.rs`), so `component_id` is `"app"` and `event_data` is
 `"load"`.
 
+### Runtime component creation (Rhai)
+
+Handlers can create and remove built-in component instances at runtime — no
+need to pre-declare every possible component and toggle `visible`. Four Rhai
+functions are available:
+
+```rhai
+create_component(parent_id, type, props)            // returns generated __dyn_N id
+create_component_with_id(parent_id, id, type, props)
+update_component(id, props)                          // bulk property set
+remove_component(id)                                  // recursive subtree + binding teardown
+```
+
+`props` is a Rhai map (`#{text: "Hi", label: "Go"}`). A `"handlers"` sub-map
+(`#{handlers: #{click: "on_click"}}`) is extracted as event handlers. No
+`<binding>` support — a dynamic component that needs reactive data must use
+an explicit handler calling `set_component_property`, or set props at creation
+time. `remove_component` refuses to remove the root. See
+[runtime component creation](../../docs/knowledgebase/patterns/runtime-component-creation.md).
+
 ## Single-File Components (`.nemo` SFCs)
 
 Package a reusable piece of UI into one `.nemo` file (template + optional scoped
