@@ -7,7 +7,7 @@ A functional calculator built entirely with XML configuration and RHAI scripting
 ## Run
 
 ```sh
-cargo run -- --app-config examples/calculator/app.xml
+cargo run -- --app-config examples/calculator/app.nemo
 ```
 
 ## What It Shows

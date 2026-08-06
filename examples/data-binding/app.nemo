@@ -1,4 +1,3 @@
-<nemo>
   <app>
     <window title="Nemo Data Binding Demo">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/data-binding"
@@ -34,7 +33,7 @@
   </data>
 
   <!-- Layout -->
-  <layout type="stack">
+  <template name="app">
     <stack id="root_panel" direction="vertical" margin="16" spacing="8">
       <label id="title" text="Data Binding Demo" />
 
@@ -111,5 +110,4 @@
         </stack>
       </panel>
     </stack>
-  </layout>
-</nemo>
+  </template>

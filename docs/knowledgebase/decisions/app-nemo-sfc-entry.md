@@ -46,12 +46,18 @@ loader reads efficiently.
   `<imports>`, `<variable>`) that the compiler maps to the same `Value` tree
   keys `process_root` produces today. See the [`app.nemo` SFC entry
   plan](../plans/app-nemo-sfc-entry.md).
-* The manifest `entry` default changes from `app.xml` to `app.nemo`
-  (`crates/nemo-config/src/manifest.rs`). Existing projects with `entry =
-  "app.xml"` keep working — the default is additive, not forced.
-* `app.xml` remains supported as a legacy entry format (an explicit manifest
-  `entry = "app.xml"` or a bare `--app-config app.xml` path), but new projects
-  and templates default to `app.nemo`.
+* The manifest `entry` default is `app.nemo` (`crates/nemo-config/src/manifest.rs`).
+* **`app.xml` entries are no longer supported (hard deprecation).**
+  `ConfigurationLoader::load` rejects any non-`.nemo` entry path with
+  `ConfigError::DeprecatedXmlEntry`, which tells the author to rename to
+  `app.nemo`. A legacy `entry = "app.xml"` in a manifest, or `--app-config
+  app.xml`, fails fast with that message. The project loader's
+  `CONFIG_CANDIDATES` and the dev panel's auto-load only look for `app.nemo`.
+  XML is **not** gone from the codebase — it remains valid inside `<include>`
+  fragments (parsed by `process_include`) and for the machine-written
+  `overrides.xml` settings overlay — but it is no longer an application entry
+  format. The obsolete `schema/nemo.xsd` (which described the `<nemo>` entry
+  document) was removed.
 * The runtime's `load_config` accepts a `.nemo` entry by compiling it to the
   same `Value` tree the source path produces, then proceeding as today.
 * The build output is the compiled `Value` tree (today's `dist/layout.json`),

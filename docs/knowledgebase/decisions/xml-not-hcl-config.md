@@ -8,8 +8,11 @@ timestamp: 2026-07-11T00:00:00Z
 
 # Decision
 
-Nemo application configuration is authored in **XML** (`app.xml`). There is no
-HCL parser or loader in the codebase.
+> **Superseded for the application entry** by [The application entry is a
+> `.nemo` SFC](app-nemo-sfc-entry.md): the entry is now an `app.nemo` SFC and
+> `app.xml` entries are rejected. XML lives on only inside `<include>` fragments
+> and the machine-written `overrides.xml` settings overlay. The core of this
+> decision — there is **no HCL** parser or loader — still holds.
 
 # Context
 

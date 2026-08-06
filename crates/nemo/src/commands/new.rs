@@ -67,7 +67,7 @@ static TEMPLATES: &[Template] = &[
     Template {
         name: "complete",
         files: &[
-            tfile!("complete/app.xml"),
+            tfile!("complete/app.nemo"),
             tfile!("complete/scripts/handlers.rhai"),
             tfile!("complete/scripts/transforms.rhai"),
             tfile!("complete/templates/nav.xml"),
@@ -220,14 +220,8 @@ mod tests {
             run(new_args(&proj, template.name, false)).unwrap();
 
             let name = template.name;
-            // The `complete` template still uses app.xml; the others use app.nemo.
-            let entry_name = if name == "complete" {
-                "app.xml"
-            } else {
-                "app.nemo"
-            };
-            let entry = proj.join(entry_name);
-            assert!(entry.exists(), "{name}: no {entry_name}");
+            let entry = proj.join("app.nemo");
+            assert!(entry.exists(), "{name}: no app.nemo");
             assert!(proj.join("README.md").exists(), "{name}: no README");
             assert!(proj.join(".gitignore").exists(), "{name}: no .gitignore");
             assert!(

@@ -1,9 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!-- Complete Example -->
 <!-- Demonstrates multi-file configuration with includes, templates, -->
 <!-- data binding, RHAI scripts, and the demo-settings plugin. -->
-<nemo>
-  <variable name="app_title" type="string" default="{{PROJECT_NAME}}" />
+  <variable name="app_title" type="string" default="Nemo Complete Example" />
   <variable name="refresh_interval" type="int" default="5" />
 
   <app title="${var.app_title}">
@@ -15,7 +13,7 @@
                   theme-toggle="true" />
       <footer-bar enabled="false" />
     </window>
-    <theme name="kanagawa" mode="dark" />
+    <theme name="catppuccin" mode="light" />
   </app>
 
   <script src="./scripts" />
@@ -25,8 +23,8 @@
   <include href="templates/cards.xml" />
   <include href="templates/data.xml" />
 
-  <layout type="stack">
-    <stack id="main" direction="horizontal" spacing="0">
+  <template name="app">
+    <stack id="main" direction="horizontal" spacing="0" flex="1" align="stretch">
 
       <!-- Sidebar navigation -->
       <panel id="sidebar">
@@ -49,7 +47,7 @@
           <text id="dash_desc" content="Overview of application state with live data from timer sources." />
 
           <!-- Status cards using included template -->
-          <stack id="dash_cards" direction="horizontal" spacing="16">
+          <stack id="dash_cards" direction="horizontal" spacing="16" align="stretch">
             <panel id="card_uptime" template="status_card">
               <label id="uptime_title" text="Uptime" size="sm" />
               <label id="uptime_value" text="0s" size="xl">
@@ -147,5 +145,4 @@
 
       </stack>
     </stack>
-  </layout>
-</nemo>
+  </template>

@@ -399,41 +399,6 @@ mod tests {
         std::fs::remove_dir_all(dir).ok();
     }
 
-    // Phase 2: a built dist/ must reload to the exact config Value the source
-    // path produces, so the render tree is identical.
-    #[test]
-    fn project_build_round_trips_via_dist() {
-        let root = std::env::temp_dir().join(format!("nemo_proj_{}", std::process::id()));
-        std::fs::create_dir_all(&root).unwrap();
-        std::fs::write(root.join("card.nemo"), CARD).unwrap();
-        std::fs::write(
-            root.join("app.xml"),
-            r#"<nemo>
-                 <app title="T"><theme name="nord" mode="dark" /></app>
-                 <imports><import src="./card.nemo" /></imports>
-                 <layout type="stack"><card id="c" title="hi" /></layout>
-               </nemo>"#,
-        )
-        .unwrap();
-        let manifest =
-            nemo_config::ProjectManifest::parse("name = \"p\"\nentry = \"app.xml\"\n").unwrap();
-
-        // Build → dist/layout.json.
-        build_project(&root, &manifest).unwrap();
-        assert!(root.join("dist").join("layout.json").is_file());
-
-        // Source-loaded config vs dist-loaded config must be identical.
-        let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
-        let from_source = loader.load(&root.join("app.xml")).unwrap();
-        let from_dist = loader.load_from_dist(&root.join("dist")).unwrap();
-        assert_eq!(
-            from_source, from_dist,
-            "dist reload equals the source-resolved config"
-        );
-
-        std::fs::remove_dir_all(&root).ok();
-    }
-
     // Phase 2: an `app.nemo` entry (the new manifest default) builds to a
     // `dist/layout.json` that reloads identically to the compiled SFC source.
     #[test]

@@ -249,9 +249,10 @@ impl NemoRuntime {
         if self.config_path.exists() {
             // A `.json` config path is a built `dist/` tree (a serialized resolved
             // config `Value`), loaded back without re-parsing/resolving; anything
-            // else is a source `app.xml`. Scripts/themes resolve relative to the
-            // config path's parent either way, so a `dist/layout.json` path makes
-            // a built tree self-contained. See ConfigurationLoader::load_from_dist.
+            // else is a source entry (app.nemo or app.xml). Scripts/themes
+            // resolve relative to the config path's parent either way, so a
+            // `dist/layout.json` path makes a built tree self-contained. See
+            // ConfigurationLoader::load_from_dist.
             let is_dist = self
                 .config_path
                 .extension()
@@ -675,7 +676,7 @@ impl NemoRuntime {
         &self.registry
     }
 
-    /// Returns the path to the loaded configuration file (the project's `app.xml`).
+    /// Returns the path to the loaded configuration file (the project's `app.nemo` or `app.xml`).
     pub fn config_path(&self) -> &Path {
         &self.config_path
     }
@@ -5950,22 +5951,22 @@ mod error_path_tests {
             )
             .unwrap();
         }
-        let config_path = dir.path().join("app.xml");
+        let config_path = dir.path().join("app.nemo");
         {
             let mut f = std::fs::File::create(&config_path).unwrap();
             write!(
                 f,
-                r#"<nemo>
-  <app title="t"/>
-  <script src="./scripts"/>
-  <layout type="stack">
+                r#"<app title="t"/>
+<script src="./scripts"/>
+<template name="app">
+  <stack id="root">
     <router id="main" default="/home">
       <route path="/home" on-leave="record_leave"></route>
       <route path="/users/:id" on-enter="record_enter"></route>
       <route path="*"></route>
     </router>
-  </layout>
-</nemo>"#
+  </stack>
+</template>"#
             )
             .unwrap();
         }
@@ -6031,21 +6032,21 @@ mod error_path_tests {
             let mut f = std::fs::File::create(scripts_dir.join("handlers.rhai")).unwrap();
             writeln!(f, "fn check(id, ev) {{ set_data(\"test.entered\", id); }}").unwrap();
         }
-        let config_path = dir.path().join("app.xml");
+        let config_path = dir.path().join("app.nemo");
         {
             let mut f = std::fs::File::create(&config_path).unwrap();
             write!(
                 f,
-                r#"<nemo>
-  <app title="t"/>
-  <script src="./scripts"/>
-  <layout type="stack">
+                r#"<app title="t"/>
+<script src="./scripts"/>
+<template name="app">
+  <stack id="root">
     <router id="main" default="/connect" primary="true">
       <route path="/connect" on-enter="check"></route>
       <route path="/other"></route>
     </router>
-  </layout>
-</nemo>"#
+  </stack>
+</template>"#
             )
             .unwrap();
         }
@@ -6138,10 +6139,10 @@ mod error_path_tests {
     fn test_runtime_load_malformed_config() {
         use std::io::Write;
         let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("bad.xml");
+        let config_path = dir.path().join("bad.nemo");
         {
             let mut f = std::fs::File::create(&config_path).unwrap();
-            writeln!(f, "<nemo><unclosed>not valid xml").unwrap();
+            writeln!(f, "<template name=\"app\"><stack id=\"root\"><unclosed>").unwrap();
         }
         let rt = NemoRuntime::new(&config_path).unwrap();
         let result = rt.load_config();
@@ -6150,14 +6151,19 @@ mod error_path_tests {
 
     #[test]
     fn test_runtime_load_empty_config_file() {
+        // An empty `.nemo` entry has no <template>, so it must error cleanly
+        // (not panic). The DeprecatedXmlEntry / SFC-parse error path is exercised
+        // without crashing the runtime.
         let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("empty.xml");
+        let config_path = dir.path().join("empty.nemo");
         {
             std::fs::File::create(&config_path).unwrap();
         }
         let rt = NemoRuntime::new(&config_path).unwrap();
-        // Empty file should load without error
-        assert!(rt.load_config().is_ok());
+        assert!(
+            rt.load_config().is_err(),
+            "an empty .nemo entry (no <template>) must error, not panic"
+        );
     }
 
     // Phase 3: `load_config` must accept an `app.nemo` SFC entry, compiling it

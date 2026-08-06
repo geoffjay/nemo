@@ -1,11 +1,16 @@
 ---
 name: nemo-xml-reference
-description: Complete XML configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo XML config files.
+description: Complete configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo config files (app.nemo SFC entries and imported .nemo components).
 ---
 
-# Nemo XML Configuration Reference
+# Nemo Configuration Reference
 
-Use this skill when writing, modifying, or debugging Nemo XML configuration files.
+Use this skill when writing, modifying, or debugging Nemo configuration files.
+The application entry is an `app.nemo` SFC. Legacy `app.xml` entries are no
+longer supported — the loader rejects them. In `app.nemo` the layout tree lives
+in a `<template name="app">` body and app-level blocks (`<app>`, `<data>`,
+`<imports>`, `<variable>`, `<templates>`, `<include>`) appear at the top level
+(no `<nemo>` wrapper). XML remains valid only inside `<include>` fragments.
 
 ## Document Structure
 
@@ -47,31 +52,6 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
 
 Top-level blocks are order-tolerant. `<themes>`, `<imports>`/`<components>`, and
 routing primitives are documented in their own sections below.
-
-## Header bar (`<header-bar>`)
-
-The title-bar chrome at the top of the window. All contents are opt-in:
-
-```xml
-<header-bar github-url="https://github.com/you/app" theme-toggle="true">
-  <menu-item label="Preferences" icon="settings" on-click="open_prefs" />
-  <menu-item label="Documentation" icon="book" on-click="open_docs" />
-  <menu-item separator="true" />
-  <menu-item label="About" icon="info" on-click="show_about" />
-</header-bar>
-```
-
-| Attribute / child | Description |
-|-------------------|-------------|
-| `github-url` | Optional external link shown as an icon on the right. |
-| `theme-toggle` | `true` shows the light/dark toggle icon on the right. |
-| `<menu-item>` children | **Opt-in** dropdown menu. When any `<menu-item>` is present, a hamburger icon appears on the **far left** (before the title) and opens a native dropdown built from these items. |
-
-`<menu-item>` attributes: `label` (entry text), `icon` (optional Lucide icon
-name), `on-click` (handler name), `separator="true"` (renders a divider instead
-of a clickable entry — no `label`/`on-click` needed). Handlers receive the
-standard `(component_id, event_data)`; `component_id` is `"header-bar"` and
-`event_data` is `"click"`.
 
 ## Themes
 
@@ -142,8 +122,6 @@ Expressions use `${...}` in attribute values:
 <data>
   <source name="ticker" type="timer" interval="1" />                 <!-- tick every 1 second -->
   <source name="api" type="http" url="https://api.example.com" interval="30" />  <!-- poll every 30 seconds -->
-  <source name="secure" type="http" url="https://api.example.com/me"
-          headers='{"Authorization":"Bearer ${env.API_TOKEN}"}' />  <!-- headers: object or JSON string; ${env.X}/${var.x} resolved at load -->
   <source name="live" type="websocket" url="ws://localhost:8080" />
   <source name="events" type="mqtt" url="mqtt://localhost:1883" topic="sensors/#" />
   <source name="cache" type="redis" url="redis://localhost:6379" channel="updates" />
@@ -248,26 +226,6 @@ fn init_handler(component_id, event_data) { ... }
 (`crates/nemo/src/app.rs`), so `component_id` is `"app"` and `event_data` is
 `"load"`.
 
-### Runtime component creation (Rhai)
-
-Handlers can create and remove built-in component instances at runtime — no
-need to pre-declare every possible component and toggle `visible`. Four Rhai
-functions are available:
-
-```rhai
-create_component(parent_id, type, props)            // returns generated __dyn_N id
-create_component_with_id(parent_id, id, type, props)
-update_component(id, props)                          // bulk property set
-remove_component(id)                                  // recursive subtree + binding teardown
-```
-
-`props` is a Rhai map (`#{text: "Hi", label: "Go"}`). A `"handlers"` sub-map
-(`#{handlers: #{click: "on_click"}}`) is extracted as event handlers. No
-`<binding>` support — a dynamic component that needs reactive data must use
-an explicit handler calling `set_component_property`, or set props at creation
-time. `remove_component` refuses to remove the root. See
-[runtime component creation](../../docs/knowledgebase/patterns/runtime-component-creation.md).
-
 ## Single-File Components (`.nemo` SFCs)
 
 Package a reusable piece of UI into one `.nemo` file (template + optional scoped
@@ -321,7 +279,7 @@ fn handleClick(component_id, event_data) {
 ]]></script>
 ```
 
-Used in `app.xml`:
+Used in `app.nemo`:
 
 ```xml
 <labeled-button label="Save" />        <!-- ${label} → "Save"; variant → default "primary" -->
@@ -565,6 +523,41 @@ Required: `name`. Uses Lucide icon names.
 ### image
 ```xml
 <image id="logo" src="https://example.com/image.png" alt="Logo" />
+```
+
+### svg
+Renders SVG vector graphics either from a file/URL or from embedded standard
+SVG markup written inline. `src` (a filesystem path or `http(s)` URL) takes
+precedence; otherwise the inline `<svg>` body is captured verbatim and
+rasterized. Optional `width`/`height` set the render size (px); otherwise the
+SVG's intrinsic size is used.
+```xml
+<!-- From a file (relative paths resolve against the config file's directory) -->
+<svg id="logo" src="assets/logo.svg" width="120" height="120" />
+
+<!-- Embedded standard SVG markup (nested elements, gradients, text, and
+     hyphenated attributes are all preserved) -->
+<svg id="badge" width="64" height="64" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="40" fill="#4c566a" stroke="#eceff4" stroke-width="4" />
+</svg>
+```
+
+`on-click` and `on-hover` make the SVG interactive. Because the graphic
+rasterizes to a single image, its child elements (`<path>`, `<circle>`, ...)
+are not individually hit-testable — the handler fires for the SVG as a whole.
+To recolor, scale, or rotate, rewrite the whole markup from the handler:
+`set_component_property(id, "content", "<svg…>")` (or swap `src`); it
+re-rasterizes on the next render.
+
+| Event | `event_data` |
+|-------|-------------|
+| `on-click` | `"click"` |
+| `on-hover` | `"hover"` (enter), `"hover_end"` (leave) |
+```xml
+<svg id="badge" width="64" height="64" viewBox="0 0 100 100"
+     on-click="recolor" on-hover="highlight">
+  <circle cx="50" cy="50" r="40" fill="#4c566a" />
+</svg>
 ```
 
 ### progress
@@ -875,7 +868,7 @@ against it consistently.
 ```toml
 # nemo.toml — an application project
 name = "my-app"
-entry = "app.xml"          # the config the app launches
+entry = "app.nemo"         # the SFC entry the app launches
 
 [build]
 out = "dist"               # build output directory

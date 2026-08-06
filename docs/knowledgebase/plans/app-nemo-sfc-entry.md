@@ -68,8 +68,11 @@ See [`app.nemo` SFC entry decision](../decisions/app-nemo-sfc-entry.md).
   optional top-level blocks alongside `<props>`/`<template>`/`<style>`/`<script>`.
   The compiler maps them to the same `Value` tree keys `process_root` produces
   today.
-* **`app.xml` remains supported** as a legacy entry (explicit manifest `entry`
-  or `--app-config` path). The default changes, not the capability.
+* **`app.xml` entries are hard-deprecated.** `ConfigurationLoader::load` rejects
+  any non-`.nemo` entry with `ConfigError::DeprecatedXmlEntry`. XML remains valid
+  only inside `<include>` fragments and the `overrides.xml` settings overlay —
+  never as an application entry. The default and the *only supported* entry is
+  `app.nemo`.
 
 # Why
 
@@ -239,21 +242,23 @@ source entry so `dist/` stays a faithful compile. Works for both `.nemo` and
 
 **Status: implemented.**
 
-* `nemo new` templates (`crates/nemo/templates/`): `basic`, `calculator`, and
-  `data-binding` renamed `app.xml` → `app.nemo` (restructured as SFC with
-  app-level blocks). `nemo.toml` added to each. `new.rs` `tfile!` paths,
-  `render_readme`, and the "Next steps" message updated. The `complete`
-  template stays `app.xml` — it uses multi-file `<include>`, which the SFC
-  app-block path doesn't yet handle (a deliberate scope limit, not a
-  regression; `<include>` is `process_root`-only).
-* `project_loader.rs` `CONFIG_CANDIDATES`: now `["app.nemo", "app.xml",
-  ".nemo/app.nemo", ".nemo/app.xml"]` — `.nemo` takes precedence.
-* `dev_panel.rs` auto-load: prefers `app.nemo`, falls back to `app.xml`.
-* Examples: added `app.nemo` fixtures to `examples/basic`, `examples/calculator`,
-  and `examples/sfc` (the latter from Phase 4). Existing `app.xml` examples
-  stay for backward compatibility.
-* `schema/nemo.xsd`: deferred — the XSD is for third-party XML editors; SFC
-  authoring uses the planned `nemo-lsp`.
+* `nemo new` templates (`crates/nemo/templates/`): all four (`basic`,
+  `calculator`, `data-binding`, `complete`) are `app.nemo` SFCs; each has a
+  `nemo.toml`. `new.rs` `tfile!` paths, `render_readme`, and the "Next steps"
+  message reference `app.nemo`. The `complete` template keeps its multi-file
+  `<include href="templates/*.xml"/>` — the `<include>` and `<templates>` arms
+  were added to `parse_sfc` (delegating to the existing `process_include`/
+  `process_template`), and `AppBlocks` gained an `extra` passthrough so
+  include-merged / `<templates>` keys reach the compiled `Value`. The
+  `<include>`-target files stay XML (they are `<nemo>` merge fragments).
+* `project_loader.rs` `CONFIG_CANDIDATES`: `["app.nemo", ".nemo/app.nemo"]` —
+  no `app.xml` candidates.
+* `dev_panel.rs` auto-load: `app.nemo` only (no `app.xml` fallback).
+* Examples: all 14 examples migrated to `app.nemo`; every `app.xml` entry
+  deleted. `examples/complete` (`<include>`) and `examples/components`
+  (`<templates>`) exercise the new SFC top-level blocks.
+* `schema/nemo.xsd`: **deleted** — it described the obsolete `<nemo>` entry
+  document. SFC authoring assistance will come from the planned `nemo-lsp`.
 * Docs: updated `configuration.md` (entry-file + settings-overlay sections),
   `architecture.md`, the `nemo-xml-reference` skill, `README.md`.
 
@@ -302,8 +307,9 @@ source entry so `dist/` stays a faithful compile. Works for both `.nemo` and
   chosen mechanism).
 * **Phase 7:** `nemo new --template basic my-app` scaffolds `app.nemo` +
   `nemo.toml`; `nemo validate` passes on the scaffold.
-* **Regression:** existing `app.xml` projects with `entry = "app.xml"` still
-  build, validate, and run unchanged.
+* **Regression:** a legacy `app.xml` entry (explicit path or manifest `entry =
+  "app.xml"`) is rejected with `DeprecatedXmlEntry`, not silently loaded;
+  `<include>` fragments and `overrides.xml` still parse as XML.
 
 # Knowledgebase updates required when implemented
 

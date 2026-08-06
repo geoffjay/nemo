@@ -1,4 +1,3 @@
-<nemo>
   <app title="SVG Demo">
     <window title="SVG Component" width="640" height="560">
       <header-bar theme-toggle="true" />
@@ -8,7 +7,8 @@
 
   <script src="./scripts" />
 
-  <layout type="stack">
+  <template name="app">
+  <stack id="root" direction="vertical">
     <label id="title" text="SVG Component" size="xl" />
     <label id="hint" text="Hover the first graphic to highlight it; click to rotate + recolor." />
 
@@ -34,5 +34,5 @@
       <svg id="from_file" src="assets/rust-logo.svg" width="120" height="120"
            on-hover="on_file_hover" />
     </panel>
-  </layout>
-</nemo>
+    </stack>
+  </template>

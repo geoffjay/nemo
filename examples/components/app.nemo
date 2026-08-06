@@ -1,7 +1,5 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!-- Component Gallery -->
 <!-- Interactive showcase of all Nemo components with sidebar navigation. -->
-<nemo>
   <app title="Nemo Component Gallery">
     <plugins>
       <plugin name="demo-settings" />
@@ -31,7 +29,7 @@
     </template>
   </templates>
 
-  <layout type="stack">
+  <template name="app">
     <!-- Root horizontal stack: sidebar + content -->
     <stack id="root_row" direction="horizontal" spacing="0" flex="1" align="stretch">
 
@@ -1366,5 +1364,4 @@
         </router>
       </stack>
     </stack>
-  </layout>
-</nemo>
+  </template>

@@ -19,8 +19,10 @@ time to the same `Value` tree the legacy `app.xml` produces. See the
 </template>
 ```
 
-The legacy `app.xml` format (a `<nemo>` XML document) remains supported — an
-explicit manifest `entry = "app.xml"` or a bare `--app-config app.xml` path.
+Legacy `app.xml` entries (a `<nemo>` XML document) are **no longer supported**:
+`ConfigurationLoader::load` rejects a non-`.nemo` entry with
+`ConfigError::DeprecatedXmlEntry`. XML survives only inside `<include>`
+fragments and the machine-written `overrides.xml` overlay — never as an entry.
 New projects and templates default to `app.nemo`. There is no HCL loader in
 the codebase — HCL appears only in archived docs and in comments explaining
 XML equivalents. See [XML, not HCL](../decisions/xml-not-hcl-config.md).
@@ -120,7 +122,7 @@ for any prop the usage omits. The strict linter treats registered SFC tags as
 known component types (skipping `unknown-component`), emits `missing-required`
 for an omitted `required` prop, and validates slot usage
 (`unknown-slot`/`missing-slot`/`slot-cardinality`) against the SFC's declared
-`<slot>`s. `nemo schema --app-config app.xml` synthesizes a `ComponentDescriptor`
+`<slot>`s. `nemo schema --app-config app.nemo` synthesizes a `ComponentDescriptor`
 per SFC (props → schema, slots → `SlotSpec`) so SFC tags appear in the export.
 
 # Control-flow directives (`n:for` / `n:if`)
@@ -236,7 +238,7 @@ settings view (`ctrl+p`, `crates/nemo/src/workspace/settings.rs`):
    `NemoConfig` (`crates/nemo/src/config/`). Holds cross-project user prefs:
    `app.theme_name`, `app.theme_mode`, `app.font_family`, `app.roundness`.
    Writable via `NemoConfig::save()`. Applied at startup in `main.rs`.
-2. **Project** — the per-project entry (`app.nemo` or `app.xml`), read via
+2. **Project** — the per-project entry (`app.nemo`), read via
    `runtime.get_config("app.theme.name" | ".mode")`. The **project layer
    wins**: `apply_theme_from_runtime` (`workspace/utils.rs`) re-applies the
    entry's theme after the global one, so a project's `<theme>` overrides the
@@ -258,7 +260,7 @@ The settings view has a **Global** page (persists to `config.toml` via
 The runtime config is read-only in memory (`set_config` is a no-op), so
 project edits are written straight to disk by `xml_edit::set_app_theme`
 (`crates/nemo/src/workspace/xml_edit.rs`) — to an **`overrides.xml` overlay**
-sitting next to the entry (`app.nemo` or `app.xml`), not the entry itself.
+sitting next to the entry (`app.nemo`), not the entry itself.
 This keeps the source entry immutable regardless of format; the overlay is a
 tiny plain-XML document (`<nemo><app><theme …/></app></nemo>`) merged over the
 entry's `app` key at load time (shallow merge: overlay keys win). Only the
@@ -277,7 +279,7 @@ dependencies }` (re-exported from `lib.rs`). It is distinct from the global
 the per-project build/dependency manifest.
 
 name  = "foo"
-entry = "app.nemo"          # default "app.nemo"; "app.xml" still works
+entry = "app.nemo"          # default (and only) entry format
 
 [build]
 out  = "dist"              # default "dist"
@@ -293,7 +295,7 @@ load = "source"            # "source" (default) | "dist"
 * **Manifest-aware launch** (`main.rs` `resolve_app_config_via_manifest`): when
   `--app-config` is a **directory** or is **omitted**, the launcher resolves the
   entry via the nearest manifest (`<root>/<entry>`). An explicit **file** path is
-  used unchanged, so existing `nemo --app-config app.xml` invocations are
+  used unchanged, so existing `nemo --app-config app.nemo` invocations are
   untouched; when omitted with no manifest in scope, the project-loader screen
   still shows. Manifest read/parse errors degrade gracefully to the loader on the
   run path.

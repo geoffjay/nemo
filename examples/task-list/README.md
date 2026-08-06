@@ -8,7 +8,7 @@ straight back to `tasks.json`** and reloaded on the next launch.
 ## Running
 
 ```bash
-cargo run -- --app-config examples/task-list/app.xml
+cargo run -- --app-config examples/task-list/app.nemo
 ```
 
 Run it from the repository root: the handler script persists to

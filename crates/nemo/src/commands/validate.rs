@@ -147,6 +147,15 @@ fn config_error_to_diagnostics(err: ConfigError) -> Vec<Diagnostic> {
                 format!("Schema not found: {}", name),
             )]
         }
+        ConfigError::DeprecatedXmlEntry { path } => {
+            vec![Diagnostic::error(
+                "deprecated-xml-entry",
+                format!(
+                    "{path} is an app.xml entry, which is no longer supported — \
+                     rename it to an app.nemo SFC entry"
+                ),
+            )]
+        }
     }
 }
 

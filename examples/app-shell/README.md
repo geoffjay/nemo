@@ -8,7 +8,7 @@ page-toggle handlers.
 ## Run
 
 ```sh
-cargo run -- --app-config examples/app-shell/app.xml
+cargo run -- --app-config examples/app-shell/app.nemo
 ```
 
 ## What It Shows

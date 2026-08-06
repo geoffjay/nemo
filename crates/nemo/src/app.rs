@@ -503,7 +503,7 @@ impl App {
                 div()
                     .text_t(FontSize::Lg)
                     .text_color(cx.theme().colors.muted_foreground)
-                    .child("Configure your application in app.xml"),
+                    .child("Configure your application in app.nemo"),
             )
             .into_any_element()
     }

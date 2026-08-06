@@ -1,10 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!-- Task List -->
 <!-- A todo application backed entirely by a JSON file. The list starts empty on -->
 <!-- first run; tasks are added through a modal, checked off / deleted by row     -->
 <!-- number, and every change is written straight back to tasks.json.            -->
 <!-- Full-screen, nord theme, with a centered card.                              -->
-<nemo>
   <app title="Nemo Task List">
     <!-- No width/height on <window> => the window opens maximized (full screen). -->
     <window title="Task List">
@@ -29,7 +27,8 @@
     the card horizontally; the default vertical centering on a horizontal stack
     centers it vertically. The card itself is content-sized.
   -->
-  <layout type="stack">
+  <template name="app">
+  <stack id="root" direction="vertical">
     <stack id="center_row" direction="horizontal" flex="1" justify="center">
       <panel id="task_card" width="860" padding="24" border="1" rounded="lg">
         <stack id="card_inner" direction="vertical" spacing="16">
@@ -86,5 +85,5 @@
         <button id="add_confirm" label="Add Task" variant="primary" on-click="submit_add" />
       </stack>
     </modal>
-  </layout>
-</nemo>
+    </stack>
+  </template>

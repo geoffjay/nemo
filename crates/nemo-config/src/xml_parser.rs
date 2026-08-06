@@ -75,6 +75,11 @@ pub struct AppBlocks {
     /// XML `<script src=… />` blocks → `config["scripts"]` (without the raw-text
     /// inline body, which is merged separately).
     pub scripts: Value,
+    /// Any remaining top-level blocks that have no dedicated field — e.g.
+    /// `<templates>`, `<themes>`, or keys merged in by `<include>`. Carried
+    /// through verbatim so an `app.nemo` supports the same top-level surface as
+    /// the old `app.xml`. An empty `Object` when there are none.
+    pub extra: Value,
     /// The `id` of the `<template>` root element, used as the key in the
     /// `layout.component` map (matching `process_layout`'s child-keying). Empty
     /// for a component `.nemo` (no app blocks).
@@ -1258,6 +1263,25 @@ impl XmlParser {
                 Some("components") => {
                     self.process_components_dir(obj, &mut app_result)?;
                 }
+                Some("include") => {
+                    self.process_include(obj, &mut app_result)?;
+                }
+                Some("templates") => {
+                    // <templates> wrapper with multiple <template name> children,
+                    // matching process_root's arm.
+                    if let Some(tmpl_children) = obj.get("__children__").and_then(|v| v.as_array())
+                    {
+                        for tmpl_child in tmpl_children {
+                            if let Some(tmpl_obj) = tmpl_child.as_object() {
+                                if tmpl_obj.get("__type__").and_then(|v| v.as_str())
+                                    == Some("template")
+                                {
+                                    self.process_template(tmpl_obj, &mut app_result);
+                                }
+                            }
+                        }
+                    }
+                }
                 Some("themes") => {
                     let themes_val = self.process_themes_block(obj);
                     app_result.insert("themes".to_string(), themes_val);
@@ -1294,12 +1318,17 @@ impl XmlParser {
                 let scripts = app_result
                     .shift_remove("scripts")
                     .unwrap_or(Value::Object(IndexMap::new()));
+                // Whatever remains (templates, themes, and any <include>-merged
+                // keys) passes through verbatim so app.nemo covers the same
+                // top-level surface as app.xml.
+                let extra = Value::Object(std::mem::take(&mut app_result));
                 Some(AppBlocks {
                     app,
                     data,
                     variables,
                     sfc_imports,
                     scripts,
+                    extra,
                     layout_root_id,
                 })
             } else {
@@ -2096,6 +2125,13 @@ impl XmlParser {
             }
             if is_non_empty_map(&blocks.scripts) {
                 result.insert("scripts".to_string(), blocks.scripts);
+            }
+            // Pass through any remaining top-level blocks (templates, themes,
+            // <include>-merged keys) verbatim, matching process_root's surface.
+            if let Value::Object(extra) = blocks.extra {
+                for (k, v) in extra {
+                    result.insert(k, v);
+                }
             }
         }
 
@@ -3297,7 +3333,10 @@ mod tests {
         assert!(inner.get("btn_2").is_some());
     }
 
-    /// Helper to load and parse an example XML file from the workspace.
+    /// Helper to load and compile an example `app.nemo` SFC entry from the
+    /// workspace (the same path `ConfigurationLoader::load` takes for a `.nemo`
+    /// entry, minus `${}` resolution). Produces the same top-level `Value`
+    /// shape `process_root` produced for the old `app.xml`.
     fn parse_example(name: &str) -> Value {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let path = std::path::Path::new(manifest_dir)
@@ -3307,15 +3346,15 @@ mod tests {
             .unwrap()
             .join("examples")
             .join(name)
-            .join("app.xml");
+            .join("app.nemo");
         let content = std::fs::read_to_string(&path)
             .unwrap_or_else(|e| panic!("Failed to read {}: {}", path.display(), e));
         let parser = XmlParser::new()
             .with_source_name(path.display().to_string())
             .with_base_dir(path.parent().unwrap());
         parser
-            .parse(&content)
-            .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path.display(), e))
+            .compile_app_sfc(&content)
+            .unwrap_or_else(|e| panic!("Failed to compile {}: {}", path.display(), e))
     }
 
     #[test]
@@ -3335,8 +3374,10 @@ mod tests {
         assert!(value.get("layout").is_some());
         let layout = value.get("layout").unwrap();
         let components = layout.get("component").unwrap();
-        assert!(components.get("display").is_some());
-        assert!(components.get("buttons").is_some());
+        // The app.nemo layout wraps its children in a single `root` stack.
+        let inner = components.get("root").unwrap().get("component").unwrap();
+        assert!(inner.get("display").is_some());
+        assert!(inner.get("buttons").is_some());
     }
 
     #[test]

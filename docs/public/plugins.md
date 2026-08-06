@@ -147,14 +147,14 @@ This produces `target/debug/libmy_sensor_plugin.dylib` (macOS) or `target/debug/
 Pass the plugin directory to Nemo:
 
 ```bash
-nemo --app-config app.xml --extension-dirs ./target/debug
+nemo --app-config app.nemo --extension-dirs ./target/debug
 ```
 
 Nemo discovers and loads the library, calls the manifest and entry functions, and the plugin begins publishing data.
 
 #### 6. Bind Plugin Data to UI
 
-In your `app.xml`, bind components to the data paths the plugin sets:
+In your `app.nemo`, bind components to the data paths the plugin sets:
 
 ```xml
 <layout type="stack">
@@ -513,7 +513,7 @@ This produces `target/wasm32-wasip2/debug/my_wasm_plugin.wasm`.
 Pass the directory containing the `.wasm` file to Nemo:
 
 ```bash
-nemo --app-config app.xml --extension-dirs ./target/wasm32-wasip2/debug
+nemo --app-config app.nemo --extension-dirs ./target/wasm32-wasip2/debug
 ```
 
 Nemo discovers `.wasm` files alongside native libraries and loads them via Wasmtime.

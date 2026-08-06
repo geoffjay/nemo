@@ -93,7 +93,7 @@ fn dispatch_screenshot(_args: args::ScreenshotArgs) -> Result<()> {
     anyhow::bail!(
         "the `screenshot` subcommand requires a build with the `screenshot` feature.\n\
          Rebuild with, e.g.:\n    \
-         cargo run -p nemo --features screenshot -- screenshot --app-config <app.xml> --out <out.png>"
+         cargo run -p nemo --features screenshot -- screenshot --app-config <app.nemo> --out <out.png>"
     )
 }
 
@@ -200,7 +200,7 @@ pub(crate) fn run_app(mut args: Args, watch: Option<Duration>, dev_mode: bool) -
     Ok(())
 }
 
-/// Resolves the effective config path (source `app.xml` or a built
+/// Resolves the effective config path (source entry — `app.nemo` or `app.xml` — or a built
 /// `dist/layout.json`) via the project manifest.
 ///
 /// * A path to an existing **file** is returned unchanged (today's behavior);

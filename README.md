@@ -92,12 +92,14 @@ A minimal application (`app.nemo` — a single-file component entry):
 </template>
 ```
 
-> `app.xml` (a `<nemo>` XML document) remains supported as a legacy entry format.
-> New projects scaffolded with `nemo new` default to `app.nemo`.
+> The application entry is an `app.nemo` single-file component. Legacy `app.xml`
+> entries are no longer supported — the loader rejects them; rename to `app.nemo`
+> (remove the `<nemo>` wrapper, move the `<layout>` body into
+> `<template name="app">`). XML remains valid only inside `<include>` fragments.
 
 ## Features
 
-- **Declarative UI** -- Component trees defined in `.nemo` single-file components (or `app.xml`)
+- **Declarative UI** -- Component trees defined in `.nemo` single-file components
 - **Live data binding** -- Connect timer, HTTP, WebSocket, MQTT, Redis, and NATS sources to components
 - **Scripted logic** -- Event handlers written in RHAI
 - **Theming** -- Built-in themes (Kanagawa, Catppuccin, Tokyo Night, Gruvbox, Nord) with dark/light modes
@@ -106,8 +108,8 @@ A minimal application (`app.nemo` — a single-file component entry):
 nemo --app-config examples/basic/app.nemo
 nemo --app-config examples/calculator/app.nemo
 nemo --app-config examples/sfc/app.nemo
-nemo --app-config examples/data-binding/app.xml      # multi-file <include> example (still app.xml)
-nemo --app-config examples/components/app.xml
+nemo --app-config examples/data-binding/app.nemo     # multi-file <include> example
+nemo --app-config examples/components/app.nemo
 ```
 
 Configuations are available in the [examples](examples) directory:

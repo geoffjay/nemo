@@ -1,4 +1,3 @@
-<nemo>
   <app title="App Shell">
     <window title="App Shell Example">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/app-shell"
@@ -15,7 +14,7 @@
     and highlights the active item — page switching is built in, so no Rhai
     handler is needed.
   -->
-  <layout type="stack">
+  <template name="app">
     <app-shell id="shell" sidenav-width="200">
 
       <app-sidenav>
@@ -54,5 +53,4 @@
       </app-footer>
 
     </app-shell>
-  </layout>
-</nemo>
+  </template>

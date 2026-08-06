@@ -30,26 +30,29 @@ impl ConfigurationLoader {
         }
     }
 
-    /// Loads a configuration file.
+    /// Loads an application entry file. The entry MUST be an `app.nemo` SFC:
+    /// it is compiled to a `Value` tree ([`compile_app_sfc`](crate::XmlParser::compile_app_sfc)),
+    /// then run through directive-compile + `${}` resolution.
     ///
-    /// A `.nemo` entry is an app SFC: it is compiled to the same `Value` tree
-    /// [`load_xml_string`](Self::load_xml_string) produces for an equivalent
-    /// `app.xml`, then run through the same directive-compile + `${}`
-    /// resolution. Anything else (`.xml`, no extension) is parsed as XML.
+    /// A non-`.nemo` path (a legacy `app.xml` entry) is rejected with
+    /// [`ConfigError::DeprecatedXmlEntry`]. XML is still parsed for `<include>`
+    /// fragments (via the parser directly) and the `overrides.xml` settings
+    /// overlay (via [`load_xml_string`](Self::load_xml_string)) — just not as an
+    /// application entry.
     pub fn load(&self, path: &Path) -> Result<Value, ConfigError> {
+        if !path.extension().map(|e| e == "nemo").unwrap_or(false) {
+            return Err(ConfigError::DeprecatedXmlEntry {
+                path: path.display().to_string(),
+            });
+        }
+
         let content = std::fs::read_to_string(path).map_err(|e| ConfigError::Io {
             path: path.display().to_string(),
             message: e.to_string(),
         })?;
 
         let source_name = path.display().to_string();
-        let base_dir = path.parent();
-
-        if path.extension().map(|e| e == "nemo").unwrap_or(false) {
-            return self.load_nemo_string(&content, &source_name, base_dir);
-        }
-
-        self.load_xml_string(&content, &source_name, base_dir)
+        self.load_nemo_string(&content, &source_name, path.parent())
     }
 
     /// Loads configuration from an XML string.

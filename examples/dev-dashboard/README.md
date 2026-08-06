@@ -11,7 +11,7 @@ spawn processes). The `rhai-env` and `rhai-sci` packages it also uses are on by
 default, so `pkg-process` (or `all-packages`) is all you need:
 
 ```bash
-cargo run --features pkg-process -- --app-config examples/dev-dashboard/app.xml
+cargo run --features pkg-process -- --app-config examples/dev-dashboard/app.nemo
 ```
 
 Without `pkg-process` the app still launches, but the handlers log a warning

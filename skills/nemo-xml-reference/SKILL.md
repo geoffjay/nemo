@@ -1,16 +1,16 @@
 ---
 name: nemo-xml-reference
-description: Complete configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo config files (app.nemo SFC or legacy app.xml).
+description: Complete configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo config files (app.nemo SFC entries and imported .nemo components).
 ---
 
 # Nemo Configuration Reference
 
 Use this skill when writing, modifying, or debugging Nemo configuration files.
-The default entry is `app.nemo` (an SFC); `app.xml` (a `<nemo>` XML document)
-remains supported as a legacy entry. The blocks below apply to both formats;
-in `app.nemo` the layout tree lives in a `<template>` body and app-level
-blocks (`<app>`, `<data>`, `<imports>`, `<variable>`) appear at the top level
-(no `<nemo>` wrapper).
+The application entry is an `app.nemo` SFC. Legacy `app.xml` entries are no
+longer supported — the loader rejects them. In `app.nemo` the layout tree lives
+in a `<template name="app">` body and app-level blocks (`<app>`, `<data>`,
+`<imports>`, `<variable>`, `<templates>`, `<include>`) appear at the top level
+(no `<nemo>` wrapper). XML remains valid only inside `<include>` fragments.
 
 ## Document Structure
 
@@ -279,7 +279,7 @@ fn handleClick(component_id, event_data) {
 ]]></script>
 ```
 
-Used in `app.xml`:
+Used in `app.nemo`:
 
 ```xml
 <labeled-button label="Save" />        <!-- ${label} → "Save"; variant → default "primary" -->
@@ -868,7 +868,7 @@ against it consistently.
 ```toml
 # nemo.toml — an application project
 name = "my-app"
-entry = "app.xml"          # the config the app launches
+entry = "app.nemo"         # the SFC entry the app launches
 
 [build]
 out = "dist"               # build output directory

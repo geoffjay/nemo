@@ -1,9 +1,9 @@
 # Project manifest for the SVG component demo.
 #
-# An app project (full app.xml, no [package] table). Launch it with
+# An app project (full app.nemo, no [package] table). Launch it with
 # `nemo --app-config examples/svg`.
 name  = "svg"
-entry = "app.xml"
+entry = "app.nemo"
 
 [build]
 out  = "dist"

@@ -346,7 +346,7 @@ impl Workspace {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Select an app.xml configuration file".into()),
+            prompt: Some("Select an app.nemo configuration file".into()),
         });
 
         cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {

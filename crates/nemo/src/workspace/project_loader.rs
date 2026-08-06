@@ -16,12 +16,11 @@ pub struct ProjectSelected(pub PathBuf);
 
 impl EventEmitter<ProjectSelected> for ProjectLoaderView {}
 
-/// Relative locations, in precedence order, where a project's entry may live
-/// within a repository. `app.nemo` (the SFC default) wins over `app.xml`
-/// (legacy); a root-level entry wins over one under `.nemo/`. When the config
-/// lives in `.nemo/`, that directory becomes the project root for all relative
-/// paths.
-const CONFIG_CANDIDATES: [&str; 4] = ["app.nemo", "app.xml", ".nemo/app.nemo", ".nemo/app.xml"];
+/// Relative locations, in precedence order, where a project's `app.nemo` entry
+/// may live within a repository. A root-level entry wins over one under
+/// `.nemo/`. When the config lives in `.nemo/`, that directory becomes the
+/// project root for all relative paths.
+const CONFIG_CANDIDATES: [&str; 2] = ["app.nemo", ".nemo/app.nemo"];
 
 /// Resolve the project configuration file within a cloned repository, trying
 /// each candidate location in precedence order. Returns the first that exists.
@@ -54,7 +53,7 @@ impl ProjectLoaderView {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Select an app.xml configuration file".into()),
+            prompt: Some("Select an app.nemo configuration file".into()),
         });
 
         cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
@@ -124,7 +123,7 @@ impl ProjectLoaderView {
                                     None => {
                                         let _ = entity.update(cx, |view, cx| {
                                             view.clone_error = Some(format!(
-                                                "Cloned successfully but no app.xml found at the \
+                                                "Cloned successfully but no app.nemo found at the \
                                                  repo root or in .nemo/ ({})",
                                                 target.display()
                                             ));
@@ -301,41 +300,10 @@ mod tests {
     }
 
     #[test]
-    fn resolves_root_config() {
-        let dir = TempDir::new().unwrap();
-        let root = dir.path();
-        touch(&root.join("app.xml"));
-
-        assert_eq!(resolve_project_config(root), Some(root.join("app.xml")));
-    }
-
-    #[test]
-    fn resolves_dot_nemo_config() {
-        let dir = TempDir::new().unwrap();
-        let root = dir.path();
-        touch(&root.join(".nemo/app.xml"));
-
-        assert_eq!(
-            resolve_project_config(root),
-            Some(root.join(".nemo/app.xml"))
-        );
-    }
-
-    #[test]
     fn resolves_nemo_entry() {
         let dir = TempDir::new().unwrap();
         let root = dir.path();
         touch(&root.join("app.nemo"));
-
-        assert_eq!(resolve_project_config(root), Some(root.join("app.nemo")));
-    }
-
-    #[test]
-    fn nemo_entry_takes_precedence_over_xml() {
-        let dir = TempDir::new().unwrap();
-        let root = dir.path();
-        touch(&root.join("app.nemo"));
-        touch(&root.join("app.xml"));
 
         assert_eq!(resolve_project_config(root), Some(root.join("app.nemo")));
     }
@@ -356,10 +324,10 @@ mod tests {
     fn root_config_takes_precedence_over_dot_nemo() {
         let dir = TempDir::new().unwrap();
         let root = dir.path();
-        touch(&root.join("app.xml"));
-        touch(&root.join(".nemo/app.xml"));
+        touch(&root.join("app.nemo"));
+        touch(&root.join(".nemo/app.nemo"));
 
-        assert_eq!(resolve_project_config(root), Some(root.join("app.xml")));
+        assert_eq!(resolve_project_config(root), Some(root.join("app.nemo")));
     }
 
     #[test]

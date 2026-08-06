@@ -21,7 +21,7 @@ The binary is produced at `target/release/nemo`.
 
 ## Your First Application
 
-Create a directory for your application and add an `app.xml` file:
+Create a directory for your application and add an `app.nemo` file:
 
 ```bash
 mkdir my-app && cd my-app
@@ -29,33 +29,31 @@ mkdir my-app && cd my-app
 
 ### 1. Define the Application
 
-Create `app.xml`:
+Create `app.nemo`:
 
-```xml
-<nemo>
-  <app>
-    <window title="My First App" width="800" height="600">
-      <header-bar theme-toggle="true" />
-    </window>
-    <theme name="kanagawa" mode="dark" />
-  </app>
+```nemo
+<app>
+  <window title="My First App" width="800" height="600">
+    <header-bar theme-toggle="true" />
+  </window>
+  <theme name="kanagawa" mode="dark" />
+</app>
 
-  <script src="./scripts" />
+<script src="./scripts" />
 
-  <layout type="stack">
-    <stack id="main" direction="vertical" margin="16" spacing="8">
-      <label id="title" text="My First Nemo App" size="xl" />
+<template name="app">
+  <stack id="main" direction="vertical" margin="16" spacing="8">
+    <label id="title" text="My First Nemo App" size="xl" />
 
-      <panel id="content" padding="16">
-        <label id="greeting" text="Click the button below to see scripting in action." />
-      </panel>
+    <panel id="content" padding="16">
+      <label id="greeting" text="Click the button below to see scripting in action." />
+    </panel>
 
-      <button id="action" label="Say Hello" variant="primary" on-click="on_say_hello" />
+    <button id="action" label="Say Hello" variant="primary" on-click="on_say_hello" />
 
-      <label id="output_label" text="" />
-    </stack>
-  </layout>
-</nemo>
+    <label id="output_label" text="" />
+  </stack>
+</template>
 ```
 
 ### 2. Add an Event Handler
@@ -72,7 +70,7 @@ fn on_say_hello(component_id, event_data) {
 ### 3. Run It
 
 ```bash
-nemo --app-config app.xml
+nemo --app-config app.nemo
 ```
 
 You should see a window with a title, a panel, a button, and a label. Clicking the button updates the label text via the RHAI script.
@@ -187,8 +185,8 @@ The `examples/` directory contains complete applications:
 Run any example:
 
 ```bash
-nemo --app-config examples/basic/app.xml
-nemo --app-config examples/calculator/app.xml
+nemo --app-config examples/basic/app.nemo
+nemo --app-config examples/calculator/app.nemo
 ```
 
 ## Next Steps
