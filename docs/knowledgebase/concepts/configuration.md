@@ -73,6 +73,11 @@ Parsing/compilation touches three places:
 1. **`XmlParser::parse_sfc()`** (`xml_parser.rs`) parses a `.nemo` file into an
    `SfcDefinition { name, template, style, script }`; the template body is
    flattened with the same `process_component_element` used for layout components.
+   `<script>`/`<style>` are pre-split as **raw-text** blocks (`split_sfc_blocks`)
+   before the XML reader sees them, so their bodies need no `<![CDATA[…]]>`
+   wrapper (CDATA is tolerated — stripped if present); this is distinct from the
+   plain-XML `app.xml` path (`process_root`), where `<script>` bodies still use
+   `__cdata__`.
 2. **`process_import`** (`xml_parser.rs`) resolves `src` relative to the config's
    `base_dir`, calls `parse_sfc`, and stores the result under the top-level `sfc`
    key as `sfc[tag] = { template, style?, script?, source_path }`. The tag is

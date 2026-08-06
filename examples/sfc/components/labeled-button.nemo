@@ -11,6 +11,12 @@
   - One script instance serves every <labeled-button>; the handler is told which
     concrete instance fired via `component_id` (the per-instance scoped id), so it
     can mutate just that button.
+
+  No CDATA: `<script>`/`<style>` are parsed as HTML-style raw-text elements — the
+  body is captured verbatim to the matching close tag, so `<`, `>`, and `&&` (Rhai
+  logical-and, generics-style angle brackets) need no `<![CDATA[…]]>` wrapper.
+  The script below exercises this: `if label != "" && clicks > 0` contains both
+  `&&` and `>`, which would have been markup/errors under the old XML-only path.
 -->
 <props>
   <prop name="label" type="string" default="Button" />
@@ -19,9 +25,13 @@
 <template name="labeled-button">
   <button label="${label}" variant="${variant}" on-click="handleClick" />
 </template>
-<script><![CDATA[
+<script>
 fn handleClick(component_id, event_data) {
     log_info("SFC labeled-button clicked: " + component_id);
-    set_component_property(component_id, "label", "Clicked!");
+    // `&&` and `>` here exercise the raw-text parser — no CDATA needed.
+    let label = get_component_property(component_id, "label");
+    if label != "" && label != "Clicked!" && label.len() > 0 {
+        set_component_property(component_id, "label", "Clicked!");
+    }
 }
-]]></script>
+</script>

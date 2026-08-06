@@ -3366,12 +3366,12 @@ button:hover { opacity: 0.8; }
         assert!(!script.contains("fn first()"));
     }
 
-    /// Regression: the existing CDATA-wrapped `examples/sfc/*.nemo` files still
-    /// parse under the new raw-text splitter (CDATA is stripped, bodies
-    /// captured). This is the plan's "existing CDATA-wrapped examples still
-    /// parse" verification step.
+    /// Regression: the `examples/sfc/*.nemo` files — the definitive CDATA-free
+    /// SFC reference — parse under the raw-text splitter and exercise the
+    /// features that previously required CDATA: Rhai `&&`/`>` in `<script>` and
+    /// the CSS `>` combinator in `<style>`. Bodies are captured verbatim.
     #[test]
-    fn test_parse_sfc_cdata_wrapped_examples_still_parse() {
+    fn test_parse_sfc_examples_are_cdata_free_raw_text_reference() {
         let manifest_dir = env!("CARGO_MANIFEST_DIR");
         let sfc_dir = std::path::Path::new(manifest_dir)
             .parent()
@@ -3392,17 +3392,44 @@ button:hover { opacity: 0.8; }
                 .with_source_name(path.display().to_string())
                 .parse_sfc(&content)
                 .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path.display(), e));
+            // The examples are the CDATA-free reference: captured script/style
+            // bodies must not carry a CDATA wrapper (the splitter strips one if
+            // present, so a surviving wrapper means the body was *only* CDATA
+            // with no real content — i.e. the file wasn't actually migrated).
+            for body in def.script.iter().chain(def.style.iter()) {
+                assert!(
+                    !body.contains("<![CDATA["),
+                    "{} script/style still carries a CDATA wrapper",
+                    path.display()
+                );
+            }
             // Every example SFC has a template.
             assert!(
                 def.template.get("type").is_some(),
                 "missing template in {}",
                 path.display()
             );
-            // labeled-button has a <script>; card has a <style>.
+            // labeled-button: <script> exercises Rhai `&&` and `>` (raw-text).
+            // card: <style> exercises the CSS `>` combinator (raw-text).
             let stem = path.file_stem().unwrap().to_str().unwrap();
             match stem {
-                "labeled-button" => assert!(def.script.is_some(), "missing script in {}", stem),
-                "card" => assert!(def.style.is_some(), "missing style in {}", stem),
+                "labeled-button" => {
+                    let script = def
+                        .script
+                        .as_deref()
+                        .unwrap_or_else(|| panic!("missing script in {}", stem));
+                    assert!(script.contains("&&"), "script must exercise && (raw-text)");
+                    assert!(script.contains("> 0"), "script must exercise > (raw-text)");
+                }
+                "card" => {
+                    let style = def
+                        .style
+                        .as_deref()
+                        .unwrap_or_else(|| panic!("missing style in {}", stem));
+                    // The style body is captured verbatim (raw-text, no CDATA).
+                    assert!(style.contains("panel {"), "style must be captured verbatim");
+                    assert!(style.contains("#head"), "id selector must survive");
+                }
                 _ => {}
             }
         }

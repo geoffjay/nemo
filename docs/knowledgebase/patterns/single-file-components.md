@@ -25,23 +25,30 @@ A `.nemo` file is **not** wrapped in `<nemo>`. Its top-level children are:
   it and fills the prop when an instance omits it; `required="true"` makes
   `nemo validate --strict` flag a usage that omits it. Without `<props>` a prop is
   stringly-typed with no default.
-* `<style>` — optional. A CSS subset (type + `#id` selectors) folded onto matching
-  template nodes as inline attributes at compile time (see **Scoped styles**
-  below). XML has no raw-text elements, so a style/script body containing `<` or
-  `&` must be wrapped in `<![CDATA[ … ]]>`.
-* `<script>` — optional Rhai. Loaded under the id `sfc:<tag>`. Bodies must be one
-  contiguous block (the parser keeps only the first text/CDATA run).
+* `<style>` — optional. A CSS subset (type + `#id` selectors) folded onto
+  matching template nodes as inline attributes at compile time (see **Scoped
+  styles** below). `<style>` is parsed as a raw-text element: the body is
+  captured verbatim to the matching close tag, so `<`, `>`, and `&` in the CSS
+  need no `<![CDATA[…]]>` wrapper (CDATA is tolerated but optional — a wrapper
+  is stripped if present).
+* `<script>` — optional Rhai. Loaded under the id `sfc:<tag>`. Also parsed as a
+  raw-text element, so Rhai `&&`, `<`, and `>` need no CDATA. Multi-line bodies
+  are captured whole.
 
 ```xml
 <!-- components/labeled-button.nemo -->
 <template name="labeled-button">
   <button label="${label}" variant="primary" on-click="handleClick" />
 </template>
-<script><![CDATA[
+<script>
 fn handleClick(component_id, event_data) {
-    set_component_property(component_id, "label", "Clicked!");
+    // No CDATA: `&&` and `>` are captured verbatim by the raw-text parser.
+    let label = get_component_property(component_id, "label");
+    if label != "" && label != "Clicked!" {
+        set_component_property(component_id, "label", "Clicked!");
+    }
 }
-]]></script>
+</script>
 ```
 
 # Using it
@@ -144,7 +151,8 @@ Phases 0–4 are implemented: import/tag-rewrite/default-slot/interpolation (P0)
 scoped `<script>` (P1), named/multiple slots (P2), scoped `<style>` folding (P3),
 and typed props with defaults/required + `<components dir>` auto-discovery + per-SFC
 descriptor for `nemo schema` + slot validation (P4); the build/cache format is the
-implemented [build system](../plans/build-system.md) (superseding SFC P5). Still
-planned: a [raw-text `.nemo` parser](../plans/sfc-raw-text-parser.md) that drops
-the CDATA requirement (was SFC Phase 6). See [the SFC plan](../plans/sfc-components.md).
+implemented [build system](../plans/build-system.md) (superseding SFC P5). The
+[raw-text `.nemo` parser](../plans/sfc-raw-text-parser.md) (SFC Phase 6) is
+implemented: `<script>`/`<style>` are parsed as HTML-style raw-text elements, so
+CDATA is optional (a wrapper is stripped if present). See [the SFC plan](../plans/sfc-components.md).
 Worked example: `examples/sfc/`.

@@ -8,8 +8,11 @@
 
   Styling: the <style> block below is folded at compile time onto matching
   template nodes as inline attributes (type selector `panel`, id selector
-  `#head`). It only reaches this SFC's own subtree. XML has no raw-text elements,
-  so a style body containing "<" must be wrapped in CDATA.
+  `#head`). It only reaches this SFC's own subtree. No CDATA is needed:
+  `<style>` is parsed as a raw-text element, so the body is captured verbatim
+  — `<` and `>` in the CSS (comments, future combinators) need no wrapper.
+  (v1 style-folding supports type and #id selectors only; the raw-text parser
+  itself captures any body regardless of selector syntax.)
 -->
 <template name="card">
   <panel border="1" border-color="theme.border">
@@ -22,8 +25,8 @@
     </stack>
   </panel>
 </template>
-<style><![CDATA[
+<style>
   /* Folded onto the panel and #head at compile time; scoped to this card. */
   panel { padding: 20px; border-radius: lg; }
   #head { padding-bottom: 8px; }
-]]></style>
+</style>
