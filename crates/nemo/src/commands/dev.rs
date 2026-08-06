@@ -26,7 +26,7 @@ pub fn run(mut args: Args, dev: DevArgs) -> Result<()> {
     }
 
     if args.app_config.is_none() {
-        bail!("`nemo dev` requires --app-config <app.xml> (or NEMO_APP_CONFIG)");
+        bail!("`nemo dev` requires --app-config <app.nemo|app.xml> (or NEMO_APP_CONFIG)");
     }
 
     // Dev mode always runs the UI with watching enabled.

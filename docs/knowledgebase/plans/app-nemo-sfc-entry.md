@@ -168,14 +168,17 @@ share this single dispatch point.
 
 ## Phase 4 — Dev/watch recompiles `.nemo` on save
 
-**Status: planned.**
+**Status: implemented.**
 
-`nemo dev` (`commands/dev.rs`) watches `app.xml` and `.rhai` files. Extend to
-watch `app.nemo` and any `<import>`ed `.nemo` files. On change, recompile the
-SFC tree to `Value`, then reload.
+`nemo dev` (`commands/dev.rs`) watches `app.xml` and `.rhai` files. The
+watcher now also accepts `.nemo` (app entry and `<import>`ed components); on
+change, the SFC tree is recompiled to `Value`, then reloaded. The reload path
+(`reload_config` → `create_runtime` → `load_config`) already compiles `.nemo`
+via Phase 3, so the only change was admitting `.nemo` into the watch filter.
 
-* `path_is_watchable` (`workspace/mod.rs:684`): already accepts any non-temp,
-  non-VCS file — `.nemo` is already watchable. Verify.
+* `path_is_watchable` (`workspace/mod.rs:560`): extended its extension match to
+  include `nemo` alongside `xml`/`rhai`/`toml`. Temp/hidden/VCS exclusions apply
+  unchanged. The `dev.rs` "requires --app-config" message now mentions `app.nemo`.
 * `Workspace::reload_config` → `create_runtime` → `load_config`: if the config
   path is `.nemo`, `load_config` compiles it (Phase 3). No additional change
   needed beyond Phase 3.
@@ -188,18 +191,21 @@ SFC tree to `Value`, then reload.
 
 ## Phase 5 — Validate/schema accept `.nemo`
 
-**Status: planned.**
+**Status: implemented.**
 
 `nemo validate` (`commands/validate.rs`) and `nemo schema`
-(`commands/schema.rs`) both call `ConfigurationLoader::load(path)`. Detect
-`.nemo` and call `compile_app_sfc` first.
+(`commands/schema.rs`) both already called `ConfigurationLoader::load(path)`,
+which Phase 3 wired to dispatch `.nemo` to `load_nemo_string` →
+`compile_app_sfc`. No new detection code was needed — the single dispatch point
+in `ConfigurationLoader::load` serves every caller.
 
-* `validate::run`: if the path extension is `.nemo`, compile to `Value` via
-  `compile_app_sfc`, then run the same validation logic. The validation itself
+* `validate::run`: calls `loader.load(path)`, which compiles `.nemo` to the
+  `Value` tree, then runs the same validation logic. The validation itself
   operates on the `Value` tree — unchanged.
-* `schema::run`: same — compile `.nemo` to `Value`, then `register_sfc_descriptors`.
-* Linter (`validate.rs`): `unknown-attribute` must skip `n:`-prefixed
-  attributes (directives) — see [control-flow directives](control-flow-directives.md).
+* `schema::run`: calls `loader.load(path)`, then `register_sfc_descriptors`
+  synthesizes a descriptor for each SFC tag in the compiled config.
+* Linter (`validate.rs`): `unknown-attribute` already skips `n:`-prefixed
+  attributes (directives) at `validate.rs:397` — verified.
 * **Verify:** `nemo validate app.nemo --strict` passes on a fixture; `nemo schema
   --app-config app.nemo` includes SFC descriptors.
 

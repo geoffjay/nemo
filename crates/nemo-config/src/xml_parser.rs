@@ -3804,14 +3804,16 @@ button:hover { opacity: 0.8; }
   <layout type="stack">
     <stack id="root"><card /></stack>
   </layout>
-</nemo>"#.to_string();
+</nemo>"#
+            .to_string();
 
         let app_nemo = r#"<imports>
   <import src="./card.nemo" />
 </imports>
 <template name="app">
   <stack id="root"><card /></stack>
-</template>"#.to_string();
+</template>"#
+            .to_string();
 
         let xml_value = XmlParser::new()
             .with_source_name("app.xml")
