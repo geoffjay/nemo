@@ -135,30 +135,34 @@ produces the same `Value` tree `process_root` produces.
 
 ## Phase 2 — Manifest default + build compiles `app.nemo`
 
-**Status: planned.**
+**Status: implemented.**
 
 * `manifest.rs`: `default_entry()` returns `"app.nemo"` (was `"app.xml"`).
   Tests updated; existing `entry = "app.xml"` projects keep working.
-* `build_project` (`commands/build.rs:117`): detect `.nemo` entry, call
-  `compile_app_sfc` instead of `ConfigurationLoader::load`, serialize the
-  resolved `Value` to `dist/layout.json` (same as today).
+* `build_project` (`commands/build.rs:117`): calls `ConfigurationLoader::load`,
+  which now detects a `.nemo` entry and compiles it via `compile_app_sfc`; the
+  resolved `Value` is serialized to `dist/layout.json` (same as today).
 * `build_single_component` already handles `.nemo` files — unchanged.
 * **Verify:** `nemo build` on a project with `app.nemo` produces
   `dist/layout.json`; `--dist` loads it identically to source.
 
 ## Phase 3 — Runtime `load_config` accepts `.nemo`
 
-**Status: planned.**
+**Status: implemented.**
 
-`NemoRuntime::load_config` (`runtime.rs:246`) currently branches on `.json`
-(dist) vs everything else (XML). Add a `.nemo` branch: compile the SFC to a
-`Value` tree via `compile_app_sfc`, then proceed as today.
+`NemoRuntime::load_config` (`runtime.rs:246`) branches on `.json` (dist) vs
+everything else, calling `ConfigurationLoader::load`. The `.nemo` detection
+lives in `ConfigurationLoader::load` (loader.rs), so `load_config` works
+unchanged — the SFC is compiled to a `Value` tree via `compile_app_sfc`, then
+proceeds as today. All callers (`build`, `validate`, `schema`, `load_config`)
+share this single dispatch point.
 
-* `load_config` gains a `.nemo` extension check: call `compile_app_sfc` (which
-  handles `<imports>` resolution + `${}` resolution), store the result.
+* `ConfigurationLoader::load` gains a `.nemo` extension check: dispatches to a
+  new `load_nemo_string` (mirrors `load_xml_string` but calls
+  `compile_app_sfc`), then runs the same directive-compile + `${}` resolution.
 * The `resolve_app_config_via_manifest` path (`main.rs:219`) already returns
   `<root>/<manifest.entry>` — no change needed; the extension detection happens
-  in `load_config`.
+  in `ConfigurationLoader::load`.
 * **Verify:** `nemo --app-config app.nemo` launches the app; `nemo dev
   --app-config app.nemo` hot-reloads on save.
 

@@ -6107,6 +6107,38 @@ mod error_path_tests {
         assert!(rt.load_config().is_ok());
     }
 
+    // Phase 3: `load_config` must accept an `app.nemo` SFC entry, compiling it
+    // to the same `Value` tree `ConfigurationLoader::load` produces.
+    #[test]
+    fn test_runtime_load_config_accepts_nemo_entry() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<app title="SFC">
+               <window title="SFC" width="400" height="300" />
+               </app>
+               <template name="app">
+                 <stack id="root"><label id="hi" text="Hi" /></stack>
+               </template>"#,
+        )
+        .unwrap();
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+
+        // The compiled config tree is present: app title and a layout root.
+        assert_eq!(
+            rt.get_config("app.title"),
+            Some(nemo_config::Value::String("SFC".to_string())),
+            "app.nemo compiled and loaded into the runtime config"
+        );
+        assert_eq!(
+            rt.get_config("layout.type"),
+            Some(nemo_config::Value::String("stack".to_string()))
+        );
+    }
+
     // ── create_data_source edge cases ────────────────────────────────
 
     #[test]

@@ -590,7 +590,7 @@ mod manifest_launch_tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("nemo.toml"),
-            "name = \"t\"\n[build]\nout = \"dist\"\n",
+            "name = \"t\"\nentry = \"app.xml\"\n[build]\nout = \"dist\"\n",
         )
         .unwrap();
         std::fs::write(dir.join("app.xml"), "<nemo/>").unwrap();

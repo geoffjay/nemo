@@ -26,7 +26,7 @@ pub struct ProjectManifest {
     pub name: String,
 
     /// The app config entry file, relative to the project root. Defaults to
-    /// `app.xml`.
+    /// `app.nemo` (the SFC entry); `app.xml` still works when set explicitly.
     #[serde(default = "default_entry")]
     pub entry: String,
 
@@ -50,7 +50,7 @@ pub struct ProjectManifest {
 }
 
 fn default_entry() -> String {
-    "app.xml".to_string()
+    "app.nemo".to_string()
 }
 
 /// The `[build]` table of a manifest.
@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn applies_defaults() {
         let m = ProjectManifest::parse(r#"name = "bar""#).unwrap();
-        assert_eq!(m.entry, "app.xml");
+        assert_eq!(m.entry, "app.nemo");
         assert_eq!(m.build.out, "dist");
         assert_eq!(m.build.load, LoadMode::Source);
         assert!(m.dependencies.is_empty());

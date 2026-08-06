@@ -31,6 +31,11 @@ impl ConfigurationLoader {
     }
 
     /// Loads a configuration file.
+    ///
+    /// A `.nemo` entry is an app SFC: it is compiled to the same `Value` tree
+    /// [`load_xml_string`](Self::load_xml_string) produces for an equivalent
+    /// `app.xml`, then run through the same directive-compile + `${}`
+    /// resolution. Anything else (`.xml`, no extension) is parsed as XML.
     pub fn load(&self, path: &Path) -> Result<Value, ConfigError> {
         let content = std::fs::read_to_string(path).map_err(|e| ConfigError::Io {
             path: path.display().to_string(),
@@ -38,7 +43,13 @@ impl ConfigurationLoader {
         })?;
 
         let source_name = path.display().to_string();
-        self.load_xml_string(&content, &source_name, path.parent())
+        let base_dir = path.parent();
+
+        if path.extension().map(|e| e == "nemo").unwrap_or(false) {
+            return self.load_nemo_string(&content, &source_name, base_dir);
+        }
+
+        self.load_xml_string(&content, &source_name, base_dir)
     }
 
     /// Loads configuration from an XML string.
@@ -48,11 +59,34 @@ impl ConfigurationLoader {
         source_name: &str,
         base_dir: Option<&Path>,
     ) -> Result<Value, ConfigError> {
+        let parser = self.parser_for(source_name, base_dir);
+        let mut raw_value = parser.parse(content).map_err(ConfigError::Parse)?;
+        self.compile_resolve(&mut raw_value)
+    }
+
+    /// Loads an `app.nemo` SFC string: compiles it to the same `Value` tree
+    /// [`load_xml_string`](Self::load_xml_string) produces for an equivalent
+    /// `app.xml`, then runs the same directive-compile + `${}` resolution.
+    pub fn load_nemo_string(
+        &self,
+        content: &str,
+        source_name: &str,
+        base_dir: Option<&Path>,
+    ) -> Result<Value, ConfigError> {
+        let parser = self.parser_for(source_name, base_dir);
+        let mut raw_value = parser
+            .compile_app_sfc(content)
+            .map_err(ConfigError::Parse)?;
+        self.compile_resolve(&mut raw_value)
+    }
+
+    /// Builds an [`XmlParser`] configured with the source name, base directory,
+    /// and (when inside a project) the `.nemo/packages` cache + `nemo.lock`
+    /// versions so remote module imports resolve.
+    fn parser_for(&self, source_name: &str, base_dir: Option<&Path>) -> XmlParser {
         let mut parser = XmlParser::new().with_source_name(source_name);
         if let Some(dir) = base_dir {
             parser = parser.with_base_dir(dir);
-            // When the file sits inside a project, expose the `.nemo/packages`
-            // cache + `nemo.lock` versions so remote module imports resolve.
             if let Some(root) = crate::manifest::find_project_root(dir) {
                 let versions = crate::pkg::Lockfile::load(&root.join(crate::pkg::LOCKFILE))
                     .unwrap_or_default()
@@ -60,23 +94,23 @@ impl ConfigurationLoader {
                 parser = parser.with_packages(crate::pkg::packages_dir(&root), versions);
             }
         }
+        parser
+    }
 
-        let mut raw_value = parser.parse(content).map_err(ConfigError::Parse)?;
-
+    /// Runs the shared post-parse pipeline: directive compilation then `${}`
+    /// expression resolution.
+    fn compile_resolve(&self, raw_value: &mut Value) -> Result<Value, ConfigError> {
         // Compile control-flow directives (n:if / n:for) in the layout and
         // SFC templates before resolution — the pass rewrites the Value tree
         // into ordinary nodes (or list-container nodes for live-data n:for).
-        crate::compile_directives(&mut raw_value);
+        crate::compile_directives(raw_value);
 
-        // Build resolve context from the parsed config
-        let context = self.build_context(&raw_value);
-
-        // Resolve expressions
+        // Build resolve context from the parsed config, then resolve expressions.
+        let context = self.build_context(raw_value);
         let resolved = self
             .resolver
-            .resolve(raw_value, &context)
+            .resolve(std::mem::take(raw_value), &context)
             .map_err(ConfigError::Resolve)?;
-
         Ok(resolved)
     }
 
