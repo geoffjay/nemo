@@ -74,39 +74,40 @@ cargo build --release
 ## Quick Start
 
 ```bash
-nemo --app-config app.xml
+nemo --app-config app.nemo
 ```
 
-A minimal application:
+A minimal application (`app.nemo` — a single-file component entry):
 
-```xml
-<nemo>
-  <app title="Hello Nemo">
-    <window title="Hello Nemo" />
-    <theme name="kanagawa" mode="dark" />
-  </app>
+```nemo
+<app title="Hello Nemo">
+  <window title="Hello Nemo" />
+  <theme name="kanagawa" mode="dark" />
+</app>
 
-  <layout type="stack">
+<template name="app">
+  <stack id="root">
     <label id="greeting" text="Hello, World!" />
-  </layout>
-</nemo>
+  </stack>
+</template>
 ```
+
+> `app.xml` (a `<nemo>` XML document) remains supported as a legacy entry format.
+> New projects scaffolded with `nemo new` default to `app.nemo`.
 
 ## Features
 
-- **Declarative UI** -- Component trees defined in XML configuration
+- **Declarative UI** -- Component trees defined in `.nemo` single-file components (or `app.xml`)
 - **Live data binding** -- Connect timer, HTTP, WebSocket, MQTT, Redis, and NATS sources to components
 - **Scripted logic** -- Event handlers written in RHAI
 - **Theming** -- Built-in themes (Kanagawa, Catppuccin, Tokyo Night, Gruvbox, Nord) with dark/light modes
 - **Extensible** -- Native plugin support via dynamic libraries
-
-## Examples
-
 ```bash
-nemo --app-config examples/basic/app.xml
-nemo --app-config examples/calculator/app.xml
+nemo --app-config examples/basic/app.nemo
+nemo --app-config examples/calculator/app.nemo
+nemo --app-config examples/sfc/app.nemo
+nemo --app-config examples/data-binding/app.xml      # multi-file <include> example (still app.xml)
 nemo --app-config examples/components/app.xml
-nemo --app-config examples/data-binding/app.xml
 ```
 
 Configuations are available in the [examples](examples) directory:

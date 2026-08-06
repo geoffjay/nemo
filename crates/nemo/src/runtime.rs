@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
 use tokio::runtime::Runtime as TokioRuntime;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// A pending navigation request.
 ///
@@ -271,6 +271,11 @@ impl NemoRuntime {
                     .map_err(|e| anyhow::anyhow!("Failed to load config file: {}", e))?
             };
 
+            // Apply the settings overlay (overrides.xml) if present next to the
+            // entry. Only the runtime applies it; build/validate/schema
+            // operate on the source entry so dist stays a faithful compile.
+            let loaded = self.apply_settings_overlay(loaded);
+
             {
                 let mut config = self.config.write().expect("config lock poisoned");
                 *config = loaded;
@@ -284,6 +289,54 @@ impl NemoRuntime {
 
         info!("Configuration loaded successfully");
         Ok(())
+    }
+
+    /// Loads `overrides.xml` next to the config path (if present) and merges
+    /// its `app` key over the loaded config's `app` key (shallow merge: each
+    /// overlay `app` key overrides the config's). The overlay is a plain-XML
+    /// document written by `xml_edit::set_app_theme` to persist settings-UI
+    /// choices (theme name/mode) without mutating the source entry. Returns
+    /// `config` unchanged when the overlay is absent or malformed.
+    fn apply_settings_overlay(&self, mut config: Value) -> Value {
+        let Some(dir) = self.config_path.parent() else {
+            return config;
+        };
+        let overlay_path = dir.join(crate::workspace::xml_edit::OVERRIDES_FILE);
+        let Ok(overlay_content) = std::fs::read_to_string(&overlay_path) else {
+            return config; // No overlay — common case.
+        };
+        if overlay_content.trim().is_empty() {
+            return config;
+        }
+        let overlay = match self.config_loader.load_xml_string(
+            &overlay_content,
+            &overlay_path.display().to_string(),
+            Some(dir),
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                warn!("Skipping malformed {}: {}", overlay_path.display(), e);
+                return config;
+            }
+        };
+        let Some(overlay_app) = overlay.get("app").cloned() else {
+            return config;
+        };
+        if let Value::Object(ref mut top) = config {
+            if let Some(config_app) = top.get_mut("app") {
+                if let (Some(config_obj), Some(overlay_obj)) =
+                    (config_app.as_object_mut(), overlay_app.as_object())
+                {
+                    for (k, v) in overlay_obj {
+                        config_obj.insert(k.clone(), v.clone());
+                    }
+                }
+            } else {
+                // Config has no `app` key; take the overlay's wholesale.
+                top.insert("app".to_string(), overlay_app);
+            }
+        }
+        config
     }
 
     /// Initializes all subsystems.
@@ -6136,6 +6189,73 @@ mod error_path_tests {
         assert_eq!(
             rt.get_config("layout.type"),
             Some(nemo_config::Value::String("stack".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_settings_overlay_overrides_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<app title="SFC">
+               <window title="SFC" width="400" height="300" />
+               <theme name="nord" mode="dark" />
+               </app>
+               <template name="app">
+                 <stack id="root"><label id="hi" text="Hi" /></stack>
+               </template>"#,
+        )
+        .unwrap();
+        // Overlay overrides only the theme name/mode.
+        std::fs::write(
+            dir.path().join("overrides.xml"),
+            r#"<nemo><app><theme name="gruvbox" mode="light" /></app></nemo>"#,
+        )
+        .unwrap();
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+
+        assert_eq!(
+            rt.get_config("app.theme.name"),
+            Some(nemo_config::Value::String("gruvbox".to_string())),
+            "overlay theme name wins over the entry's"
+        );
+        assert_eq!(
+            rt.get_config("app.theme.mode"),
+            Some(nemo_config::Value::String("light".to_string())),
+            "overlay theme mode wins over the entry's"
+        );
+        // Non-overridden app keys survive.
+        assert_eq!(
+            rt.get_config("app.title"),
+            Some(nemo_config::Value::String("SFC".to_string())),
+            "non-overridden app key preserved"
+        );
+    }
+
+    #[test]
+    fn test_settings_overlay_absent_uses_entry_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<app title="SFC">
+               <window title="SFC" width="400" height="300" />
+               <theme name="nord" mode="dark" />
+               </app>
+               <template name="app">
+                 <stack id="root"><label id="hi" text="Hi" /></stack>
+               </template>"#,
+        )
+        .unwrap();
+        // No overrides.xml — entry theme used as-is.
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+        assert_eq!(
+            rt.get_config("app.theme.name"),
+            Some(nemo_config::Value::String("nord".to_string())),
         );
     }
 

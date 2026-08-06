@@ -6,21 +6,28 @@ tags: [config, xml, core]
 timestamp: 2026-07-11T00:00:00Z
 ---
 
-Nemo configuration is **XML** (`app.xml`). There is no HCL loader in the
-codebase — HCL appears only in archived docs and in comments explaining XML
-equivalents. See [XML, not HCL](../decisions/xml-not-hcl-config.md).
+Nemo's application entry is **`app.nemo`** — a single-file component (SFC)
+using `<template>`/`<props>`/`<style>`/`<script>`, extended with app-level
+blocks (`<app>`, `<data>`, `<imports>`, `<variable>`). It is compiled at load
+time to the same `Value` tree the legacy `app.xml` produces. See the
+[`app.nemo` SFC entry decision](../decisions/app-nemo-sfc-entry.md).
 
-A config is a `<nemo>` root containing `<app>`, `<variable>`, `<data>`,
-`<templates>`, and a `<layout>` component tree:
-
-```xml
-<nemo>
-  <app><window title="Hello" /><theme name="kanagawa" mode="dark" /></app>
-  <layout type="stack">
-    <button id="btn" label="Click" on-click="handler" />
-  </layout>
-</nemo>
+```nemo
+<app title="Hello"><window title="Hello" /><theme name="kanagawa" mode="dark" /></app>
+<template name="app">
+  <stack id="root"><label id="greeting" text="Hello, World!" /></stack>
+</template>
 ```
+
+The legacy `app.xml` format (a `<nemo>` XML document) remains supported — an
+explicit manifest `entry = "app.xml"` or a bare `--app-config app.xml` path.
+New projects and templates default to `app.nemo`. There is no HCL loader in
+the codebase — HCL appears only in archived docs and in comments explaining
+XML equivalents. See [XML, not HCL](../decisions/xml-not-hcl-config.md).
+
+A config (either format) carries `<app>`, `<variable>`, `<data>`,
+`<templates>`, and a layout tree (`<layout>` in `app.xml`; the `<template>`
+body in `app.nemo`):
 
 # Pipeline
 
@@ -229,33 +236,37 @@ settings view (`ctrl+p`, `crates/nemo/src/workspace/settings.rs`):
    `NemoConfig` (`crates/nemo/src/config/`). Holds cross-project user prefs:
    `app.theme_name`, `app.theme_mode`, `app.font_family`, `app.roundness`.
    Writable via `NemoConfig::save()`. Applied at startup in `main.rs`.
-2. **Project** — the per-project `app.xml` (`<app><theme name mode/></app>`),
-   read via `runtime.get_config("app.theme.name" | ".mode")`. The **project
-   layer wins**: `apply_theme_from_runtime` (`workspace/utils.rs`) re-applies the
-   XML theme after the global one, so a project's `<theme>` overrides the global
-   default. If neither layer sets a theme, gpui-component's built-in default is
-   used.
+2. **Project** — the per-project entry (`app.nemo` or `app.xml`), read via
+   `runtime.get_config("app.theme.name" | ".mode")`. The **project layer
+   wins**: `apply_theme_from_runtime` (`workspace/utils.rs`) re-applies the
+   entry's theme after the global one, so a project's `<theme>` overrides the
+   global default. If neither layer sets a theme, gpui-component's built-in
+   default is used.
 
 **Global roundness** (`app.roundness`, both layers): sets the base corner
 radius for the whole UI — a named preset (`none`/`square`/`sharp`/`default`/
 `round`) or a raw pixel number. Applied via `theme::apply_roundness` *after*
 theme application (`main.rs` for TOML, `workspace/utils.rs` reading
-`app.theme.roundness`/`app.roundness` for XML). It sets the gpui-component
+`app.theme.roundness`/`app.roundness` for the entry). It sets the gpui-component
 `Theme.radius`, and all nemo-drawn chrome scales from it via
 `theme::tokens::radius_for`/`radius_of` — see the
 [design-tokens plan](../plans/design-tokens.md). Default (unset) is unchanged
-(6px). Per-component XML `rounded="…"` still wins and scales with the base.
+(6px). Per-component `rounded="…"` still wins and scales with the base.
 
 The settings view has a **Global** page (persists to `config.toml` via
-`NemoConfig::save()`) and a **Project** page (persists to the loaded `app.xml`).
-The runtime config is read-only in memory (`set_config` is a no-op), so project
-edits are written straight to disk by `xml_edit::set_app_theme`
-(`crates/nemo/src/workspace/xml_edit.rs`) — a **surgical text edit** that updates
-only the `<theme>` element's `name`/`mode` attributes (or inserts a `<theme>`
-under `<app>` if absent), preserving the rest of the hand-authored file. A future
-option is an `overrides.xml` overlay to keep `app.xml` fully immutable; not yet
-implemented. Theme values are matched case-insensitively against the theme *set*
-names from `crates/nemo/src/theme/*.json` (`theme::get_theme_set_names`).
+`NemoConfig::save()`) and a **Project** page (persists the theme choice).
+The runtime config is read-only in memory (`set_config` is a no-op), so
+project edits are written straight to disk by `xml_edit::set_app_theme`
+(`crates/nemo/src/workspace/xml_edit.rs`) — to an **`overrides.xml` overlay**
+sitting next to the entry (`app.nemo` or `app.xml`), not the entry itself.
+This keeps the source entry immutable regardless of format; the overlay is a
+tiny plain-XML document (`<nemo><app><theme …/></app></nemo>`) merged over the
+entry's `app` key at load time (shallow merge: overlay keys win). Only the
+runtime applies the overlay — `nemo build`/`validate`/`schema` operate on the
+source entry so `dist/` stays a faithful compile. See the
+[settings-overlay decision](../decisions/settings-overrides-xml.md). Theme
+values are matched case-insensitively against the theme *set* names from
+`crates/nemo/src/theme/*.json` (`theme::get_theme_set_names`).
 
 # Project manifest (`nemo.toml`)
 
@@ -265,9 +276,8 @@ dependencies }` (re-exported from `lib.rs`). It is distinct from the global
 `config.toml` above: `config.toml` is cross-project user prefs; `nemo.toml` is
 the per-project build/dependency manifest.
 
-```toml
 name  = "foo"
-entry = "app.xml"          # default "app.xml"
+entry = "app.nemo"          # default "app.nemo"; "app.xml" still works
 
 [build]
 out  = "dist"              # default "dist"

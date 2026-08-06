@@ -41,21 +41,24 @@ static TEMPLATES: &[Template] = &[
     Template {
         name: "basic",
         files: &[
-            tfile!("basic/app.xml"),
+            tfile!("basic/app.nemo"),
+            tfile!("basic/nemo.toml"),
             tfile!("basic/scripts/handlers.rhai"),
         ],
     },
     Template {
         name: "calculator",
         files: &[
-            tfile!("calculator/app.xml"),
+            tfile!("calculator/app.nemo"),
+            tfile!("calculator/nemo.toml"),
             tfile!("calculator/scripts/handlers.rhai"),
         ],
     },
     Template {
         name: "data-binding",
         files: &[
-            tfile!("data-binding/app.xml"),
+            tfile!("data-binding/app.nemo"),
+            tfile!("data-binding/nemo.toml"),
             tfile!("data-binding/scripts/handlers.rhai"),
             tfile!("data-binding/docker-compose.yml"),
             tfile!("data-binding/mosquitto.conf"),
@@ -138,13 +141,19 @@ pub fn run(args: NewArgs) -> Result<()> {
         std::fs::write(&dest, rendered)
             .with_context(|| format!("failed to write '{}'", dest.display()))?;
     }
-
     scaffold_extras(&target, &project_name, &args.template)?;
 
     println!("\nCreated Nemo project at {}", target.display());
     println!("\nNext steps:");
     println!("  cd {}", target.display());
-    println!("  nemo dev --app-config app.xml");
+    // The `complete` template still uses app.xml (multi-file <include>); the
+    // others are .nemo SFC entries.
+    let entry = if args.template == "complete" {
+        "app.xml"
+    } else {
+        "app.nemo"
+    };
+    println!("  nemo dev --app-config {entry}");
     Ok(())
 }
 
@@ -166,20 +175,24 @@ fn scaffold_extras(dest: &Path, project_name: &str, template: &str) -> Result<()
     }
     Ok(())
 }
-
 fn render_readme(project_name: &str, template: &str) -> String {
+    let entry = if template == "complete" {
+        "app.xml"
+    } else {
+        "app.nemo"
+    };
     format!(
         "# {project_name}\n\n\
          A [Nemo](https://github.com/geoffjay/nemo) application scaffolded from the \
          `{template}` template.\n\n\
          ## Run\n\n\
          ```bash\n\
-         nemo dev --app-config app.xml\n\
+         nemo dev --app-config {entry}\n\
          ```\n\n\
-         `nemo dev` hot-reloads the app when you edit `app.xml` or files under `scripts/`.\n\n\
+         `nemo dev` hot-reloads the app when you edit `{entry}` or files under `scripts/`.\n\n\
          ## Validate\n\n\
          ```bash\n\
-         nemo validate app.xml --strict\n\
+         nemo validate {entry} --strict\n\
          ```\n"
     )
 }
@@ -207,7 +220,14 @@ mod tests {
             run(new_args(&proj, template.name, false)).unwrap();
 
             let name = template.name;
-            assert!(proj.join("app.xml").exists(), "{name}: no app.xml");
+            // The `complete` template still uses app.xml; the others use app.nemo.
+            let entry_name = if name == "complete" {
+                "app.xml"
+            } else {
+                "app.nemo"
+            };
+            let entry = proj.join(entry_name);
+            assert!(entry.exists(), "{name}: no {entry_name}");
             assert!(proj.join("README.md").exists(), "{name}: no README");
             assert!(proj.join(".gitignore").exists(), "{name}: no .gitignore");
             assert!(
@@ -215,7 +235,7 @@ mod tests {
                 "{name}: no plugins/.gitkeep"
             );
 
-            let xml = std::fs::read_to_string(proj.join("app.xml")).unwrap();
+            let xml = std::fs::read_to_string(&entry).unwrap();
             assert!(
                 !xml.contains(PLACEHOLDER),
                 "{name}: placeholder not substituted"
@@ -224,7 +244,7 @@ mod tests {
             // The scaffolded config must parse + resolve (same path as `nemo validate`).
             let loader = ConfigurationLoader::new(std::sync::Arc::new(SchemaRegistry::new()));
             loader
-                .load(&proj.join("app.xml"))
+                .load(&entry)
                 .unwrap_or_else(|e| panic!("{name} scaffold failed to validate: {e}"));
         }
     }
@@ -239,7 +259,7 @@ mod tests {
         assert!(run(new_args(&proj, "basic", false)).is_err());
         // --force allows scaffolding into the non-empty directory.
         run(new_args(&proj, "basic", true)).unwrap();
-        assert!(proj.join("app.xml").exists());
+        assert!(proj.join("app.nemo").exists());
     }
 
     #[test]

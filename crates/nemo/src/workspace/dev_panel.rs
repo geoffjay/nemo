@@ -216,12 +216,17 @@ impl DevPanel {
 
 impl Render for DevPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Auto-load app.xml on first render.
+        // Auto-load the project entry on first render: prefer app.nemo (the
+        // SFC default), falling back to app.xml (legacy).
         if self.pending_default_load {
             self.pending_default_load = false;
-            let default_file = self.project_root.join("app.xml");
-            if default_file.is_file() {
-                self.load_file(&default_file, window, cx);
+            // Prefer app.nemo (SFC default), fall back to app.xml (legacy).
+            let nemo = self.project_root.join("app.nemo");
+            let xml = self.project_root.join("app.xml");
+            if nemo.is_file() {
+                self.load_file(&nemo, window, cx);
+            } else if xml.is_file() {
+                self.load_file(&xml, window, cx);
             }
         }
 

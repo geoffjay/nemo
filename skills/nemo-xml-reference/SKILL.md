@@ -1,11 +1,16 @@
 ---
 name: nemo-xml-reference
-description: Complete XML configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo XML config files.
+description: Complete configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo config files (app.nemo SFC or legacy app.xml).
 ---
 
-# Nemo XML Configuration Reference
+# Nemo Configuration Reference
 
-Use this skill when writing, modifying, or debugging Nemo XML configuration files.
+Use this skill when writing, modifying, or debugging Nemo configuration files.
+The default entry is `app.nemo` (an SFC); `app.xml` (a `<nemo>` XML document)
+remains supported as a legacy entry. The blocks below apply to both formats;
+in `app.nemo` the layout tree lives in a `<template>` body and app-level
+blocks (`<app>`, `<data>`, `<imports>`, `<variable>`) appear at the top level
+(no `<nemo>` wrapper).
 
 ## Document Structure
 

@@ -211,7 +211,7 @@ in `ConfigurationLoader::load` serves every caller.
 
 ## Phase 6 — Settings persistence
 
-**Status: planned.**
+**Status: implemented.**
 
 `xml_edit.rs` does surgical text edits to `app.xml` to persist theme choices.
 For `app.nemo`, the text-edit approach is fragile against SFC syntax (raw-text
@@ -226,27 +226,36 @@ blocks, directives, single-root constraint). Options:
 * **Move project settings to `nemo.toml`** — add a `[settings]` table. Simplest,
   but conflates build config with runtime prefs.
 
-**Recommendation:** `overrides.nemo` overlay (or `overrides.xml` if the overlay
-is plain key-value). This is a design decision to settle before this phase
-starts; it should be a decision doc.
+**Decision:** `overrides.xml` overlay — see the
+[settings-overlay decision](../decisions/settings-overrides-xml.md).
+`xml_edit::set_app_theme` now writes to `<entry_dir>/overrides.xml` (creating
+or updating it), never the entry file. `NemoRuntime::load_config` merges the
+overlay's `app` key over the entry's at load time (shallow merge). Only the
+runtime applies the overlay — `nemo build`/`validate`/`schema` operate on the
+source entry so `dist/` stays a faithful compile. Works for both `.nemo` and
+`.xml` entries.
 
 ## Phase 7 — Templates, examples, docs migration
 
-**Status: planned.**
+**Status: implemented.**
 
-* `nemo new` templates (`crates/nemo/templates/`): rename `app.xml` → `app.nemo`,
-  restructure as SFC. Add `nemo.toml` to templates that lack it. Update
-  `new.rs` `tfile!` paths and the `render_readme` output.
-* `project_loader.rs` `CONFIG_CANDIDATES`: add `app.nemo` and `.nemo/app.nemo`
-  to the candidate list (before `app.xml` for precedence).
-* `dev_panel.rs:222` auto-load: `self.project_root.join("app.nemo")` (fall back
-  to `app.xml`).
-* Examples: migrate `examples/*/` to `app.nemo` (or add new `.nemo` examples).
-  Existing `app.xml` examples can stay for backward compatibility.
-* `schema/nemo.xsd`: update or supersede with an SFC schema (deferred — the XSD
-  is for third-party XML editors; SFC authoring uses the planned `nemo-lsp`).
-* Docs: update `configuration.md`, the `nemo-xml-reference` skill, `README.md`,
-  the `nemo new` README output.
+* `nemo new` templates (`crates/nemo/templates/`): `basic`, `calculator`, and
+  `data-binding` renamed `app.xml` → `app.nemo` (restructured as SFC with
+  app-level blocks). `nemo.toml` added to each. `new.rs` `tfile!` paths,
+  `render_readme`, and the "Next steps" message updated. The `complete`
+  template stays `app.xml` — it uses multi-file `<include>`, which the SFC
+  app-block path doesn't yet handle (a deliberate scope limit, not a
+  regression; `<include>` is `process_root`-only).
+* `project_loader.rs` `CONFIG_CANDIDATES`: now `["app.nemo", "app.xml",
+  ".nemo/app.nemo", ".nemo/app.xml"]` — `.nemo` takes precedence.
+* `dev_panel.rs` auto-load: prefers `app.nemo`, falls back to `app.xml`.
+* Examples: added `app.nemo` fixtures to `examples/basic`, `examples/calculator`,
+  and `examples/sfc` (the latter from Phase 4). Existing `app.xml` examples
+  stay for backward compatibility.
+* `schema/nemo.xsd`: deferred — the XSD is for third-party XML editors; SFC
+  authoring uses the planned `nemo-lsp`.
+* Docs: updated `configuration.md` (entry-file + settings-overlay sections),
+  `architecture.md`, the `nemo-xml-reference` skill, `README.md`.
 
 # Critical files
 

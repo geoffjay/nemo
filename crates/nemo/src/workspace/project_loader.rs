@@ -16,11 +16,12 @@ pub struct ProjectSelected(pub PathBuf);
 
 impl EventEmitter<ProjectSelected> for ProjectLoaderView {}
 
-/// Relative locations, in precedence order, where a project's `app.xml` may
-/// live within a repository. A root-level `app.xml` wins over `.nemo/app.xml`
-/// so existing repositories keep working unchanged; when the config lives in
-/// `.nemo/`, that directory becomes the project root for all relative paths.
-const CONFIG_CANDIDATES: [&str; 2] = ["app.xml", ".nemo/app.xml"];
+/// Relative locations, in precedence order, where a project's entry may live
+/// within a repository. `app.nemo` (the SFC default) wins over `app.xml`
+/// (legacy); a root-level entry wins over one under `.nemo/`. When the config
+/// lives in `.nemo/`, that directory becomes the project root for all relative
+/// paths.
+const CONFIG_CANDIDATES: [&str; 4] = ["app.nemo", "app.xml", ".nemo/app.nemo", ".nemo/app.xml"];
 
 /// Resolve the project configuration file within a cloned repository, trying
 /// each candidate location in precedence order. Returns the first that exists.
@@ -317,6 +318,37 @@ mod tests {
         assert_eq!(
             resolve_project_config(root),
             Some(root.join(".nemo/app.xml"))
+        );
+    }
+
+    #[test]
+    fn resolves_nemo_entry() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        touch(&root.join("app.nemo"));
+
+        assert_eq!(resolve_project_config(root), Some(root.join("app.nemo")));
+    }
+
+    #[test]
+    fn nemo_entry_takes_precedence_over_xml() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        touch(&root.join("app.nemo"));
+        touch(&root.join("app.xml"));
+
+        assert_eq!(resolve_project_config(root), Some(root.join("app.nemo")));
+    }
+
+    #[test]
+    fn resolves_dot_nemo_nemo_entry() {
+        let dir = TempDir::new().unwrap();
+        let root = dir.path();
+        touch(&root.join(".nemo/app.nemo"));
+
+        assert_eq!(
+            resolve_project_config(root),
+            Some(root.join(".nemo/app.nemo"))
         );
     }
 
