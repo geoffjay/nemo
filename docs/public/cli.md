@@ -31,7 +31,7 @@ These options apply to the default run path (no command).
 
 | Option | Short | Env | Description |
 |--------|-------|-----|-------------|
-| `--app-config <PATH>` | | `NEMO_APP_CONFIG` | Path to the main XML configuration file (`app.xml`) |
+| `--app-config <PATH>` | | `NEMO_APP_CONFIG` | Path to the application entry (an `app.nemo` SFC) |
 | `--config <PATH>` | `-c` | `NEMO_CONFIG` | Path to the TOML application config (`config.toml`) |
 | `--app-config-dirs <DIR>` | `-d` | | Additional configuration directories to scan (repeatable) |
 | `--extension-dirs <DIR>` | `-e` | `NEMO_EXTENSION_DIRS` | Extension/plugin directories, `:`-separated (repeatable) |
@@ -52,66 +52,66 @@ nemo new my-dashboard --template complete
 nemo new --list                       # list available templates
 ```
 
-Creates a ready-to-run project directory (`app.xml`, `scripts/`, `plugins/`,
+Creates a ready-to-run project directory (`app.nemo`, `scripts/`, `plugins/`,
 `README.md`, `.gitignore`). Available templates: `basic`, `calculator`,
 `data-binding`, `complete`. Refuses a non-empty target unless `--force` is given.
 
 ### Run an application
 
 ```bash
-nemo --app-config app.xml
+nemo --app-config app.nemo
 ```
 
 ### Run with verbose logging
 
 ```bash
-nemo --app-config app.xml --verbose
+nemo --app-config app.nemo --verbose
 ```
 
 ### Develop with hot-reload
 
 ```bash
-nemo dev --app-config app.xml
+nemo dev --app-config app.nemo
 ```
 
-Runs the app and reloads it automatically when `app.xml`, files under its
+Runs the app and reloads it automatically when `app.nemo`, files under its
 directory (including `.rhai` handlers), or extension directories change.
 `--debounce-ms` tunes the settle window (default 200 ms). An invalid edit shows
 an error and leaves the last working UI running. The same behavior is available
 on the default run path via `--watch`:
 
 ```bash
-nemo --app-config app.xml --watch
+nemo --app-config app.nemo --watch
 ```
 
 ### Validate configuration without launching
 
 ```bash
-nemo validate app.xml
+nemo validate app.nemo
 ```
 
 Parses and resolves the config, reporting located diagnostics and exiting
 non-zero on error. Useful in CI pipelines or before deploying changes. The
-legacy `nemo --app-config app.xml --validate-only` form remains supported.
+legacy `nemo --app-config app.nemo --validate-only` form remains supported.
 
 Add `--strict` for component-level lints (unknown component types, unused
 templates, anonymous components wired to handlers/bindings, and — for schemas
 that opt into strict validation — unknown or missing properties):
 
 ```bash
-nemo validate app.xml --strict
+nemo validate app.nemo --strict
 ```
 
 Use `--format json` for machine-readable output (editors, CI):
 
 ```bash
-nemo validate app.xml --format json
+nemo validate app.nemo --format json
 ```
 
 ### Run in headless mode
 
 ```bash
-nemo --app-config app.xml --headless
+nemo --app-config app.nemo --headless
 ```
 
 Starts data sources and event handling without opening a window. Useful for background data processing or testing. Press `Ctrl-C` to stop.
@@ -119,7 +119,7 @@ Starts data sources and event handling without opening a window. Useful for back
 ### Load additional config and extension directories
 
 ```bash
-nemo --app-config app.xml -d ./config.d -e ./plugins -e ./scripts
+nemo --app-config app.nemo -d ./config.d -e ./plugins -e ./scripts
 ```
 
 Multiple directories can be specified by repeating the flag. Config directories are scanned for additional XML files. Extension directories are scanned for `.rhai` scripts and native plugin libraries.
@@ -147,7 +147,7 @@ Log output includes thread IDs and module targets for troubleshooting:
 
 ```
 2026-02-09T12:00:00.000Z  INFO nemo: Nemo v0.1.0 starting...
-2026-02-09T12:00:00.001Z  INFO nemo::runtime: Loading configuration from: "app.xml"
+2026-02-09T12:00:00.001Z  INFO nemo::runtime: Loading configuration from: "app.nemo"
 2026-02-09T12:00:00.010Z  INFO nemo::runtime: Initializing subsystems...
 2026-02-09T12:00:00.015Z  INFO nemo: Starting GPUI application...
 ```

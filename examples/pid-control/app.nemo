@@ -1,4 +1,3 @@
-<nemo>
   <app>
     <window title="PID Control Demo">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/pid-control"
@@ -14,7 +13,7 @@
     <source name="plant" type="timer" interval="1" />
   </data>
 
-  <layout type="stack">
+  <template name="app">
     <stack id="root_panel" direction="vertical" margin="16" spacing="8">
       <label id="title" text="PID Control Demo" size="xl" />
 
@@ -39,5 +38,4 @@
         </panel>
       </stack>
     </stack>
-  </layout>
-</nemo>
+  </template>

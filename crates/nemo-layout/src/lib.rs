@@ -10,17 +10,18 @@
 pub mod binding;
 pub mod builder;
 pub mod error;
+pub mod list_binding;
 pub mod manager;
 pub mod node;
 pub mod state;
 
 pub use binding::{ActiveBinding, BindingId, BindingManager, BindingUpdate, ComponentProperty};
-pub use builder::{BuildResult, LayoutBuilder, LayoutTypeBuilder};
 pub use error::{BindingError, LayoutError, StateError};
+pub use list_binding::ListBindingManager;
 pub use manager::{BuiltComponent, LayoutManager};
 pub use node::{
     Alignment, BindingMode, BindingSpec, ComponentConfig, LayoutConfig, LayoutHints, LayoutNode,
-    LayoutType, Size,
+    LayoutType, ListBindingSpec, Size,
 };
 pub use state::{
     ComponentState, MemoryPersistence, StateCoordinator, StateMetadata, StatePersistence,

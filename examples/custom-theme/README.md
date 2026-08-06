@@ -21,7 +21,7 @@ alongside the shipped themes.
 ## Run
 
 ```sh
-nemo run examples/custom-theme/app.xml
+nemo run examples/custom-theme/app.nemo
 # or capture a screenshot (macOS):
-nemo screenshot examples/custom-theme/app.xml
+nemo screenshot examples/custom-theme/app.nemo
 ```

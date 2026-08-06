@@ -34,6 +34,11 @@ impl LayoutBuilder {
         Self { registry }
     }
 
+    /// Checks if a component type is registered (same gate as `build_node`).
+    pub fn has_component_type(&self, component_type: &str) -> bool {
+        self.registry.has_component(component_type)
+    }
+
     /// Builds a complete layout from configuration.
     pub fn build(&self, config: &LayoutConfig) -> Result<BuildResult, LayoutError> {
         // Build the root node

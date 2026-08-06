@@ -1,0 +1,26 @@
+<!-- {{PROJECT_NAME}} — a Nemo application entry (SFC). -->
+<app title="{{PROJECT_NAME}}">
+  <window title="{{PROJECT_NAME}}">
+    <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/basic"
+                theme-toggle="true" />
+  </window>
+  <theme name="kanagawa" mode="dark" />
+</app>
+
+<!-- Script handlers (on-load, on-click, ...) live under scripts/. -->
+<script src="./scripts" />
+
+<!-- The layout tree: this is what <layout> carries in app.xml. -->
+<template name="app">
+  <stack id="root" direction="vertical" spacing="12" padding="24">
+    <label id="header" text="Welcome to Nemo" />
+    <panel id="content">
+      <button id="button" label="Click Me" on-click="on_button_click" />
+    </panel>
+  </stack>
+</template>
+
+<!-- Data sources -->
+<data>
+  <source name="api" type="http" url="https://api.example.com" refresh="30" />
+</data>

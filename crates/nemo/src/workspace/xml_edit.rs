@@ -1,26 +1,40 @@
-//! Minimal, surgical edits to a project's `app.xml`.
+//! Settings-overlay persistence.
 //!
-//! Nemo treats `app.xml` as the source of truth for a project, but the settings
-//! UI needs to persist a couple of user choices (the theme) back into it. Rather
-//! than round-tripping the whole parsed config through a serializer (which would
-//! discard comments and formatting), these helpers do targeted text edits that
-//! touch only the element in question and leave the rest of the file untouched.
+//! Project-level user preferences (today: the theme `name` and `mode` chosen
+//! in the settings UI) are written to an `overrides.xml` file sitting next to
+//! the entry (`app.nemo` or `app.xml`), not edited into the entry itself. This
+//! keeps the source entry immutable regardless of format — important for
+//! `.nemo` SFCs, where a text edit into raw-text `<style>`/`<script>` blocks
+//! would be fragile. See the
+//! [settings-overlay decision](../../docs/knowledgebase/decisions/settings-overrides-xml.md).
+//!
+//! The overlay is a tiny plain-XML document (`<nemo><app><theme …/></app></nemo>`)
+//! parsed by the existing `load_xml_string` path; the runtime merges its `app`
+//! key over the entry's at load time.
 
 use std::io;
 use std::path::Path;
 
-/// Persist the theme `name` and `mode` into a project's `app.xml`.
+/// The overlay filename, looked for next to the entry file.
+pub const OVERRIDES_FILE: &str = "overrides.xml";
+
+/// Persist the theme `name` and `mode` into the `overrides.xml` next to the
+/// given entry path (`app.nemo` or `app.xml`).
 ///
-/// - If a `<theme ...>` element already exists, only its `name` and `mode`
-///   attributes are updated (other attributes and any children are preserved).
-/// - Otherwise a self-closing `<theme name mode />` element is inserted just
-///   after the `<app ...>` opening tag.
+/// - If `overrides.xml` already exists, only its `<theme>` element's `name`/
+///   `mode` attributes are updated (other attributes/children preserved).
+/// - Otherwise a new `overrides.xml` is created with a self-closing
+///   `<theme name mode />` under `<app>`.
 ///
-/// Returns an error if the file has no `<app>` element to attach the theme to.
-pub fn set_app_theme(path: &Path, name: &str, mode: &str) -> io::Result<()> {
-    let content = std::fs::read_to_string(path)?;
-    let updated = set_theme_in_xml(&content, name, mode)?;
-    std::fs::write(path, updated)
+/// The entry file itself is never mutated.
+pub fn set_app_theme(entry_path: &Path, name: &str, mode: &str) -> io::Result<()> {
+    let overlay_path = entry_path
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .join(OVERRIDES_FILE);
+    let existing = std::fs::read_to_string(&overlay_path).unwrap_or_default();
+    let updated = set_theme_in_xml(&existing, name, mode)?;
+    std::fs::write(&overlay_path, updated)
 }
 
 /// Pure string transform behind [`set_app_theme`], separated out for testing.
@@ -55,21 +69,20 @@ pub fn set_theme_in_xml(content: &str, name: &str, mode: &str) -> io::Result<Str
         out.push_str(&content[gt + 1..]);
         return Ok(out);
     }
-
-    // No existing <theme>: insert one after the <app ...> opening tag.
-    let Some((_app_start, app_gt)) = find_opening_tag(content, "app") else {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "app.xml has no <app> element to attach a <theme> to",
-        ));
-    };
-
+    // No existing <theme>: insert one after the <app ...> opening tag, or
+    // synthesize a fresh overlay document when the content is empty/has no
+    // <app> element (e.g. first-ever settings write).
     let insertion = format!("\n    <theme name=\"{}\" mode=\"{}\" />", name, mode);
-    let mut out = String::with_capacity(content.len() + insertion.len());
-    out.push_str(&content[..=app_gt]);
-    out.push_str(&insertion);
-    out.push_str(&content[app_gt + 1..]);
-    Ok(out)
+    if let Some((_app_start, app_gt)) = find_opening_tag(content, "app") {
+        let mut out = String::with_capacity(content.len() + insertion.len());
+        out.push_str(&content[..=app_gt]);
+        out.push_str(&insertion);
+        out.push_str(&content[app_gt + 1..]);
+        return Ok(out);
+    }
+
+    // No <app> at all (empty or malformed content): create a minimal overlay.
+    Ok(format!("<nemo>\n  <app>\n{insertion}\n  </app>\n</nemo>\n"))
 }
 
 /// Find the opening tag `<{tag}` for an element, returning the byte index of the
@@ -208,9 +221,18 @@ mod tests {
     }
 
     #[test]
-    fn errors_when_no_app_element() {
+    fn synthesizes_overlay_when_no_app_element() {
+        // Empty content (first-ever settings write): synthesize a fresh overlay.
+        let out = set_theme_in_xml("", "nord", "dark").unwrap();
+        assert!(out.contains(r#"<theme name="nord" mode="dark" />"#));
+        assert!(out.contains("<app>"));
+        assert!(out.contains("</nemo>"));
+
+        // Content with no <app> element: also synthesizes a fresh overlay.
         let xml = r#"<nemo><layout /></nemo>"#;
-        assert!(set_theme_in_xml(xml, "nord", "dark").is_err());
+        let out = set_theme_in_xml(xml, "nord", "dark").unwrap();
+        assert!(out.contains(r#"<theme name="nord" mode="dark" />"#));
+        assert!(out.contains("<app>"));
     }
 
     #[test]

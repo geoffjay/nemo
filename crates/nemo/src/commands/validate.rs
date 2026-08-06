@@ -147,6 +147,15 @@ fn config_error_to_diagnostics(err: ConfigError) -> Vec<Diagnostic> {
                 format!("Schema not found: {}", name),
             )]
         }
+        ConfigError::DeprecatedXmlEntry { path } => {
+            vec![Diagnostic::error(
+                "deprecated-xml-entry",
+                format!(
+                    "{path} is an app.xml entry, which is no longer supported — \
+                     rename it to an app.nemo SFC entry"
+                ),
+            )]
+        }
     }
 }
 
@@ -154,7 +163,7 @@ fn config_error_to_diagnostics(err: ConfigError) -> Vec<Diagnostic> {
 fn is_structural_key(key: &str) -> bool {
     matches!(
         key,
-        "type" | "component" | "binding" | "slot" | "vars" | "template"
+        "type" | "component" | "binding" | "slot" | "vars" | "template" | "list_binding"
     )
 }
 
@@ -394,6 +403,7 @@ fn lint_component(
                     || is_universal_style(key)
                     || key.starts_with("on_")
                     || key.starts_with("bind_")
+                    || key.starts_with("n:")
                 {
                     continue;
                 }

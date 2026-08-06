@@ -40,6 +40,10 @@ interface host-api {
     log: func(level: log-level, message: string);
     get-component-property: func(id: string, prop: string) -> option<plugin-value>;
     set-component-property: func(id: string, prop: string, value: plugin-value) -> result<_, string>;
+    create-component: func(parent-id: string, component-type: string, properties: plugin-value) -> result<string, string>;
+    create-component-with-id: func(parent-id: string, component-id: string, component-type: string, properties: plugin-value) -> result<_, string>;
+    update-component: func(component-id: string, properties: plugin-value) -> result<_, string>;
+    remove-component: func(component-id: string) -> result<_, string>;
 }
 
 world nemo-plugin {

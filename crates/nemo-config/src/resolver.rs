@@ -103,7 +103,11 @@ impl ConfigResolver {
                         // path (not `${var.x}`/`${env.x}` load-time resolution), so
                         // pass the subtree through verbatim rather than erroring on
                         // an "undefined variable".
-                        if k == "sfc" {
+                        // The `list_binding` metadata (from live-data `n:for`)
+                        // stores a loop template with runtime `${item.*}`
+                        // placeholders resolved per-instance by the runtime, not
+                        // at load time. Pass it through verbatim like `sfc`.
+                        if k == "sfc" || k == "list_binding" {
                             Ok((k, v))
                         } else {
                             self.resolve(v, context).map(|rv| (k, rv))

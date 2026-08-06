@@ -216,12 +216,12 @@ impl DevPanel {
 
 impl Render for DevPanel {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        // Auto-load app.xml on first render.
+        // Auto-load the project's app.nemo entry on first render.
         if self.pending_default_load {
             self.pending_default_load = false;
-            let default_file = self.project_root.join("app.xml");
-            if default_file.is_file() {
-                self.load_file(&default_file, window, cx);
+            let nemo = self.project_root.join("app.nemo");
+            if nemo.is_file() {
+                self.load_file(&nemo, window, cx);
             }
         }
 

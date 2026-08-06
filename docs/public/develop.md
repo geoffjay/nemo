@@ -267,7 +267,7 @@ enum PluginValue {
 Place compiled plugin libraries in a directory and pass it to Nemo:
 
 ```bash
-nemo --app-config app.xml --extension-dirs ./plugins
+nemo --app-config app.nemo --extension-dirs ./plugins
 ```
 
 Nemo scans for `.so` (Linux), `.dylib` (macOS), or `.dll` (Windows) files and loads them at startup.
@@ -437,8 +437,8 @@ cargo test --workspace
 ### Running Examples
 
 ```bash
-cargo run -- --app-config examples/basic/app.xml
-cargo run -- --app-config examples/calculator/app.xml
-cargo run -- --app-config examples/components/app.xml
-cargo run -- --app-config examples/data-binding/app.xml
+cargo run -- --app-config examples/basic/app.nemo
+cargo run -- --app-config examples/calculator/app.nemo
+cargo run -- --app-config examples/components/app.nemo
+cargo run -- --app-config examples/data-binding/app.nemo
 ```

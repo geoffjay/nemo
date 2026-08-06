@@ -1,4 +1,3 @@
-<nemo>
   <!-- Register project-defined theme sets from external JSON files. These use
        the same schema as the themes that ship with nemo (see crates/nemo/src/theme/*.json),
        so the easiest way to author one is to copy a shipped theme and edit its colors. -->
@@ -21,7 +20,8 @@
     </theme>
   </app>
 
-  <layout type="stack">
+  <template name="app">
+  <stack id="root" direction="vertical">
     <label id="header" text="Aurora — a project-defined theme" />
 
     <panel id="intro">
@@ -34,5 +34,5 @@
       <button id="secondary-btn" label="Secondary" variant="secondary" />
       <button id="danger-btn" label="Danger" variant="danger" />
     </panel>
-  </layout>
-</nemo>
+    </stack>
+  </template>

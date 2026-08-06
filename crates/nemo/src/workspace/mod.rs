@@ -346,7 +346,7 @@ impl Workspace {
             files: true,
             directories: false,
             multiple: false,
-            prompt: Some("Select an app.xml configuration file".into()),
+            prompt: Some("Select an app.nemo configuration file".into()),
         });
 
         cx.spawn(async move |this: WeakEntity<Self>, cx: &mut AsyncApp| {
@@ -555,8 +555,11 @@ fn reload_relevant(event: &Event) -> bool {
     event.paths.iter().any(|path| path_is_watchable(path))
 }
 
-/// Whether a changed path is one we care about: a `.xml`/`.rhai`/`.toml` source
-/// file that is not an editor temp/hidden file or under a build/VCS directory.
+/// Whether a changed path is one we care about: a `.nemo`/`.xml`/`.rhai`/`.toml`
+/// source file that is not an editor temp/hidden file or under a build/VCS
+/// directory. A `.nemo` app entry (or an `<import>`ed component) is watched
+/// the same as an `app.xml`; the reload path recompiles it via
+/// `ConfigurationLoader::load`.
 fn path_is_watchable(path: &Path) -> bool {
     let name = path
         .file_name()
@@ -577,7 +580,7 @@ fn path_is_watchable(path: &Path) -> bool {
     }
     matches!(
         path.extension().and_then(|e| e.to_str()),
-        Some("xml") | Some("rhai") | Some("toml")
+        Some("nemo") | Some("xml") | Some("rhai") | Some("toml")
     )
 }
 
@@ -682,6 +685,9 @@ mod watch_tests {
     #[test]
     fn watches_config_and_script_sources() {
         assert!(path_is_watchable(Path::new("/proj/app.xml")));
+        assert!(path_is_watchable(Path::new("/proj/app.nemo")));
+        assert!(path_is_watchable(Path::new("/proj/components/card.nemo")));
+        assert!(path_is_watchable(Path::new("app.nemo")));
         assert!(path_is_watchable(Path::new("/proj/scripts/handlers.rhai")));
         assert!(path_is_watchable(Path::new("/proj/config.toml")));
         assert!(path_is_watchable(Path::new("app.xml")));

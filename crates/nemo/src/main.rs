@@ -93,7 +93,7 @@ fn dispatch_screenshot(_args: args::ScreenshotArgs) -> Result<()> {
     anyhow::bail!(
         "the `screenshot` subcommand requires a build with the `screenshot` feature.\n\
          Rebuild with, e.g.:\n    \
-         cargo run -p nemo --features screenshot -- screenshot --app-config <app.xml> --out <out.png>"
+         cargo run -p nemo --features screenshot -- screenshot --app-config <app.nemo> --out <out.png>"
     )
 }
 
@@ -200,7 +200,7 @@ pub(crate) fn run_app(mut args: Args, watch: Option<Duration>, dev_mode: bool) -
     Ok(())
 }
 
-/// Resolves the effective config path (source `app.xml` or a built
+/// Resolves the effective config path (source entry — `app.nemo` or `app.xml` — or a built
 /// `dist/layout.json`) via the project manifest.
 ///
 /// * A path to an existing **file** is returned unchanged (today's behavior);
@@ -590,7 +590,7 @@ mod manifest_launch_tests {
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(
             dir.join("nemo.toml"),
-            "name = \"t\"\n[build]\nout = \"dist\"\n",
+            "name = \"t\"\nentry = \"app.xml\"\n[build]\nout = \"dist\"\n",
         )
         .unwrap();
         std::fs::write(dir.join("app.xml"), "<nemo/>").unwrap();

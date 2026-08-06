@@ -12,7 +12,7 @@ pub struct Args {
     #[command(subcommand)]
     pub command: Option<Command>,
 
-    /// Path to the project configuration file (app.xml).
+    /// Path to the project configuration file (app.nemo).
     /// When not provided, shows the project loader screen.
     #[arg(long, env = "NEMO_APP_CONFIG")]
     pub app_config: Option<PathBuf>,
@@ -45,12 +45,12 @@ pub struct Args {
 
     /// Validate configuration and exit.
     ///
-    /// Deprecated: prefer `nemo validate <app.xml>`. Kept for backward
+    /// Deprecated: prefer `nemo validate <app.nemo>`. Kept for backward
     /// compatibility with the default (no-subcommand) run path.
     #[arg(long)]
     pub validate_only: bool,
 
-    /// Load a previously built `dist/` tree instead of the source `app.xml`.
+    /// Load a previously built `dist/` tree instead of the source entry (app.nemo).
     ///
     /// Requires a project (`nemo.toml`) and a prior `nemo build`. Equivalent to
     /// the manifest's `[build] load = "dist"`. Only meaningful when `--app-config`
@@ -118,7 +118,7 @@ pub struct NewArgs {
 /// Arguments for `nemo dev`.
 #[derive(clap::Args, Debug)]
 pub struct DevArgs {
-    /// Path to the project configuration file (app.xml).
+    /// Path to the project configuration file (app.nemo).
     #[arg(long, env = "NEMO_APP_CONFIG")]
     pub app_config: Option<PathBuf>,
 
@@ -167,7 +167,7 @@ pub enum ValidateFormat {
 /// Arguments for `nemo schema`.
 #[derive(clap::Args, Debug)]
 pub struct SchemaArgs {
-    /// Optional project config (`app.xml`). When given, single-file components
+    /// Optional project config (`app.nemo`). When given, single-file components
     /// it imports are synthesized into descriptors and included in the schema.
     #[arg(long, env = "NEMO_APP_CONFIG")]
     pub app_config: Option<PathBuf>,
@@ -211,7 +211,7 @@ pub struct GetArgs {
 /// Arguments for `nemo screenshot`.
 #[derive(clap::Args, Debug)]
 pub struct ScreenshotArgs {
-    /// Path to the project configuration file (app.xml).
+    /// Path to the project configuration file (app.nemo).
     #[arg(long, env = "NEMO_APP_CONFIG")]
     pub app_config: PathBuf,
 

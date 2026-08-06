@@ -26,7 +26,7 @@ pub struct ProjectManifest {
     pub name: String,
 
     /// The app config entry file, relative to the project root. Defaults to
-    /// `app.xml`.
+    /// `app.nemo` (the SFC entry); `app.xml` still works when set explicitly.
     #[serde(default = "default_entry")]
     pub entry: String,
 
@@ -50,7 +50,7 @@ pub struct ProjectManifest {
 }
 
 fn default_entry() -> String {
-    "app.xml".to_string()
+    "app.nemo".to_string()
 }
 
 /// The `[build]` table of a manifest.
@@ -63,8 +63,8 @@ pub struct BuildConfig {
     pub out: String,
 
     /// Which tree the default (no-subcommand) launch loads. `source` (the
-    /// default) always re-parses `app.xml`; `dist` opts into loading a built
-    /// tree. `nemo dev` ignores this and always loads source.
+    /// default) always re-parses the entry (`app.nemo`); `dist` opts into
+    /// loading a built tree. `nemo dev` ignores this and always loads source.
     #[serde(default)]
     pub load: LoadMode,
 }
@@ -96,7 +96,7 @@ pub struct PackageConfig {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LoadMode {
-    /// Re-parse `app.xml` on every launch (default; the only Phase-0 behavior).
+    /// Re-parse the entry (`app.nemo`) on every launch (default).
     #[default]
     Source,
     /// Load a previously built `dist/` tree (opt-in; wired in a later phase).
@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn applies_defaults() {
         let m = ProjectManifest::parse(r#"name = "bar""#).unwrap();
-        assert_eq!(m.entry, "app.xml");
+        assert_eq!(m.entry, "app.nemo");
         assert_eq!(m.build.out, "dist");
         assert_eq!(m.build.load, LoadMode::Source);
         assert!(m.dependencies.is_empty());

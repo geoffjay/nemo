@@ -3,10 +3,14 @@ type: Plan
 title: Raw-text `.nemo` parser (drop the CDATA requirement)
 description: A parser-layer pre-splitter in front of quick-xml that treats `<script>`/`<style>` as HTML-style raw-text elements, so `.nemo` SFC bodies no longer need `<![CDATA[…]]>`. Independent of every other SFC/build phase.
 tags: [config, sfc, parsing, planning]
-timestamp: 2026-07-30T00:00:00Z
+status: implemented
 ---
 
-# Raw-text `.nemo` parser (drop the CDATA requirement)
+
+> **Status: implemented.** `split_sfc_blocks` (`xml_parser.rs`) pre-splits
+> `<script>`/`<style>` as raw-text before `quick-xml`; `parse_sfc` consumes the
+> split. The `examples/sfc/*.nemo` files are the definitive CDATA-free reference.
+> CDATA wrappers are still tolerated (stripped) for backward compatibility.
 
 Today a `.nemo` single-file component is *pure XML*: it is parsed by `quick-xml`
 (`crates/nemo-config/src/xml_parser.rs`), a general XML reader. XML has no

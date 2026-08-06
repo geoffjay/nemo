@@ -16,7 +16,7 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::RwLock;
 use tokio::runtime::Runtime as TokioRuntime;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 /// A pending navigation request.
 ///
@@ -249,9 +249,10 @@ impl NemoRuntime {
         if self.config_path.exists() {
             // A `.json` config path is a built `dist/` tree (a serialized resolved
             // config `Value`), loaded back without re-parsing/resolving; anything
-            // else is a source `app.xml`. Scripts/themes resolve relative to the
-            // config path's parent either way, so a `dist/layout.json` path makes
-            // a built tree self-contained. See ConfigurationLoader::load_from_dist.
+            // else is a source entry (app.nemo or app.xml). Scripts/themes
+            // resolve relative to the config path's parent either way, so a
+            // `dist/layout.json` path makes a built tree self-contained. See
+            // ConfigurationLoader::load_from_dist.
             let is_dist = self
                 .config_path
                 .extension()
@@ -271,6 +272,11 @@ impl NemoRuntime {
                     .map_err(|e| anyhow::anyhow!("Failed to load config file: {}", e))?
             };
 
+            // Apply the settings overlay (overrides.xml) if present next to the
+            // entry. Only the runtime applies it; build/validate/schema
+            // operate on the source entry so dist stays a faithful compile.
+            let loaded = self.apply_settings_overlay(loaded);
+
             {
                 let mut config = self.config.write().expect("config lock poisoned");
                 *config = loaded;
@@ -284,6 +290,54 @@ impl NemoRuntime {
 
         info!("Configuration loaded successfully");
         Ok(())
+    }
+
+    /// Loads `overrides.xml` next to the config path (if present) and merges
+    /// its `app` key over the loaded config's `app` key (shallow merge: each
+    /// overlay `app` key overrides the config's). The overlay is a plain-XML
+    /// document written by `xml_edit::set_app_theme` to persist settings-UI
+    /// choices (theme name/mode) without mutating the source entry. Returns
+    /// `config` unchanged when the overlay is absent or malformed.
+    fn apply_settings_overlay(&self, mut config: Value) -> Value {
+        let Some(dir) = self.config_path.parent() else {
+            return config;
+        };
+        let overlay_path = dir.join(crate::workspace::xml_edit::OVERRIDES_FILE);
+        let Ok(overlay_content) = std::fs::read_to_string(&overlay_path) else {
+            return config; // No overlay — common case.
+        };
+        if overlay_content.trim().is_empty() {
+            return config;
+        }
+        let overlay = match self.config_loader.load_xml_string(
+            &overlay_content,
+            &overlay_path.display().to_string(),
+            Some(dir),
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                warn!("Skipping malformed {}: {}", overlay_path.display(), e);
+                return config;
+            }
+        };
+        let Some(overlay_app) = overlay.get("app").cloned() else {
+            return config;
+        };
+        if let Value::Object(ref mut top) = config {
+            if let Some(config_app) = top.get_mut("app") {
+                if let (Some(config_obj), Some(overlay_obj)) =
+                    (config_app.as_object_mut(), overlay_app.as_object())
+                {
+                    for (k, v) in overlay_obj {
+                        config_obj.insert(k.clone(), v.clone());
+                    }
+                }
+            } else {
+                // Config has no `app` key; take the overlay's wholesale.
+                top.insert("app".to_string(), overlay_app);
+            }
+        }
+        config
     }
 
     /// Initializes all subsystems.
@@ -622,7 +676,7 @@ impl NemoRuntime {
         &self.registry
     }
 
-    /// Returns the path to the loaded configuration file (the project's `app.xml`).
+    /// Returns the path to the loaded configuration file (the project's `app.nemo` or `app.xml`).
     pub fn config_path(&self) -> &Path {
         &self.config_path
     }
@@ -904,6 +958,11 @@ impl NemoRuntime {
                         layout_manager.apply_updates(updates);
                         any_updates = true;
                     }
+                    // List bindings (runtime n:for): diff the array and
+                    // create/remove component instances after scalar bindings.
+                    if layout_manager.on_list_data_changed(&source_path, &value) {
+                        any_updates = true;
+                    }
                 }
             }
         }
@@ -924,6 +983,10 @@ impl NemoRuntime {
                         let updates = layout_manager.on_data_changed(path, &value);
                         if !updates.is_empty() {
                             layout_manager.apply_updates(updates);
+                            any_updates = true;
+                        }
+                        // List bindings (runtime n:for).
+                        if layout_manager.on_list_data_changed(path, &value) {
                             any_updates = true;
                         }
                     }
@@ -2752,10 +2815,40 @@ fn parse_component_from_value(value: &Value, default_id: Option<&str>) -> Option
         node = node.with_id(id);
     }
 
-    // Add all other properties (excluding type, id, and component children)
+    // Extract list_binding metadata (live-data n:for container).
+    if let Some(lb) = obj.get("list_binding").and_then(|v| v.as_object()) {
+        let source = lb
+            .get("source")
+            .and_then(|v| v.as_str())
+            .unwrap_or_default()
+            .to_string();
+        let item_var = lb
+            .get("item_var")
+            .and_then(|v| v.as_str())
+            .unwrap_or("item")
+            .to_string();
+        let key = lb
+            .get("key")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let template = lb.get("template").cloned().unwrap_or(Value::Null);
+        let n_if = lb
+            .get("n_if")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        if !source.is_empty() {
+            node.list_binding = Some(nemo_layout::ListBindingSpec {
+                source,
+                item_var,
+                key,
+                template,
+                n_if,
+            });
+        }
+    }
     for (key, val) in obj {
         match key.as_str() {
-            "type" | "id" => continue,
+            "type" | "id" | "list_binding" => continue,
             "component" => {
                 // Nested components - parsed as objects
                 // e.g., component: { button: {...} }
@@ -2967,6 +3060,91 @@ impl PluginContext for RuntimeContext {
         }
     }
 
+    fn create_component(
+        &self,
+        parent_id: &str,
+        component_type: &str,
+        properties: PluginValue,
+    ) -> Result<String, PluginError> {
+        if let Ok(mut layout_manager) = self.layout_manager.try_write() {
+            let id = layout_manager.generate_dynamic_id();
+            let (props, handlers) = split_props_and_handlers(properties);
+            layout_manager
+                .insert_component(&id, component_type, Some(parent_id), props, handlers)
+                .map_err(|e| PluginError::ComponentFailed(e.to_string()))?;
+            self.data_dirty.store(true, Ordering::Release);
+            self.data_notify.notify_one();
+            Ok(id)
+        } else {
+            Err(PluginError::ComponentFailed(
+                "Layout manager is locked".to_string(),
+            ))
+        }
+    }
+
+    fn create_component_with_id(
+        &self,
+        parent_id: &str,
+        component_id: &str,
+        component_type: &str,
+        properties: PluginValue,
+    ) -> Result<(), PluginError> {
+        if let Ok(mut layout_manager) = self.layout_manager.try_write() {
+            let (props, handlers) = split_props_and_handlers(properties);
+            layout_manager
+                .insert_component(
+                    component_id,
+                    component_type,
+                    Some(parent_id),
+                    props,
+                    handlers,
+                )
+                .map_err(|e| PluginError::ComponentFailed(e.to_string()))?;
+            self.data_dirty.store(true, Ordering::Release);
+            self.data_notify.notify_one();
+            Ok(())
+        } else {
+            Err(PluginError::ComponentFailed(
+                "Layout manager is locked".to_string(),
+            ))
+        }
+    }
+
+    fn update_component(
+        &self,
+        component_id: &str,
+        properties: PluginValue,
+    ) -> Result<(), PluginError> {
+        if let Ok(mut layout_manager) = self.layout_manager.try_write() {
+            let (props, _handlers) = split_props_and_handlers(properties);
+            layout_manager
+                .set_properties(component_id, props)
+                .map_err(|e| PluginError::ComponentFailed(e.to_string()))?;
+            self.data_dirty.store(true, Ordering::Release);
+            self.data_notify.notify_one();
+            Ok(())
+        } else {
+            Err(PluginError::ComponentFailed(
+                "Layout manager is locked".to_string(),
+            ))
+        }
+    }
+
+    fn remove_component(&self, component_id: &str) -> Result<(), PluginError> {
+        if let Ok(mut layout_manager) = self.layout_manager.try_write() {
+            layout_manager
+                .remove_component(component_id)
+                .map_err(|e| PluginError::ComponentFailed(e.to_string()))?;
+            self.data_dirty.store(true, Ordering::Release);
+            self.data_notify.notify_one();
+            Ok(())
+        } else {
+            Err(PluginError::ComponentFailed(
+                "Layout manager is locked".to_string(),
+            ))
+        }
+    }
+
     fn navigate(&self, router: Option<&str>, path: &str) -> Result<(), PluginError> {
         self.enqueue(NavIntent::Navigate {
             router: router.map(String::from),
@@ -3035,6 +3213,36 @@ fn plugin_value_to_config_value(value: PluginValue) -> Value {
             Value::Object(map)
         }
     }
+}
+
+/// Splits a `PluginValue::Object` of properties into `(properties, handlers)`.
+///
+/// If the object contains a `"handlers"` key whose value is an object mapping
+/// event names to handler strings, those are extracted as the handlers map and
+/// stripped from the properties. All other keys become property values.
+fn split_props_and_handlers(
+    value: PluginValue,
+) -> (HashMap<String, Value>, HashMap<String, String>) {
+    let mut props = HashMap::new();
+    let mut handlers = HashMap::new();
+
+    if let PluginValue::Object(obj) = value {
+        for (key, val) in obj {
+            if key == "handlers" {
+                if let PluginValue::Object(handler_map) = val {
+                    for (event, handler_val) in handler_map {
+                        if let PluginValue::String(s) = handler_val {
+                            handlers.insert(event, s);
+                        }
+                    }
+                }
+            } else {
+                props.insert(key, plugin_value_to_config_value(val));
+            }
+        }
+    }
+
+    (props, handlers)
 }
 
 /// Converts a PluginValue to a serde_json::Value for events.
@@ -4289,6 +4497,143 @@ mod runtime_tests {
         assert!(leave.contains("#4c566a"), "on leave: {leave}");
     }
 
+    #[test]
+    fn test_rhai_create_component_on_click_then_remove() {
+        // End-to-end proof of the runtime component creation plan: a Rhai click
+        // handler calls `create_component` to add a label under the root, the
+        // new component appears in the layout snapshot, and a subsequent
+        // `remove_component` cleans it up.
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root").with_child(
+                LayoutNode::new("button")
+                    .with_id("add_btn")
+                    .with_prop("label", s("Add")),
+            );
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let context: Arc<dyn PluginContext> = Arc::new(RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        ));
+
+        // The handler creates a label under `root` and stores the generated
+        // ID in a module-level variable so the remove handler can reference it.
+        let script = r###"
+            let created_id = "";
+
+            fn on_add_click(component_id, event_data) {
+                let props = #{text: "Created at runtime"};
+                created_id = create_component("root", "label", props);
+            }
+
+            fn on_remove_click(component_id, event_data) {
+                if created_id != "" {
+                    remove_component(created_id);
+                }
+            }
+        "###;
+
+        let mut ext = ExtensionManager::new();
+        ext.register_context(context);
+        ext.load_script_source("handlers", script).unwrap();
+
+        // Before: root has one child (add_btn).
+        assert_eq!(
+            layout_manager
+                .read()
+                .unwrap()
+                .get_component("root")
+                .unwrap()
+                .children
+                .len(),
+            1
+        );
+
+        // Fire the click handler — creates a label under root.
+        ext.call_script::<()>(
+            "handlers",
+            "on_add_click",
+            ("add_btn".to_string(), "click".to_string()),
+        )
+        .unwrap();
+
+        // After create: root now has two children, and the new label exists.
+        {
+            let lm = layout_manager.read().unwrap();
+            let root = lm.get_component("root").unwrap();
+            assert_eq!(
+                root.children.len(),
+                2,
+                "root should have 2 children after create"
+            );
+
+            // Find the dynamically-created child (not add_btn).
+            let dyn_id = root
+                .children
+                .iter()
+                .find(|c| *c != "add_btn")
+                .expect("dynamic child should exist");
+            assert!(
+                dyn_id.starts_with("__dyn_"),
+                "id should be __dyn_N: {dyn_id}"
+            );
+
+            let label = lm.get_component(dyn_id).unwrap();
+            assert_eq!(label.component_type, "label");
+            assert_eq!(
+                label.properties.get("text"),
+                Some(&Value::String("Created at runtime".into()))
+            );
+        }
+
+        // Fire the remove handler — removes the created label.
+        ext.call_script::<()>(
+            "handlers",
+            "on_remove_click",
+            ("add_btn".to_string(), "click".to_string()),
+        )
+        .unwrap();
+
+        // After remove: root is back to one child, and the dynamic label is gone.
+        {
+            let lm = layout_manager.read().unwrap();
+            let root = lm.get_component("root").unwrap();
+            assert_eq!(
+                root.children.len(),
+                1,
+                "root should have 1 child after remove"
+            );
+            assert!(root.children.contains(&"add_btn".to_string()));
+
+            // No __dyn_ component should remain.
+            for id in lm.component_ids() {
+                assert!(
+                    !id.starts_with("__dyn_"),
+                    "dynamic component should be removed: {id}"
+                );
+            }
+        }
+    }
+
     // ── Value conversion roundtrips ───────────────────────────────────
 
     #[test]
@@ -5316,6 +5661,275 @@ mod error_path_tests {
         assert!(result.is_err());
     }
 
+    // ── RuntimeContext component lifecycle ─────────────────────────────
+
+    /// Helper: build a `PluginValue::Object` from string key → PluginValue pairs.
+    fn pv_obj(pairs: Vec<(&str, PluginValue)>) -> PluginValue {
+        let mut map = indexmap::IndexMap::new();
+        for (k, v) in pairs {
+            map.insert(k.to_string(), v);
+        }
+        PluginValue::Object(map)
+    }
+
+    #[test]
+    fn test_create_component_appears_in_layout() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root");
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let ctx = RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty.clone(),
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+
+        let props = pv_obj(vec![("label", PluginValue::String("Click".into()))]);
+        let id = ctx
+            .create_component("root", "button", props)
+            .expect("create_component should succeed");
+
+        // The generated ID should be a __dyn_N counter.
+        assert!(id.starts_with("__dyn_"));
+
+        // dirty flag should be set (re-render trigger).
+        assert!(dirty.load(Ordering::Acquire));
+
+        // The component should be present in the layout snapshot.
+        let lm = layout_manager.read().unwrap();
+        let btn = lm.get_component(&id).expect("component should exist");
+        assert_eq!(btn.component_type, "button");
+        assert_eq!(btn.parent, Some("root".to_string()));
+        assert_eq!(
+            btn.properties.get("label"),
+            Some(&Value::String("Click".into()))
+        );
+        let root = lm.get_component("root").unwrap();
+        assert!(root.children.contains(&id));
+    }
+
+    #[test]
+    fn test_create_component_with_id_explicit() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root");
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let ctx = RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+
+        let props = pv_obj(vec![("text", PluginValue::String("Hello".into()))]);
+        ctx.create_component_with_id("root", "my_label", "label", props)
+            .expect("create_component_with_id should succeed");
+
+        let lm = layout_manager.read().unwrap();
+        assert!(lm.get_component("my_label").is_some());
+    }
+
+    #[test]
+    fn test_create_component_unknown_type_rejected() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root");
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let ctx = RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+
+        let result = ctx.create_component("root", "no_such_type", PluginValue::Null);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_remove_component_cleans_up() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root");
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let ctx = RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+
+        let props = pv_obj(vec![("text", PluginValue::String("Temp".into()))]);
+        let id = ctx
+            .create_component("root", "label", props)
+            .expect("create_component should succeed");
+
+        // Verify it exists.
+        assert!(layout_manager.read().unwrap().get_component(&id).is_some());
+
+        // Remove it.
+        ctx.remove_component(&id)
+            .expect("remove_component should succeed");
+
+        // It should be gone, and root's children should no longer contain it.
+        let lm = layout_manager.read().unwrap();
+        assert!(lm.get_component(&id).is_none());
+        let root = lm.get_component("root").unwrap();
+        assert!(!root.children.contains(&id));
+    }
+
+    #[test]
+    fn test_remove_root_refused() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root");
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let ctx = RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+
+        let result = ctx.remove_component("root");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_component_bulk_properties() {
+        let config = Arc::new(RwLock::new(Value::Null));
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let layout_manager = Arc::new(RwLock::new(LayoutManager::new(Arc::clone(&registry))));
+        let event_bus = Arc::new(EventBus::with_default_capacity());
+        let repo = Arc::new(DataRepository::new());
+        let dirty = Arc::new(AtomicBool::new(false));
+        let notify = Arc::new(tokio::sync::Notify::new());
+
+        {
+            let mut lm = layout_manager.write().unwrap();
+            let root = LayoutNode::new("stack").with_id("root").with_child(
+                LayoutNode::new("label")
+                    .with_id("lbl")
+                    .with_prop("text", s("Hi")),
+            );
+            lm.apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+                .unwrap();
+        }
+
+        let ctx = RuntimeContext::new(
+            config,
+            Arc::clone(&layout_manager),
+            event_bus,
+            repo,
+            dirty,
+            notify,
+            Arc::new(RwLock::new(HashSet::new())),
+            Arc::new(Mutex::new(Vec::new())),
+            Arc::new(Mutex::new(Vec::new())),
+        );
+
+        let props = pv_obj(vec![
+            ("text", PluginValue::String("Updated".into())),
+            ("visible", PluginValue::Bool(false)),
+        ]);
+        ctx.update_component("lbl", props)
+            .expect("update_component should succeed");
+
+        let lm = layout_manager.read().unwrap();
+        assert_eq!(
+            lm.get_property("lbl", "text"),
+            Some(&Value::String("Updated".into()))
+        );
+        assert_eq!(lm.get_property("lbl", "visible"), Some(&Value::Bool(false)));
+    }
+
     // ── Router navigation (deferred apply) ─────────────────────────────
 
     /// End-to-end regression guard that a navigation applied through the
@@ -5337,22 +5951,22 @@ mod error_path_tests {
             )
             .unwrap();
         }
-        let config_path = dir.path().join("app.xml");
+        let config_path = dir.path().join("app.nemo");
         {
             let mut f = std::fs::File::create(&config_path).unwrap();
             write!(
                 f,
-                r#"<nemo>
-  <app title="t"/>
-  <script src="./scripts"/>
-  <layout type="stack">
+                r#"<app title="t"/>
+<script src="./scripts"/>
+<template name="app">
+  <stack id="root">
     <router id="main" default="/home">
       <route path="/home" on-leave="record_leave"></route>
       <route path="/users/:id" on-enter="record_enter"></route>
       <route path="*"></route>
     </router>
-  </layout>
-</nemo>"#
+  </stack>
+</template>"#
             )
             .unwrap();
         }
@@ -5418,21 +6032,21 @@ mod error_path_tests {
             let mut f = std::fs::File::create(scripts_dir.join("handlers.rhai")).unwrap();
             writeln!(f, "fn check(id, ev) {{ set_data(\"test.entered\", id); }}").unwrap();
         }
-        let config_path = dir.path().join("app.xml");
+        let config_path = dir.path().join("app.nemo");
         {
             let mut f = std::fs::File::create(&config_path).unwrap();
             write!(
                 f,
-                r#"<nemo>
-  <app title="t"/>
-  <script src="./scripts"/>
-  <layout type="stack">
+                r#"<app title="t"/>
+<script src="./scripts"/>
+<template name="app">
+  <stack id="root">
     <router id="main" default="/connect" primary="true">
       <route path="/connect" on-enter="check"></route>
       <route path="/other"></route>
     </router>
-  </layout>
-</nemo>"#
+  </stack>
+</template>"#
             )
             .unwrap();
         }
@@ -5525,10 +6139,10 @@ mod error_path_tests {
     fn test_runtime_load_malformed_config() {
         use std::io::Write;
         let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("bad.xml");
+        let config_path = dir.path().join("bad.nemo");
         {
             let mut f = std::fs::File::create(&config_path).unwrap();
-            writeln!(f, "<nemo><unclosed>not valid xml").unwrap();
+            writeln!(f, "<template name=\"app\"><stack id=\"root\"><unclosed>").unwrap();
         }
         let rt = NemoRuntime::new(&config_path).unwrap();
         let result = rt.load_config();
@@ -5537,14 +6151,118 @@ mod error_path_tests {
 
     #[test]
     fn test_runtime_load_empty_config_file() {
+        // An empty `.nemo` entry has no <template>, so it must error cleanly
+        // (not panic). The DeprecatedXmlEntry / SFC-parse error path is exercised
+        // without crashing the runtime.
         let dir = tempfile::tempdir().unwrap();
-        let config_path = dir.path().join("empty.xml");
+        let config_path = dir.path().join("empty.nemo");
         {
             std::fs::File::create(&config_path).unwrap();
         }
         let rt = NemoRuntime::new(&config_path).unwrap();
-        // Empty file should load without error
-        assert!(rt.load_config().is_ok());
+        assert!(
+            rt.load_config().is_err(),
+            "an empty .nemo entry (no <template>) must error, not panic"
+        );
+    }
+
+    // Phase 3: `load_config` must accept an `app.nemo` SFC entry, compiling it
+    // to the same `Value` tree `ConfigurationLoader::load` produces.
+    #[test]
+    fn test_runtime_load_config_accepts_nemo_entry() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<app title="SFC">
+               <window title="SFC" width="400" height="300" />
+               </app>
+               <template name="app">
+                 <stack id="root"><label id="hi" text="Hi" /></stack>
+               </template>"#,
+        )
+        .unwrap();
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+
+        // The compiled config tree is present: app title and a layout root.
+        assert_eq!(
+            rt.get_config("app.title"),
+            Some(nemo_config::Value::String("SFC".to_string())),
+            "app.nemo compiled and loaded into the runtime config"
+        );
+        assert_eq!(
+            rt.get_config("layout.type"),
+            Some(nemo_config::Value::String("stack".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_settings_overlay_overrides_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<app title="SFC">
+               <window title="SFC" width="400" height="300" />
+               <theme name="nord" mode="dark" />
+               </app>
+               <template name="app">
+                 <stack id="root"><label id="hi" text="Hi" /></stack>
+               </template>"#,
+        )
+        .unwrap();
+        // Overlay overrides only the theme name/mode.
+        std::fs::write(
+            dir.path().join("overrides.xml"),
+            r#"<nemo><app><theme name="gruvbox" mode="light" /></app></nemo>"#,
+        )
+        .unwrap();
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+
+        assert_eq!(
+            rt.get_config("app.theme.name"),
+            Some(nemo_config::Value::String("gruvbox".to_string())),
+            "overlay theme name wins over the entry's"
+        );
+        assert_eq!(
+            rt.get_config("app.theme.mode"),
+            Some(nemo_config::Value::String("light".to_string())),
+            "overlay theme mode wins over the entry's"
+        );
+        // Non-overridden app keys survive.
+        assert_eq!(
+            rt.get_config("app.title"),
+            Some(nemo_config::Value::String("SFC".to_string())),
+            "non-overridden app key preserved"
+        );
+    }
+
+    #[test]
+    fn test_settings_overlay_absent_uses_entry_theme() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<app title="SFC">
+               <window title="SFC" width="400" height="300" />
+               <theme name="nord" mode="dark" />
+               </app>
+               <template name="app">
+                 <stack id="root"><label id="hi" text="Hi" /></stack>
+               </template>"#,
+        )
+        .unwrap();
+        // No overrides.xml — entry theme used as-is.
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+        assert_eq!(
+            rt.get_config("app.theme.name"),
+            Some(nemo_config::Value::String("nord".to_string())),
+        );
     }
 
     // ── create_data_source edge cases ────────────────────────────────
@@ -5560,6 +6278,212 @@ mod error_path_tests {
         // "HTTP" (uppercase) should not match "http"
         let config = obj(vec![("type", s("HTTP")), ("url", s("https://example.com"))]);
         assert!(nemo_data::create_source("api", "HTTP", &config).is_none());
+    }
+}
+
+/// End-to-end verification for control-flow directives (`n:if`/`n:for`),
+/// exercising the full pipeline: XML → `ConfigurationLoader` (which runs
+/// `compile_directives`) → `parse_layout_config` → `LayoutManager` → data
+/// change.
+#[cfg(test)]
+mod control_flow_directive_tests {
+    use super::*;
+    use nemo_config::Value;
+    use nemo_layout::LayoutManager;
+    use nemo_registry::{register_all_builtins, ComponentRegistry};
+
+    /// Loads an XML config string through the real loader (running
+    /// `compile_directives`) and builds a `LayoutManager` with all builtins.
+    fn build_layout(xml: &str) -> LayoutManager {
+        let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
+        let config = loader
+            .load_xml_string(xml, "test.xml", None)
+            .expect("config should load");
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let mut manager = LayoutManager::new(registry);
+        manager.apply_layout(layout).expect("apply layout");
+        manager
+    }
+
+    fn user(name: &str) -> Value {
+        let mut o = indexmap::IndexMap::new();
+        o.insert("name".to_string(), Value::String(name.to_string()));
+        Value::Object(o)
+    }
+
+    /// Phase 1 — `n:if` toggles a component's `visible` property via data.
+    #[test]
+    fn verify_n_if_toggles_via_data() {
+        let xml = r#"
+            <nemo>
+              <layout type="stack">
+                <panel id="err_panel" n:if="data.status == 'error'">
+                  <label id="msg" text="Something went wrong" />
+                </panel>
+              </layout>
+            </nemo>
+        "#;
+        let mut manager = build_layout(xml);
+
+        // Compiled to a bind-visible binding on the panel.
+        let bindings = manager.bindings().bindings_for_component("err_panel");
+        assert_eq!(bindings.len(), 1, "n:if compiled to one binding");
+        assert_eq!(bindings[0].source, "data.status");
+        assert_eq!(bindings[0].target.property_path, "visible");
+
+        // status == "error" → visible = true.
+        let updates = manager.on_data_changed("data.status", &Value::String("error".to_string()));
+        manager.apply_updates(updates);
+        assert_eq!(
+            manager.get_property("err_panel", "visible"),
+            Some(&Value::Bool(true)),
+            "panel shown when status == error"
+        );
+
+        // status == "ok" → visible = false.
+        let updates = manager.on_data_changed("data.status", &Value::String("ok".to_string()));
+        manager.apply_updates(updates);
+        assert_eq!(
+            manager.get_property("err_panel", "visible"),
+            Some(&Value::Bool(false)),
+            "panel hidden when status != error"
+        );
+    }
+
+    /// Phase 2 — static `n:for` over a literal array expands to N nodes and
+    /// the expanded config passes `nemo validate` (no errors/warnings).
+    #[test]
+    fn verify_static_n_for_expands_and_validates() {
+        let xml = r#"
+            <nemo>
+              <layout type="stack">
+                <tab-item n:for="tab in ['home', 'settings', 'about']" n:key="tab"
+                          label="${tab}" />
+              </layout>
+            </nemo>
+        "#;
+        // Load through the loader (runs compile_directives) and confirm the
+        // parsed config has 3 expanded children with substituted labels.
+        let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
+        let config = loader
+            .load_xml_string(xml, "test.xml", None)
+            .expect("config loads");
+        let layout = parse_layout_config(&config, &TemplateMap::new()).expect("layout");
+        let labels: Vec<String> = layout
+            .root
+            .children
+            .iter()
+            .filter(|c| c.component_type == "tab_item")
+            .filter_map(|c| {
+                c.config
+                    .properties
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .map(String::from)
+            })
+            .collect();
+        assert_eq!(labels.len(), 3, "static n:for expanded to 3 tab-items");
+        assert!(labels.contains(&"home".to_string()));
+        assert!(labels.contains(&"settings".to_string()));
+        assert!(labels.contains(&"about".to_string()));
+
+        // The expanded config builds without error (the LayoutManager gate is
+        // the same registry check `nemo validate --strict` runs).
+        let registry = Arc::new(ComponentRegistry::new());
+        register_all_builtins(&registry);
+        let mut manager = LayoutManager::new(registry);
+        manager
+            .apply_layout(layout)
+            .expect("expanded static n:for tree builds cleanly");
+    }
+
+    /// Phase 3 — live-data `n:for` backed by a mock source: adding items
+    /// creates components, removing cleans up, reordering updates values.
+    #[test]
+    fn verify_live_data_n_for_add_remove_reorder() {
+        let xml = r#"
+            <nemo>
+              <layout type="stack">
+                <stack id="user_list" n:for="user in data.api.users" n:key="user.id">
+                  <label text="${user.name}" />
+                </stack>
+              </layout>
+            </nemo>
+        "#;
+        let mut manager = build_layout(xml);
+
+        // Container built with no children; list binding registered.
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            0,
+            "container starts empty"
+        );
+
+        // Mock HTTP source publishes the whole `data.api` object.
+        let api = |users: Vec<Value>| {
+            let mut o = indexmap::IndexMap::new();
+            o.insert("users".to_string(), Value::Array(users));
+            Value::Object(o)
+        };
+
+        // Add two users.
+        let changed =
+            manager.on_list_data_changed("data.api", &api(vec![user("Alice"), user("Bob")]));
+        assert!(changed, "adding items reports a change");
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            2,
+            "two instances created"
+        );
+
+        // Add a third.
+        manager.on_list_data_changed(
+            "data.api",
+            &api(vec![user("Alice"), user("Bob"), user("Carol")]),
+        );
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            3,
+            "third instance created"
+        );
+
+        // Remove one (back to two).
+        manager.on_list_data_changed("data.api", &api(vec![user("Alice"), user("Bob")]));
+        assert_eq!(
+            manager.get_component("user_list").unwrap().children.len(),
+            2,
+            "instance removed"
+        );
+
+        // Reorder: the index-0 label component's text follows the data.
+        let label0 = format!(
+            "{}_{}",
+            "user_list_0",
+            manager
+                .get_component("user_list_0")
+                .unwrap()
+                .children
+                .first()
+                .map(|c| c.rsplit('_').next().unwrap_or("").to_string())
+                .unwrap_or_default()
+        );
+        let _ = label0; // child id shape is instance-specific; assert on the label value below.
+        manager.on_list_data_changed("data.api", &api(vec![user("Bob"), user("Alice")]));
+        // The first instance's label now reflects Bob.
+        let first_instance = manager.get_component("user_list_0").unwrap();
+        let first_child_id = first_instance.children.first().cloned().unwrap();
+        assert_eq!(
+            manager
+                .get_component(&first_child_id)
+                .unwrap()
+                .properties
+                .get("text")
+                .and_then(|v| v.as_str()),
+            Some("Bob"),
+            "reorder updated the first instance's label"
+        );
     }
 }
 

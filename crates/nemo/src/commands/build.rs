@@ -205,7 +205,8 @@ fn compile_component(file: &Path) -> Result<CompiledComponent> {
         Some(css) => crate::runtime::fold_sfc_styles(&sfc.template, css, &tag),
         None => sfc.template.clone(),
     };
-    let template = crate::runtime::rewrite_sfc_handlers(&template, &tag);
+    let mut template = crate::runtime::rewrite_sfc_handlers(&template, &tag);
+    nemo_config::compile_directives_node(&mut template);
 
     // Reuse the canonical flatten for script/props/slots so they match the
     // `config["sfc"][tag]` shape a loader reads back.
@@ -398,35 +399,34 @@ mod tests {
         std::fs::remove_dir_all(dir).ok();
     }
 
-    // Phase 2: a built dist/ must reload to the exact config Value the source
-    // path produces, so the render tree is identical.
+    // Phase 2: an `app.nemo` entry (the new manifest default) builds to a
+    // `dist/layout.json` that reloads identically to the compiled SFC source.
     #[test]
-    fn project_build_round_trips_via_dist() {
-        let root = std::env::temp_dir().join(format!("nemo_proj_{}", std::process::id()));
+    fn project_build_nemo_entry_round_trips_via_dist() {
+        let root = std::env::temp_dir().join(format!("nemo_nemo_proj_{}", std::process::id()));
         std::fs::create_dir_all(&root).unwrap();
         std::fs::write(root.join("card.nemo"), CARD).unwrap();
         std::fs::write(
-            root.join("app.xml"),
-            r#"<nemo>
-                 <app title="T"><theme name="nord" mode="dark" /></app>
-                 <imports><import src="./card.nemo" /></imports>
-                 <layout type="stack"><card id="c" title="hi" /></layout>
-               </nemo>"#,
+            root.join("app.nemo"),
+            r#"<app title="T"><theme name="nord" mode="dark" /></app>
+               <imports><import src="./card.nemo" /></imports>
+               <template name="app">
+                 <stack id="root"><card id="c" title="hi" /></stack>
+               </template>"#,
         )
         .unwrap();
+        // Default entry is now app.nemo — no explicit entry needed.
         let manifest = nemo_config::ProjectManifest::parse("name = \"p\"\n").unwrap();
 
-        // Build → dist/layout.json.
         build_project(&root, &manifest).unwrap();
         assert!(root.join("dist").join("layout.json").is_file());
 
-        // Source-loaded config vs dist-loaded config must be identical.
         let loader = ConfigurationLoader::new(Arc::new(SchemaRegistry::new()));
-        let from_source = loader.load(&root.join("app.xml")).unwrap();
+        let from_source = loader.load(&root.join("app.nemo")).unwrap();
         let from_dist = loader.load_from_dist(&root.join("dist")).unwrap();
         assert_eq!(
             from_source, from_dist,
-            "dist reload equals the source-resolved config"
+            "dist reload equals the compiled app.nemo config"
         );
 
         std::fs::remove_dir_all(&root).ok();

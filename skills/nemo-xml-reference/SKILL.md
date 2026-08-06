@@ -1,11 +1,16 @@
 ---
 name: nemo-xml-reference
-description: Complete XML configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo XML config files.
+description: Complete configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo config files (app.nemo SFC entries and imported .nemo components).
 ---
 
-# Nemo XML Configuration Reference
+# Nemo Configuration Reference
 
-Use this skill when writing, modifying, or debugging Nemo XML configuration files.
+Use this skill when writing, modifying, or debugging Nemo configuration files.
+The application entry is an `app.nemo` SFC. Legacy `app.xml` entries are no
+longer supported — the loader rejects them. In `app.nemo` the layout tree lives
+in a `<template name="app">` body and app-level blocks (`<app>`, `<data>`,
+`<imports>`, `<variable>`, `<templates>`, `<include>`) appear at the top level
+(no `<nemo>` wrapper). XML remains valid only inside `<include>` fragments.
 
 ## Document Structure
 
@@ -274,7 +279,7 @@ fn handleClick(component_id, event_data) {
 ]]></script>
 ```
 
-Used in `app.xml`:
+Used in `app.nemo`:
 
 ```xml
 <labeled-button label="Save" />        <!-- ${label} → "Save"; variant → default "primary" -->
@@ -338,6 +343,46 @@ sizes drop `px` (`20px`→`20`), colors stay strings (incl. `theme.*`).
 * **Two `${}` systems.** SFC props use bare `${label}` (runtime interpolation,
   string-only), distinct from load-time `${var.x}`/`${env.x}`. Data still flows
   through `bind-*`/`<binding>`.
+
+## Control-Flow Directives (`n:for` / `n:if` / `n:key`)
+
+Vue-style namespaced attributes for conditionals and iteration on any template
+element (layout, `<template>`, or a `.nemo` SFC template). Resolved by a compile
+pass before layout building.
+
+```xml
+<!-- n:if — conditionally show a component -->
+<panel n:if="data.api.status == 'error'">
+  <label text="Something went wrong" />
+</panel>
+
+<!-- n:for over a static literal array (compile-time) -->
+<tab-item n:for="tab in ['home', 'settings', 'about']" n:key="tab"
+          label="${tab}" />
+
+<!-- n:for over a live data source (runtime) -->
+<card n:for="user in data.api.users" n:key="user.id">
+  <label slot="header" text="${user.name}" />
+  <text content="${user.email}" />
+</card>
+```
+
+| Directive | When | Compiles to |
+|-----------|------|-------------|
+| `n:if="path"` | compile-time | `bind-visible` on `path`'s truthiness |
+| `n:if="path == 'x'"` (or `!=`) | compile-time | a `visible` binding with a comparison transform |
+| `n:for="i in ['a','b']"` (literal array) | compile-time | N sibling nodes, `${i}`/`${i.field}` substituted |
+| `n:for="i in data.x.y"` (`data.*` path) | runtime | a list container the runtime grows/shrinks as the array changes |
+
+* **`n:key`** gives loop items stable identity — keyed instances keep their
+  state across reorders; unkeyed items match by index (state lost on reorder).
+  Static-expansion ids are suffixed `_<index>` or `_<key>`.
+* **`${item}` / `${item.field}`** inside the loop body reference the current
+  item; for live-data `n:for` these become per-instance data bindings.
+* **`n:for` + `n:if`** on one element: `n:for` wins; the `n:if` is evaluated per
+  instance.
+* Condition syntax is a **source path** or an `==`/`!=` **comparison** against a
+  string/number/bool literal — not a full expression.
 
 ## Routing (`<router>` / `<route>` / `<nav-link>`)
 
@@ -823,7 +868,7 @@ against it consistently.
 ```toml
 # nemo.toml — an application project
 name = "my-app"
-entry = "app.xml"          # the config the app launches
+entry = "app.nemo"         # the SFC entry the app launches
 
 [build]
 out = "dist"               # build output directory

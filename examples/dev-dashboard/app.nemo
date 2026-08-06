@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!-- Dev Dashboard -->
 <!-- A developer tools dashboard that exercises every Rhai extension package: -->
 <!--   rhai-env     → read environment variables (HOME, SHELL, PATH, USER) -->
@@ -8,7 +7,6 @@
 <!--   built-in HTTP → fetch a public API (httpbin.org/uuid) -->
 <!-- Requires the pkg-env, pkg-sci, and pkg-process cargo features on -->
 <!-- nemo-extension, and the system + science + file-io script features. -->
-<nemo>
   <app title="Nemo Dev Dashboard">
     <window title="Dev Dashboard">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/dev-dashboard"
@@ -19,7 +17,7 @@
 
   <script src="./scripts" features="file-io, system, science" />
 
-  <layout type="stack">
+  <template name="app">
     <stack id="root" direction="vertical" flex="1" scroll="true" padding="24" spacing="16">
 
       <!-- Header -->
@@ -118,5 +116,4 @@
       </stack>
 
     </stack>
-  </layout>
-</nemo>
+  </template>

@@ -239,6 +239,21 @@ fn apply_transform(transform: &str, value: &Value) -> Value {
         return value.clone();
     }
 
+    // Comparison transforms (from `n:if` conditions): "== 'literal'" or
+    // "!= 'literal'". Returns a `Value::Bool` indicating whether the bound
+    // value satisfies the comparison. The literal may be a quoted string,
+    // a number, `true`/`false`, or `null`.
+    if let Some(rest) = transform.strip_prefix("==") {
+        return Value::Bool(value_equals(value, rest.trim()));
+    }
+    if let Some(rest) = transform.strip_prefix("!=") {
+        return Value::Bool(!value_equals(value, rest.trim()));
+    }
+    let transform = transform.trim();
+    if transform.is_empty() {
+        return value.clone();
+    }
+
     // Field extraction: "field.subfield" extracts nested fields from Object values
     if !transform.contains("value") && !transform.contains(' ') {
         let parts: Vec<&str> = transform.split('.').collect();
@@ -273,6 +288,42 @@ fn apply_transform(transform: &str, value: &Value) -> Value {
 
     // Fallback: pass through
     value.clone()
+}
+
+/// Compares a bound `Value` against a literal string from a comparison
+/// transform. The literal may be a quoted string (`'error'`), a number
+/// (`42`, `3.14`), a boolean (`true`/`false`), or `null`. Unquoted strings
+/// are compared as strings.
+fn value_equals(value: &Value, literal: &str) -> bool {
+    let literal = literal.trim();
+    // Quoted string literal: 'error' or "error".
+    if (literal.starts_with('\'') && literal.ends_with('\''))
+        || (literal.starts_with('"') && literal.ends_with('"'))
+    {
+        let s = &literal[1..literal.len() - 1];
+        return value.as_str() == Some(s);
+    }
+    // Boolean literal.
+    if literal == "true" {
+        return value.as_bool() == Some(true);
+    }
+    if literal == "false" {
+        return value.as_bool() == Some(false);
+    }
+    // Null literal.
+    if literal == "null" {
+        return value.is_null();
+    }
+    // Integer literal.
+    if let Ok(i) = literal.parse::<i64>() {
+        return value.as_i64() == Some(i);
+    }
+    // Float literal.
+    if let Ok(f) = literal.parse::<f64>() {
+        return value.as_f64() == Some(f);
+    }
+    // Fallback: string comparison.
+    value.as_str() == Some(literal)
 }
 
 /// A pending update from a binding.

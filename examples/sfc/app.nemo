@@ -1,0 +1,76 @@
+<!-- app.nemo: SFC entry equivalent to app.xml in this example. Exercises
+     app-level blocks (<app>, <components>, <script>), SFC composition (card),
+     and control-flow directives (n:for / n:if) in the layout. -->
+<app title="Nemo — Single-File Components">
+  <window title="SFC Demo">
+    <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/sfc"
+                theme-toggle="true" />
+  </window>
+  <theme name="nord" mode="dark" />
+</app>
+
+<!-- Auto-discover every *.nemo in ./components (tags come from <template name>
+     or the filename stem). Equivalent to listing each with <import>. -->
+<components dir="./components" />
+<script src="./scripts" on-load="on_load" />
+
+<template name="app">
+  <stack id="root" direction="vertical" spacing="20" padding="32" scroll="true">
+    <!-- SFC composition: the title targets the named `header` slot; the rest
+         fill the default slot. -->
+    <stack id="sfc_row" direction="horizontal" spacing="20" align="start">
+      <card>
+        <label id="c1_title" slot="header" text="First card" size="lg" />
+        <text id="c1_body" content="The title above went to the header slot; this went to the default slot." />
+        <labeled-button id="btn_a" label="Press me" />
+      </card>
+      <card>
+        <label id="c2_title" slot="header" text="Second card" size="lg" />
+        <text id="c2_body" content="A second instance, sharing the same .nemo definition." />
+        <labeled-button id="btn_b" label="And me" />
+      </card>
+      <card>
+        <label id="c3_title" slot="header" text="Prop defaults" size="lg" />
+        <text id="c3_body" content="This button omits label and variant — both come from the SFC's declared prop defaults." />
+        <labeled-button id="btn_c" />
+      </card>
+    </stack>
+
+    <!-- Static n:for (compile-time): expanded from a literal array. -->
+    <card>
+      <label id="c5_title" slot="header" text="Static n:for" size="lg" />
+      <text id="c5_body" content="The chips below are expanded at compile time from a literal array with n:for." />
+      <stack direction="horizontal" spacing="8">
+        <label id="chip" n:for="tag in ['config', 'sfc', 'runtime']" n:key="tag"
+               text="#${tag}" background="theme.muted" padding="6" rounded="md" />
+      </stack>
+    </card>
+
+    <!-- n:if (compile-time binding): visible while data.ui.show_details == 'yes'. -->
+    <card>
+      <label id="c6_title" slot="header" text="Conditional with n:if" size="lg" />
+      <text id="c6_body" content="The details panel below is shown only while data.ui.show_details == 'yes'." />
+      <button id="btn_toggle" label="Toggle details" variant="primary" on-click="on_toggle_details" />
+      <panel id="details" n:if="data.ui.show_details == 'yes'"
+             background="theme.muted" padding="12" rounded="md">
+        <text id="details_text" content="Now you see me. Toggle again and n:if hides this whole panel." />
+      </panel>
+    </card>
+
+    <!-- Live-data n:for (runtime): one row per task in data.tasks. -->
+    <card>
+      <label id="c7_title" slot="header" text="Live-data n:for" size="lg" />
+      <text id="c7_body" content="One row per task in data.tasks. Add/Remove create and tear down instances." />
+      <stack id="task_list" n:for="task in data.tasks" n:key="task.id"
+             direction="horizontal" spacing="8">
+        <label text="•" />
+        <text content="${task.name}" />
+      </stack>
+      <stack direction="horizontal" spacing="8">
+        <button id="btn_add_task" label="Add task" variant="primary" on-click="on_add_task" />
+        <button id="btn_remove_task" label="Remove task" variant="secondary" on-click="on_remove_task" />
+        <button id="btn_reverse_tasks" label="Reverse" variant="secondary" on-click="on_reverse_tasks" />
+      </stack>
+    </card>
+  </stack>
+</template>

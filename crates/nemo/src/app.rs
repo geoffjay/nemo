@@ -503,7 +503,7 @@ impl App {
                 div()
                     .text_t(FontSize::Lg)
                     .text_color(cx.theme().colors.muted_foreground)
-                    .child("Configure your application in app.xml"),
+                    .child("Configure your application in app.nemo"),
             )
             .into_any_element()
     }
@@ -767,6 +767,16 @@ impl App {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> AnyElement {
+        // `n:if` / `visible` binding: a component whose `visible` property is
+        // explicitly `false` renders as an empty element (occupies no space).
+        if component
+            .properties
+            .get("visible")
+            .and_then(|v| v.as_bool())
+            == Some(false)
+        {
+            return div().into_any_element();
+        }
         let element = match component.component_type.as_str() {
             "stack" => {
                 let children = self.render_children(component, components, entity_id, window, cx);

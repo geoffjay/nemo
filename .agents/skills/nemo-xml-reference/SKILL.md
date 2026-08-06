@@ -1,11 +1,16 @@
 ---
 name: nemo-xml-reference
-description: Complete XML configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo XML config files.
+description: Complete configuration reference for Nemo applications including all component types, properties, data sources, expressions, bindings, and templates. Use when writing or debugging Nemo config files (app.nemo SFC entries and imported .nemo components).
 ---
 
-# Nemo XML Configuration Reference
+# Nemo Configuration Reference
 
-Use this skill when writing, modifying, or debugging Nemo XML configuration files.
+Use this skill when writing, modifying, or debugging Nemo configuration files.
+The application entry is an `app.nemo` SFC. Legacy `app.xml` entries are no
+longer supported — the loader rejects them. In `app.nemo` the layout tree lives
+in a `<template name="app">` body and app-level blocks (`<app>`, `<data>`,
+`<imports>`, `<variable>`, `<templates>`, `<include>`) appear at the top level
+(no `<nemo>` wrapper). XML remains valid only inside `<include>` fragments.
 
 ## Document Structure
 
@@ -47,31 +52,6 @@ Use this skill when writing, modifying, or debugging Nemo XML configuration file
 
 Top-level blocks are order-tolerant. `<themes>`, `<imports>`/`<components>`, and
 routing primitives are documented in their own sections below.
-
-## Header bar (`<header-bar>`)
-
-The title-bar chrome at the top of the window. All contents are opt-in:
-
-```xml
-<header-bar github-url="https://github.com/you/app" theme-toggle="true">
-  <menu-item label="Preferences" icon="settings" on-click="open_prefs" />
-  <menu-item label="Documentation" icon="book" on-click="open_docs" />
-  <menu-item separator="true" />
-  <menu-item label="About" icon="info" on-click="show_about" />
-</header-bar>
-```
-
-| Attribute / child | Description |
-|-------------------|-------------|
-| `github-url` | Optional external link shown as an icon on the right. |
-| `theme-toggle` | `true` shows the light/dark toggle icon on the right. |
-| `<menu-item>` children | **Opt-in** dropdown menu. When any `<menu-item>` is present, a hamburger icon appears on the **far left** (before the title) and opens a native dropdown built from these items. |
-
-`<menu-item>` attributes: `label` (entry text), `icon` (optional Lucide icon
-name), `on-click` (handler name), `separator="true"` (renders a divider instead
-of a clickable entry — no `label`/`on-click` needed). Handlers receive the
-standard `(component_id, event_data)`; `component_id` is `"header-bar"` and
-`event_data` is `"click"`.
 
 ## Themes
 
@@ -142,8 +122,6 @@ Expressions use `${...}` in attribute values:
 <data>
   <source name="ticker" type="timer" interval="1" />                 <!-- tick every 1 second -->
   <source name="api" type="http" url="https://api.example.com" interval="30" />  <!-- poll every 30 seconds -->
-  <source name="secure" type="http" url="https://api.example.com/me"
-          headers='{"Authorization":"Bearer ${env.API_TOKEN}"}' />  <!-- headers: object or JSON string; ${env.X}/${var.x} resolved at load -->
   <source name="live" type="websocket" url="ws://localhost:8080" />
   <source name="events" type="mqtt" url="mqtt://localhost:1883" topic="sensors/#" />
   <source name="cache" type="redis" url="redis://localhost:6379" channel="updates" />
@@ -301,7 +279,7 @@ fn handleClick(component_id, event_data) {
 ]]></script>
 ```
 
-Used in `app.xml`:
+Used in `app.nemo`:
 
 ```xml
 <labeled-button label="Save" />        <!-- ${label} → "Save"; variant → default "primary" -->
@@ -365,6 +343,46 @@ sizes drop `px` (`20px`→`20`), colors stay strings (incl. `theme.*`).
 * **Two `${}` systems.** SFC props use bare `${label}` (runtime interpolation,
   string-only), distinct from load-time `${var.x}`/`${env.x}`. Data still flows
   through `bind-*`/`<binding>`.
+
+## Control-Flow Directives (`n:for` / `n:if` / `n:key`)
+
+Vue-style namespaced attributes for conditionals and iteration on any template
+element (layout, `<template>`, or a `.nemo` SFC template). Resolved by a compile
+pass before layout building.
+
+```xml
+<!-- n:if — conditionally show a component -->
+<panel n:if="data.api.status == 'error'">
+  <label text="Something went wrong" />
+</panel>
+
+<!-- n:for over a static literal array (compile-time) -->
+<tab-item n:for="tab in ['home', 'settings', 'about']" n:key="tab"
+          label="${tab}" />
+
+<!-- n:for over a live data source (runtime) -->
+<card n:for="user in data.api.users" n:key="user.id">
+  <label slot="header" text="${user.name}" />
+  <text content="${user.email}" />
+</card>
+```
+
+| Directive | When | Compiles to |
+|-----------|------|-------------|
+| `n:if="path"` | compile-time | `bind-visible` on `path`'s truthiness |
+| `n:if="path == 'x'"` (or `!=`) | compile-time | a `visible` binding with a comparison transform |
+| `n:for="i in ['a','b']"` (literal array) | compile-time | N sibling nodes, `${i}`/`${i.field}` substituted |
+| `n:for="i in data.x.y"` (`data.*` path) | runtime | a list container the runtime grows/shrinks as the array changes |
+
+* **`n:key`** gives loop items stable identity — keyed instances keep their
+  state across reorders; unkeyed items match by index (state lost on reorder).
+  Static-expansion ids are suffixed `_<index>` or `_<key>`.
+* **`${item}` / `${item.field}`** inside the loop body reference the current
+  item; for live-data `n:for` these become per-instance data bindings.
+* **`n:for` + `n:if`** on one element: `n:for` wins; the `n:if` is evaluated per
+  instance.
+* Condition syntax is a **source path** or an `==`/`!=` **comparison** against a
+  string/number/bool literal — not a full expression.
 
 ## Routing (`<router>` / `<route>` / `<nav-link>`)
 
@@ -505,6 +523,41 @@ Required: `name`. Uses Lucide icon names.
 ### image
 ```xml
 <image id="logo" src="https://example.com/image.png" alt="Logo" />
+```
+
+### svg
+Renders SVG vector graphics either from a file/URL or from embedded standard
+SVG markup written inline. `src` (a filesystem path or `http(s)` URL) takes
+precedence; otherwise the inline `<svg>` body is captured verbatim and
+rasterized. Optional `width`/`height` set the render size (px); otherwise the
+SVG's intrinsic size is used.
+```xml
+<!-- From a file (relative paths resolve against the config file's directory) -->
+<svg id="logo" src="assets/logo.svg" width="120" height="120" />
+
+<!-- Embedded standard SVG markup (nested elements, gradients, text, and
+     hyphenated attributes are all preserved) -->
+<svg id="badge" width="64" height="64" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="40" fill="#4c566a" stroke="#eceff4" stroke-width="4" />
+</svg>
+```
+
+`on-click` and `on-hover` make the SVG interactive. Because the graphic
+rasterizes to a single image, its child elements (`<path>`, `<circle>`, ...)
+are not individually hit-testable — the handler fires for the SVG as a whole.
+To recolor, scale, or rotate, rewrite the whole markup from the handler:
+`set_component_property(id, "content", "<svg…>")` (or swap `src`); it
+re-rasterizes on the next render.
+
+| Event | `event_data` |
+|-------|-------------|
+| `on-click` | `"click"` |
+| `on-hover` | `"hover"` (enter), `"hover_end"` (leave) |
+```xml
+<svg id="badge" width="64" height="64" viewBox="0 0 100 100"
+     on-click="recolor" on-hover="highlight">
+  <circle cx="50" cy="50" r="40" fill="#4c566a" />
+</svg>
 ```
 
 ### progress
@@ -815,7 +868,7 @@ against it consistently.
 ```toml
 # nemo.toml — an application project
 name = "my-app"
-entry = "app.xml"          # the config the app launches
+entry = "app.nemo"         # the SFC entry the app launches
 
 [build]
 out = "dist"               # build output directory

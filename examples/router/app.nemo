@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <!-- Page Router -->
 <!-- Demonstrates the chrome-free <router>/<route>/<nav-link> primitive:        -->
 <!--   * a top nav bar of declarative <nav-link>s (no handler needed),          -->
@@ -7,7 +6,6 @@
 <!--   * a nested <router> inside the /settings route,                          -->
 <!--   * an on-enter lifecycle hook, and                                        -->
 <!--   * a "*" not-found fallback.                                              -->
-<nemo>
   <app title="Nemo Router Demo">
     <window title="Router Demo" width="900" height="640">
       <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/router"
@@ -18,7 +16,7 @@
 
   <script src="./scripts" />
 
-  <layout type="stack">
+  <template name="app">
     <stack id="root" direction="vertical" flex="1">
 
       <!-- Declarative navigation: each link navigates its router to a route
@@ -82,5 +80,4 @@
 
       </router>
     </stack>
-  </layout>
-</nemo>
+  </template>

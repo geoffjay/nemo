@@ -21,7 +21,7 @@ Live data streaming with NATS, real-time charts, and plugin-computed rolling sta
                                   │  └──────────┬─────────────┘  │
                                   │             │                │
                                   │  ┌──────────▼─────────────┐  │
-                                  │  │ Dashboard (app.xml)    │  │
+                                  │  │ Dashboard (app.nemo)    │  │
                                   │  │ - Area charts          │  │
                                   │  │ - Stats labels         │  │
                                   │  │ - Summary table        │  │
@@ -61,7 +61,7 @@ Live data streaming with NATS, real-time charts, and plugin-computed rolling sta
 4. Launch the dashboard:
 
    ```sh
-   cargo run -p nemo -- --app-config examples/data-streaming/app.xml -e target/debug
+   cargo run -p nemo -- --app-config examples/data-streaming/app.nemo -e target/debug
    ```
 
 5. Stop streaming:

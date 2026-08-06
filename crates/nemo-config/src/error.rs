@@ -27,6 +27,17 @@ pub enum ConfigError {
     /// Schema not found.
     #[error("Schema not found: {name}")]
     SchemaNotFound { name: String },
+
+    /// An `.xml` file was passed as an application entry. `app.xml` entries are
+    /// deprecated in favor of `app.nemo` SFC entries; XML remains valid only
+    /// inside `<include>` fragments.
+    #[error(
+        "'{path}' is an app.xml entry, which is no longer supported. \
+         Rename it to an app.nemo SFC entry (remove the <nemo> wrapper, move the \
+         <layout> body into <template name=\"app\">). XML is still valid inside \
+         <include> fragments."
+    )]
+    DeprecatedXmlEntry { path: String },
 }
 
 /// Error during configuration parsing.

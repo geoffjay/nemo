@@ -98,3 +98,28 @@ params into the repository at `data.route.<id>.path` and
 `data.route.<id>.params.*` and flags those paths dirty — so pages read them via
 `get_data("route.<id>.params.x")` and `<binding source="data.route.<id>.params.x">`
 propagates them like any other data change. See [routing](../patterns/routing.md).
+
+**Runtime component creation** reuses the same signal.
+`create_component`/`create_component_with_id`/`update_component`/`remove_component`
+take the `LayoutManager` write lock, mutate the component tree, then set
+`data_dirty` and notify — so the next poll tick snapshots the new tree and
+re-renders. No new wake-up mechanism. See
+[runtime component creation](../patterns/runtime-component-creation.md).
+
+# List bindings (runtime `n:for`)
+
+A template element with `n:for` over a `data.*` source compiles to a **list
+container** carrying a `list_binding` spec (`{ source, item_var, key, template }`);
+see [control-flow directives](configuration.md#control-flow-directives-nfor--nif).
+`LayoutManager` owns a `ListBindingManager` (`crates/nemo-layout/src/list_binding.rs`)
+that registers each container by source path. `apply_pending_data_updates` calls
+`LayoutManager::on_list_data_changed(path, value)` **after** the scalar
+`on_data_changed` pass: it diffs the new array against the container's current
+instance ids and expands/tears down instances via the same
+`insert_component`/`remove_component` primitives as
+[runtime component creation](../patterns/runtime-component-creation.md). With
+`n:key`, persisted items match by key value and keep their state (e.g. an
+input's caret); without a key, items match by index (state lost on reorder).
+Per-item `${item.field}` placeholders become ordinary per-instance bindings, so
+a list instance propagates like any scalar binding. Structural changes ride the
+existing `data_dirty`/`data_notify`/`cx.notify()` signal — no new wake-up.

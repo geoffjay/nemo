@@ -14,8 +14,9 @@ It is authored by people and agents and meant to be read by both.
 ## For agents (policy)
 
 This section is the single source of truth for how agents (Claude Code,
-opencode, and others) should use this knowledge base. Tooling injects it into
-context automatically (Claude via a `SessionStart` hook, opencode via the
+oh-my-pi, opencode, and others) should use this knowledge base. Tooling
+injects it into context automatically (Claude Code via a `SessionStart` hook,
+oh-my-pi via the `.omp/extensions/kb-hooks.ts` extension, opencode via the
 `instructions` config), so it does not depend on `CLAUDE.md`/`AGENTS.md` being
 picked up.
 
@@ -61,7 +62,8 @@ to touch the KB on every edit.
 * [Three-tier extension model with a unified PluginContext](decisions/three-tier-extensions.md) - Rhai, native cdylib, and WASM plugins share one host API.
 * [cargo audit ignores transitive advisories we cannot upgrade](decisions/audit-ignore-transitive-advisories.md) - .cargo/audit.toml ignores advisories pinned via the gpui/wasmtime deps; wasmtime upgrade tracked.
 * [nemo screenshot uses gpui's test-support render-to-image path](decisions/screenshot-via-test-support-feature.md) - opt-in `screenshot` feature enables offscreen capture; macOS-first, additive to Cargo.lock.
-* [Screenshots target macOS; Windows out of scope](decisions/screenshots-windows-out-of-scope.md) - macOS-first; Linux best-effort/deferred, Windows out of scope.
+* [The application entry is a `.nemo` SFC (not `app.xml`)](decisions/app-nemo-sfc-entry.md) - `app.nemo` is an SFC compiled at build time; supersedes the XML entry decision. Build output is compiled (not `dist/app.xml`).
+* [Control-flow directives use `n:for`/`n:if`; `n:for` evaluates over live data](decisions/control-flow-directives.md) - Vue-style namespaced attributes; `n:if` is compile-time, `n:for` over live data is a runtime list-binding expansion.
 
 ## Patterns
 
@@ -84,13 +86,15 @@ to touch the KB on every edit.
 * [Devtools inspector](plans/devtools-inspector.md) - what a nemo-devtools crate would take; the introspection surfaces already exist, in-process panel recommended over an external client.
 * [Design tokens and active redesign](plans/design-tokens.md) - centralized spacing/radius/typography/semantic-color tokens (gpui-free `nemo-tokens` crate); full chrome migration with screenshot verification.
 * [Design-system export](plans/design-system-export.md) - `cargo xtask design-export` emits tokens + themes + component structure as a pencil.dev-friendly JSON intermediate.
-* [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext.
+* [Runtime component creation](plans/runtime-component-creation.md) - let handlers/scripts create and remove built-in component instances at runtime, via Rhai and PluginContext. **Implemented** — see [runtime component creation](patterns/runtime-component-creation.md).
 * [Page router](plans/page-router.md) - a general chrome-free `<router>`/`<route>` primitive (URL-path routes + params, history, lifecycle hooks, nested routers, `navigate()` Rhai API) replacing the fragile visibility-toggle page-switching pattern. **Implemented** — see [routing](patterns/routing.md).
-* [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery. **Phase 0–4 implemented** — see [single-file components](patterns/single-file-components.md).
-* [Raw-text `.nemo` parser](plans/sfc-raw-text-parser.md) - a parser-layer pre-splitter treating `<script>`/`<style>` as HTML-style raw-text so `.nemo` SFC bodies no longer need `<![CDATA[…]]>`; independent of every other SFC/build phase. **Planned** (was SFC Phase 6).
+* [Single-file components (`.nemo` SFCs)](plans/sfc-components.md) - a Vue-like `<template>`/`<style>`/`<script>` file, imported and used as a custom tag, implemented by expanding onto the existing template machinery. **Phases 0–4 + Phase 6 (raw-text parser) implemented** — see [single-file components](patterns/single-file-components.md).
+* [Raw-text `.nemo` parser](plans/sfc-raw-text-parser.md) - a parser-layer pre-splitter treating `<script>`/`<style>` as HTML-style raw-text so `.nemo` SFC bodies no longer need `<![CDATA[…]]>`; independent of every other SFC/build phase. **Implemented** (was SFC Phase 6) — `split_sfc_blocks` pre-splits before `quick-xml`; `examples/sfc/*.nemo` are the CDATA-free reference.
 * [Scope nested routers inside SFCs](plans/router-in-sfc-scoping.md) - a `<router>` nested in an SFC `<template>` has its id scoped per instance, but `<nav-link router=>` (static rewrite at scope time) and Rhai `navigate()` (instance-relative runtime resolution) targets are not — a latent break. **Planned / not implemented.**
 * [Multi-target output via crepuscularity View IR](plans/crepuscularity-multi-target.md) - reach mobile/TUI/web by lowering Nemo's `BuiltComponent` tree into crepuscularity's View IR (`IR_VERSION=7`) as an export target — NOT by adopting `.crepus` as input or swapping its GPUI runtime. Recommends vendoring the IR serde structs (avoids the gpui git-pin drift), flags coverage of Nemo's dashboard components as the go/no-go gate. **Research/design; not implemented.**
 * [Build system](plans/build-system.md) - a `nemo build` command with a `nemo.toml` manifest, compiled `.nemo` component artifacts, opt-in `dist/` project builds, and Go-style remote component libraries in `.nemo/packages`; expands and supersedes SFC "Phase 5". **Implemented** (all phases): `nemo.toml` manifest + project-root discovery + manifest-aware launch; `nemo build` compiles a `.nemo` file / `[package]` library to JSON artifacts and builds an app project to a loadable `dist/` (`--dist` / `load = "dist"` loads it); `nemo get` fetches remote `github.com/…` component libraries (git) into `.nemo/packages` pinned by `nemo.lock`, and module `<import>`s resolve against the cache.
+* [Control-flow directives (`n:for`/`n:if`) in `.nemo` templates](plans/control-flow-directives.md) - Vue-style namespaced attributes for iteration and conditionals. `n:if` and static `n:for` are compile-time; `n:for` over live data is a runtime list-binding expansion. **Implemented** (all phases): `compile_directives` in `nemo-config/src/directives.rs`; `ListBindingManager` in `nemo-layout/src/list_binding.rs`.
+* [`app.nemo` SFC as the project entry](plans/app-nemo-sfc-entry.md) - make the application entry a `.nemo` SFC (not `app.xml`), compiled at build time. Extends the SFC structure with app-level blocks, changes the manifest default, wires compile-into-load, and migrates the toolchain. **Implemented** (all phases): `SfcDefinition` app-level blocks + `compile_app_sfc`; manifest default → `app.nemo`; `ConfigurationLoader::load` dispatches `.nemo` (shared by build/validate/schema/load_config); dev/watch accepts `.nemo`; settings persist to `overrides.xml`; templates/examples/docs migrated.
 
 ## References
 

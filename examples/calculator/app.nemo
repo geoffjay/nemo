@@ -1,19 +1,20 @@
-<nemo>
-  <variable name="button_height" type="int" default="${var.button_height}" />
+<!-- examples/calculator/app.nemo — SFC entry equivalent to app.xml. -->
+<variable name="button_height" type="int" default="${var.button_height}" />
 
-  <app title="Nemo Calculator">
-    <window title="Calculator" width="320" height="480" min-width="280" min-height="400">
-      <header-bar
-        github-url="https://github.com/geoffjay/nemo/tree/main/examples/calculator"
-        theme-toggle="true"
-      />
-    </window>
-    <theme name="kanagawa" font-family="Menlo" mode="dark" />
-  </app>
+<app title="Nemo Calculator">
+  <window title="Calculator" width="320" height="480" min-width="280" min-height="400">
+    <header-bar
+      github-url="https://github.com/geoffjay/nemo/tree/main/examples/calculator"
+      theme-toggle="true"
+    />
+  </window>
+  <theme name="kanagawa" font-family="Menlo" mode="dark" />
+</app>
 
-  <script src="./scripts" />
+<script src="./scripts" />
 
-  <layout type="stack">
+<template name="app">
+  <stack id="root" direction="vertical" spacing="6" padding="8">
     <!-- Display showing current input and result -->
     <panel id="display" margin="8" rounded="full">
       <label id="display_result" text="0" margin="16" />
@@ -60,5 +61,5 @@
         <button id="btn_equals" label="=" flex="1" rounded="full" min-height="${var.button_height}" on-click="on_equals" />
       </stack>
     </stack>
-  </layout>
-</nemo>
+  </stack>
+</template>
