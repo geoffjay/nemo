@@ -67,7 +67,7 @@ static PROJECT_THEME_SETS: LazyLock<RwLock<Vec<ThemeSet>>> =
 pub fn register_project_theme_sets(base_dir: &Path, srcs: &[String]) {
     let mut overlay = PROJECT_THEME_SETS
         .write()
-        .expect("project theme sets lock poisoned");
+        .unwrap_or_else(|e| e.into_inner());
     overlay.clear();
 
     for src in srcs {
@@ -126,7 +126,7 @@ fn pair_from_variants(variants: &[ThemeConfig]) -> Option<(ThemeConfig, ThemeCon
 fn resolve_pair_from_overlay(name_lower: &str) -> Option<(ThemeConfig, ThemeConfig)> {
     let sets = PROJECT_THEME_SETS
         .read()
-        .expect("project theme sets lock poisoned");
+        .unwrap_or_else(|e| e.into_inner());
 
     for set in sets.iter() {
         if set.name.to_lowercase() == name_lower {

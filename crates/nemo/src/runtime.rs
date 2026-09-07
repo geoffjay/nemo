@@ -235,7 +235,7 @@ impl NemoRuntime {
         let mut ext = self
             .extension_manager
             .write()
-            .expect("extension_manager lock poisoned");
+            .unwrap_or_else(|e| e.into_inner());
         ext.add_script_path(dir.join("scripts"));
         ext.add_plugin_path(dir.join("plugins"));
         ext.add_wasm_path(dir.join("wasm-plugins"));
@@ -278,7 +278,7 @@ impl NemoRuntime {
             let loaded = self.apply_settings_overlay(loaded);
 
             {
-                let mut config = self.config.write().expect("config lock poisoned");
+                let mut config = self.config.write().unwrap_or_else(|e| e.into_inner());
                 *config = loaded;
             }
         } else {
@@ -349,7 +349,7 @@ impl NemoRuntime {
             // Build allowed plugin set from config (<plugins> block).
             // If absent, no plugins are loaded. Plugins with load="false" are skipped.
             let allowed_plugins: HashSet<String> = {
-                let config = self.config.read().expect("config lock poisoned");
+                let config = self.config.read().unwrap_or_else(|e| e.into_inner());
                 config
                     .get("app")
                     .and_then(|app| app.get("plugins"))
@@ -376,7 +376,7 @@ impl NemoRuntime {
             let ext = self
                 .extension_manager
                 .read()
-                .expect("extension_manager lock poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             let manifests = ext.discover().unwrap_or_default();
             info!("Discovered {} extensions", manifests.len());
             drop(ext);
@@ -384,7 +384,7 @@ impl NemoRuntime {
             let mut ext = self
                 .extension_manager
                 .write()
-                .expect("extension_manager lock poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             for manifest in manifests {
                 match manifest.extension_type {
                     nemo_extension::ExtensionType::Script => {
@@ -458,7 +458,7 @@ impl NemoRuntime {
     /// Loads scripts specified in configuration.
     fn load_scripts_from_config(&self) -> Result<()> {
         let scripts_config = {
-            let config = self.config.read().expect("config lock poisoned");
+            let config = self.config.read().unwrap_or_else(|e| e.into_inner());
             config.get("scripts").cloned()
         };
 
@@ -490,7 +490,7 @@ impl NemoRuntime {
                 let mut ext = self
                     .extension_manager
                     .write()
-                    .expect("extension_manager lock poisoned");
+                    .unwrap_or_else(|e| e.into_inner());
                 ext.apply_rhai_features(features);
             }
 
@@ -511,7 +511,7 @@ impl NemoRuntime {
                     let mut ext = self
                         .extension_manager
                         .write()
-                        .expect("extension_manager lock poisoned");
+                        .unwrap_or_else(|e| e.into_inner());
                     ext.add_script_path(&scripts_path);
 
                     // Load all .rhai files in the directory
@@ -551,7 +551,7 @@ impl NemoRuntime {
                             let mut ext = self
                                 .extension_manager
                                 .write()
-                                .expect("extension_manager lock poisoned");
+                                .unwrap_or_else(|e| e.into_inner());
                             match ext.load_script(&script_path) {
                                 Ok(id) => info!("Loaded script: {}", id),
                                 Err(e) => {
@@ -570,7 +570,7 @@ impl NemoRuntime {
         // The `sfc:` prefix keeps a single colon so `call_handler`'s first-`::`
         // split resolves `sfc:<tag>::<fn>` to (script_id=`sfc:<tag>`, fn).
         let sfc_scripts: Vec<(String, String)> = {
-            let config = self.config.read().expect("config lock poisoned");
+            let config = self.config.read().unwrap_or_else(|e| e.into_inner());
             config
                 .get("sfc")
                 .and_then(|v| v.as_object())
@@ -590,7 +590,7 @@ impl NemoRuntime {
             let mut ext = self
                 .extension_manager
                 .write()
-                .expect("extension_manager lock poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             for (tag, source) in sfc_scripts {
                 let id = format!("sfc:{}", tag);
                 match ext.load_script_source(&id, &source) {
@@ -617,7 +617,7 @@ impl NemoRuntime {
             let mut ext = self
                 .extension_manager
                 .write()
-                .expect("extension_manager lock poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             ext.register_context(Arc::clone(&context));
 
             // Register HTTP request functions so RHAI scripts can make
@@ -683,7 +683,7 @@ impl NemoRuntime {
 
     /// Gets a configuration value by path.
     pub fn get_config(&self, path: &str) -> Option<Value> {
-        let config = self.config.read().expect("config lock poisoned");
+        let config = self.config.read().unwrap_or_else(|e| e.into_inner());
         get_nested_value(&config, path).cloned()
     }
 
@@ -714,7 +714,7 @@ impl NemoRuntime {
         let mut ext = self
             .extension_manager
             .write()
-            .expect("extension_manager lock poisoned");
+            .unwrap_or_else(|e| e.into_inner());
         match ext.call_script::<()>(
             script_id,
             function_name,
@@ -735,7 +735,7 @@ impl NemoRuntime {
             let ext = self
                 .extension_manager
                 .read()
-                .expect("extension_manager lock poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             ext.plugin_templates()
                 .iter()
                 .map(|(name, pv)| (name.clone(), plugin_value_to_config_value(pv.clone())))
@@ -743,8 +743,13 @@ impl NemoRuntime {
         };
 
         let layout_config = {
+<<<<<<< HEAD
             let config = self.config.read().expect("config lock poisoned");
             parse_layout_config(&config, &extra_templates, Some(&self.registry))
+=======
+            let config = self.config.read().unwrap_or_else(|e| e.into_inner());
+            parse_layout_config(&config, &extra_templates)
+>>>>>>> 6be6043 (fix: Recover from lock poisoning instead of panicking)
         };
 
         if let Some(layout_config) = layout_config {
@@ -755,14 +760,14 @@ impl NemoRuntime {
 
             self.layout_manager
                 .write()
-                .expect("layout_manager lock poisoned")
+                .unwrap_or_else(|e| e.into_inner())
                 .apply_layout(layout_config)
                 .map_err(|e| anyhow::anyhow!("Failed to apply layout: {}", e))?;
 
             let component_count = self
                 .layout_manager
                 .read()
-                .expect("layout_manager lock poisoned")
+                .unwrap_or_else(|e| e.into_inner())
                 .component_count();
             info!("Layout applied with {} components", component_count);
         } else {
@@ -775,7 +780,7 @@ impl NemoRuntime {
     /// Parses data source configuration and registers sources with the DataFlowEngine.
     fn setup_data_sources(&self) -> Result<()> {
         let data_config = {
-            let config = self.config.read().expect("config lock poisoned");
+            let config = self.config.read().unwrap_or_else(|e| e.into_inner());
             config.get("data").cloned()
         };
 
@@ -1047,7 +1052,7 @@ impl NemoRuntime {
     /// `default_path`. Called from the render pass.
     pub fn router_current_path(&self, router_id: &str, default_path: &str) -> String {
         {
-            let states = self.router_states.read().expect("router_states poisoned");
+            let states = self.router_states.read().unwrap_or_else(|e| e.into_inner());
             if let Some(st) = states.get(router_id) {
                 if let Some(path) = st.history.get(st.index) {
                     return path.clone();
@@ -1057,7 +1062,7 @@ impl NemoRuntime {
         let init_path = self
             .initial_path_for(router_id)
             .unwrap_or_else(|| default_path.to_string());
-        let mut states = self.router_states.write().expect("router_states poisoned");
+        let mut states = self.router_states.write().unwrap_or_else(|e| e.into_inner());
         // A concurrent render may have raced us to initialize this router; only
         // the render that actually seeds the state owes the initial `on-enter`.
         if !states.contains_key(router_id) {
@@ -1205,7 +1210,7 @@ impl NemoRuntime {
         params: &HashMap<String, String>,
     ) {
         let needs = {
-            let states = self.router_states.read().expect("router_states poisoned");
+            let states = self.router_states.read().unwrap_or_else(|e| e.into_inner());
             match states.get(router_id) {
                 Some(st) => !st.projected || &st.params != params,
                 None => true,
@@ -1223,7 +1228,7 @@ impl NemoRuntime {
     /// caller re-renders).
     pub fn apply_pending_navigations(&self) -> bool {
         let intents: Vec<NavIntent> = {
-            let mut q = self.nav_intents.lock().expect("nav_intents poisoned");
+            let mut q = self.nav_intents.lock().unwrap_or_else(|e| e.into_inner());
             if q.is_empty() {
                 return false;
             }
@@ -1249,7 +1254,7 @@ impl NemoRuntime {
             let mut q = self
                 .roundness_intents
                 .lock()
-                .expect("roundness_intents poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             std::mem::take(&mut *q)
         };
         pending.into_iter().next_back()
@@ -1268,7 +1273,7 @@ impl NemoRuntime {
             let mut q = self
                 .pending_initial_enters
                 .lock()
-                .expect("pending_initial_enters poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             if q.is_empty() {
                 return false;
             }
@@ -1328,7 +1333,7 @@ impl NemoRuntime {
 
         // Update history/index under the write lock and capture old + new path.
         let (old_path, new_path) = {
-            let mut states = self.router_states.write().expect("router_states poisoned");
+            let mut states = self.router_states.write().unwrap_or_else(|e| e.into_inner());
             let st = states
                 .entry(router_id.clone())
                 .or_insert_with(|| RouterState {
@@ -1399,7 +1404,7 @@ impl NemoRuntime {
     /// Parses sink configuration and stores sink configs.
     fn setup_data_sinks(&self) -> Result<()> {
         let data_config = {
-            let config = self.config.read().expect("config lock poisoned");
+            let config = self.config.read().unwrap_or_else(|e| e.into_inner());
             config.get("data").cloned()
         };
 

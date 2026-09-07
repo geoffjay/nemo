@@ -71,7 +71,7 @@ impl SettingsView {
         let plugin_pages = runtime
             .extension_manager
             .read()
-            .expect("extension_manager lock poisoned")
+            .unwrap_or_else(|e| e.into_inner())
             .plugin_settings_pages()
             .to_vec();
 
@@ -317,7 +317,7 @@ impl SettingsView {
         let entity = cx.entity();
 
         let (cur_theme, cur_mode) = {
-            let cfg = self.nemo_config.lock().expect("nemo_config lock poisoned");
+            let cfg = self.nemo_config.lock().unwrap_or_else(|e| e.into_inner());
             (
                 cfg.app.theme_name.clone(),
                 cfg.app
@@ -334,7 +334,7 @@ impl SettingsView {
             Rc::new(move |sel, window, cx| {
                 let name_lc = sel.to_lowercase();
                 let mode = {
-                    let c = cfg.lock().expect("nemo_config lock poisoned");
+                    let c = cfg.lock().unwrap_or_else(|e| e.into_inner());
                     c.app
                         .theme_mode
                         .clone()
@@ -360,7 +360,7 @@ impl SettingsView {
             let entity = entity.clone();
             Rc::new(move |sel, window, cx| {
                 let name = {
-                    let c = cfg.lock().expect("nemo_config lock poisoned");
+                    let c = cfg.lock().unwrap_or_else(|e| e.into_inner());
                     c.app.theme_name.clone()
                 };
                 if name != "default" {

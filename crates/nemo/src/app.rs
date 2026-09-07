@@ -464,7 +464,7 @@ impl App {
                 .runtime
                 .layout_manager
                 .read()
-                .expect("layout_manager lock poisoned");
+                .unwrap_or_else(|e| e.into_inner());
             let root_id = layout_manager.root_id();
             let components: HashMap<String, BuiltComponent> = layout_manager
                 .component_ids()
