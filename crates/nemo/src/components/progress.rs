@@ -1,5 +1,6 @@
 use gpui::*;
 use gpui_kit::component::progress::Progress as GpuiProgress;
+use nemo_layout::BuiltComponent;
 use nemo_macros::NemoComponent;
 
 /// A progress bar component.
@@ -22,6 +23,8 @@ pub struct Progress {
     value: Option<f64>,
     #[property(default = 100.0)]
     max: f64,
+    #[source]
+    source: BuiltComponent,
 }
 
 impl RenderOnce for Progress {
@@ -32,6 +35,10 @@ impl RenderOnce for Progress {
         } else {
             0.0
         };
-        GpuiProgress::new("progress").value(percentage)
+        // Unique element id per instance (XML `id`) — required for gpui state
+        // (the animated value) and a11y node ids, which hash the element path.
+        GpuiProgress::new(SharedString::from(self.source.id.clone()))
+            .value(percentage)
+            .accessibility_label(SharedString::from(format!("{}%", percentage.round())))
     }
 }
