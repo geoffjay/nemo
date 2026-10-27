@@ -60,7 +60,7 @@
 
         <!-- Styling page: moved out of the demo router; the shell switches to it. -->
         <page id="styling">
-          <stack direction="vertical" scroll="true" flex="1">
+          <stack direction="vertical" scroll="true" flex="1" padding="20">
             <panel template="content_page">
               <label id="styling_title" text="Styling" size="lg" />
               <text id="styling_desc" content="All components support shared styling attributes via apply_layout_styles: padding, margin, border, shadow, and rounded. These wrap any component in a styled container." />
@@ -216,7 +216,7 @@
         <page id="components">
           <stack id="root_row" direction="horizontal" spacing="0" flex="1" align="stretch">
             <!-- Sidebar -->
-            <panel id="sidebar">
+            <panel id="sidebar" border="0">
               <stack id="sidebar_inner" direction="vertical" spacing="8" padding="16" scroll="true" border-right="1" border-color="theme.border">
                 <!-- Basic -->
                 <label id="cat_basic" text="Basic" size="sm" />
