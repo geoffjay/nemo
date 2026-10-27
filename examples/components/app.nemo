@@ -220,47 +220,47 @@
               <stack id="sidebar_inner" direction="vertical" spacing="8" padding="16" scroll="true" border-right="1" border-color="theme.border">
                 <!-- Basic -->
                 <label id="cat_basic" text="Basic" size="sm" />
-                <nav-link router="main" route="/button" label="Button" />
-                <nav-link router="main" route="/label" label="Label" />
-                <nav-link router="main" route="/icon" label="Icon" />
-                <nav-link router="main" route="/text" label="Text" />
-                <nav-link router="main" route="/image" label="Image" />
-                <nav-link router="main" route="/checkbox" label="Checkbox" />
-                <nav-link router="main" route="/progress" label="Progress" />
                 <nav-link router="main" route="/accordion" label="Accordion" />
                 <nav-link router="main" route="/alert" label="Alert" />
                 <nav-link router="main" route="/avatar" label="Avatar" />
                 <nav-link router="main" route="/badge" label="Badge" />
+                <nav-link router="main" route="/button" label="Button" />
+                <nav-link router="main" route="/checkbox" label="Checkbox" />
                 <nav-link router="main" route="/collapsible" label="Collapsible" />
                 <nav-link router="main" route="/dropdown-button" label="Dropdown Button" />
+                <nav-link router="main" route="/icon" label="Icon" />
+                <nav-link router="main" route="/image" label="Image" />
+                <nav-link router="main" route="/label" label="Label" />
+                <nav-link router="main" route="/progress" label="Progress" />
                 <nav-link router="main" route="/spinner" label="Spinner" />
                 <nav-link router="main" route="/tag" label="Tag" />
+                <nav-link router="main" route="/text" label="Text" />
                 <nav-link router="main" route="/tooltip" label="Tooltip" />
 
                 <!-- Form -->
                 <label id="cat_form" text="Form" size="sm" />
-                <nav-link router="main" route="/input" label="Input" />
-                <nav-link router="main" route="/textarea" label="Textarea" />
                 <nav-link router="main" route="/code-editor" label="Code Editor" />
-                <nav-link router="main" route="/text-editor" label="Text Editor" />
-                <nav-link router="main" route="/select" label="Select" />
+                <nav-link router="main" route="/input" label="Input" />
                 <nav-link router="main" route="/radio" label="Radio" />
+                <nav-link router="main" route="/select" label="Select" />
                 <nav-link router="main" route="/slider" label="Slider" />
                 <nav-link router="main" route="/switch" label="Switch" />
+                <nav-link router="main" route="/text-editor" label="Text Editor" />
+                <nav-link router="main" route="/textarea" label="Textarea" />
                 <nav-link router="main" route="/toggle" label="Toggle" />
 
                 <!-- Layout -->
                 <label id="cat_layout" text="Layout" size="sm" />
-                <nav-link router="main" route="/panel" label="Panel &amp; Stack" />
                 <nav-link router="main" route="/list" label="List" />
-                <nav-link router="main" route="/notification" label="Notification" />
                 <nav-link router="main" route="/modal" label="Modal" />
+                <nav-link router="main" route="/notification" label="Notification" />
+                <nav-link router="main" route="/panel" label="Panel &amp; Stack" />
 
                 <!-- Advanced -->
                 <label id="cat_advanced" text="Advanced" size="sm" />
+                <nav-link router="main" route="/charts" label="Charts" />
                 <nav-link router="main" route="/table" label="Table" />
                 <nav-link router="main" route="/tree" label="Tree" />
-                <nav-link router="main" route="/charts" label="Charts" />
 
                 <!-- Navigation -->
                 <label id="cat_navigation" text="Navigation" size="sm" />
