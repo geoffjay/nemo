@@ -69,7 +69,7 @@ fn build_export(registry: &ComponentRegistry, theme_dir: &Path) -> Result<Design
         nemo_version: env!("CARGO_PKG_VERSION").to_string(),
         note: "Faithful design-system intermediate for pencil.dev; not a .pen file. \
                Tokens from nemo-tokens, components from nemo-registry, theme palettes \
-               parsed verbatim from the theme JSON (absent fields use gpui-component \
+               parsed verbatim from the theme JSON (absent fields use GPUI Kit \
                defaults and are omitted here)."
             .to_string(),
         tokens: build_tokens(),
