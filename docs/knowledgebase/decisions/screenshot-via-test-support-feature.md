@@ -50,13 +50,21 @@ no screen-recording permission, and the window need not be visible.
 
 # Consequences
 
-* **Opt-in only — keep it out of `default`.** `test-support` can change gpui
-  codegen/behavior, so release and normal builds must stay feature-free.
-* **Additive to Cargo.lock, no rev drift.** Enabling the feature added only
-  `proptest` (a **git** dep of gpui's test-support), `proptest-macro`, and
-  `convert_case`; the pinned `zed-industries/zed#3bd9d13…` revision is unchanged.
-  This is a feature-only change and must stay that way — verify `git diff
-  Cargo.lock` after building. See [pin gpui git dep](pin-gpui-git-dep.md).
+* **Opt-in only — keep it out of `default`.** `test-support` changes the gpui
+  build (it now also compiles the Windows `render_to_image` path and is
+  upstream-blessed for production builds), so release and normal builds stay
+  feature-free by policy.
+* **Snapshot-crate reality (2026-10-27+).** With the gpui-kit/gpui-pre stack,
+  enabling the feature pulls the snapshot's `test-support` extras into
+  `Cargo.lock` (proptest and friends from crates.io — no git deps involved).
+  A feature toggle still must not change the pinned snapshot versions; verify
+  `git diff Cargo.lock` only touches feature-only additions. See the
+  [gpui crates.io decision](gpui-kit-crates-io-dep.md).
+* **macOS optimized builds may fail to capture.** The Metal renderer's
+  `framebuffer_only(false)` escape hatch — required for the drawable readback
+  — is now compiled only under `debug_assertions` in the gpui-pre snapshot
+  family (`gpui-pre-apple`). Use a debug-profile build for screenshot runs,
+  or set debug-assertions for that package in a dedicated profile.
 * **Output is at drawable resolution.** The PNG is `logical size × window scale
   factor` — a `--size 1200x800` capture is 2400×1600 on a retina Mac. `--size`
   is logical, not exact pixels.

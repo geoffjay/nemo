@@ -1,10 +1,9 @@
 use gpui::*;
-use gpui_component::label::Label;
-use gpui_component::notification::{Notification as Toast, NotificationType};
-use gpui_component::v_flex;
-use gpui_component::ActiveTheme;
-use gpui_component::Root;
-use gpui_component::WindowExt as _;
+use gpui_kit::component::label::Label;
+use gpui_kit::component::notification::{Notification as Toast, NotificationType};
+use gpui_kit::component::v_flex;
+use gpui_kit::component::ActiveTheme;
+use gpui_kit::component::WindowExt as _;
 use gpui_router::{use_navigate, Route, Routes};
 use notify::{Event, EventKind, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
@@ -62,6 +61,11 @@ pub struct Workspace {
     pub focus_handle: FocusHandle,
     /// Current route path for the router.
     pub current_route: String,
+    /// Launch-time `<router>` starting-path override (`--route`), applied on
+    /// the first render (see [`Workspace::render`]).
+    pub initial_route: Option<String>,
+    /// One-shot flag: apply `initial_route` on the next render.
+    pub pending_initial_route: bool,
     /// The project loader view entity (persists across renders).
     pub loader: Entity<ProjectLoaderView>,
     /// Deferred hot-reload request, set by the `nemo dev` file watcher and
@@ -71,7 +75,7 @@ pub struct Workspace {
     pub(crate) _watcher: Option<notify::RecommendedWatcher>,
     /// Whether the app was launched via `nemo dev` (enables the dev panel).
     pub dev_mode: bool,
-    pub dev_panel_window: Option<WindowHandle<gpui_component::Root>>,
+    pub dev_panel_window: Option<WindowHandle<gpui_kit::component::Root>>,
 }
 
 impl Workspace {
@@ -106,8 +110,7 @@ impl Workspace {
                 self.current_config_path = Some(app_config_path);
                 self.current_route = "/app".to_string();
 
-                use_navigate(cx)("/app".into());
-                window.refresh();
+                use_navigate(window, cx).push("/app");
                 cx.notify();
             }
             Err(e) => {
@@ -207,7 +210,7 @@ impl Workspace {
                 });
                 self.current_route = "/app".to_string();
 
-                use_navigate(cx)("/app".into());
+                use_navigate(window, cx).push("/app");
                 window.refresh();
                 window.push_notification("Configuration reloaded", cx);
                 cx.notify();
@@ -363,7 +366,7 @@ impl Workspace {
     }
 
     fn toggle_theme(&mut self, _: &ToggleTheme, window: &mut Window, cx: &mut Context<Self>) {
-        use gpui_component::{Theme, ThemeMode};
+        use gpui_kit::component::{Theme, ThemeMode};
 
         let current_mode = Theme::global(cx).mode;
         let new_mode = if current_mode == ThemeMode::Dark {
@@ -399,15 +402,15 @@ impl Workspace {
         }
 
         self.current_route = "/app/settings".to_string();
-        use_navigate(cx)("/app/settings".into());
+        use_navigate(window, cx).push("/app/settings");
         window.refresh();
         cx.notify();
     }
 
-    fn close_settings(&mut self, _: &CloseSettings, _window: &mut Window, cx: &mut Context<Self>) {
+    fn close_settings(&mut self, _: &CloseSettings, window: &mut Window, cx: &mut Context<Self>) {
         if self.current_route == "/app/settings" {
             self.current_route = "/app".to_string();
-            use_navigate(cx)("/app".into());
+            use_navigate(window, cx).push("/app");
             cx.notify();
         }
     }
@@ -489,7 +492,7 @@ impl Workspace {
                 size(px(900.), px(650.)),
                 cx,
             ))),
-            titlebar: Some(gpui_component::TitleBar::title_bar_options()),
+            titlebar: Some(gpui_kit::component::TitleBar::title_bar_options()),
             window_decorations: Some(WindowDecorations::Client),
             is_movable: true,
             is_resizable: true,
@@ -499,7 +502,7 @@ impl Workspace {
         };
 
         match cx.open_window(dev_window_options, |window, cx| {
-            cx.new(|cx| gpui_component::Root::new(panel.clone(), window, cx))
+            cx.new(|cx| gpui_kit::component::Root::new(panel.clone(), window, cx))
         }) {
             Ok(handle) => {
                 self.dev_panel_window = Some(handle);
@@ -600,13 +603,27 @@ impl Render for Workspace {
             // Recreate loader so it gets fresh recent projects list
             self.loader = Workspace::create_loader(&self.nemo_config, window, cx);
 
-            use_navigate(cx)("/".into());
+            use_navigate(window, cx).push("/");
             window.refresh();
             window.push_notification("Project closed", cx);
         }
         if self.pending_reload {
             self.pending_reload = false;
             self.perform_reload(window, cx);
+        }
+
+        // Apply the launch `--route` on the first render. gpui-router 0.7
+        // creates a window's router state lazily on the first `Routes` render,
+        // so the initial navigation cannot run before this window has drawn;
+        // deferring from here runs it after this frame's layout has created
+        // the state.
+        if self.pending_initial_route {
+            self.pending_initial_route = false;
+            if let Some(route) = self.initial_route.clone() {
+                window.defer(cx, move |window, cx| {
+                    use_navigate(window, cx).push(route.as_str());
+                });
+            }
         }
 
         let bg_color = cx.theme().colors.background;
@@ -650,7 +667,7 @@ impl Render for Workspace {
             );
         }
 
-        let mut container = v_flex()
+        let container = v_flex()
             .size_full()
             .bg(bg_color)
             .text_color(text_color)
@@ -666,12 +683,9 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::toggle_dev_panel))
             .child(routes);
 
-        if let Some(dialog_layer) = Root::render_dialog_layer(window, cx) {
-            container = container.child(dialog_layer);
-        }
-        if let Some(notification_layer) = Root::render_notification_layer(window, cx) {
-            container = container.child(notification_layer);
-        }
+        // Dialog/notification layers are mounted automatically by the Root
+        // view that wraps this workspace (gpui-kit base Root plugins), so
+        // they must not be rendered here anymore.
 
         container
     }

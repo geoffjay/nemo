@@ -11,13 +11,13 @@ use std::sync::Arc;
 
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::button::{Button, ButtonVariants as _};
-use gpui_component::input::{Input as GpuiInput, InputEvent, InputState};
-use gpui_component::label::Label;
-use gpui_component::list::ListItem;
-use gpui_component::notification::{Notification as Toast, NotificationType};
-use gpui_component::tree::{Tree as GpuiTree, TreeItem, TreeState};
-use gpui_component::{
+use gpui_kit::component::button::{Button, ButtonVariants as _};
+use gpui_kit::component::input::{Editor as GpuiEditor, EditorState, InputEvent};
+use gpui_kit::component::label::Label;
+use gpui_kit::component::list::ListItem;
+use gpui_kit::component::notification::{Notification as Toast, NotificationType};
+use gpui_kit::component::tree::{Tree as GpuiTree, TreeItem, TreeState};
+use gpui_kit::component::{
     h_flex, v_flex, ActiveTheme, Disableable, IconName, Sizable as _, StyledExt, TitleBar,
     WindowExt as _,
 };
@@ -41,7 +41,7 @@ pub struct DevPanel {
     /// Whether the editor has unsaved changes.
     dirty: bool,
     /// The code editor state (syntax-highlighted multi-line input).
-    editor_state: Entity<InputState>,
+    editor_state: Entity<EditorState>,
     /// The file-tree state.
     tree_state: Entity<TreeState>,
     /// The runtime (for future reload coordination after save).
@@ -69,9 +69,8 @@ impl DevPanel {
         // Build the code editor state — start in code-editor mode with HTML
         // highlighting (the default for .nemo/.xml files).
         let editor_state = cx.new(|cx| {
-            InputState::new(window, cx)
-                .multi_line(true)
-                .code_editor("html")
+            EditorState::new(window, cx)
+                .language("html")
                 .line_number(true)
                 .searchable(true)
                 .placeholder("Select a file from the tree to edit…")
@@ -253,7 +252,7 @@ impl Render for DevPanel {
                 .child(
                     h_flex()
                         .gap_2()
-                        .child(gpui_component::Icon::new(icon).size(px(14.)))
+                        .child(gpui_kit::component::Icon::new(icon).size(px(14.)))
                         .child(item.label.clone()),
                 )
         });
@@ -275,7 +274,7 @@ impl Render for DevPanel {
             )
             .child(div().flex_1().overflow_hidden().child(tree));
         // Editor area (center).
-        let editor_input = GpuiInput::new(&self.editor_state).h_full();
+        let editor_input = GpuiEditor::new(&self.editor_state).h(relative(1.0));
         let editor_area = v_flex()
             .flex_1()
             .h_full()
@@ -345,7 +344,7 @@ impl Render for DevPanel {
                         .items_center()
                         .gap_2()
                         .child(
-                            gpui_component::Icon::new(IconName::SquareTerminal)
+                            gpui_kit::component::Icon::new(IconName::SquareTerminal)
                                 .size(px(14.))
                                 .text_color(cx.theme().colors.accent),
                         )

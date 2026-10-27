@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::{
+use gpui_kit::component::{
     button::{Button, ButtonVariants as _},
     h_flex,
     label::Label,

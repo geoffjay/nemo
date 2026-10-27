@@ -66,7 +66,7 @@ pub fn run(args: ScreenshotArgs) -> Result<()> {
     // non-zero (the run loop itself always returns Ok once quit).
     let capture_err: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 
-    let gpui_app = gpui_platform::application().with_assets(gpui_component_assets::Assets);
+    let gpui_app = gpui_platform::application().with_assets(gpui_kit::assets::Assets);
     let capture_err_run = capture_err.clone();
     gpui_app.run(move |cx| {
         let window = build_app_window(cx, params);
@@ -139,7 +139,7 @@ pub fn run(args: ScreenshotArgs) -> Result<()> {
                 // loop fired during the timer yield.
                 let _ = window_any.update(cx, |_, w, cx| {
                     let arena_clear_needed = w.draw(cx);
-                    arena_clear_needed.clear();
+                    arena_clear_needed.clear(cx);
                 });
 
                 if remaining.is_zero() {
@@ -154,7 +154,7 @@ pub fn run(args: ScreenshotArgs) -> Result<()> {
             cx.background_executor().timer(tick).await;
             let _ = window_any.update(cx, |_, w, cx| {
                 let arena_clear_needed = w.draw(cx);
-                arena_clear_needed.clear();
+                arena_clear_needed.clear(cx);
             });
 
             let result: Result<()> = window_any

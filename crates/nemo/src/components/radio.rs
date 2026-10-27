@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::radio::{Radio as GpuiRadio, RadioGroup};
+use gpui_kit::component::radio::{Radio as GpuiRadio, RadioGroup};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 

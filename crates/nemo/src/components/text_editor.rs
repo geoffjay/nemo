@@ -1,7 +1,7 @@
 use gpui::*;
-use gpui_component::button::{Button as GpuiButton, ButtonVariants};
-use gpui_component::input::{Input as GpuiInput, InputState};
-use gpui_component::{h_flex, v_flex, ActiveTheme, Sizable};
+use gpui_kit::component::button::{Button as GpuiButton, ButtonVariants};
+use gpui_kit::component::input::{Textarea as GpuiTextarea, TextareaState};
+use gpui_kit::component::{h_flex, v_flex, ActiveTheme, Sizable};
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
 
@@ -36,13 +36,13 @@ pub struct TextEditor {
     rows: Option<i64>,
     #[property]
     disabled: Option<bool>,
-    input_state: Option<Entity<InputState>>,
+    input_state: Option<Entity<TextareaState>>,
     runtime: Option<Arc<NemoRuntime>>,
     entity_id: Option<EntityId>,
 }
 
 impl TextEditor {
-    pub fn input_state(mut self, state: Entity<InputState>) -> Self {
+    pub fn input_state(mut self, state: Entity<TextareaState>) -> Self {
         self.input_state = Some(state);
         self
     }
@@ -57,7 +57,7 @@ impl TextEditor {
         self
     }
 
-    fn render_toolbar(state: Entity<InputState>) -> impl IntoElement {
+    fn render_toolbar(state: Entity<TextareaState>) -> impl IntoElement {
         h_flex()
             .gap(px(2.))
             .p(px(4.))
@@ -114,14 +114,14 @@ impl RenderOnce for TextEditor {
 
         let disabled = matches!(self.disabled, Some(true));
 
-        let mut input = GpuiInput::new(&state);
+        let mut input = GpuiTextarea::new(&state);
         if disabled {
             input = input.disabled(true);
         }
         // Remove default border/bg — the outer container provides them
         input = input.appearance(false);
 
-        // The GpuiInput multi-line element uses height: 100% + flex_grow,
+        // The Textarea element uses height: 100% + flex_grow,
         // requiring a parent with definite height. Compute from rows.
         let rows = self.rows.unwrap_or(4) as f32;
         let line_height = window.line_height();

@@ -1,26 +1,34 @@
 # cargo-audit configuration.
 #
-# Every advisory ignored below is in a *transitive* dependency that this
-# workspace cannot upgrade on its own — each is pulled in through a pinned git
-# dependency (the zed/gpui stack, its zed-reqwest fork) or a version pin
-# (`wasmtime` 29 in nemo-wasm). Bumping any of them re-resolves the rev-less
-# gpui git dependency and breaks the build (Cargo.lock is load-bearing here).
+# Every advisory ignored below is in a dependency this workspace cannot (or has
+# deliberately not yet) upgraded on its own — each arrives transitively through
+# the gpui stack (crates.io `gpui-kit` 0.8.1, which pins the `gpui-pre` =0.3.10
+# snapshot crates), or through the `wasmtime` 29.0.1 pin in nemo-wasm.
+#
+# Since the gpui-kit migration there are no git deps: gpui comes from crates.io
+# and Cargo.lock is no longer load-bearing against git drift. Normal
+# `cargo update` hygiene applies, EXCEPT that the gpui-pre snapshot family must
+# stay version-aligned — gpui-kit pins =0.3.10 exactly, so `cargo update` cannot
+# drift it within the lock; the family moves only with a deliberate
+# gpui-kit bump. The wasmtime 29 pin remains.
 #
 # These are NOT "won't fix" — they are "cannot fix without a coordinated
-# upstream/dependency upgrade". Re-audit and prune this list whenever the gpui
-# stack or the wasmtime pin is bumped. See
+# upstream/dependency upgrade". Re-audit and prune this list whenever the
+# gpui-kit/gpui-pre stack or the wasmtime pin is bumped. See
 # docs/knowledgebase/decisions/audit-ignore-transitive-advisories.md.
 #
-# Warnings (unmaintained/unsound: async-std, fxhash, instant, paste,
-# proc-macro-error2, rustls-pemfile, rustybuzz, ttf-parser, rand, memmap2,
-# anyhow, core2) are intentionally left un-ignored: cargo-audit does not fail
-# the build on them, and keeping them visible is useful triage signal.
+# Warnings (unmaintained/unsound/yanked: anyhow, core2, event-listener, fxhash,
+# instant, memmap2, paste, rand, rustls-pemfile, rustybuzz, smartstring, spin,
+# ttf-parser, tokio, zbus_names, zvariant, zvariant_derive, zstd-safe) are
+# intentionally left un-ignored: cargo-audit does not fail the build on them
+# (30 currently allowed), and keeping them visible is useful triage signal.
 
 [advisories]
 ignore = [
-    # --- wasmtime / wasmtime-wasi: pinned at 29.0.1 by nemo-wasm. Fix requires
-    # upgrading to 36+/42+, a major host-API port. TRACKED as a follow-up
-    # (nemo runs untrusted WASM plugins, so this matters — see the KB decision).
+    # --- wasmtime / wasmtime-wasi 29.0.1 (incl. its zstd stack via
+    # wasmtime-cache): pinned at 29.0.1 by nemo-wasm. Fix requires upgrading to
+    # 36+/42+, a major host-API port. TRACKED as a follow-up (nemo runs
+    # untrusted WASM plugins, so this matters — see the KB decision).
     "RUSTSEC-2025-0046",
     "RUSTSEC-2025-0118",
     "RUSTSEC-2026-0006",
@@ -41,24 +49,56 @@ ignore = [
     "RUSTSEC-2026-0182",
     "RUSTSEC-2026-0188",
     "RUSTSEC-2026-0222",
+    "RUSTSEC-2026-0269",
+    "RUSTSEC-2026-0314",
+    "RUSTSEC-2026-0316",
+    "RUSTSEC-2026-0321",
+    "RUSTSEC-2026-0322",
+    "RUSTSEC-2026-0323",
+    "RUSTSEC-2026-0352",
+    "RUSTSEC-2026-0363",
+    "RUSTSEC-2026-0379",
+    "RUSTSEC-2026-0380",
 
-    # --- rustls-webpki / quinn-proto: via the `zed-reqwest` fork behind
-    # gpui-component-assets. No upgrade path without forking upstream.
+    # --- zstd / zstd-safe / zstd-sys (vulnerability-class only): also
+    # transitive via wasmtime 29 (wasmtime-cache → zstd 0.13/zstd-safe 7/
+    # zstd-sys 2). Moves only with the wasmtime bump.
+    "RUSTSEC-2026-0391",
+    "RUSTSEC-2026-0398",
+    "RUSTSEC-2026-0403",
+    "RUSTSEC-2026-0410",
+
+    # --- TLS stack: quinn-proto / rustls / rustls-webpki — via
+    # gpui-pre-reqwest (the reqwest fork inside the gpui-pre =0.3.10 snapshot
+    # behind gpui-kit 0.8.1, quinn enabled for HTTP/3); the older rustls
+    # 0.22 / rustls-webpki 0.102 instances also arrive via async-nats/rumqttc
+    # in nemo-data (bump-deferred, moves with the TLS stack). No upgrade path
+    # inside the snapshot pins without forking upstream.
     "RUSTSEC-2026-0037",
     "RUSTSEC-2026-0185",
     "RUSTSEC-2026-0049",
     "RUSTSEC-2026-0098",
     "RUSTSEC-2026-0099",
     "RUSTSEC-2026-0104",
+    "RUSTSEC-2026-0258",
+    "RUSTSEC-2026-0285",
+    "RUSTSEC-2026-0338",
+    "RUSTSEC-2026-0339",
+    "RUSTSEC-2026-0340",
+    "RUSTSEC-2026-0342",
+    "RUSTSEC-2026-0346",
+    "RUSTSEC-2026-0348",
+    "RUSTSEC-2026-0349",
+    "RUSTSEC-2026-0382",
 
     # --- crossbeam-epoch, thin-vec: via gpui.
     "RUSTSEC-2026-0204",
     "RUSTSEC-2026-0103",
 
-    # --- quick-xml: our direct dep is 0.37; 0.30/0.39 instances are transitive.
-    # Upgrading our own to >=0.41 is possible in isolation code-wise, but the
-    # `cargo update` it requires re-resolves the rev-less gpui git dep and
-    # drifts the load-bearing pins, so it is deferred to a coordinated bump.
+    # --- quick-xml: our direct dep is 0.37; 0.30/0.39 instances are
+    # transitive. Upgrading our own to >=0.41 is feasible in isolation
+    # code-wise and — with the git pins gone — no longer blocked by gpui
+    # resolution; deferred as an ordinary (unblocked) future change.
     "RUSTSEC-2026-0194",
     "RUSTSEC-2026-0195",
 ]

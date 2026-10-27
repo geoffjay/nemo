@@ -14,8 +14,8 @@
 
 use anyhow::{Context as _, Result};
 use gpui::*;
-use gpui_component::Root;
-use gpui_router::{init as router_init, use_navigate};
+use gpui_kit::component::Root;
+use gpui_router::init as router_init;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -178,7 +178,7 @@ pub(crate) fn run_app(mut args: Args, watch: Option<Duration>, dev_mode: bool) -
 
     // Launch GPUI application
     info!("Starting GPUI application...");
-    let gpui_app = gpui_platform::application().with_assets(gpui_component_assets::Assets);
+    let gpui_app = gpui_platform::application().with_assets(gpui_kit::assets::Assets);
 
     let params = BootstrapParams {
         nemo_config,
@@ -275,7 +275,7 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         dev_mode,
     } = params;
 
-    gpui_component::init(cx);
+    gpui_kit::component::init(cx);
     router_init(cx);
 
     // Apply theme from TOML config (base app settings)
@@ -286,7 +286,9 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
 
     // Apply global font family from TOML config
     if let Some(ref font_family) = nemo_config.app.font_family {
-        gpui_component::Theme::global_mut(cx).font_family = font_family.clone().into();
+        gpui_kit::component::Theme::update(cx, |theme| {
+            theme.font_family = font_family.clone().into();
+        });
     }
 
     // Apply global roundness from TOML config (after theme so it isn't reset)
@@ -304,17 +306,25 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
     #[cfg(not(target_os = "macos"))]
     const PRIMARY: &str = "ctrl";
 
-    cx.bind_keys([
-        KeyBinding::new(&format!("{PRIMARY}-shift-r"), ReloadConfig, None),
-        KeyBinding::new(&format!("{PRIMARY}-q"), QuitApp, None),
-        KeyBinding::new(&format!("{PRIMARY}-w"), CloseProject, None),
-        KeyBinding::new(&format!("{PRIMARY}-o"), OpenProject, None),
-        KeyBinding::new(&format!("{PRIMARY}-shift-t"), ToggleTheme, None),
-        KeyBinding::new(&format!("{PRIMARY}-p"), OpenSettings, None),
-        KeyBinding::new("escape", CloseSettings, None),
-        KeyBinding::new("f10", ShowKeyboardShortcuts, None),
-        KeyBinding::new(&format!("{PRIMARY}-shift-e"), ToggleDevPanel, None),
-    ]);
+    // `KeyBinding::new` now requires a `&'static str`, so runtime-built
+    // keystrokes go through `KeyBinding::load`, which parses with the host
+    // OS's keyboard mapper.
+    let bindings: [(String, Box<dyn Action>); 9] = [
+        (format!("{PRIMARY}-shift-r"), Box::new(ReloadConfig)),
+        (format!("{PRIMARY}-q"), Box::new(QuitApp)),
+        (format!("{PRIMARY}-w"), Box::new(CloseProject)),
+        (format!("{PRIMARY}-o"), Box::new(OpenProject)),
+        (format!("{PRIMARY}-shift-t"), Box::new(ToggleTheme)),
+        (format!("{PRIMARY}-p"), Box::new(OpenSettings)),
+        ("escape".to_string(), Box::new(CloseSettings)),
+        ("f10".to_string(), Box::new(ShowKeyboardShortcuts)),
+        (format!("{PRIMARY}-shift-e"), Box::new(ToggleDevPanel)),
+    ];
+    let bindings: Vec<KeyBinding> = bindings
+        .into_iter()
+        .filter_map(|(keys, action)| KeyBinding::load(&keys, action, None, false, None, cx).ok())
+        .collect();
+    cx.bind_keys(bindings);
 
     // Store workspace entity + main window ID for window close handler.
     let workspace_entity: Rc<RefCell<Option<Entity<Workspace>>>> = Rc::new(RefCell::new(None));
@@ -487,6 +497,15 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
 
                 let loader = Workspace::create_loader(&nemo_config, window, cx);
 
+                let ws_args = ws_args;
+                let initial_route = if current_route == "/app" {
+                    // A project loads straight into the app route.
+                    Some(current_route.clone())
+                } else {
+                    // The launch `--route` override; `None` stays on `/`.
+                    ws_args.initial_route.clone()
+                };
+
                 Workspace {
                     nemo_config,
                     ws_args,
@@ -499,6 +518,8 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
                     pending_close_project: false,
                     focus_handle,
                     current_route,
+                    initial_route,
+                    pending_initial_route: true,
                     loader,
                     pending_reload: false,
                     _watcher: None,
@@ -506,14 +527,6 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
                     dev_panel_window: None,
                 }
             });
-
-            // Navigate to the initial route after window creation
-            let route = ws.read(cx).current_route.clone();
-            let needs_refresh = route != "/";
-            use_navigate(cx)(route.into());
-            if needs_refresh {
-                window.refresh();
-            }
 
             // Start hot-reload file watching when requested (nemo dev / --watch).
             if let Some(debounce) = watch {

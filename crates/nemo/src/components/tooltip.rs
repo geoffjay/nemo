@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::tooltip::Tooltip as GpuiTooltip;
+use gpui_kit::component::tooltip::Tooltip as GpuiTooltip;
 use nemo_layout::BuiltComponent;
 
 /// A tooltip wrapper component that shows a popup on hover.

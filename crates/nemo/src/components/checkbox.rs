@@ -1,6 +1,6 @@
 use gpui::*;
-use gpui_component::checkbox::Checkbox as GpuiCheckbox;
-use gpui_component::Disableable;
+use gpui_kit::component::checkbox::Checkbox as GpuiCheckbox;
+use gpui_kit::component::Disableable;
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
 

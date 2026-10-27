@@ -1,8 +1,6 @@
-[patch.crates-io]
-# version pin disambiguates the patch (the zed git workspace exposes gpui as
-# both 0.0.0 and 0.2.2 once the x11/wayland linux backend is pulled in).
-gpui = { git = "https://github.com/zed-industries/zed", version = "=0.2.2" }
-
+# GPUI comes from the gpui-pre snapshot crates that gpui-kit pins. The
+# dependency KEY stays `gpui`/`gpui_platform` (the crates keep those Rust lib
+# names), so `use gpui::*` and `gpui_platform::application()` are unchanged.
 [workspace]
 resolver = "2"
 members = [
@@ -35,21 +33,21 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/geoffjay/nemo"
 
 [workspace.dependencies]
-# GPUI. NOTE: rev-less by necessity — gpui-component references these git repos
-# without a rev, and adding a rev here splits the git source into two crate
-# instances (type mismatches). The exact commits are pinned by Cargo.lock, which
-# is therefore load-bearing; avoid `cargo update`.
-gpui = { git = "https://github.com/zed-industries/zed" }
-gpui_platform = { git = "https://github.com/zed-industries/zed", features = [
+# GPUI, via the GPUI Kit umbrella crate (crates.io). `gpui-kit` pins the
+# `gpui-pre`/`gpui-pre-platform` snapshot crates exactly (`=0.3.10`), which keep
+# the Rust lib names `gpui`/`gpui_platform`, so `use gpui::*` and
+# `gpui_platform::application()` are unchanged. The `tree-sitter-languages`
+# feature supplies syntax highlighting for the code editor component.
+gpui = { package = "gpui-pre", version = "=0.3.10" }
+gpui_platform = { package = "gpui-pre-platform", version = "=0.3.10", features = [
   "font-kit",
   "x11",
   "wayland",
 ] }
-gpui-component = { git = "https://github.com/longbridge/gpui-component", features = [
-  "tree-sitter-languages",
+gpui-kit = { version = "0.8.1", features = ["tree-sitter-languages"] }
+gpui-router = { version = "0.7", default-features = false, features = [
+  "gpui-pre",
 ] }
-gpui-component-assets = { git = "https://github.com/longbridge/gpui-component" }
-gpui-router = "0.3"
 
 # Async
 tokio = { version = "1", features = ["full"] }

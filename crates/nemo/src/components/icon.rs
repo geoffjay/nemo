@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::{Icon as GpuiIcon, IconName};
+use gpui_kit::component::{Icon as GpuiIcon, IconName};
 use nemo_macros::NemoComponent;
 
 /// An icon display component.

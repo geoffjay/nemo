@@ -1,9 +1,11 @@
 use gpui::*;
-use gpui_component::plot::{
+use gpui_kit::component::plot::{
+    axis_gutter,
+    label::TEXT_SIZE,
     scale::{Scale, ScaleBand, ScaleLinear},
-    AxisText, Grid, PlotAxis, AXIS_GAP,
+    AxisText, Grid, PlotAxis,
 };
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 use super::chart_utils::{
@@ -153,19 +155,20 @@ impl Element for ClusteredColumnElement {
         cx: &mut App,
     ) {
         let width = bounds.size.width.as_f32();
-        let height = bounds.size.height.as_f32() - AXIS_GAP;
+        let height = bounds.size.height.as_f32() - axis_gutter(px(TEXT_SIZE));
         let n_series = self.series_values.len();
         if n_series == 0 {
             return;
         }
 
-        let x_scale = ScaleBand::new(self.x_labels.clone(), vec![0., width])
+        let x_scale = ScaleBand::new(self.x_labels.clone(), [0., width])
             .padding_inner(0.3)
-            .padding_outer(0.2);
+            .padding_outer(0.2)
+            .max_band_width(30.);
         let band_width = x_scale.band_width();
         let sub_width = band_width / n_series as f32;
 
-        let y_scale = ScaleLinear::new(vec![0.0_f64, self.max_y], vec![height, 10.]);
+        let y_scale = ScaleLinear::new([0.0_f64, self.max_y], [height, 10.]);
 
         // X axis
         let x_label = self.x_labels.iter().enumerate().filter_map(|(i, label)| {
@@ -186,7 +189,7 @@ impl Element for ClusteredColumnElement {
 
         // Grid
         Grid::new()
-            .y((0..=3).map(|i| height * i as f32 / 4.0).collect())
+            .y((0..=3).map(|i| height * i as f32 / 4.0))
             .stroke(self.border_color)
             .dash_array(&[px(4.), px(2.)])
             .paint(&bounds, window);

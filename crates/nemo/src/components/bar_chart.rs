@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::chart::BarChart as GpuiBarChart;
+use gpui_kit::component::chart::BarChart as GpuiBarChart;
 use nemo_config::Value;
 use nemo_macros::NemoComponent;
 
@@ -52,6 +52,7 @@ impl RenderOnce for BarChart {
         let y_field = self.y_field.clone();
 
         let mut chart = GpuiBarChart::new(data)
+            .id(SharedString::from(self.source.id.clone()))
             .band(move |item: &Value| get_string_field(item, &x_field))
             .value(move |item: &Value| get_f64_field(item, &y_field));
 

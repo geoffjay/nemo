@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::label::Label as GpuiLabel;
+use gpui_kit::component::label::Label as GpuiLabel;
 use nemo_macros::NemoComponent;
 
 use crate::theme::tokens::{radius_for, FontSize, TokenStyled};

@@ -1,8 +1,8 @@
 use gpui::*;
-use gpui_component::button::{Button, ButtonVariants as _};
-use gpui_component::input::{Input, InputState};
-use gpui_component::label::Label;
-use gpui_component::{h_flex, v_flex, ActiveTheme, IconName, WindowExt as _};
+use gpui_kit::component::button::{Button, ButtonVariants as _};
+use gpui_kit::component::input::{Input, InputState};
+use gpui_kit::component::label::Label;
+use gpui_kit::component::{h_flex, v_flex, ActiveTheme, IconName, WindowExt as _};
 use std::path::{Path, PathBuf};
 use tracing::info;
 

@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::input::{Input as GpuiInput, InputState};
+use gpui_kit::component::input::{Editor as GpuiEditor, EditorState};
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
 
@@ -49,13 +49,13 @@ pub struct CodeEditor {
     disabled: Option<bool>,
     #[property]
     rows: Option<i64>,
-    input_state: Option<Entity<InputState>>,
+    input_state: Option<Entity<EditorState>>,
     runtime: Option<Arc<NemoRuntime>>,
     entity_id: Option<EntityId>,
 }
 
 impl CodeEditor {
-    pub fn input_state(mut self, state: Entity<InputState>) -> Self {
+    pub fn input_state(mut self, state: Entity<EditorState>) -> Self {
         self.input_state = Some(state);
         self
     }
@@ -77,15 +77,15 @@ impl RenderOnce for CodeEditor {
             return div().child("CodeEditor: missing state").into_any_element();
         };
 
-        let mut input = GpuiInput::new(&state);
+        let mut input = GpuiEditor::new(&state);
 
         if let Some(true) = self.disabled {
             input = input.disabled(true);
         }
 
-        // Set height directly on the Input element so it doesn't collapse
-        // to a single line. GpuiInput multi-line defaults to height: 100%
-        // which requires a parent with definite height; using .h() bypasses that.
+        // Set height directly on the Editor element so it doesn't collapse.
+        // Using .h() bypasses the default height: 100% which requires a
+        // parent with definite height.
         let rows = self.rows.unwrap_or(4) as f32;
         let line_height = window.line_height();
         let editor_height = line_height * rows + px(8.);

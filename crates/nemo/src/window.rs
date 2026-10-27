@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::TitleBar;
+use gpui_kit::component::TitleBar;
 
 pub fn get_window_options(
     cx: &mut App,

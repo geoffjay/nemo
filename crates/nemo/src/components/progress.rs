@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::progress::Progress as GpuiProgress;
+use gpui_kit::component::progress::Progress as GpuiProgress;
 use nemo_macros::NemoComponent;
 
 /// A progress bar component.

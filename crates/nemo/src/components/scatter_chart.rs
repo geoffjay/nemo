@@ -1,9 +1,11 @@
 use gpui::*;
-use gpui_component::plot::{
+use gpui_kit::component::plot::{
+    axis_gutter,
+    label::TEXT_SIZE,
     scale::{Scale, ScaleLinear},
-    Grid, AXIS_GAP,
+    Grid,
 };
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 use super::chart_utils::{chart_color, empty_chart_placeholder, extract_data_array, get_f64_field};
@@ -150,29 +152,24 @@ impl Element for ScatterElement {
         window: &mut Window,
         _cx: &mut App,
     ) {
-        let width = bounds.size.width.as_f32() - AXIS_GAP;
-        let height = bounds.size.height.as_f32() - AXIS_GAP;
-        let left_margin = AXIS_GAP;
+        let width = bounds.size.width.as_f32() - axis_gutter(px(TEXT_SIZE));
+        let height = bounds.size.height.as_f32() - axis_gutter(px(TEXT_SIZE));
+        let left_margin = axis_gutter(px(TEXT_SIZE));
         let top_margin = 10.0_f32;
 
         let x_pad = (self.x_max - self.x_min).max(1.0) * 0.05;
         let y_pad = (self.y_max - self.y_min).max(1.0) * 0.05;
 
-        let x_scale = ScaleLinear::new(
-            vec![self.x_min - x_pad, self.x_max + x_pad],
-            vec![0., width],
-        );
+        let x_scale = ScaleLinear::new([self.x_min - x_pad, self.x_max + x_pad], [0., width]);
         let y_scale = ScaleLinear::new(
-            vec![self.y_min - y_pad, self.y_max + y_pad],
-            vec![height, top_margin],
+            [self.y_min - y_pad, self.y_max + y_pad],
+            [height, top_margin],
         );
 
         // Grid
         Grid::new()
-            .x((0..=4)
-                .map(|i| left_margin + width * i as f32 / 4.0)
-                .collect())
-            .y((0..=3).map(|i| height * i as f32 / 4.0).collect())
+            .x((0..=4).map(|i| left_margin + width * i as f32 / 4.0))
+            .y((0..=3).map(|i| height * i as f32 / 4.0))
             .stroke(self.border_color)
             .dash_array(&[px(4.), px(2.)])
             .paint(&bounds, window);

@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::slider::{Slider as GpuiSlider, SliderState};
+use gpui_kit::component::slider::{Slider as GpuiSlider, SliderState};
 use nemo_layout::BuiltComponent;
 
 /// A range slider component.

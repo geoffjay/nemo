@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::chart::PieChart as GpuiPieChart;
+use gpui_kit::component::chart::PieChart as GpuiPieChart;
 use nemo_config::Value;
 use nemo_macros::NemoComponent;
 
@@ -60,6 +60,7 @@ impl RenderOnce for PieChart {
         let inner_radius = self.inner_radius.map(|r| r as f32).unwrap_or(0.0);
 
         let chart = GpuiPieChart::new(data)
+            .id(SharedString::from(self.source.id.clone()))
             .value(move |item: &Value| get_f64_field(item, &value_field) as f32)
             .color(move |_item: &Value| {
                 let idx = counter.fetch_add(1, std::sync::atomic::Ordering::Relaxed);

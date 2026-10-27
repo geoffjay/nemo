@@ -29,9 +29,10 @@ all-packages = ["pkg-env", "pkg-sci", "pkg-process"]
 
 # Offscreen screenshot capture (`nemo screenshot`). Turns on gpui's
 # `test-support` render-to-image path (Metal drawable readback on macOS). NOT in
-# `default`: test-support can change gpui codegen, so release/normal builds must
-# stay feature-free. Enabling it is a feature-only change and must NOT drift the
-# pinned gpui rev in Cargo.lock — verify `git diff Cargo.lock` after building.
+# `default`: release/normal builds stay feature-free. Note: on macOS the
+# framebuffer-only escape hatch in the Metal renderer is now active only in
+# debug builds, so `--release --features screenshot` may fail to capture on
+# macOS; prefer a debug build for screenshot runs.
 # See docs/knowledgebase/decisions/screenshot-via-test-support-feature.md.
 screenshot = ["gpui_platform/test-support"]
 
@@ -48,8 +49,7 @@ nemo-plugin-api = { workspace = true }
 nemo-macros = { workspace = true }
 gpui = { workspace = true }
 gpui_platform = { workspace = true }
-gpui-component = { workspace = true }
-gpui-component-assets = { workspace = true }
+gpui-kit = { workspace = true }
 gpui-router = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }

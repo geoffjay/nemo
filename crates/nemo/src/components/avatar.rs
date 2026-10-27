@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::avatar::Avatar as GpuiAvatar;
+use gpui_kit::component::avatar::Avatar as GpuiAvatar;
 use nemo_layout::BuiltComponent;
 
 /// A user avatar component displaying initials or an image.

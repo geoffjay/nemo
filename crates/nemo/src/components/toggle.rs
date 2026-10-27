@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::{ActiveTheme, Sizable};
+use gpui_kit::component::{ActiveTheme, Sizable};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
@@ -108,8 +108,8 @@ impl RenderOnce for Toggle {
 
         if let Some(name) = icon_name {
             el = el.child(
-                gpui_component::Icon::new(super::icon::map_icon_name(&name))
-                    .with_size(gpui_component::Size::Small),
+                gpui_kit::component::Icon::new(super::icon::map_icon_name(&name))
+                    .with_size(gpui_kit::component::Size::Small),
             );
         }
 

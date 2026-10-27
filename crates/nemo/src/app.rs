@@ -1,12 +1,12 @@
 //! GPUI application wrapper.
 
 use gpui::*;
-use gpui_component::input::{InputEvent, InputState};
-use gpui_component::slider::SliderState;
-use gpui_component::table::TableState;
-use gpui_component::tree::TreeState;
-use gpui_component::v_flex;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
+use gpui_kit::component::slider::SliderState;
+use gpui_kit::component::table::TableState;
+use gpui_kit::component::tree::TreeState;
+use gpui_kit::component::v_flex;
+use gpui_kit::component::ActiveTheme;
 use nemo_config::Value;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -14,7 +14,7 @@ use std::sync::Arc;
 use crate::components::state::{ComponentState, ComponentStates};
 use crate::components::table::NemoTableDelegate;
 use crate::components::tree::values_to_tree_items;
-use gpui_component::input::TabSize;
+use gpui_kit::component::input::TabSize;
 
 use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
@@ -300,14 +300,16 @@ impl App {
         state
     }
 
-    /// Gets or creates an InputState entity configured for a Textarea component.
+    /// Gets or creates a TextareaState entity configured for a Textarea component.
     fn get_or_create_textarea_state(
         &mut self,
         component: &BuiltComponent,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Entity<InputState> {
-        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+    ) -> Entity<TextareaState> {
+        let id = component.id.clone();
+
+        if let Some(ComponentState::Textarea(state)) = self.component_states.get(&id) {
             return state.clone();
         }
 
@@ -326,13 +328,12 @@ impl App {
         let auto_grow_max = props.get("auto_grow_max").and_then(|v| v.as_i64());
 
         let state = cx.new(|cx| {
-            let mut s = InputState::new(window, cx).placeholder(placeholder);
+            let mut s = TextareaState::new(window, cx).placeholder(placeholder);
 
-            // Configure mode: auto_grow takes priority, then rows, then default multi_line
+            // Configure sizing: auto_grow takes priority, then rows.
             if let (Some(min), Some(max)) = (auto_grow_min, auto_grow_max) {
                 s = s.auto_grow(min as usize, max as usize);
             } else {
-                s = s.multi_line(true);
                 s = s.rows(rows.unwrap_or(4) as usize);
             }
 
@@ -343,18 +344,21 @@ impl App {
         });
 
         self.component_states
-            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+            .insert(id.clone(), ComponentState::Textarea(state.clone()));
+
         state
     }
 
-    /// Gets or creates an InputState entity configured for a CodeEditor component.
+    /// Gets or creates an EditorState entity configured for a CodeEditor component.
     fn get_or_create_code_editor_state(
         &mut self,
         component: &BuiltComponent,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Entity<InputState> {
-        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+    ) -> Entity<EditorState> {
+        let id = component.id.clone();
+
+        if let Some(ComponentState::Editor(state)) = self.component_states.get(&id) {
             return state.clone();
         }
 
@@ -376,32 +380,21 @@ impl App {
             .get("default_value")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        let multi_line = props
-            .get("multi_line")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true);
         let tab_size_val = props.get("tab_size").and_then(|v| v.as_i64()).unwrap_or(4) as usize;
         let hard_tabs = props
             .get("hard_tabs")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let rows = props.get("rows").and_then(|v| v.as_i64());
 
         let state = cx.new(|cx| {
-            let mut s = InputState::new(window, cx)
-                .code_editor(language)
+            let mut s = EditorState::new(window, cx)
+                .language(language)
                 .line_number(line_number)
                 .searchable(searchable)
                 .tab_size(TabSize {
                     tab_size: tab_size_val,
                     hard_tabs,
                 });
-
-            if !multi_line {
-                s = s.multi_line(false);
-            }
-
-            s = s.rows(rows.unwrap_or(4) as usize);
 
             if let Some(val) = default_value {
                 s = s.default_value(val);
@@ -410,18 +403,21 @@ impl App {
         });
 
         self.component_states
-            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+            .insert(id.clone(), ComponentState::Editor(state.clone()));
+
         state
     }
 
-    /// Gets or creates an InputState entity configured for a TextEditor component.
+    /// Gets or creates a TextareaState entity configured for a TextEditor component.
     fn get_or_create_text_editor_state(
         &mut self,
         component: &BuiltComponent,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Entity<InputState> {
-        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+    ) -> Entity<TextareaState> {
+        let id = component.id.clone();
+
+        if let Some(ComponentState::Textarea(state)) = self.component_states.get(&id) {
             return state.clone();
         }
 
@@ -438,8 +434,7 @@ impl App {
         let rows = props.get("rows").and_then(|v| v.as_i64());
 
         let state = cx.new(|cx| {
-            let mut s = InputState::new(window, cx)
-                .multi_line(true)
+            let mut s = TextareaState::new(window, cx)
                 .placeholder(placeholder)
                 .rows(rows.unwrap_or(4) as usize);
 
@@ -450,7 +445,8 @@ impl App {
         });
 
         self.component_states
-            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+            .insert(id.clone(), ComponentState::Textarea(state.clone()));
+
         state
     }
 

@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 use crate::theme::tokens::{radius_of, Space, TokenStyled};

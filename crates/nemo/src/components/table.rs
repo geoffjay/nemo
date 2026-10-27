@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::table::{Column, TableDelegate, TableState};
+use gpui_kit::component::table::{Column, TableDelegate, TableState};
 use nemo_config::Value;
 use nemo_layout::BuiltComponent;
 
@@ -159,7 +159,7 @@ impl RenderOnce for Table {
             .and_then(|v| v.as_bool())
             .unwrap_or(true);
 
-        let table = gpui_component::table::DataTable::new(&state)
+        let table = gpui_kit::component::table::DataTable::new(&state)
             .stripe(stripe)
             .bordered(bordered);
 

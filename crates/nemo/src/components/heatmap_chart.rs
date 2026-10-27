@@ -1,9 +1,11 @@
 use gpui::*;
-use gpui_component::plot::{
+use gpui_kit::component::plot::{
+    axis_gutter,
+    label::TEXT_SIZE,
     scale::{Scale, ScaleBand},
-    AxisText, PlotAxis, AXIS_GAP,
+    AxisText, PlotAxis,
 };
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 use super::chart_utils::{
@@ -177,16 +179,18 @@ impl Element for HeatmapElement {
         window: &mut Window,
         cx: &mut App,
     ) {
-        let width = bounds.size.width.as_f32() - AXIS_GAP;
-        let height = bounds.size.height.as_f32() - AXIS_GAP;
-        let left_margin = AXIS_GAP;
+        let width = bounds.size.width.as_f32() - axis_gutter(px(TEXT_SIZE));
+        let height = bounds.size.height.as_f32() - axis_gutter(px(TEXT_SIZE));
+        let left_margin = axis_gutter(px(TEXT_SIZE));
 
-        let x_scale = ScaleBand::new(self.x_cats.clone(), vec![0., width])
+        let x_scale = ScaleBand::new(self.x_cats.clone(), [0., width])
             .padding_inner(0.05)
-            .padding_outer(0.05);
-        let y_scale = ScaleBand::new(self.y_cats.clone(), vec![0., height])
+            .padding_outer(0.05)
+            .max_band_width(30.);
+        let y_scale = ScaleBand::new(self.y_cats.clone(), [0., height])
             .padding_inner(0.05)
-            .padding_outer(0.05);
+            .padding_outer(0.05)
+            .max_band_width(30.);
 
         let x_band = x_scale.band_width();
         let y_band = y_scale.band_width();

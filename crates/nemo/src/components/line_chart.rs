@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::chart::LineChart as GpuiLineChart;
+use gpui_kit::component::chart::LineChart as GpuiLineChart;
 use nemo_config::Value;
 use nemo_macros::NemoComponent;
 
@@ -55,6 +55,7 @@ impl RenderOnce for LineChart {
         let y_field = self.y_field.clone();
 
         let mut chart = GpuiLineChart::new(data)
+            .id(SharedString::from(self.source.id.clone()))
             .x(move |item: &Value| get_string_field(item, &x_field))
             .y(move |item: &Value| get_f64_field(item, &y_field));
 

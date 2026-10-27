@@ -1,6 +1,6 @@
 use gpui::*;
-use gpui_component::spinner::Spinner as GpuiSpinner;
-use gpui_component::{Sizable, Size as ComponentSize};
+use gpui_kit::component::spinner::Spinner as GpuiSpinner;
+use gpui_kit::component::{Sizable, Size as ComponentSize};
 use nemo_layout::BuiltComponent;
 
 /// A loading spinner component.

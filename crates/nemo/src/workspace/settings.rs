@@ -4,14 +4,14 @@
 //! Shows general application settings and plugin-contributed settings sections.
 
 use gpui::*;
-use gpui_component::button::{Button as GpuiButton, DropdownButton as GpuiDropdownButton};
-use gpui_component::input::{Input as GpuiInput, InputEvent, InputState};
-use gpui_component::label::Label;
-use gpui_component::menu::PopupMenuItem;
-use gpui_component::slider::{Slider as GpuiSlider, SliderState};
-use gpui_component::switch::Switch as GpuiSwitch;
-use gpui_component::v_flex;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::button::{Button as GpuiButton, DropdownButton as GpuiDropdownButton};
+use gpui_kit::component::input::{Input as GpuiInput, InputEvent, InputState};
+use gpui_kit::component::label::Label;
+use gpui_kit::component::menu::PopupMenuItem;
+use gpui_kit::component::slider::{Slider as GpuiSlider, SliderState};
+use gpui_kit::component::switch::Switch as GpuiSwitch;
+use gpui_kit::component::v_flex;
+use gpui_kit::component::ActiveTheme;
 use nemo_extension::SettingsPageInfo;
 use nemo_plugin_api::PluginValue;
 use std::collections::HashMap;
@@ -104,14 +104,18 @@ impl SettingsView {
                         } else {
                             "sans-serif".into()
                         };
-                        gpui_component::Theme::global_mut(cx).font_family = default_font;
+                        gpui_kit::component::Theme::update(cx, |theme| {
+                            theme.font_family = default_font;
+                        });
                         if let Ok(mut cfg) = nemo_config.lock() {
                             cfg.app.font_family = None;
                             let _ = cfg.save();
                         }
                     } else {
                         let family: SharedString = trimmed.clone().into();
-                        gpui_component::Theme::global_mut(cx).font_family = family;
+                        gpui_kit::component::Theme::update(cx, |theme| {
+                            theme.font_family = family;
+                        });
                         if let Ok(mut cfg) = nemo_config.lock() {
                             cfg.app.font_family = Some(trimmed);
                             let _ = cfg.save();
@@ -727,7 +731,7 @@ impl SettingsView {
             "button" => {
                 let label_text = pv_string(obj, "label").unwrap_or_else(|| "Button".to_string());
 
-                gpui_component::button::Button::new(ElementId::Name(
+                gpui_kit::component::button::Button::new(ElementId::Name(
                     format!("btn-{}", id_prefix).into(),
                 ))
                 .label(label_text)

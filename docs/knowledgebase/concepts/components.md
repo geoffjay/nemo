@@ -41,12 +41,22 @@ components.
 
 # Stateful widgets
 
-Widgets that carry runtime state across re-renders (Table, Tree, Input, Slider,
-Select, Tabs, Accordion, switches/toggles) persist that state in
-`ComponentStates`, a `HashMap<String, ComponentState>` keyed by component ID
+Widgets that carry runtime state across re-renders (Table, Tree, Input, Textarea,
+CodeEditor, Slider, Select, Tabs, Accordion, switches/toggles) persist that state
+in `ComponentStates`, a `HashMap<String, ComponentState>` keyed by component ID
 (`crates/nemo/src/components/state.rs`). The `ComponentState` enum holds either
-GPUI `Entity<T>` handles (Input, Slider, Table, Tree) or `Arc<Mutex<T>>` for
-handler-closure state (Accordion, bool/selected-value/selected-index).
+GPUI `Entity<T>` handles or `Arc<Mutex<T>>` for handler-closure state (Accordion,
+bool/selected-value/selected-index).
+
+Since the gpui-kit migration (2026-10-27) the text-editing widgets are **three
+state kinds**, mirroring the kit's type-level split: `Input` holds
+`Entity<InputState>` (single-line), `Textarea`/`TextEditor` hold
+`Entity<TextareaState>` (multi-line), and `CodeEditor` holds
+`Entity<EditorState>` (code editor with syntax highlighting). All three
+re-export from `gpui_kit::component::input` and share `value()`/`set_value`/
+`insert` plus the `InputEvent` emitter; only the single-line `Input` state is
+subscribed for value sync-back into the `value` property today. See
+[stateful widget persistence](../patterns/stateful-widget-entity-persistence.md).
 
 `app.rs` `get_or_create_*_state()` methods look up state by ID, create it via
 `cx.new(...)` on first render, and perform **data-change detection** — e.g. the

@@ -1,6 +1,6 @@
 use gpui::*;
-use gpui_component::list::ListItem;
-use gpui_component::tree::{Tree as GpuiTree, TreeItem, TreeState};
+use gpui_kit::component::list::ListItem;
+use gpui_kit::component::tree::{Tree as GpuiTree, TreeItem, TreeState};
 use nemo_config::Value;
 use nemo_layout::BuiltComponent;
 
