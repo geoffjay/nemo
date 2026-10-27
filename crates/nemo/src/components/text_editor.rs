@@ -57,12 +57,12 @@ impl TextEditor {
         self
     }
 
-    fn render_toolbar(state: Entity<TextareaState>) -> impl IntoElement {
+    fn render_toolbar(id: &str, state: &Entity<TextareaState>) -> impl IntoElement {
         h_flex()
             .gap(px(2.))
             .p(px(4.))
             .child(
-                GpuiButton::new("bold")
+                GpuiButton::new(SharedString::from(format!("{}-bold", id)))
                     .label("B")
                     .xsmall()
                     .ghost()
@@ -76,7 +76,7 @@ impl TextEditor {
                     }),
             )
             .child(
-                GpuiButton::new("italic")
+                GpuiButton::new(SharedString::from(format!("{}-italic", id)))
                     .label("I")
                     .xsmall()
                     .ghost()
@@ -90,7 +90,7 @@ impl TextEditor {
                     }),
             )
             .child(
-                GpuiButton::new("underline")
+                GpuiButton::new(SharedString::from(format!("{}-underline", id)))
                     .label("U")
                     .xsmall()
                     .ghost()
@@ -113,6 +113,11 @@ impl RenderOnce for TextEditor {
         };
 
         let disabled = matches!(self.disabled, Some(true));
+
+        // Unique per-editor ids — two editors on the same page get identical
+        // view paths (the ViewElement uses the type name as its element id),
+        // so nested element ids must differ or a11y node ids collide.
+        let editor_id = self.source.id.clone();
 
         let mut input = GpuiTextarea::new(&state);
         if disabled {
@@ -140,7 +145,7 @@ impl RenderOnce for TextEditor {
                 div()
                     .border_b_1()
                     .border_color(cx.theme().colors.border)
-                    .child(Self::render_toolbar(state)),
+                    .child(Self::render_toolbar(&editor_id, &state)),
             )
             .child(input)
             .into_any_element()
