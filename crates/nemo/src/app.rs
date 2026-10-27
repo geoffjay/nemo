@@ -623,6 +623,36 @@ impl App {
 
         let is_panel = component.component_type == "panel";
 
+        // Panels own their decoration (`Panel::render` handles padding,
+        // border, shadow, rounding, and background), so those properties get
+        // skipped in the wrapper below. Only wrap when there is actual
+        // geometry (size, margin, flex, scroll) to apply: adding a wrapper
+        // for a decoration-only attribute like `border="0"` inserts an
+        // intermediate div into the flex chain that an inner scroll stack
+        // depends on, which breaks its scrolling.
+        let has_geometry = [
+            width,
+            height,
+            min_width,
+            min_height,
+            max_width,
+            max_height,
+            margin,
+            margin_x,
+            margin_y,
+            margin_left,
+            margin_right,
+            margin_top,
+            margin_bottom,
+        ]
+        .iter()
+        .any(|v| v.is_some())
+            || flex_grows
+            || scroll;
+        if is_panel && !has_geometry {
+            return element;
+        }
+
         let mut wrapper = div().flex().flex_col().min_h(px(0.));
 
         // A scrolling stack must grow so the wrapper doesn't break the flex chain
