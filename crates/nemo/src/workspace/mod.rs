@@ -76,6 +76,9 @@ pub struct Workspace {
     /// Whether the app was launched via `nemo dev` (enables the dev panel).
     pub dev_mode: bool,
     pub dev_panel_window: Option<WindowHandle<gpui_kit::component::Root>>,
+    /// Whether the keyboard-shortcuts dialog is currently open (so the
+    /// shortcut toggles it closed and later presses never stack duplicates).
+    pub shortcuts_open: bool,
 }
 
 impl Workspace {
@@ -433,7 +436,17 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        window.open_dialog(cx, |dialog, _window, _cx| {
+        // The shortcut toggles: a second press dismisses, so repeated presses
+        // never stack copies of the dialog.
+        if self.shortcuts_open {
+            self.dismiss_keyboard_shortcuts(window, cx);
+            return;
+        }
+
+        self.shortcuts_open = true;
+        let primary = utils::PRIMARY_KEY;
+        window.open_dialog(cx, move |dialog, _window, cx| {
+            let row = |label: &str, keystroke: String| shortcut_row(label, keystroke, cx);
             dialog
                 .title("Keyboard Shortcuts")
                 .w(px(420.))
@@ -441,16 +454,38 @@ impl Workspace {
                 .child(
                     v_flex()
                         .gap_t(Space::Xs)
-                        .child(shortcut_row("Open Project", "ctrl-o"))
-                        .child(shortcut_row("Close Project", "ctrl-w"))
-                        .child(shortcut_row("Reload Configuration", "ctrl-shift-r"))
-                        .child(shortcut_row("Toggle Light/Dark Theme", "ctrl-shift-t"))
-                        .child(shortcut_row("Settings", "ctrl-p"))
-                        .child(shortcut_row("Keyboard Shortcuts", "f10"))
-                        .child(shortcut_row("Toggle Dev Panel (dev mode)", "ctrl-shift-e"))
-                        .child(shortcut_row("Quit Application", "ctrl-q")),
+                        .child(row("Open Project", format!("{primary}-o")))
+                        .child(row("Close Project", format!("{primary}-w")))
+                        .child(row("Open Settings", format!("{primary}-p")))
+                        .child(row("Toggle Light/Dark Theme", format!("{primary}-shift-t")))
+                        .child(row("Reload Configuration", format!("{primary}-shift-r")))
+                        .child(row("Keyboard Shortcuts", format!("{primary}-k")))
+                        .child(row(
+                            "Toggle Dev Panel (dev mode)",
+                            format!("{primary}-shift-e"),
+                        ))
+                        .child(row("Quit Application", format!("{primary}-q")))
+                        .child(row("Dismiss Dialog", "escape".to_string())),
                 )
         });
+    }
+
+    /// Dismisses the keyboard shortcuts dialog if this workspace opened it.
+    ///
+    /// Escape (the newest dialog owns Escape — see `Dialog`'s keyboard
+    /// handling) and the dialog's close button dismiss the dialog through the
+    /// stock behavior; this is the programmatic counterpart, also used by the
+    /// toggle path above.
+    ///
+    /// The `shortcuts_open` flag can go stale if the user closes the dialog
+    /// with Escape (the workspace isn't notified); a later call then closes
+    /// the last active dialog, which is a no-op when none is open.
+    pub fn dismiss_keyboard_shortcuts(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if !self.shortcuts_open {
+            return;
+        }
+        self.shortcuts_open = false;
+        window.close_dialog(cx);
     }
 
     /// Toggles the dev panel builder window. When no builder window is open,

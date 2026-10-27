@@ -299,26 +299,24 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
     // Wrap config in Arc<Mutex<>> for sharing with settings view
     let nemo_config = Arc::new(Mutex::new(nemo_config));
 
-    // Primary modifier: cmd on macOS (so native menu accelerators render as ⌘),
-    // ctrl elsewhere (x11/wayland).
-    #[cfg(target_os = "macos")]
-    const PRIMARY: &str = "cmd";
-    #[cfg(not(target_os = "macos"))]
-    const PRIMARY: &str = "ctrl";
+    // Primary modifier for all app shortcuts: cmd on macOS (so native menu
+    // accelerators render as ⌘), ctrl elsewhere (x11/wayland).
+    let primary = workspace::utils::PRIMARY_KEY;
 
     // `KeyBinding::new` now requires a `&'static str`, so runtime-built
     // keystrokes go through `KeyBinding::load`, which parses with the host
     // OS's keyboard mapper.
-    let bindings: [(String, Box<dyn Action>); 9] = [
-        (format!("{PRIMARY}-shift-r"), Box::new(ReloadConfig)),
-        (format!("{PRIMARY}-q"), Box::new(QuitApp)),
-        (format!("{PRIMARY}-w"), Box::new(CloseProject)),
-        (format!("{PRIMARY}-o"), Box::new(OpenProject)),
-        (format!("{PRIMARY}-shift-t"), Box::new(ToggleTheme)),
-        (format!("{PRIMARY}-p"), Box::new(OpenSettings)),
+    let bindings: [(String, Box<dyn Action>); 10] = [
+        (format!("{primary}-shift-r"), Box::new(ReloadConfig)),
+        (format!("{primary}-q"), Box::new(QuitApp)),
+        (format!("{primary}-w"), Box::new(CloseProject)),
+        (format!("{primary}-o"), Box::new(OpenProject)),
+        (format!("{primary}-shift-t"), Box::new(ToggleTheme)),
+        (format!("{primary}-p"), Box::new(OpenSettings)),
+        (format!("{primary}-k"), Box::new(ShowKeyboardShortcuts)),
         ("escape".to_string(), Box::new(CloseSettings)),
         ("f10".to_string(), Box::new(ShowKeyboardShortcuts)),
-        (format!("{PRIMARY}-shift-e"), Box::new(ToggleDevPanel)),
+        (format!("{primary}-shift-e"), Box::new(ToggleDevPanel)),
     ];
     let bindings: Vec<KeyBinding> = bindings
         .into_iter()
@@ -525,6 +523,7 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
                     _watcher: None,
                     dev_mode,
                     dev_panel_window: None,
+                    shortcuts_open: false,
                 }
             });
 
