@@ -249,34 +249,36 @@ impl RenderOnce for AppShell {
             .children(self.content_children);
 
         // ── Footer ────────────────────────────────────────────────────────
-        let footer = div()
-            .flex()
-            .flex_row()
-            .items_center()
-            .w_full()
-            .flex_shrink_0()
-            .min_h(px(32.))
-            .border_t_1()
-            .border_color(border)
-            .px_t(Space::Sm)
-            .children(self.footer_children);
-
-        div()
-            .flex()
-            .flex_col()
-            .size_full()
-            .child(
+        // Only painted when the app supplies an <app-footer> region; an
+        // empty 32px strip with a border line is just dead space.
+        let root = div().flex().flex_col().size_full().child(
+            div()
+                .flex()
+                .flex_row()
+                .flex_1()
+                .min_h(px(0.))
+                .items_stretch()
+                .child(sidenav)
+                .child(content),
+        );
+        if self.footer_children.is_empty() {
+            root.into_any_element()
+        } else {
+            root.child(
                 div()
                     .flex()
                     .flex_row()
-                    .flex_1()
-                    .min_h(px(0.))
-                    .items_stretch()
-                    .child(sidenav)
-                    .child(content),
+                    .items_center()
+                    .w_full()
+                    .flex_shrink_0()
+                    .min_h(px(32.))
+                    .border_t_1()
+                    .border_color(border)
+                    .px_t(Space::Sm)
+                    .children(self.footer_children),
             )
-            .child(footer)
             .into_any_element()
+        }
     }
 }
 
