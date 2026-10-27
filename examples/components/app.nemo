@@ -41,6 +41,7 @@
       <app-content>
         <!-- Overview page -->
         <page id="overview">
+          <stack direction="vertical" scroll="true" flex="1">
           <panel template="content_page">
             <label id="overview_title" text="Nemo Component Gallery" size="xl" />
             <text id="overview_desc" content="Nemo is a GPUI-powered desktop application framework configured entirely with XML. Applications compose built-in components — layout containers, widgets, charts, and navigation primitives — into a layout tree, and this gallery exercises every one of them in one running app. The shell you are looking at is the app-shell component: a sidenav of icon menu items that switches between the three sections below." />
@@ -54,10 +55,12 @@
             <label id="overview_section_theme" text="Themes" size="lg" />
             <text id="overview_theme" content="The header-bar menu switches the roundness preset, and the settings entry toggles dark or light mode and the theme set. Every page re-renders with the new palette, so the previews you see here are a live theme holder as well." />
           </panel>
+          </stack>
         </page>
 
         <!-- Styling page: moved out of the demo router; the shell switches to it. -->
         <page id="styling">
+          <stack direction="vertical" scroll="true" flex="1">
           <panel template="content_page">
             <label id="styling_title" text="Styling" size="lg" />
             <text id="styling_desc" content="All components support shared styling attributes via apply_layout_styles: padding, margin, border, shadow, and rounded. These wrap any component in a styled container." />
@@ -206,6 +209,7 @@
               </tab-item>
             </tabs>
           </panel>
+          </stack>
         </page>
 
         <!-- Components page: the original gallery navigation and router, intact. -->
@@ -214,9 +218,6 @@
             <!-- Sidebar -->
             <panel id="sidebar">
               <stack id="sidebar_inner" direction="vertical" spacing="8" padding="16" scroll="true" border-right="1" border-color="theme.border">
-                <label id="sidebar_title" text="Components" size="lg" />
-
-
                 <!-- Basic -->
                 <label id="cat_basic" text="Basic" size="sm" />
                 <nav-link router="main" route="/button" label="Button" />
