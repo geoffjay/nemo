@@ -1,20 +1,23 @@
 //! GPUI application wrapper.
 
 use gpui::*;
-use gpui_component::input::{InputEvent, InputState};
-use gpui_component::slider::SliderState;
-use gpui_component::table::TableState;
-use gpui_component::tree::TreeState;
-use gpui_component::v_flex;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
+use gpui_kit::component::slider::SliderState;
+use gpui_kit::component::table::TableState;
+use gpui_kit::component::tree::TreeState;
+use gpui_kit::component::v_flex;
+use gpui_kit::component::ActiveTheme;
 use nemo_config::Value;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use crate::components::state::{ComponentState, ComponentStates};
-use crate::components::table::NemoTableDelegate;
-use crate::components::tree::values_to_tree_items;
-use gpui_component::input::TabSize;
+use crate::components::table::{
+    DeclaredCell, DeclaredColumn, DeclaredRow, DeclaredTableData, NemoTableDelegate,
+};
+use crate::components::tree::{declared_to_tree_items, values_to_tree_items, DeclaredTreeNode};
+use gpui_kit::component::input::TabSize;
+use gpui_kit::component::table::Column;
 
 use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
@@ -200,6 +203,7 @@ impl App {
     fn get_or_create_table_state(
         &mut self,
         component: &BuiltComponent,
+        declared_columns: &[DeclaredColumn],
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Entity<TableState<NemoTableDelegate>> {
@@ -222,7 +226,32 @@ impl App {
             return state.clone();
         }
 
-        let delegate = NemoTableDelegate::from_properties(&component.properties);
+        // Declarative `<table-column>` children feed the data table's
+        // columns (replacing the `columns` JSON attribute); fall back to the
+        // attribute/autodetect when no header is declared.
+        let delegate = if declared_columns.is_empty() {
+            NemoTableDelegate::from_properties(&component.properties)
+        } else {
+            let columns: Vec<Column> = declared_columns
+                .iter()
+                .map(|col| {
+                    let mut column = Column::new(col.field.clone(), col.label.clone());
+                    if let Some(w) = col.width {
+                        column = column.width(px(w));
+                    }
+                    column
+                })
+                .collect();
+            let column_keys: Vec<String> = declared_columns
+                .iter()
+                .map(|col| col.field.clone())
+                .collect();
+            let rows = match component.properties.get("data") {
+                Some(Value::Array(arr)) => arr.clone(),
+                _ => Vec::new(),
+            };
+            NemoTableDelegate::from_parts(columns, column_keys, rows)
+        };
         let state = cx.new(|cx| TableState::new(delegate, window, cx));
         self.component_states.insert(
             component.id.clone(),
@@ -232,6 +261,169 @@ impl App {
             },
         );
         state
+    }
+
+    /// Extracts `<table-column>` children from the table's
+    /// `<table-header>` into column definitions. Shared by both table
+    /// modes: declared mode renders the header band from them, data mode
+    /// feeds them to the virtualized delegate.
+    fn extract_declared_columns(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Vec<DeclaredColumn> {
+        let mut columns: Vec<DeclaredColumn> = Vec::new();
+        for child_id in &component.children {
+            let Some(child) = components.get(child_id) else {
+                continue;
+            };
+            if child.component_type != "table_header" {
+                continue;
+            }
+            for col_id in &child.children {
+                let Some(col) = components.get(col_id) else {
+                    continue;
+                };
+                if col.component_type != "table_column" {
+                    continue;
+                }
+                let field = col
+                    .properties
+                    .get("field")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                // The header label: text content, then the `label` attribute.
+                let label = col
+                    .properties
+                    .get("content")
+                    .or_else(|| col.properties.get("label"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| field.clone());
+                let width = col
+                    .properties
+                    .get("width")
+                    .and_then(|v| v.as_i64())
+                    .map(|w| w as f32);
+                let align = match col
+                    .properties
+                    .get("align")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("left")
+                {
+                    "center" => TextAlign::Center,
+                    "right" => TextAlign::Right,
+                    _ => TextAlign::Left,
+                };
+                columns.push(DeclaredColumn {
+                    field,
+                    label,
+                    width,
+                    align,
+                });
+            }
+        }
+        columns
+    }
+
+    /// Extracts `<table-header>`/`<table-row>` children into declared-mode
+    /// data. Returns `None` when the table has no declared rows or when live
+    /// `data` is present (data mode wins so a bound table replaces its
+    /// declared placeholder rows once the source delivers).
+    fn extract_declared_table(
+        &mut self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+        entity_id: EntityId,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<DeclaredTableData> {
+        // Live data wins over declared rows.
+        if let Some(Value::Array(arr)) = component.properties.get("data") {
+            if !arr.is_empty() {
+                return None;
+            }
+        }
+
+        let columns = self.extract_declared_columns(component, components);
+
+        // Rows: `<table-row>` children, each holding `<table-cell>` children.
+        let mut rows: Vec<DeclaredRow> = Vec::new();
+        for child_id in &component.children {
+            let Some(child) = components.get(child_id) else {
+                continue;
+            };
+            if child.component_type != "table_row" {
+                continue;
+            }
+            let row_col_span = child
+                .properties
+                .get("col_span")
+                .and_then(|v| v.as_i64())
+                .map(|v| v.max(1) as usize)
+                .unwrap_or(1);
+            let mut cells: Vec<DeclaredCell> = Vec::new();
+            for cell_id in &child.children {
+                let Some(cell) = components.get(cell_id) else {
+                    continue;
+                };
+                if cell.component_type != "table_cell" {
+                    continue;
+                }
+                // Text-only cells: the `content` property becomes a text
+                // child; otherwise the cell's children are the content.
+                let content: Vec<AnyElement> =
+                    if let Some(Value::String(text)) = cell.properties.get("content") {
+                        // Text cells render the string directly; the id derives
+                        // from the cell's component id so sibling cells stay
+                        // distinct.
+                        vec![gpui::Text::new(
+                            gpui::ElementId::Name(text.clone().into()),
+                            text.clone().into(),
+                        )
+                        .into_any_element()]
+                    } else {
+                        self.render_children(cell, components, entity_id, window, cx)
+                    };
+                let align = match cell
+                    .properties
+                    .get("align")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("left")
+                {
+                    "center" => TextAlign::Center,
+                    "right" => TextAlign::Right,
+                    _ => TextAlign::Left,
+                };
+                cells.push(DeclaredCell {
+                    col_span: cell
+                        .properties
+                        .get("col_span")
+                        .and_then(|v| v.as_i64())
+                        .map(|v| v.max(1) as usize)
+                        .unwrap_or(1),
+                    row_span: cell
+                        .properties
+                        .get("row_span")
+                        .and_then(|v| v.as_i64())
+                        .map(|v| v.max(1) as usize)
+                        .unwrap_or(1),
+                    align,
+                    content,
+                });
+            }
+            rows.push(DeclaredRow {
+                col_span: row_col_span,
+                cells,
+            });
+        }
+
+        if rows.is_empty() {
+            return None;
+        }
+
+        Some(DeclaredTableData { columns, rows })
     }
 
     /// Gets or creates a TreeState entity for the given component.
@@ -271,6 +463,145 @@ impl App {
         state
     }
 
+    /// Gets or creates the TreeState for a declared-mode tree. The structure
+    /// is identical every frame (the XML does not change without a config
+    /// reload), so the state is created once from the first extraction and
+    /// reused, preserving user expansion/selection across frames.
+    fn get_or_create_declared_tree_state(
+        &mut self,
+        component_id: &str,
+        nodes: &[DeclaredTreeNode],
+        cx: &mut Context<Self>,
+    ) -> Entity<TreeState> {
+        if let Some(ComponentState::Tree { state, .. }) =
+            self.component_states.get_mut(component_id)
+        {
+            return state.clone();
+        }
+        let items = declared_to_tree_items(nodes);
+        let state = cx.new(|cx| TreeState::new(cx).items(items));
+        self.component_states.insert(
+            component_id.to_string(),
+            ComponentState::Tree {
+                state: state.clone(),
+                last_items: Vec::new(),
+            },
+        );
+        state
+    }
+
+    /// Extracts a single `<tree-node>`'s declared structure.
+    ///
+    /// Content children are reduced to plain data the row renderer can build
+    /// fresh on every call: `<icon>` children contribute leading/trailing
+    /// icon names, `<text>`/`<label>` children contribute the label. This
+    /// is required because the kit tree renders each row once per layout
+    /// pass and once per paint pass — pre-rendered GPUI elements would be
+    /// consumed by the first pass.
+    fn extract_declared_tree_node(
+        &self,
+        node: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Option<DeclaredTreeNode> {
+        let mut children_nodes: Vec<DeclaredTreeNode> = Vec::new();
+        let mut leading_icon: Option<String> = None;
+        let mut trailing_icon: Option<String> = None;
+        let mut text_label: Option<String> = None;
+
+        for child_id in &node.children {
+            let Some(child) = components.get(child_id) else {
+                continue;
+            };
+            match child.component_type.as_str() {
+                "tree_node" => {
+                    if let Some(child_node) = self.extract_declared_tree_node(child, components) {
+                        children_nodes.push(child_node);
+                    }
+                }
+                "icon" => {
+                    // The first icon leads, a second trails the label.
+                    if let Some(n) = child.properties.get("name").and_then(|v| v.as_str()) {
+                        if leading_icon.is_none() {
+                            leading_icon = Some(n.to_string());
+                        } else if trailing_icon.is_none() {
+                            trailing_icon = Some(n.to_string());
+                        }
+                    }
+                }
+                "text" | "label" if text_label.is_none() => {
+                    // A text child provides the displayed label.
+                    text_label = child
+                        .properties
+                        .get("content")
+                        .or_else(|| child.properties.get("text"))
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                }
+                _ => {}
+            }
+        }
+
+        // Label precedence: a text/label child, then the element's own text
+        // content, then the `label` attribute, then the id.
+        let label_attr = node
+            .properties
+            .get("label")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let own_text = node
+            .properties
+            .get("content")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+        let label = text_label
+            .or(own_text)
+            .or(label_attr)
+            .unwrap_or_else(|| node.id.clone());
+
+        Some(DeclaredTreeNode {
+            id: node.id.clone(),
+            label,
+            leading_icon,
+            trailing_icon,
+            children: children_nodes,
+            expanded: node
+                .properties
+                .get("expanded")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            disabled: node
+                .properties
+                .get("disabled")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+        })
+    }
+
+    /// Extracts the tree's direct `<tree-node>` children (recursively).
+    fn extract_declared_tree(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Option<Vec<DeclaredTreeNode>> {
+        let mut nodes: Vec<DeclaredTreeNode> = Vec::new();
+        for child_id in &component.children {
+            let Some(child) = components.get(child_id) else {
+                continue;
+            };
+            if child.component_type == "tree_node" {
+                if let Some(node) = self.extract_declared_tree_node(child, components) {
+                    nodes.push(node);
+                }
+            }
+        }
+
+        if nodes.is_empty() {
+            None
+        } else {
+            Some(nodes)
+        }
+    }
+
     /// Gets or creates a SliderState entity for the given component.
     fn get_or_create_slider_state(
         &mut self,
@@ -300,14 +631,16 @@ impl App {
         state
     }
 
-    /// Gets or creates an InputState entity configured for a Textarea component.
+    /// Gets or creates a TextareaState entity configured for a Textarea component.
     fn get_or_create_textarea_state(
         &mut self,
         component: &BuiltComponent,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Entity<InputState> {
-        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+    ) -> Entity<TextareaState> {
+        let id = component.id.clone();
+
+        if let Some(ComponentState::Textarea(state)) = self.component_states.get(&id) {
             return state.clone();
         }
 
@@ -326,13 +659,12 @@ impl App {
         let auto_grow_max = props.get("auto_grow_max").and_then(|v| v.as_i64());
 
         let state = cx.new(|cx| {
-            let mut s = InputState::new(window, cx).placeholder(placeholder);
+            let mut s = TextareaState::new(window, cx).placeholder(placeholder);
 
-            // Configure mode: auto_grow takes priority, then rows, then default multi_line
+            // Configure sizing: auto_grow takes priority, then rows.
             if let (Some(min), Some(max)) = (auto_grow_min, auto_grow_max) {
                 s = s.auto_grow(min as usize, max as usize);
             } else {
-                s = s.multi_line(true);
                 s = s.rows(rows.unwrap_or(4) as usize);
             }
 
@@ -343,18 +675,21 @@ impl App {
         });
 
         self.component_states
-            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+            .insert(id.clone(), ComponentState::Textarea(state.clone()));
+
         state
     }
 
-    /// Gets or creates an InputState entity configured for a CodeEditor component.
+    /// Gets or creates an EditorState entity configured for a CodeEditor component.
     fn get_or_create_code_editor_state(
         &mut self,
         component: &BuiltComponent,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Entity<InputState> {
-        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+    ) -> Entity<EditorState> {
+        let id = component.id.clone();
+
+        if let Some(ComponentState::Editor(state)) = self.component_states.get(&id) {
             return state.clone();
         }
 
@@ -376,32 +711,21 @@ impl App {
             .get("default_value")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
-        let multi_line = props
-            .get("multi_line")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(true);
         let tab_size_val = props.get("tab_size").and_then(|v| v.as_i64()).unwrap_or(4) as usize;
         let hard_tabs = props
             .get("hard_tabs")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
-        let rows = props.get("rows").and_then(|v| v.as_i64());
 
         let state = cx.new(|cx| {
-            let mut s = InputState::new(window, cx)
-                .code_editor(language)
+            let mut s = EditorState::new(window, cx)
+                .language(language)
                 .line_number(line_number)
                 .searchable(searchable)
                 .tab_size(TabSize {
                     tab_size: tab_size_val,
                     hard_tabs,
                 });
-
-            if !multi_line {
-                s = s.multi_line(false);
-            }
-
-            s = s.rows(rows.unwrap_or(4) as usize);
 
             if let Some(val) = default_value {
                 s = s.default_value(val);
@@ -410,18 +734,21 @@ impl App {
         });
 
         self.component_states
-            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+            .insert(id.clone(), ComponentState::Editor(state.clone()));
+
         state
     }
 
-    /// Gets or creates an InputState entity configured for a TextEditor component.
+    /// Gets or creates a TextareaState entity configured for a TextEditor component.
     fn get_or_create_text_editor_state(
         &mut self,
         component: &BuiltComponent,
         window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Entity<InputState> {
-        if let Some(ComponentState::Input(state)) = self.component_states.get(&component.id) {
+    ) -> Entity<TextareaState> {
+        let id = component.id.clone();
+
+        if let Some(ComponentState::Textarea(state)) = self.component_states.get(&id) {
             return state.clone();
         }
 
@@ -438,8 +765,7 @@ impl App {
         let rows = props.get("rows").and_then(|v| v.as_i64());
 
         let state = cx.new(|cx| {
-            let mut s = InputState::new(window, cx)
-                .multi_line(true)
+            let mut s = TextareaState::new(window, cx)
                 .placeholder(placeholder)
                 .rows(rows.unwrap_or(4) as usize);
 
@@ -450,7 +776,8 @@ impl App {
         });
 
         self.component_states
-            .insert(component.id.clone(), ComponentState::Input(state.clone()));
+            .insert(id.clone(), ComponentState::Textarea(state.clone()));
+
         state
     }
 
@@ -626,6 +953,36 @@ impl App {
         }
 
         let is_panel = component.component_type == "panel";
+
+        // Panels own their decoration (`Panel::render` handles padding,
+        // border, shadow, rounding, and background), so those properties get
+        // skipped in the wrapper below. Only wrap when there is actual
+        // geometry (size, margin, flex, scroll) to apply: adding a wrapper
+        // for a decoration-only attribute like `border="0"` inserts an
+        // intermediate div into the flex chain that an inner scroll stack
+        // depends on, which breaks its scrolling.
+        let has_geometry = [
+            width,
+            height,
+            min_width,
+            min_height,
+            max_width,
+            max_height,
+            margin,
+            margin_x,
+            margin_y,
+            margin_left,
+            margin_right,
+            margin_top,
+            margin_bottom,
+        ]
+        .iter()
+        .any(|v| v.is_some())
+            || flex_grows
+            || scroll;
+        if is_panel && !has_geometry {
+            return element;
+        }
 
         let mut wrapper = div().flex().flex_col().min_h(px(0.));
 
@@ -916,10 +1273,25 @@ impl App {
                     .into_any_element()
             }
             "table" => {
-                let table_state = self.get_or_create_table_state(component, window, cx);
-                Table::new(component.clone())
-                    .table_state(table_state)
-                    .into_any_element()
+                // Declared mode: header/row children author the content.
+                // Data mode: `data` array via binding, rendered through the
+                // virtualized kit table. When both are present, live data
+                // wins once it arrives; declared `<table-column>` children
+                // feed the data table's column definitions either way.
+                let declared_columns = self.extract_declared_columns(component, components);
+                if let Some(declared) =
+                    self.extract_declared_table(component, components, entity_id, window, cx)
+                {
+                    Table::new(component.clone())
+                        .declared(declared)
+                        .into_any_element()
+                } else {
+                    let table_state =
+                        self.get_or_create_table_state(component, &declared_columns, window, cx);
+                    Table::new(component.clone())
+                        .table_state(table_state)
+                        .into_any_element()
+                }
             }
             "list" => {
                 // Each <list-item> child is a row; its own children are the content.
@@ -946,10 +1318,33 @@ impl App {
                 List::new(component.clone()).items(items).into_any_element()
             }
             "tree" => {
-                let tree_state = self.get_or_create_tree_state(component, window, cx);
-                Tree::new(component.clone())
-                    .tree_state(tree_state)
-                    .into_any_element()
+                // Declared mode: <tree-node> children author the structure.
+                // Data mode: `items` array via binding. Live items win once
+                // delivered (same precedence as the table).
+                let has_live_items = match component.properties.get("items") {
+                    Some(Value::Array(arr)) => !arr.is_empty(),
+                    _ => false,
+                };
+                let declared_nodes = if has_live_items {
+                    None
+                } else {
+                    self.extract_declared_tree(component, components)
+                };
+
+                let tree_state = match declared_nodes.as_ref() {
+                    // Structure goes into the TreeState once (created on
+                    // first render, reused after so user expansion state
+                    // survives); content is rebuilt every frame inside the
+                    // row closure.
+                    Some(nodes) => self.get_or_create_declared_tree_state(&component.id, nodes, cx),
+                    None => self.get_or_create_tree_state(component, window, cx),
+                };
+
+                let mut tree = Tree::new(component.clone()).tree_state(tree_state);
+                if let Some(nodes) = declared_nodes {
+                    tree = tree.declared(nodes);
+                }
+                tree.into_any_element()
             }
             "line_chart" => LineChart::new(component.clone()).into_any_element(),
             "realtime_chart" => RealtimeChart::new(component.clone()).into_any_element(),
@@ -1018,7 +1413,8 @@ impl App {
                     .entity_id(entity_id)
                     .into_any_element()
             }
-            "accordion_item" | "tab_item" | "option" | "menu_item" | "list_item" => {
+            "accordion_item" | "tab_item" | "option" | "menu_item" | "list_item"
+            | "table_header" | "table_column" | "table_row" | "table_cell" | "tree_node" => {
                 // These are rendered by their parent container; standalone fallback.
                 div().into_any_element()
             }
@@ -1195,6 +1591,15 @@ impl App {
                     (children, None)
                 } else {
                     let default_target = pages.first().map(|p| p.id.clone()).unwrap_or_default();
+                    // `default_page` names the initially-active page (deep-linking
+                    // into a section); it must match a `<page id="...">`.
+                    let default_target = component
+                        .properties
+                        .get("default_page")
+                        .and_then(|v| v.as_str())
+                        .filter(|name| pages.iter().any(|p| &p.id == name))
+                        .map(|s| s.to_string())
+                        .unwrap_or(default_target);
                     let state = self
                         .component_states
                         .get_or_create_selected_value(&component.id, default_target);

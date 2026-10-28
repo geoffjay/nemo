@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::badge::Badge as GpuiBadge;
+use gpui_kit::component::badge::Badge as GpuiBadge;
 use nemo_layout::BuiltComponent;
 
 /// A badge component with an optional count indicator or dot.

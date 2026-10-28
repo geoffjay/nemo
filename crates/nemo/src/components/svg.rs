@@ -1,4 +1,5 @@
 use gpui::*;
+use gpui_kit::component::ActiveTheme;
 use nemo_macros::NemoComponent;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -93,6 +94,33 @@ fn is_url(src: &str) -> bool {
     src.starts_with("http://") || src.starts_with("https://")
 }
 
+/// Replaces every `currentColor` in SVG markup with a concrete color.
+///
+/// Browsers resolve `currentColor` from the CSS `color` property (inheriting
+/// the theme's text color); usvg has no such context and falls back to black,
+/// which vanishes on dark themes. Icon sets like Heroicons write
+/// `stroke="currentColor"` by default, so embed them stroke-colored to the
+/// active theme's foreground here, before the markup is handed to the
+/// rasterizer. (Only applies to embedded markup; `src`-loaded files go through
+/// the image pipeline untouched.)
+fn resolve_current_color(svg: &str, cx: &App) -> String {
+    if !svg.contains("currentColor") {
+        return svg.to_string();
+    }
+    resolve_current_color_with(svg, &hex_of(cx.theme().colors.foreground))
+}
+
+fn resolve_current_color_with(svg: &str, color: &str) -> String {
+    svg.replace("currentColor", color)
+}
+
+/// Formats an opaque color as `#rrggbb` (SVG's hex syntax).
+fn hex_of(color: gpui::Hsla) -> String {
+    let rgba = gpui::Rgba::from(color);
+    let channel = |v: f32| -> String { format!("{:02x}", (v * 255.0).round() as u8) };
+    format!("#{}{}{}", channel(rgba.r), channel(rgba.g), channel(rgba.b))
+}
+
 /// Resolves an SVG `src` filesystem path. Absolute paths are used as-is; a
 /// relative path resolves against the config file's directory (available via
 /// the runtime) so launching from any working directory finds the asset. When
@@ -112,7 +140,7 @@ fn resolve_src_path(src: &str, runtime: Option<&NemoRuntime>) -> PathBuf {
 }
 
 impl RenderOnce for Svg {
-    fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
+    fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
         let width = self.source.properties.get("width").and_then(|v| v.as_i64());
         let height = self
             .source
@@ -140,7 +168,7 @@ impl RenderOnce for Svg {
                 Some(path.into())
             }
         } else if !content.is_empty() && content.contains("<svg") {
-            let bytes = ensure_xmlns(content).into_bytes();
+            let bytes = ensure_xmlns(&resolve_current_color(content, cx)).into_bytes();
             Some(ImageSource::Image(Arc::new(Image::from_bytes(
                 ImageFormat::Svg,
                 bytes,
@@ -199,5 +227,31 @@ impl RenderOnce for Svg {
         }
 
         element.into_any_element()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{hex_of, resolve_current_color_with};
+
+    #[test]
+    fn test_resolve_current_color_substitutes_theme_color() {
+        let svg = r#"<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+            stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" d="M5 14.5" /></svg>"#;
+
+        let resolved = resolve_current_color_with(svg, "#eceff4");
+        assert!(resolved.contains(r##"stroke="#eceff4""##));
+        assert!(!resolved.contains("currentColor"));
+
+        // Markup without `currentColor` passes through untouched.
+        let plain = r##"<svg fill="#ff0000"></svg>"##;
+        assert_eq!(resolve_current_color_with(plain, "#eceff4"), plain);
+    }
+
+    #[test]
+    fn test_hex_of_formats_srgb_hex() {
+        // #eceff4 = (236, 239, 244) / 255.
+        let color: gpui::Hsla = gpui::rgb(0xeceff4).into();
+        assert_eq!(hex_of(color), "#eceff4");
     }
 }

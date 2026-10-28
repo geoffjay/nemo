@@ -1,8 +1,8 @@
 use crate::theme::tokens::{FontSize, Space, TokenStyled};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::v_flex;
-use gpui_component::{ActiveTheme, Sizable};
+use gpui_kit::component::v_flex;
+use gpui_kit::component::{ActiveTheme, Sizable};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
@@ -73,9 +73,9 @@ impl RenderOnce for Collapsible {
         let toggle_id = ElementId::Name(SharedString::from(format!("{}-toggle", self.source.id)));
 
         let chevron = if open {
-            gpui_component::IconName::ChevronDown
+            gpui_kit::component::IconName::ChevronDown
         } else {
-            gpui_component::IconName::ChevronRight
+            gpui_kit::component::IconName::ChevronRight
         };
 
         let border_color = cx.theme().border;
@@ -94,7 +94,7 @@ impl RenderOnce for Collapsible {
                     .border_b_1()
                     .border_color(border_color)
                     .hover(|s| s.bg(gpui::hsla(0., 0., 0.5, 0.1)))
-                    .child(gpui_component::Icon::new(chevron).xsmall())
+                    .child(gpui_kit::component::Icon::new(chevron).xsmall())
                     .child(
                         div()
                             .text_t(FontSize::Sm)

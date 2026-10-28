@@ -43,13 +43,13 @@ should not be re-derived.
   `WAYLAND_DISPLAY` was set — i.e. on any real Linux desktop, not just
   headless). This fix also makes the Linux release binaries (`.deb`/`.rpm`/
   tarball) launch correctly.
-* **No rev-pin needed for the fix.** Adding `x11`/`wayland` to `gpui_platform`
-  was done WITHOUT adding a `rev` to the git dep — a `rev` splits the git
-  source vs `gpui-component`'s rev-less refs into two incompatible `gpui`
-  instances (298 type errors). The working recipe: keep specs rev-less, restore
-  the good `Cargo.lock`, run a plain `cargo build` (adds only the new x11 crates,
-  lock diff: +282/-0, no rev change). See
-  [pin gpui git dep](../decisions/pin-gpui-git-dep.md).
+* **No rev-pin was needed for the fix.** Adding `x11`/`wayland` to
+  `gpui_platform` was done WITHOUT adding a `rev` to the (historical) git dep —
+  a `rev` split the git source vs `gpui-component`'s rev-less refs into two
+  incompatible `gpui` instances (298 type errors). Since 2026-10-27 the whole
+  stack is crates.io (`gpui-pre-platform` pins exactly via gpui-kit) and this
+  hazard no longer exists; see the
+  [gpui crates.io decision](../decisions/gpui-kit-crates-io-dep.md).
 
 ## What doesn't work yet
 

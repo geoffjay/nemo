@@ -1,8 +1,8 @@
 use gpui::Entity;
-use gpui_component::input::InputState;
-use gpui_component::slider::SliderState;
-use gpui_component::table::TableState;
-use gpui_component::tree::TreeState;
+use gpui_kit::component::input::{EditorState, InputState, TextareaState};
+use gpui_kit::component::slider::SliderState;
+use gpui_kit::component::table::TableState;
+use gpui_kit::component::tree::TreeState;
 use nemo_config::Value;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -55,6 +55,8 @@ use super::table::NemoTableDelegate;
 /// internal synchronization.
 pub enum ComponentState {
     Input(Entity<InputState>),
+    Textarea(Entity<TextareaState>),
+    Editor(Entity<EditorState>),
     Slider(Entity<SliderState>),
     Table {
         state: Entity<TableState<NemoTableDelegate>>,

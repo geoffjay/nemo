@@ -41,12 +41,22 @@ components.
 
 # Stateful widgets
 
-Widgets that carry runtime state across re-renders (Table, Tree, Input, Slider,
-Select, Tabs, Accordion, switches/toggles) persist that state in
-`ComponentStates`, a `HashMap<String, ComponentState>` keyed by component ID
+Widgets that carry runtime state across re-renders (Table, Tree, Input, Textarea,
+CodeEditor, Slider, Select, Tabs, Accordion, switches/toggles) persist that state
+in `ComponentStates`, a `HashMap<String, ComponentState>` keyed by component ID
 (`crates/nemo/src/components/state.rs`). The `ComponentState` enum holds either
-GPUI `Entity<T>` handles (Input, Slider, Table, Tree) or `Arc<Mutex<T>>` for
-handler-closure state (Accordion, bool/selected-value/selected-index).
+GPUI `Entity<T>` handles or `Arc<Mutex<T>>` for handler-closure state (Accordion,
+bool/selected-value/selected-index).
+
+Since the gpui-kit migration (2026-10-27) the text-editing widgets are **three
+state kinds**, mirroring the kit's type-level split: `Input` holds
+`Entity<InputState>` (single-line), `Textarea`/`TextEditor` hold
+`Entity<TextareaState>` (multi-line), and `CodeEditor` holds
+`Entity<EditorState>` (code editor with syntax highlighting). All three
+re-export from `gpui_kit::component::input` and share `value()`/`set_value`/
+`insert` plus the `InputEvent` emitter; only the single-line `Input` state is
+subscribed for value sync-back into the `value` property today. See
+[stateful widget persistence](../patterns/stateful-widget-entity-persistence.md).
 
 `app.rs` `get_or_create_*_state()` methods look up state by ID, create it via
 `cx.new(...)` on first render, and perform **data-change detection** — e.g. the
@@ -57,6 +67,42 @@ Table compares its current `Vec<Value>` to the stored `last_data` and only calls
 Table and Tree have a sizing gotcha: their `uniform_list` bodies collapse to 0px
 without a definite parent height. See
 [definite height for lists](../patterns/definite-height-for-lists.md).
+
+# Container child-item components (2026-10-28)
+
+Data containers accept their content as **child components** in addition to
+data attributes/`<binding>`: `tabs`→`tab_item`, `list`→`list_item`,
+`accordion`→`accordion_item`, `dropdown-button`→`menu_item`,
+`select`/`radio`→`option`, **`table`→`table_header`/`table_column`/
+`table_row`/`table_cell` (2026-10-28)**, and **`tree`→`tree_node`
+(2026-10-28)**. The pattern: the parser stores every child (id-keyed,
+order-preserving `children` vec); the container's render dispatch filters
+children by type and interprets them (see `parent-rendered-child-components`
+pattern). Two conventions for the new items:
+
+* **Element text content is the label.** `process_component_element`
+  (`crates/nemo-config/src/xml_parser.rs`) demotes an element's text nodes to
+  a `content` property for the child-item types only
+  (`tree_node`, `table_column`, `table_row`, `table_cell`, `table_header`) —
+  other components still drop stray text so unknown-attribute lints stay
+  quiet. `<tree-node>Label</tree-node>` works without a `label` attribute.
+* **Structure vs content is type-based.** A `tree-node`'s `tree_node` children
+  are its nested nodes; any other child (icon/text/…) is its label content.
+  No `label-ref` attributes and no wrapper elements.
+
+Table/two-mode split: content from `<table-row>` children renders through
+nemo's own span-aware grid (fixed pixel columns, uniform 32px rows grown by
+row spans; `col-span`/`row-span`/row-level `col_span` supported; cells can
+hold live components); rows from `data`/binding keep the kit's virtualized
+`DataTable` delegate path — with declarative `<table-column field=...>`
+children feeding the delegate's columns. Live `data` wins over declared rows
+once a source delivers (the declared content becomes the placeholder). Tree:
+declared `tree_node` children build the kit `TreeState` once (expansion and
+selection state survive across frames; live `items` data still replaces them
+when a binding delivers) while each row's label content is rebuilt per frame.
+Tree-node content must be plain data (leading icon, label, trailing icon)
+because the kit's `uniform_list` renders rows once per layout pass **and**
+once per paint pass — pre-rendered elements are consumed by the first pass.
 
 # Layout containers (stack / panel)
 

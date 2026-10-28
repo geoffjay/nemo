@@ -1,12 +1,20 @@
 use gpui::*;
-use gpui_component::h_flex;
-use gpui_component::label::Label;
+use gpui_kit::component::h_flex;
+use gpui_kit::component::label::Label;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::runtime;
 use crate::theme;
 use crate::theme::tokens::{Space, TokenStyled};
+
+/// The app's primary modifier in keystroke syntax: `cmd` on macOS, `ctrl` on
+/// Windows/Linux. Single source for the global binding table (`main.rs`) and
+/// the keyboard-shortcuts dialog rows, which must agree exactly.
+#[cfg(target_os = "macos")]
+pub const PRIMARY_KEY: &str = "cmd";
+#[cfg(not(target_os = "macos"))]
+pub const PRIMARY_KEY: &str = "ctrl";
 
 /// Creates a NemoRuntime, applies extension dirs, loads config, and initializes.
 /// Returns the runtime wrapped in Arc on success.
@@ -95,7 +103,7 @@ pub fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gp
         .get_config("app.theme.font_family")
         .and_then(|v| v.as_str().map(|s| s.to_string()))
     {
-        gpui_component::Theme::global_mut(cx).font_family = font_family.into();
+        gpui_kit::component::Theme::global_mut(cx).font_family = font_family.into();
     }
 
     // Apply per-project roundness override (after theme so it isn't reset).
@@ -110,8 +118,12 @@ pub fn apply_theme_from_runtime(runtime: &Arc<runtime::NemoRuntime>, cx: &mut gp
 }
 
 /// Render a single row for the keyboard shortcuts dialog.
-pub fn shortcut_row(label: &str, keystroke: &str) -> impl IntoElement {
-    let kbd = gpui_component::kbd::Kbd::new(Keystroke::parse(keystroke).unwrap());
+pub fn shortcut_row(label: &str, keystroke: String, cx: &gpui::App) -> impl IntoElement {
+    // Dynamic keystroke strings can't go through `Keystroke::parse`, which
+    // demands `&'static str`; `parse_with_os` accepts dynamic input (and
+    // resolves the `secondary-` alias, so rows may use it too).
+    let keystroke = Keystroke::parse_with_os(&keystroke, cx.platform_info().os).unwrap();
+    let kbd = gpui_kit::component::kbd::Kbd::new(keystroke);
     h_flex()
         .w_full()
         .justify_between()

@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::{ActiveTheme, Sizable};
+use gpui_kit::component::{ActiveTheme, Sizable};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 
@@ -142,7 +142,7 @@ impl RenderOnce for SidenavBar {
                 if let Some(entity_id) = self.entity_id {
                     item = item.entity_id(entity_id);
                 }
-                item.render(_window, cx).into_any_element()
+                RenderOnce::render(item, _window, cx).into_any_element()
             })
             .collect();
 
@@ -245,8 +245,10 @@ impl RenderOnce for SidenavBarItem {
         if self.collapsed {
             // Icon only, centered — square aspect ratio
             row = row.justify_center().mx_t(Space::Xs).size(px(40.));
-            row = row
-                .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
+            row = row.child(
+                gpui_kit::component::Icon::new(icon_name)
+                    .with_size(gpui_kit::component::Size::Small),
+            );
         } else {
             // Icon + label
             row = row
@@ -254,8 +256,10 @@ impl RenderOnce for SidenavBarItem {
                 .py_t(Space::Xs)
                 .mx_t(Space::Xs)
                 .gap_t(Space::Md);
-            row = row
-                .child(gpui_component::Icon::new(icon_name).with_size(gpui_component::Size::Small));
+            row = row.child(
+                gpui_kit::component::Icon::new(icon_name)
+                    .with_size(gpui_kit::component::Size::Small),
+            );
             row = row.child(div().text_t(FontSize::Sm).child(self.label));
         }
 

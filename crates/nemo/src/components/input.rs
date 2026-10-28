@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::input::{Input as GpuiInput, InputState};
+use gpui_kit::component::input::{Input as GpuiInput, InputState};
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
 

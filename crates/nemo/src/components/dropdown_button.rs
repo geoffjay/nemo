@@ -1,8 +1,8 @@
 use gpui::*;
-use gpui_component::button::{
+use gpui_kit::component::button::{
     Button as GpuiButton, ButtonVariants, DropdownButton as GpuiDropdownButton,
 };
-use gpui_component::menu::PopupMenuItem;
+use gpui_kit::component::menu::PopupMenuItem;
 use nemo_layout::BuiltComponent;
 use std::sync::Arc;
 

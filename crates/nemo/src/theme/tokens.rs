@@ -19,7 +19,7 @@
 #![allow(dead_code)]
 
 use gpui::{px, App, Pixels, Styled};
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 
 // Re-export the gpui-free token data so existing `crate::theme::tokens::*` paths
 // keep working (scales, radius, `radius_px`, semantic roles, `resolve_role_alias`).

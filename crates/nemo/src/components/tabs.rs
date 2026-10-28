@@ -1,7 +1,7 @@
 use crate::theme::tokens::{Space, TokenStyled};
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::tab::{Tab as GpuiTab, TabBar, TabVariant};
+use gpui_kit::component::tab::{Tab as GpuiTab, TabBar, TabVariant};
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 

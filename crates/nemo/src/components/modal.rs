@@ -1,6 +1,6 @@
 use crate::theme::tokens::{radius_of, FontSize, Space, TokenStyled};
 use gpui::*;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_macros::NemoComponent;
 
 /// A modal dialog overlay component.

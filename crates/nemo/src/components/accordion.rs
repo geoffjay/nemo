@@ -1,6 +1,6 @@
 use crate::theme::tokens::{Space, TokenStyled};
 use gpui::*;
-use gpui_component::accordion::{Accordion as GpuiAccordion, AccordionItem};
+use gpui_kit::component::accordion::{Accordion as GpuiAccordion, AccordionItem};
 use nemo_layout::BuiltComponent;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};

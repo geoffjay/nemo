@@ -54,7 +54,7 @@ mod tooltip;
 pub(crate) mod tree;
 
 use gpui::*;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_config::Value;
 use std::collections::HashMap;
 

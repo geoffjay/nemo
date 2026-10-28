@@ -1,6 +1,6 @@
 use gpui::*;
-use gpui_component::switch::Switch as GpuiSwitch;
-use gpui_component::Disableable;
+use gpui_kit::component::switch::Switch as GpuiSwitch;
+use gpui_kit::component::Disableable;
 use nemo_layout::BuiltComponent;
 use std::sync::{Arc, Mutex};
 

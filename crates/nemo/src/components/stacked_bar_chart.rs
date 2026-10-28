@@ -1,10 +1,12 @@
 use gpui::*;
-use gpui_component::plot::{
+use gpui_kit::component::plot::{
+    axis_gutter,
+    label::TEXT_SIZE,
     scale::{Scale, ScaleBand, ScaleLinear},
     shape::Stack,
-    AxisText, Grid, PlotAxis, AXIS_GAP,
+    AxisText, Grid, PlotAxis,
 };
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_config::Value;
 use nemo_macros::NemoComponent;
 
@@ -91,7 +93,7 @@ impl RenderOnce for StackedBarChart {
 }
 
 struct StackedBarElement {
-    series: Vec<gpui_component::plot::shape::StackSeries<Value>>,
+    series: Vec<gpui_kit::component::plot::shape::StackSeries<Value>>,
     y_labels: Vec<String>,
     max_x: f64,
     colors: Vec<Hsla>,
@@ -154,16 +156,17 @@ impl Element for StackedBarElement {
         window: &mut Window,
         cx: &mut App,
     ) {
-        let width = bounds.size.width.as_f32() - AXIS_GAP;
-        let height = bounds.size.height.as_f32() - AXIS_GAP;
-        let left_margin = AXIS_GAP;
+        let width = bounds.size.width.as_f32() - axis_gutter(px(TEXT_SIZE));
+        let height = bounds.size.height.as_f32() - axis_gutter(px(TEXT_SIZE));
+        let left_margin = axis_gutter(px(TEXT_SIZE));
 
-        let y_scale = ScaleBand::new(self.y_labels.clone(), vec![0., height])
+        let y_scale = ScaleBand::new(self.y_labels.clone(), [0., height])
             .padding_inner(0.3)
-            .padding_outer(0.2);
+            .padding_outer(0.2)
+            .max_band_width(30.);
         let band_height = y_scale.band_width();
 
-        let x_scale = ScaleLinear::new(vec![0.0_f64, self.max_x], vec![0., width]);
+        let x_scale = ScaleLinear::new([0.0_f64, self.max_x], [0., width]);
 
         // Y axis labels
         let y_label = self.y_labels.iter().enumerate().filter_map(|(i, label)| {
@@ -183,9 +186,7 @@ impl Element for StackedBarElement {
 
         // Grid (vertical)
         Grid::new()
-            .x((0..=4)
-                .map(|i| left_margin + width * i as f32 / 4.0)
-                .collect())
+            .x((0..=4).map(|i| left_margin + width * i as f32 / 4.0))
             .stroke(self.border_color)
             .dash_array(&[px(4.), px(2.)])
             .paint(&bounds, window);

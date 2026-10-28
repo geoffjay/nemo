@@ -1,6 +1,6 @@
 use crate::theme::tokens::{radius_of, Space, TokenStyled};
 use gpui::*;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::ActiveTheme;
 use nemo_layout::BuiltComponent;
 
 /// A list display component.

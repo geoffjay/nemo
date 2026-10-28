@@ -5,11 +5,11 @@ use std::sync::LazyLock;
 use std::sync::RwLock;
 
 use gpui::*;
-use gpui_component::Theme;
-use gpui_component::ThemeConfig;
-use gpui_component::ThemeConfigColors;
-use gpui_component::ThemeMode;
-use gpui_component::ThemeSet;
+use gpui_kit::component::Theme;
+use gpui_kit::component::ThemeConfig;
+use gpui_kit::component::ThemeConfigColors;
+use gpui_kit::component::ThemeMode;
+use gpui_kit::component::ThemeSet;
 use tracing::info;
 use tracing::warn;
 
@@ -262,17 +262,22 @@ pub fn apply_configured_theme(
                     _ => ThemeMode::Light,
                 };
 
-                let theme = Theme::global_mut(cx);
-                // Apply both variants so system mode switching works
-                theme.apply_config(&light);
-                theme.apply_config(&dark);
-                theme.mode = os_mode;
-                // Re-apply the active variant's colors
-                if os_mode == ThemeMode::Dark {
-                    theme.apply_config(&dark);
-                } else {
+                // `Theme::update` reconciles the token/base-layer copies of
+                // the theme (scrollbars, resize handles) and refreshes the
+                // windows — the old `global_mut` write path leaves those
+                // stale under gpui-kit.
+                Theme::update(cx, |theme| {
+                    // Apply both variants so system mode switching works
                     theme.apply_config(&light);
-                }
+                    theme.apply_config(&dark);
+                    theme.mode = os_mode;
+                    // Re-apply the active variant's colors
+                    if os_mode == ThemeMode::Dark {
+                        theme.apply_config(&dark);
+                    } else {
+                        theme.apply_config(&light);
+                    }
+                });
 
                 info!(
                     "Applied theme '{}' in system mode (detected: {:?})",
@@ -296,17 +301,18 @@ pub fn apply_configured_theme(
                 let light = Rc::new(light);
                 let dark = Rc::new(dark);
 
-                let theme = Theme::global_mut(cx);
-                // Apply both variants so mode toggling works
-                theme.apply_config(&light);
-                theme.apply_config(&dark);
-                theme.mode = mode;
-                // Re-apply the active variant's colors
-                if mode == ThemeMode::Dark {
-                    theme.apply_config(&dark);
-                } else {
+                Theme::update(cx, |theme| {
+                    // Apply both variants so mode toggling works
                     theme.apply_config(&light);
-                }
+                    theme.apply_config(&dark);
+                    theme.mode = mode;
+                    // Re-apply the active variant's colors
+                    if mode == ThemeMode::Dark {
+                        theme.apply_config(&dark);
+                    } else {
+                        theme.apply_config(&light);
+                    }
+                });
 
                 info!("Applied theme '{}' in {:?} mode", name, mode);
             }
@@ -349,9 +355,10 @@ pub fn get_theme_set_names() -> Vec<String> {
 pub fn apply_theme(name: &str, cx: &mut App) {
     if let Some(theme_config) = THEMES.get(name) {
         let theme_config = Rc::new(theme_config.clone());
-        let theme = Theme::global_mut(cx);
-        theme.mode = theme_config.mode;
-        theme.apply_config(&theme_config);
+        Theme::update(cx, |theme| {
+            theme.mode = theme_config.mode;
+            theme.apply_config(&theme_config);
+        });
     }
 }
 
@@ -369,23 +376,25 @@ pub fn apply_roundness(value: &str, cx: &mut App) {
         warn!("ignoring unrecognized roundness value: {value:?}");
         return;
     };
-    let theme = Theme::global_mut(cx);
-    theme.radius = px(base);
-    // Scale the large radius proportionally to the base (lg == 8/6 of md).
-    let lg = nemo_tokens::radius_scaled("lg", base).unwrap_or(base);
-    theme.radius_lg = px(lg);
+    Theme::update(cx, |theme| {
+        theme.radius = px(base);
+        // Scale the large radius proportionally to the base (lg == 8/6 of md).
+        let lg = nemo_tokens::radius_scaled("lg", base).unwrap_or(base);
+        theme.radius_lg = px(lg);
+    });
 }
 
 /// Toggle the color mode using the already-stored light/dark theme configs.
 pub fn change_color_mode(mode: ThemeMode, _win: &mut Window, cx: &mut App) {
-    let theme = Theme::global_mut(cx);
-    let config = if mode == ThemeMode::Dark {
-        theme.dark_theme.clone()
-    } else {
-        theme.light_theme.clone()
-    };
-    theme.mode = mode;
-    theme.apply_config(&config);
+    Theme::update(cx, |theme| {
+        let config = if mode == ThemeMode::Dark {
+            theme.dark_theme.clone()
+        } else {
+            theme.light_theme.clone()
+        };
+        theme.mode = mode;
+        theme.apply_config(&config);
+    });
 }
 
 #[cfg(test)]
@@ -397,7 +406,7 @@ mod tests {
         get_theme_set_names, merge_theme_config_colors, register_project_theme_sets,
         resolve_theme_pair,
     };
-    use gpui_component::{ThemeConfigColors, ThemeMode};
+    use gpui_kit::component::{ThemeConfigColors, ThemeMode};
 
     const SAMPLE_SET: &str = r##"{
         "name": "Sample",

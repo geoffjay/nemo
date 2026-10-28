@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::chart::CandlestickChart as GpuiCandlestickChart;
+use gpui_kit::component::chart::CandlestickChart as GpuiCandlestickChart;
 use nemo_config::Value;
 use nemo_macros::NemoComponent;
 
@@ -61,6 +61,7 @@ impl RenderOnce for CandlestickChart {
         let close_field = self.close_field.clone();
 
         let mut chart = GpuiCandlestickChart::new(data)
+            .id(SharedString::from(self.source.id.clone()))
             .x(move |item: &Value| get_string_field(item, &x_field))
             .open(move |item: &Value| get_f64_field(item, &open_field))
             .high(move |item: &Value| get_f64_field(item, &high_field))

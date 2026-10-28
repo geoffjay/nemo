@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::tag::Tag as GpuiTag;
+use gpui_kit::component::tag::Tag as GpuiTag;
 use nemo_layout::BuiltComponent;
 
 /// A colored tag/chip component.

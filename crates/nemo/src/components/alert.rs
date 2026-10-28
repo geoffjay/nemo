@@ -1,5 +1,5 @@
 use gpui::*;
-use gpui_component::alert::{Alert as GpuiAlert, AlertVariant};
+use gpui_kit::component::alert::{Alert as GpuiAlert, AlertVariant};
 use nemo_layout::BuiltComponent;
 
 /// An alert/status message component.

@@ -7,12 +7,16 @@ timestamp: 2026-07-11T00:00:00Z
 ---
 
 Nemo is a configuration-driven desktop application framework built on
-[GPUI](https://gpui.rs) (Zed's GPU-accelerated UI framework). An application is
-declared in an `app.nemo` single-file component: a
-component tree, data sources, bindings, handlers, and theme. Nemo compiles the
-entry to an internal `Value` tree, builds a component tree, and renders it as
-native GPUI elements. Data flow is asynchronous and pushed into a central
-changes propagate through a binding system that updates component properties and
+[GPUI](https://gpui.rs) (Zed's GPU-accelerated UI framework), consumed through
+the [GPUI Kit](https://gpui-kit.com) umbrella crate (`gpui-kit` on crates.io,
+which pins the `gpui-pre` snapshot crates and re-exports the styled component
+library as `gpui_kit::component` — the former `gpui-component` — plus the
+unstyled base layer as `gpui_kit::base`). An application is
+declared in an `app.nemo` single-file component: a component tree, data
+sources, bindings, handlers, and theme. Nemo compiles the entry to an internal
+`Value` tree, builds a component tree, and renders it as native GPUI elements.
+Data flow is asynchronous and pushed into a central repository; changes
+propagate through a binding system that updates component properties and
 signals GPUI to re-render.
 
 # Workspace crates

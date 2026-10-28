@@ -66,20 +66,20 @@ the desktop path untouched.
   (`ViewIr`/`ViewStyle` structs, `ViewNode` enum). Mirrors the gpui-free boundary
   already used by `xtask`/`nemo-tokens`.
   - **Vendor the serde structs; do NOT add a dependency on `crepuscularity-native`.**
-    The types are ~3 plain serde definitions pinned at `IR_VERSION = 7`. Adding an
-    external dependency forces a `cargo update` / Cargo.lock re-resolution, which is
-    the single documented build hazard in this repo — it drifts the **rev-less gpui
-    git dependency** and breaks the build (see
-    [pin-gpui-git-dep](../decisions/pin-gpui-git-dep.md); Cargo.lock is load-bearing).
-    The hazard is the lockfile re-resolution itself, *not* gpui being pulled in:
+    The types are ~3 plain serde definitions pinned at `IR_VERSION = 7`. (The
+    historical reason for vendoring was the rev-less gpui git dependency, whose
+    lockfile re-resolution any new external dep could drift — see the
+    [gpui crates.io decision](../decisions/gpui-kit-crates-io-dep.md) History
+    section. Since 2026-10-27 gpui comes from crates.io and that hazard is
+    gone; vendoring remains the right call because it pins the IR contract
+    explicitly — a shell-side `IR_VERSION` bump becomes a visible
+    compile-time break — and avoids pulling a large external dep for three
+    structs.)
     `crepuscularity-native` (v0.5.0) and its transitive `crepuscularity-core`
     (v0.5.0) are both verified gpui-free (deps are serde/serde_json/toml/sha2/
     tracing/thiserror + optional schemars/notify; gpui lives only in the separate
-    `crepuscularity-gpui` crate). Vendoring sidesteps the drift entirely, pins the
-    IR contract explicitly (a shell-side `IR_VERSION` bump becomes a visible
-    constant to update, not a silent break), and drops a pre-1.0 crate from the
-    tree — all upside given this repo's constraints. Keep a golden test asserting
-    our vendored structs still round-trip against a captured upstream sample.
+    `crepuscularity-gpui` crate). Keep a golden test asserting our vendored
+    structs still round-trip against a captured upstream sample.
 - **Node mapping** `component_type → ViewNode`: `label→text`,
   `panel`/`stack`/layout→`stack`, `button→button`, `select→picker`, `tabs→tabs`,
   `list→list`, text input→`input`, `image→image`, `divider`/`spacer`/`slider`/

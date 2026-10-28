@@ -1,6 +1,6 @@
 use gpui::*;
-use gpui_component::button::{Button as GpuiButton, ButtonRounded, ButtonVariants};
-use gpui_component::{Disableable, Sizable, Size as ComponentSize};
+use gpui_kit::component::button::{Button as GpuiButton, ButtonRounded, ButtonVariants};
+use gpui_kit::component::{Disableable, Sizable, Size as ComponentSize};
 use nemo_macros::NemoComponent;
 use std::sync::Arc;
 

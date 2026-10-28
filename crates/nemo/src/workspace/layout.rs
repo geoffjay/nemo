@@ -5,8 +5,8 @@
 
 use gpui::prelude::FluentBuilder as _;
 use gpui::*;
-use gpui_component::v_flex;
-use gpui_component::ActiveTheme;
+use gpui_kit::component::v_flex;
+use gpui_kit::component::ActiveTheme;
 use gpui_router::{IntoLayout, Outlet};
 
 use crate::workspace::{FooterBar, HeaderBar};
