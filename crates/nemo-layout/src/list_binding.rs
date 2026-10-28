@@ -289,35 +289,122 @@ fn insert_instance(
     // Recursively insert children from the expanded template's `component` map.
     if let Some(children) = expanded.get("component").and_then(|v| v.as_object()) {
         for (child_id, child_val) in children {
-            let full_child_id = format!("{}_{}", instance_id, child_id);
-            let child_type = child_val
-                .get("type")
-                .and_then(|v| v.as_str())
-                .unwrap_or("panel")
-                .to_string();
-            let mut child_props: HashMap<String, Value> = HashMap::new();
-            if let Some(child_obj) = child_val.as_object() {
-                for (k, v) in child_obj {
-                    match k.as_str() {
-                        "type" | "id" | "component" | "binding" | "slot" | "vars"
-                        | "list_binding" => continue,
-                        _ => {
-                            child_props.insert(k.clone(), v.clone());
-                        }
-                    }
-                }
-            }
-            let _ = manager.insert_component(
-                &full_child_id,
-                &child_type,
-                Some(instance_id),
-                child_props,
-                HashMap::new(),
+            insert_child_recursive(
+                manager,
+                instance_id,
+                child_id,
+                child_val,
+                source,
+                index,
+                item_var,
             );
         }
     }
 
     Ok(())
+}
+
+/// Recursively inserts a template child (and its own children) as runtime
+/// components. `parent_id` is the component the child renders under, its id
+/// suffixed like `<instance>_<child_id>`; `${item.*}` placeholders and
+/// `${item.*}`-derived bindings resolve against this instance's index.
+fn insert_child_recursive(
+    manager: &mut LayoutManager,
+    parent_id: &str,
+    child_id: &str,
+    child_val: &Value,
+    source: &str,
+    index: usize,
+    item_var: &str,
+) {
+    let full_child_id = format!("{parent_id}_{child_id}");
+    let child_type = child_val
+        .get("type")
+        .and_then(|v| v.as_str())
+        .unwrap_or("panel")
+        .to_string();
+    let mut child_props: HashMap<String, Value> = HashMap::new();
+    let mut child_handlers: HashMap<String, String> = HashMap::new();
+    if let Some(child_obj) = child_val.as_object() {
+        for (k, v) in child_obj {
+            match k.as_str() {
+                "type" | "id" | "component" | "binding" | "slot" | "vars" | "list_binding" => {
+                    continue;
+                }
+                _ => {
+                    if let Some(event) = k.strip_prefix("on_") {
+                        if let Some(h) = v.as_str() {
+                            child_handlers.insert(event.to_string(), h.to_string());
+                            continue;
+                        }
+                    }
+                    child_props.insert(
+                        k.clone(),
+                        expand_template_for_index(v, source, index, item_var, &Value::Null),
+                    );
+                }
+            }
+        }
+        // Per-instance bindings for `${item_var.field}` placeholders.
+        setup_child_bindings(manager, &full_child_id, child_obj, source, index, item_var);
+    }
+    if manager
+        .insert_component(
+            &full_child_id,
+            &child_type,
+            Some(parent_id),
+            child_props,
+            child_handlers,
+        )
+        .is_err()
+    {
+        return;
+    }
+    if let Some(grandchildren) = child_val.get("component").and_then(|v| v.as_object()) {
+        for (gc_id, gc_val) in grandchildren {
+            insert_child_recursive(
+                manager,
+                &full_child_id,
+                gc_id,
+                gc_val,
+                source,
+                index,
+                item_var,
+            );
+        }
+    }
+}
+
+/// Binds `${item_var.field}` string properties of a child to the per-index
+/// data path, the same way `setup_instance_bindings` does for the top level.
+fn setup_child_bindings(
+    manager: &mut LayoutManager,
+    child_id: &str,
+    child_obj: &indexmap::IndexMap<String, Value>,
+    source: &str,
+    index: usize,
+    item_var: &str,
+) {
+    for (key, val) in child_obj {
+        if let Value::String(s) = val {
+            let field_prefix = format!("${{{}.", item_var);
+            let Some(start) = s.find(&field_prefix) else {
+                continue;
+            };
+            let after = start + field_prefix.len();
+            let Some(end) = s[after..].find('}') else {
+                continue;
+            };
+            let field = &s[after..after + end];
+            let binding_source = format!("{}.{}.{}", source, index, field);
+            manager.bindings_mut().bind(
+                binding_source,
+                ComponentProperty::new(child_id, key),
+                crate::node::BindingMode::OneWay,
+                None,
+            );
+        }
+    }
 }
 
 /// Expands a loop template for a specific index, substituting `${item_var}`

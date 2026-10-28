@@ -1,0 +1,24 @@
+[package]
+name = "nemo-phosphor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Phosphor icon assets and catalog for nemo, compiled against the pinned gpui-pre stack."
+build = "build.rs"
+
+[dependencies]
+# Must match the workspace's exact gpui snapshot (same lib as gpui-kit uses).
+gpui = { workspace = true }
+
+[features]
+default = ["all-weights"]
+# Weights embedded by `PhosphorAssets`. Every weight is on by default so
+# `<icon-phosphor weight="…">` can pick any of the six.
+thin = []
+light = []
+regular = []
+bold = []
+fill = []
+duotone = []
+all-weights = ["thin", "light", "regular", "bold", "fill", "duotone"]

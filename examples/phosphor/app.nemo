@@ -1,0 +1,139 @@
+<!-- examples/phosphor/app.nemo — Phosphor icon browser.
+     Pinned header (weight dropdown, search, size slider, color input) over a
+     scrollable grid of every Phosphor icon, all live-filtered through Rhai:
+     handlers rewrite `data.icons`; the grid is a runtime `n:for` container
+     over it ("Icons" page of the gallery uses the same machinery). -->
+<app title="Nemo Phosphor Icons">
+  <window title="Nemo Phosphor Icons" width="1568" height="900">
+    <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/phosphor"
+                theme-toggle="true" />
+  </window>
+  <theme name="catppuccin" mode="light" />
+</app>
+
+<!--
+  file-io  → rhai-fs, for reading icons.txt (the catalog of all 1,512 names).
+  on-load  → seeds data.icons (all icons), data.weight, data.size, data.color
+             before the first paint.
+-->
+<script src="./scripts" features="file-io" on-load="on_load" />
+
+<template name="app">
+  <stack id="root" direction="vertical" flex="1" spacing="0">
+
+    <!-- ═══ Pinned header: controls row ═══ -->
+    <stack id="toolbar" direction="vertical" spacing="8" padding="12">
+      <stack id="toolbar_row" direction="horizontal" spacing="12" align="center">
+
+        <!-- Weight picker: Thin/Light/Regular/Bold/Fill/Duotone.
+             Handlers live on the <menu-item> children, not the button: the
+             dropdown-button's on-click is not wired (the button just opens the
+             menu), and each item's handler is called with THAT item's id. -->
+        <dropdown-button id="weight_select" label="Light">
+          <menu-item label="Thin" on-click="on_click_thin" />
+          <menu-item label="Light" on-click="on_click_light" />
+          <menu-item label="Regular" on-click="on_click_regular" />
+          <menu-item label="Bold" on-click="on_click_bold" />
+          <menu-item label="Fill" on-click="on_click_fill" />
+          <menu-item label="Duotone" on-click="on_click_duotone" />
+        </dropdown-button>
+
+        <!-- Search box: filters the grid by icon name (live, per keystroke) -->
+        <input id="search_input" placeholder="Search" width="280" value="" on-change="on_search_change" />
+
+        <!-- Icon size: slider 12..96 with a live px label -->
+        <label id="size_label" text="32px" size="sm" />
+        <slider id="size_slider" min="12" max="96" step="1" value="32" on-change="on_size_change" />
+
+        <!-- Icon color: hex text (e.g. #0F0F0F); empty = theme foreground -->
+        <input id="color_input" width="120" value="#0F0F0F" on-change="on_color_change" />
+
+      </stack>
+    </stack>
+
+    <!-- ═══ Scrollable icon grid ═══
+         Seven fixed equal-width columns (each column = a runtime `n:for`
+         container over data.col_N): flex-grow gives every column exactly 1/7
+         of the row at any window width (a CSS grid or percent widths can't:
+         taffy only stretches grid cells under conditions we've seen mis-measure
+         runtime-inserted text, and percent widths collapse below one definite
+         level). Each column's instances stretch to the column's width, so icon
+         labels never wrap. data.col_0..col_6 are rewritten by the header
+         handlers; the row is the visual gutter. -->
+    <stack id="grid_scroll" direction="vertical" scroll="true" flex="1">
+      <stack id="icon_grid" direction="horizontal" spacing="0" flex="1">
+        <stack id="col_0" direction="vertical" spacing="16" flex="1"
+               n:for="icon in data.col_0" n:key="icon.name">
+          <stack direction="vertical" spacing="6" align="center" padding="8">
+            <icon-phosphor name="${icon.name}"
+                           size="${icon.size}"
+                           color="${icon.color}"
+                           weight="${icon.weight}" />
+            <label text="${icon.name}" size="xs" />
+          </stack>
+        </stack>
+        <stack id="col_1" direction="vertical" spacing="16" flex="1"
+               n:for="icon in data.col_1" n:key="icon.name">
+          <stack direction="vertical" spacing="6" align="center" padding="8">
+            <icon-phosphor name="${icon.name}"
+                           size="${icon.size}"
+                           color="${icon.color}"
+                           weight="${icon.weight}" />
+            <label text="${icon.name}" size="xs" />
+          </stack>
+        </stack>
+        <stack id="col_2" direction="vertical" spacing="16" flex="1"
+               n:for="icon in data.col_2" n:key="icon.name">
+          <stack direction="vertical" spacing="6" align="center" padding="8">
+            <icon-phosphor name="${icon.name}"
+                           size="${icon.size}"
+                           color="${icon.color}"
+                           weight="${icon.weight}" />
+            <label text="${icon.name}" size="xs" />
+          </stack>
+        </stack>
+        <stack id="col_3" direction="vertical" spacing="16" flex="1"
+               n:for="icon in data.col_3" n:key="icon.name">
+          <stack direction="vertical" spacing="6" align="center" padding="8">
+            <icon-phosphor name="${icon.name}"
+                           size="${icon.size}"
+                           color="${icon.color}"
+                           weight="${icon.weight}" />
+            <label text="${icon.name}" size="xs" />
+          </stack>
+        </stack>
+        <stack id="col_4" direction="vertical" spacing="16" flex="1"
+               n:for="icon in data.col_4" n:key="icon.name">
+          <stack direction="vertical" spacing="6" align="center" padding="8">
+            <icon-phosphor name="${icon.name}"
+                           size="${icon.size}"
+                           color="${icon.color}"
+                           weight="${icon.weight}" />
+            <label text="${icon.name}" size="xs" />
+          </stack>
+        </stack>
+        <stack id="col_5" direction="vertical" spacing="16" flex="1"
+               n:for="icon in data.col_5" n:key="icon.name">
+          <stack direction="vertical" spacing="6" align="center" padding="8">
+            <icon-phosphor name="${icon.name}"
+                           size="${icon.size}"
+                           color="${icon.color}"
+                           weight="${icon.weight}" />
+            <label text="${icon.name}" size="xs" />
+          </stack>
+        </stack>
+        <stack id="col_6" direction="vertical" spacing="16" flex="1"
+               n:for="icon in data.col_6" n:key="icon.name">
+          <stack direction="vertical" spacing="6" align="center" padding="8">
+            <icon-phosphor name="${icon.name}"
+                           size="${icon.size}"
+                           color="${icon.color}"
+                           weight="${icon.weight}" />
+            <label text="${icon.name}" size="xs" />
+          </stack>
+        </stack>
+      </stack>
+    </stack>
+
+  </stack>
+</template>

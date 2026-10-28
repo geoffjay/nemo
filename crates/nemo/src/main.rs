@@ -178,7 +178,8 @@ pub(crate) fn run_app(mut args: Args, watch: Option<Duration>, dev_mode: bool) -
 
     // Launch GPUI application
     info!("Starting GPUI application...");
-    let gpui_app = gpui_platform::application().with_assets(gpui_kit::assets::Assets);
+    let gpui_app = gpui_platform::application()
+        .with_assets(nemo_phosphor::PhosphorAssets.with(gpui_kit::assets::Assets));
 
     let params = BootstrapParams {
         nemo_config,

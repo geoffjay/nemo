@@ -104,12 +104,39 @@ Tree-node content must be plain data (leading icon, label, trailing icon)
 because the kit's `uniform_list` renders rows once per layout pass **and**
 once per paint pass — pre-rendered elements are consumed by the first pass.
 
+# Icon components
+
+Two icon components ship:
+
+* `<icon name="info">` renders from GPUI Kit's own closed icon set
+  (`gpui_kit::component::IconName` — a fixed handful of icons, sized to the
+  surrounding text style). `map_icon_name`
+  (`crates/nemo/src/components/icon.rs`) maps config names to that enum;
+  unknown names fall back to `Info`.
+* `<icon-phosphor name="acorn" size="64" color="#0f0f0f" weight="light" />`
+  renders any of the **1,512 Phosphor icons** in any weight
+  (`thin|light|regular|bold|fill|duotone`), at any pixel size, in any hex (or
+  `theme.*`) color — `crates/nemo-phosphor` is a port of the
+  `gpui-kit-phosphor` catalog compiled against the workspace's exact
+  `gpui-pre =0.3.10` (the upstream crate pins `=0.3.9`, so it cannot be a
+  direct dependency without forking the `gpui` graph; its `assets/` and
+  `build.rs` are vendored verbatim, the catalog is codegen'd from the assets).
+  The asset source is layered into every `with_assets` call site (main.rs and
+  the screenshot command) via `PhosphorAssets.with(Assets)`; icons resolve as
+  `phosphor/{weight}/{name}.svg` through the normal `svg().path(..)` asset
+  path. `color="currentColor"` (the default) tracks the theme foreground.
+  Unknown (name, weight) pairs render nothing, mirroring Phosphor assets.
+  `weight` matching is case-insensitive. Numeric `size` strings coerce: values
+  arriving through `${item}` template substitution become strings, so
+  `icon_phosphor.rs` accepts both `Value::Integer` and numeric strings.
+
 # Layout containers (stack / panel)
 
 Layout is **flexbox-native**: `<stack>` is content-sized by default and grows
 only when it opts in (truthy `flex`, `scroll="true"`, or being the layout root);
 horizontal stacks center children by default, and `align`/`justify` control the
-axes. `<panel>` owns its own decoration (padding/border/border-color/rounded/
+axes. `wrap="true"` sets `flex_wrap` so a horizontal stack wraps items onto new
+rows (icon grids, tag clouds — see `examples/phosphor`). `<panel>` owns its own decoration (padding/border/border-color/rounded/
 shadow/bg) — `apply_layout_styles` skips those props for panels to avoid
 double-decorating — and can also grow with `flex`; it draws a subtle 1px hairline
 border by default (`border="0"` opts out). See

@@ -42,3 +42,11 @@ because a container routes its children into regions itself it typically uses
 hand-written builders (`#[derive(IntoElement)]` only, like `SidenavBar`) instead
 of the `NemoComponent` derive, plus no-op standalone arms for its region/leaf
 marker types. See [containers](containers.md).
+
+**Asset-backed components** (e.g. `icon-phosphor`, `crates/nemo-phosphor`) add a
+fifth wiring point: an `AssetSource` layer merged into every
+`with_assets(...)` call site — there is more than one (`main.rs` **and**
+`commands/screenshot.rs`, which builds its own app) — so `svg().path(..)`
+resolves the asset in every launch path. `svg().path()` resolves through the
+app's `AssetSource` (gpui's `svg_renderer.render_alpha_mask`), not the
+filesystem.

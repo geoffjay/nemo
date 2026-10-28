@@ -16,6 +16,7 @@ members = [
   "crates/nemo-plugin-api",
   "crates/nemo-plugin",
   "crates/nemo-macros",
+  "crates/nemo-phosphor",
   "crates/nemo-wasm",
   "crates/nemo-wasm-guest",
   "plugins/mock-data",
@@ -117,4 +118,5 @@ nemo-events = { path = "crates/nemo-events" }
 nemo-plugin-api = { version = "0.9.1", path = "crates/nemo-plugin-api" }
 nemo-plugin = { version = "0.9.1", path = "crates/nemo-plugin" }
 nemo-macros = { path = "crates/nemo-macros" }
+nemo-phosphor = { path = "crates/nemo-phosphor" }
 nemo-wasm = { path = "crates/nemo-wasm" }
