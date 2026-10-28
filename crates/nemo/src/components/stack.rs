@@ -21,6 +21,7 @@ use nemo_macros::NemoComponent;
 /// | `flex` | bool/int | Grow to fill the main axis (`"1"`/`"true"`); content-sized otherwise |
 /// | `align` | string | Cross-axis alignment: `start`/`center`/`end`/`stretch` (default: `center` for horizontal, `stretch` for vertical) |
 /// | `justify` | string | Main-axis alignment: `start`/`center`/`end`/`between`/`around` |
+/// | `wrap` | bool | Wrap items onto new rows/columns instead of one line |
 ///
 /// A stack is **content-sized** by default and grows only when it has a truthy
 /// `flex`, has `scroll="true"`, or is the layout root.
@@ -32,6 +33,14 @@ pub struct Stack {
     spacing: i64,
     #[property]
     scroll: Option<bool>,
+    /// Wrap items onto new rows/columns instead of a single line (icon grids,
+    /// tag clouds). Combines with `direction`: `horizontal` wraps to new rows.
+    #[property]
+    wrap: Option<bool>,
+    /// CSS-grid mode: lay children out in exactly N equal columns (`.grid()`
+    /// + `grid_cols(n)`). Column count is exact at any container width.
+    #[property]
+    columns: Option<i64>,
     #[source]
     source: nemo_layout::BuiltComponent,
     #[children]
@@ -44,6 +53,24 @@ impl RenderOnce for Stack {
         let is_horizontal = self.direction == "horizontal";
         let scroll = self.scroll == Some(true);
         let props = &self.source.properties;
+        let columns = self.columns.filter(|c| *c > 0).map(|c| c as u16);
+
+        // CSS-grid mode: exactly N equal columns at any container width;
+        // `spacing` becomes the column gap and `scroll` still scrolls.
+        if let Some(cols) = columns {
+            let mut grid = div()
+                .id(SharedString::from(self.source.id.clone()))
+                .grid()
+                .grid_cols(cols)
+                .gap(gap);
+            if crate::components::container_grows(props) {
+                grid = grid.flex_1().min_h(px(0.));
+            }
+            if scroll {
+                grid = grid.overflow_y_scroll();
+            }
+            return grid.children(self.children).into_any_element();
+        }
 
         // Flexbox-native sizing: a stack is content-sized by default and only
         // grows along its main axis when it opts in (truthy `flex`) or scrolls.
@@ -92,6 +119,10 @@ impl RenderOnce for Stack {
             } else {
                 base.overflow_y_scroll()
             };
+        }
+
+        if self.wrap == Some(true) {
+            base = base.flex_wrap();
         }
 
         base.children(self.children).into_any_element()

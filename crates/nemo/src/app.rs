@@ -2,7 +2,7 @@
 
 use gpui::*;
 use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
-use gpui_kit::component::slider::SliderState;
+use gpui_kit::component::slider::{SliderEvent, SliderState, SliderValue};
 use gpui_kit::component::table::TableState;
 use gpui_kit::component::tree::TreeState;
 use gpui_kit::component::v_flex;
@@ -23,10 +23,10 @@ use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
     ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
-    HeatmapChart, Icon, Image, Label, LineChart, List, MenuItem, Modal, Notification, OptionData,
-    Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart,
-    Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Svg, Switch,
-    TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    HeatmapChart, Icon, IconPhosphor, Image, Label, LineChart, List, MenuItem, Modal, Notification,
+    OptionData, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart,
+    ScatterChart, Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart,
+    Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -38,6 +38,9 @@ pub struct App {
     runtime: Arc<NemoRuntime>,
     component_states: ComponentStates,
     _subscriptions: Vec<Subscription>,
+    /// Slider component ids that already have an `on-change` subscription, so
+    /// re-renders don't stack duplicate handlers (each would fire per drag).
+    slider_subscribed: HashSet<String>,
     /// Last `value` we pushed into each `<input>`'s `InputState`, keyed by id.
     ///
     /// Lets the render pass tell script-driven property changes (e.g. clearing a
@@ -92,6 +95,7 @@ impl App {
             runtime,
             component_states: ComponentStates::new(),
             _subscriptions,
+            slider_subscribed: HashSet::new(),
             input_values: HashMap::new(),
         }
     }
@@ -157,7 +161,17 @@ impl App {
                 match event {
                     InputEvent::Change | InputEvent::Blur => {
                         let value = input_state.read(cx).value().to_string();
-                        sync_value(this, value);
+                        sync_value(this, value.clone());
+                        // Keystroke-level handler dispatch (search-as-you-type).
+                        // Enter is covered below; the subscription exists only
+                        // for inputs that declared `on-change`, so inputs
+                        // without one behave exactly as before.
+                        if matches!(event, InputEvent::Change) {
+                            if let Some(handler) = &change_handler {
+                                runtime.call_handler(handler, &sub_id, &value);
+                                cx.notify();
+                            }
+                        }
                     }
                     InputEvent::PressEnter { .. } => {
                         let value = input_state.read(cx).value().to_string();
@@ -631,6 +645,55 @@ impl App {
         state
     }
 
+    /// Subscribes a slider to its own change events so an `on-change` handler
+    /// fires continuously while the user drags (event_data = the value as a
+    /// string). Component-level: the slider's `value` property also stays in
+    /// sync so other components can read it.
+    ///
+    /// Only sliders with an `on-change` handler are subscribed; sliders without
+    /// one keep the old no-event behavior.
+    fn subscribe_slider_change(
+        &mut self,
+        component: &BuiltComponent,
+        state: &Entity<SliderState>,
+        cx: &mut Context<Self>,
+    ) {
+        let id = component.id.clone();
+        // One subscription per component for its lifetime; the slider arm calls
+        // this on every render.
+        if !self.slider_subscribed.insert(id.clone()) {
+            return;
+        }
+        let Some(handler) = component.handlers.get("change").cloned() else {
+            self.slider_subscribed.remove(&id);
+            return;
+        };
+        let runtime = Arc::clone(&self.runtime);
+        let sub_id = id.clone();
+        let subscription = cx.subscribe(
+            state,
+            move |_this: &mut App, _slider, event: &SliderEvent, cx| {
+                let SliderEvent::Change(value) = event else {
+                    return;
+                };
+                let SliderValue::Single(value) = *value else {
+                    return;
+                };
+                let text = if value.fract() == 0.0 {
+                    format!("{}", value as i64)
+                } else {
+                    format!("{}", value)
+                };
+                if let Ok(mut lm) = runtime.layout_manager.try_write() {
+                    let _ = lm.set_property(&sub_id, "value", Value::from(text.clone()));
+                }
+                runtime.call_handler(&handler, &sub_id, &text);
+                cx.notify();
+            },
+        );
+        self._subscriptions.push(subscription);
+    }
+
     /// Gets or creates a TextareaState entity configured for a Textarea component.
     fn get_or_create_textarea_state(
         &mut self,
@@ -852,6 +915,25 @@ impl App {
             .collect()
     }
 
+    /// Parses a `width`/`height` property into a gpui `Length`: an integer/float
+    /// is pixels; a string ending in `%` is a fraction of the parent's size
+    /// (e.g. `"50%"`); any other string is ignored. Returns `None` when the
+    /// property is absent or unparseable, so callers treat it as unset.
+    fn parse_length(prop: Option<&Value>) -> Option<gpui::Length> {
+        let value = prop?;
+        match value {
+            Value::Integer(i) => Some(gpui::px(*i as f32).into()),
+            Value::Float(f) => Some(gpui::px(*f as f32).into()),
+            Value::String(s) => s
+                .trim()
+                .strip_suffix('%')
+                .and_then(|pct| pct.trim().parse::<f32>().ok())
+                .filter(|pct| *pct >= 0.0)
+                .map(|pct| gpui::relative(pct / 100.0).into()),
+            _ => None,
+        }
+    }
+
     /// Wraps an element in a styled div if layout/decoration properties are present.
     fn apply_layout_styles(
         element: AnyElement,
@@ -860,13 +942,16 @@ impl App {
     ) -> AnyElement {
         let props = &component.properties;
 
-        // Sizing
-        let width = props.get("width").and_then(|v| v.as_i64());
-        let height = props.get("height").and_then(|v| v.as_i64());
-        let min_width = props.get("min_width").and_then(|v| v.as_i64());
-        let min_height = props.get("min_height").and_then(|v| v.as_i64());
-        let max_width = props.get("max_width").and_then(|v| v.as_i64());
-        let max_height = props.get("max_height").and_then(|v| v.as_i64());
+        // Sizing. `width`/`height` accept ints (px) or percent strings
+        // ("50%") resolved against the parent box (flex-basis in flex
+        // contexts, so percent children of a wrapping flex row scale and
+        // wrap with it).
+        let width = Self::parse_length(props.get("width"));
+        let height = Self::parse_length(props.get("height"));
+        let min_width = Self::parse_length(props.get("min_width"));
+        let min_height = Self::parse_length(props.get("min_height"));
+        let max_width = Self::parse_length(props.get("max_width"));
+        let max_height = Self::parse_length(props.get("max_height"));
         // A component grows when it has a truthy `flex` (or, for stacks, scrolls).
         let flex_grows = props
             .get("flex")
@@ -910,14 +995,15 @@ impl App {
         let rounded = props.get("rounded").and_then(|v| v.as_str());
         let background = props.get("background").and_then(|v| v.as_str());
 
-        // Early return if nothing to apply
-        if [
-            width,
-            height,
-            min_width,
-            min_height,
-            max_width,
-            max_height,
+        // Early return if nothing to apply (size props are Lengths, the rest
+        // px ints — check each individually to avoid a heterogeneous array).
+        let no_size = width.is_none()
+            && height.is_none()
+            && min_width.is_none()
+            && min_height.is_none()
+            && max_width.is_none()
+            && max_height.is_none();
+        let no_spacing = [
             margin,
             margin_x,
             margin_y,
@@ -941,7 +1027,9 @@ impl App {
             border_bottom,
         ]
         .iter()
-        .all(|v| v.is_none())
+        .all(|v| v.is_none());
+        if no_size
+            && no_spacing
             && !flex_grows
             && !scroll
             && shadow.is_none()
@@ -961,23 +1049,18 @@ impl App {
         // for a decoration-only attribute like `border="0"` inserts an
         // intermediate div into the flex chain that an inner scroll stack
         // depends on, which breaks its scrolling.
-        let has_geometry = [
-            width,
-            height,
-            min_width,
-            min_height,
-            max_width,
-            max_height,
-            margin,
-            margin_x,
-            margin_y,
-            margin_left,
-            margin_right,
-            margin_top,
-            margin_bottom,
-        ]
-        .iter()
-        .any(|v| v.is_some())
+        let has_geometry = no_size
+            || [
+                margin,
+                margin_x,
+                margin_y,
+                margin_left,
+                margin_right,
+                margin_top,
+                margin_bottom,
+            ]
+            .iter()
+            .any(|v| v.is_some())
             || flex_grows
             || scroll;
         if is_panel && !has_geometry {
@@ -994,22 +1077,28 @@ impl App {
 
         // Sizing
         if let Some(w) = width {
-            wrapper = wrapper.w(px(w as f32));
+            wrapper = wrapper.w(w);
         }
         if let Some(h) = height {
-            wrapper = wrapper.h(px(h as f32)).flex_shrink_0();
+            wrapper = wrapper.h(h);
+            // A definite pixel height must not be squeezed when siblings
+            // overflow; percent heights stay shrinkable like CSS percent
+            // heights.
+            if matches!(h, gpui::Length::Definite(gpui::DefiniteLength::Absolute(_))) {
+                wrapper = wrapper.flex_shrink_0();
+            }
         }
         if let Some(mw) = min_width {
-            wrapper = wrapper.min_w(px(mw as f32));
+            wrapper = wrapper.min_w(mw);
         }
         if let Some(mh) = min_height {
-            wrapper = wrapper.min_h(px(mh as f32));
+            wrapper = wrapper.min_h(mh);
         }
         if let Some(mw) = max_width {
-            wrapper = wrapper.max_w(px(mw as f32));
+            wrapper = wrapper.max_w(mw);
         }
         if let Some(mh) = max_height {
-            wrapper = wrapper.max_h(px(mh as f32));
+            wrapper = wrapper.max_h(mh);
         }
         if flex_grows {
             wrapper = wrapper.flex_1();
@@ -1154,6 +1243,7 @@ impl App {
                 .into_any_element(),
             "text" => Text::new(component.clone()).into_any_element(),
             "icon" => Icon::new(component.clone()).into_any_element(),
+            "icon_phosphor" => IconPhosphor::new(component.clone()).into_any_element(),
             "checkbox" => Checkbox::new(component.clone())
                 .runtime(Arc::clone(&self.runtime))
                 .entity_id(entity_id)
@@ -1482,6 +1572,7 @@ impl App {
             }
             "slider" => {
                 let slider_state = self.get_or_create_slider_state(component, window, cx);
+                self.subscribe_slider_change(component, &slider_state, cx);
                 Slider::new(component.clone())
                     .slider_state(slider_state)
                     .into_any_element()

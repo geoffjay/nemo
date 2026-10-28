@@ -43,6 +43,9 @@ are libraries. `xtask/` is a separate dev-only binary (not shipped, not under
   design-system exporter so they can't drift. See
   [design tokens](../plans/design-tokens.md).
 * **nemo-macros** — proc macros (`#[derive(NemoComponent)]`). See [Components](components.md).
+* **nemo-phosphor** — the Phosphor icon catalog (1,512 icons × 6 weights, SVG
+  assets) compiled against the workspace's pinned `gpui-pre`; served as an
+  `AssetSource` layer. See [Components](components.md#icon-components).
 * **nemo-plugin** / **nemo-plugin-api** — native plugin SDK and the stable host↔plugin API contract.
 * **nemo-wasm** / **nemo-wasm-guest** — WASM Component Model host (wasmtime) and guest SDK (wit-bindgen).
 * **xtask** — dev-only tasks run via `cargo xtask <task>` (aliased in

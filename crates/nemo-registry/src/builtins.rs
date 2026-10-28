@@ -69,18 +69,20 @@ fn register_layout_components(registry: &ComponentRegistry) {
                 PropertySchema::string().with_default("vertical"),
             )
             .property("spacing", PropertySchema::integer().with_default(0i64))
-            .property("width", PropertySchema::integer())
-            .property("height", PropertySchema::integer())
-            .property("min_width", PropertySchema::integer())
-            .property("min_height", PropertySchema::integer())
-            .property("max_width", PropertySchema::integer())
-            .property("max_height", PropertySchema::integer())
+            .property("width", PropertySchema::any())
+            .property("height", PropertySchema::any())
+            .property("min_width", PropertySchema::any())
+            .property("min_height", PropertySchema::any())
+            .property("max_width", PropertySchema::any())
+            .property("max_height", PropertySchema::any())
             .property("flex", PropertySchema::float())
             .property("align", PropertySchema::string())
             .property("justify", PropertySchema::string())
             .property("padding", PropertySchema::integer())
             .property("margin", PropertySchema::integer())
-            .property("scroll", PropertySchema::boolean().with_default(false)),
+            .property("scroll", PropertySchema::boolean().with_default(false))
+            .property("wrap", PropertySchema::boolean().with_default(false))
+            .property("columns", PropertySchema::integer()),
     );
 
     reg(
@@ -92,12 +94,12 @@ fn register_layout_components(registry: &ComponentRegistry) {
         ConfigSchema::new("panel")
             .property("title", PropertySchema::string())
             .property("visible", PropertySchema::boolean().with_default(true))
-            .property("width", PropertySchema::integer())
-            .property("height", PropertySchema::integer())
-            .property("min_width", PropertySchema::integer())
-            .property("min_height", PropertySchema::integer())
-            .property("max_width", PropertySchema::integer())
-            .property("max_height", PropertySchema::integer())
+            .property("width", PropertySchema::any())
+            .property("height", PropertySchema::any())
+            .property("min_width", PropertySchema::any())
+            .property("min_height", PropertySchema::any())
+            .property("max_width", PropertySchema::any())
+            .property("max_height", PropertySchema::any())
             .property("flex", PropertySchema::float())
             .property("padding", PropertySchema::integer())
             .property("margin", PropertySchema::integer())
@@ -413,10 +415,10 @@ fn register_input_components(registry: &ComponentRegistry) {
         .property("full_width", PropertySchema::boolean().with_default(false))
         .property("align", PropertySchema::string())
         .property("disabled", PropertySchema::boolean().with_default(false))
-        .property("width", PropertySchema::integer())
-        .property("height", PropertySchema::integer())
-        .property("min_width", PropertySchema::integer())
-        .property("min_height", PropertySchema::integer())
+        .property("width", PropertySchema::any())
+        .property("height", PropertySchema::any())
+        .property("min_width", PropertySchema::any())
+        .property("min_height", PropertySchema::any())
         .property("flex", PropertySchema::float())
         .property("padding", PropertySchema::integer())
         .property("margin", PropertySchema::integer())
@@ -598,6 +600,32 @@ fn register_display_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "icon_phosphor",
+        ComponentCategory::Display,
+        "Phosphor Icon",
+        "A Phosphor icon in any of the six weights, at any size and color",
+        ConfigSchema::new("icon_phosphor")
+            .property(
+                "name",
+                PropertySchema::string().with_default(Value::from("acorn")),
+            )
+            .property(
+                "weight",
+                PropertySchema::string()
+                    .with_default("regular")
+                    .one_of(enum_vals(&[
+                        "thin", "light", "regular", "bold", "fill", "duotone",
+                    ])),
+            )
+            .property(
+                "color",
+                PropertySchema::string().with_default("currentColor"),
+            )
+            .property("size", PropertySchema::integer().with_default(16i64)),
+    );
+
+    reg(
+        registry,
         "image",
         ComponentCategory::Display,
         "Image",
@@ -656,7 +684,7 @@ fn register_data_components(registry: &ComponentRegistry) {
                     ConfigSchema::new("column")
                         .property("key", PropertySchema::string())
                         .property("label", PropertySchema::string())
-                        .property("width", PropertySchema::integer()),
+                        .property("width", PropertySchema::any()),
                 )),
             )
             .property("stripe", PropertySchema::boolean().with_default(false))
@@ -682,7 +710,7 @@ fn register_data_components(registry: &ComponentRegistry) {
         // table; `key` is reserved by the n:for directive pass.
         ConfigSchema::new("table_column")
             .property("field", PropertySchema::string())
-            .property("width", PropertySchema::integer())
+            .property("width", PropertySchema::any())
             .property("align", PropertySchema::string().with_default("left")),
     );
 
@@ -794,7 +822,7 @@ fn register_navigation_components(registry: &ComponentRegistry) {
         "A vertical navigation sidebar with collapsible icon+label items",
         ConfigSchema::new("sidenav_bar")
             .property("collapsed", PropertySchema::boolean().with_default(false))
-            .property("width", PropertySchema::integer().with_default(200i64))
+            .property("width", PropertySchema::any().with_default(200i64))
             .property("border_left", PropertySchema::boolean().with_default(true))
             .property("border_right", PropertySchema::boolean().with_default(true)),
     );

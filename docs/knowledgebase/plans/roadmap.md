@@ -43,7 +43,7 @@ Nemo currently supports:
 
 Worked examples live under `examples/` (basic, components, data-binding,
 data-streaming, calculator, pid-control, complete, task-list, dev-dashboard,
-app-shell, router, sfc).
+app-shell, router, sfc, phosphor).
 Example configs are validated in CI via `nemo validate --strict`
 (`.github/workflows/ci.yml`, `validate-examples` job).
 

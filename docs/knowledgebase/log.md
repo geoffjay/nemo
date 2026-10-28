@@ -1,6 +1,51 @@
 # Knowledge Base Update Log
 
 ## 2026-10-28
+* **Fix**: Live-data `n:for` instances only inserted **one level of children** —
+  `ListBindingManager::insert_instance`
+  (`crates/nemo-layout/src/list_binding.rs`) recursed into the template's
+  `component` map exactly once, silently dropping grandchildren (a chip stack
+  holding a label), and dropped instance handlers on child components. New
+  `insert_child_recursive` walks the template subtree (handlers from `on_*`,
+  `${item.*}` placeholders substituted and per-index bindings registered at
+  every level via `setup_child_bindings`); `instances keep their ids so the
+  differ's update-in-place is unchanged.
+* **Feature**: Phosphor icons (`<icon-phosphor>`, `crates/nemo-phosphor`,
+  `examples/phosphor`). Component: stateless display widget (`icon_phosphor.rs`,
+  schema in `register_display_components`) rendering `svg().path("phosphor/{
+  weight}/{name}.svg")` — any of the 1,512 Phosphor icons, six weights
+  (case-insensitive), any px size (numeric strings coerce, template
+  substitution), hex/`theme.*`/`currentColor` colors. Crate: port of
+  `gpui-kit-phosphor` 0.1.0 against the pinned `gpui-pre =0.3.10` (upstream
+  pins `=0.3.9`; vendored its `assets/` + `build.rs` verbatim — 35MB of SVG,
+  catalog codegen'd from the files; only referenced SVGs reach the binary as
+  `include_bytes!` consts). `PhosphorAssets.with(Assets)` layered into BOTH
+  `with_assets` call sites (main.rs **and** commands/screenshot.rs — the
+  screenshot command builds its own app). Grid example: pinned toolbar (weight
+  select, live search input, size slider, color input) over a wrapped scroll
+  grid; live `n:for` over `data.icons` hydrated by `on_load` from
+  `icons.txt`; filter handlers rewrite `data.icons` (differ removes/adds
+  chips keyed by icon name). **Additive event plumbing** for the controls:
+  `<input on-change>` now also fires per keystroke (`InputEvent::Change`),
+  not only on Enter, and sliders with an `on-change` handler get a
+  `SliderEvent::Change` subscription (syncs `value` property, `event_data` =
+  the value as string; deduped via `App::slider_subscribed`); sliders/inputs
+  without handlers behave exactly as before. **Stack** gained `wrap="true"`
+  (`flex_wrap`) and `columns="N"` (CSS grid via gpui `.grid().grid_cols(n)` —
+  exactly N equal columns at any width). `apply_layout_styles` accepts percent
+  `width`/`height`/`min_*`/`max_*` ("50%") via a shared `App::parse_length`
+  helper. **Grid gotchas** (found on the Phosphor grid): taffy percent widths
+  collapse below one definite parent level (percent-in-percent), and text in
+  RUNTIME-INSERTED grid cells mis-measures to ~min-content (static grids are
+  fine) — the icon grid therefore sidesteps both: seven explicit flex columns
+  (each `flex="1"`, so 1/7 width at any window size), each a runtime `n:for`
+  container fed round-robin from rhai `data.col_0..col_6`. **Verified**:
+  nemo-phosphor unit+doctests,
+  workspace clippy/test clean (pre-existing SHELL-env failure aside), validate,
+  and screenshots: 200/500-icon probes, full 1512-icon gallery at 32px
+  light-weight `#0F0F0F` on catppuccin-light in a 7-column grid, and a
+  filtered query ("heart" → duotone `#bf616a` 48px hearts) proving
+  select/search/slider/color paths.
 * **Feature**: Container **child-item components for `table` and `tree`** (completing the list/tabs/accordion pattern for the remaining data containers). **Table**: `<table-header>` holds `<table-column field="name" width="150">Label</table-column>` children (declared columns replace the ugly `columns` JSON attribute — attribute still works — and feed the virtualized delegate in data mode too); `<table-row>`/`<table-cell>` children author static rows with HTML-like spans — `col-span`/`row-span` on cells, `col_span` on a row turns it into a full-width band — rendered through nemo's own absolute-positioned grid (`render_declared` in `crates/nemo/src/components/table.rs`: fixed pixel columns, 32px uniform rows grown by span shares, two-pass painting — ALL row background/border strips first, then cells, because GPUI paints later siblings on top and a strip added after a row-spanned cell would cover its lower half). Cells hold arbitrary child components, which the old data path could not express. **Tree**: `<tree-node>` children (`crates/nemo/src/components/tree.rs`); element text content or non-`tree-node` children are the node's label (leading icon, text, trailing icon); nested `tree-node` children are subnodes — the type-based rule resolves the "label with icons" vs "nested nodes" ambiguity without `label-ref` or a wrapper element; `expanded`/`disabled` attributes; expansion is kit `TreeState` (created once per tree, so user toggles survive frames; live `items` bindings still replace declared nodes when data arrives). **Parser**: `process_component_element` now demotes element text content to a `content` property for the child-item types only (other components keep dropping stray text; schemas declare `content` to satisfy the unknown-attribute lint). **Gotcha**: `key` is RESERVED at parse time — `compile_directives` (`crates/nemo-config/src/directives.rs` `strip_directives`) consumes/strips `key` on every node as the `n:for` loop-identity name, so `table_column` uses `field` as its row-object property name. **Verified**: new parser tests (`test_parse_child_item_text_content`, `test_parse_table_child_items`), validate on the gallery + task-list + data-streaming (columns migrated to `<table-header>`), and offscreen screenshots of a throwaway app exercising spans/keyed cells/nested tree nodes/collapse; full workspace `-p nemo` suites green (256+18 bin tests incl. the new table-grid math tests; known pre-existing SHELL-env failure in nemo-extension aside). **Gotcha**: `use super::*` inside a `mod tests` whose parent file carries `#[derive(IntoElement)]` structs sends the `#[test]` macro expansion into unbounded recursion (recursion-limit errors that scale with test count, or a rustc main-thread stack overflow masked as SIGBUS at 97% swap) — test modules in component files import the specific items instead.
 
 ## 2026-10-27
