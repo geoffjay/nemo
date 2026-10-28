@@ -499,12 +499,9 @@ impl App {
     /// pass and once per paint pass — pre-rendered GPUI elements would be
     /// consumed by the first pass.
     fn extract_declared_tree_node(
-        &mut self,
+        &self,
         node: &BuiltComponent,
         components: &HashMap<String, BuiltComponent>,
-        entity_id: EntityId,
-        window: &mut Window,
-        cx: &mut Context<Self>,
     ) -> Option<DeclaredTreeNode> {
         let mut children_nodes: Vec<DeclaredTreeNode> = Vec::new();
         let mut leading_icon: Option<String> = None;
@@ -517,9 +514,7 @@ impl App {
             };
             match child.component_type.as_str() {
                 "tree_node" => {
-                    if let Some(child_node) =
-                        self.extract_declared_tree_node(child, components, entity_id, window, cx)
-                    {
+                    if let Some(child_node) = self.extract_declared_tree_node(child, components) {
                         children_nodes.push(child_node);
                     }
                 }
@@ -584,12 +579,9 @@ impl App {
 
     /// Extracts the tree's direct `<tree-node>` children (recursively).
     fn extract_declared_tree(
-        &mut self,
+        &self,
         component: &BuiltComponent,
         components: &HashMap<String, BuiltComponent>,
-        entity_id: EntityId,
-        window: &mut Window,
-        cx: &mut Context<Self>,
     ) -> Option<Vec<DeclaredTreeNode>> {
         let mut nodes: Vec<DeclaredTreeNode> = Vec::new();
         for child_id in &component.children {
@@ -597,9 +589,7 @@ impl App {
                 continue;
             };
             if child.component_type == "tree_node" {
-                if let Some(node) =
-                    self.extract_declared_tree_node(child, components, entity_id, window, cx)
-                {
+                if let Some(node) = self.extract_declared_tree_node(child, components) {
                     nodes.push(node);
                 }
             }
@@ -1338,21 +1328,16 @@ impl App {
                 let declared_nodes = if has_live_items {
                     None
                 } else {
-                    self.extract_declared_tree(component, components, entity_id, window, cx)
+                    self.extract_declared_tree(component, components)
                 };
 
-                let tree_state = if declared_nodes.is_some() {
+                let tree_state = match declared_nodes.as_ref() {
                     // Structure goes into the TreeState once (created on
                     // first render, reused after so user expansion state
-                    // survives); content is re-rendered every frame into
-                    // the per-frame map.
-                    self.get_or_create_declared_tree_state(
-                        &component.id,
-                        declared_nodes.as_ref().unwrap(),
-                        cx,
-                    )
-                } else {
-                    self.get_or_create_tree_state(component, window, cx)
+                    // survives); content is rebuilt every frame inside the
+                    // row closure.
+                    Some(nodes) => self.get_or_create_declared_tree_state(&component.id, nodes, cx),
+                    None => self.get_or_create_tree_state(component, window, cx),
                 };
 
                 let mut tree = Tree::new(component.clone()).tree_state(tree_state);

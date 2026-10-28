@@ -424,8 +424,7 @@ impl Table {
 
 impl RenderOnce for Table {
     fn render(self, _window: &mut Window, cx: &mut App) -> impl IntoElement {
-        if self.declared.is_some() {
-            let declared = self.declared.unwrap();
+        if let Some(declared) = self.declared {
             return Self::render_declared(self.source, declared, cx);
         }
 
