@@ -259,6 +259,7 @@
                 <!-- Advanced -->
                 <label id="cat_advanced" text="Advanced" size="sm" />
                 <nav-link router="main" route="/charts" label="Charts" />
+                <nav-link router="main" route="/svg" label="SVG" />
                 <nav-link router="main" route="/table" label="Table" />
                 <nav-link router="main" route="/tree" label="Tree" />
 
@@ -888,6 +889,47 @@
                   <tab-item id="charts_tabs_code" label="Code">
                     <panel id="charts_code_panel">
                       <code-editor id="charts_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Line Chart --&gt;&#10;&lt;line-chart x-field=&quot;month&quot; y-field=&quot;revenue&quot; dot=&quot;true&quot; height=&quot;300&quot;&#10;             data='[{&quot;month&quot;:&quot;Jan&quot;,&quot;revenue&quot;:186},...]' /&gt;&#10;&#10;&lt;!-- Bar Chart --&gt;&#10;&lt;bar-chart x-field=&quot;month&quot; y-field=&quot;visitors&quot; show-label=&quot;true&quot; height=&quot;300&quot;&#10;           data='[{&quot;month&quot;:&quot;Jan&quot;,&quot;visitors&quot;:275},...]' /&gt;&#10;&#10;&lt;!-- Area Chart (Multi-Series) --&gt;&#10;&lt;area-chart x-field=&quot;month&quot; y-fields='[&quot;desktop&quot;,&quot;mobile&quot;]' height=&quot;300&quot;&#10;            data='[{&quot;month&quot;:&quot;Jan&quot;,&quot;desktop&quot;:186,&quot;mobile&quot;:80},...]' /&gt;&#10;&#10;&lt;!-- Pie Chart --&gt;&#10;&lt;pie-chart value-field=&quot;amount&quot; height=&quot;300&quot;&#10;           data='[{&quot;label&quot;:&quot;Chrome&quot;,&quot;amount&quot;:275},...]' /&gt;&#10;&#10;&lt;!-- Donut (Pie with inner radius) --&gt;&#10;&lt;pie-chart value-field=&quot;value&quot; inner-radius=&quot;60&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Candlestick --&gt;&#10;&lt;candlestick-chart x-field=&quot;date&quot; open-field=&quot;open&quot; high-field=&quot;high&quot;&#10;                   low-field=&quot;low&quot; close-field=&quot;close&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Column / Stacked / Clustered --&gt;&#10;&lt;column-chart x-field=&quot;month&quot; y-field=&quot;sales&quot; height=&quot;300&quot; /&gt;&#10;&lt;stacked-column-chart x-field=&quot;quarter&quot; y-fields='[&quot;product_a&quot;,&quot;product_b&quot;]' /&gt;&#10;&lt;clustered-column-chart x-field=&quot;region&quot; y-fields='[&quot;sales&quot;,&quot;returns&quot;]' /&gt;&#10;&#10;&lt;!-- Stacked / Clustered Bar (horizontal) --&gt;&#10;&lt;stacked-bar-chart y-field=&quot;department&quot; x-fields='[&quot;budget&quot;,&quot;spent&quot;]' /&gt;&#10;&lt;clustered-bar-chart y-field=&quot;language&quot; x-fields='[&quot;stars&quot;,&quot;forks&quot;]' /&gt;&#10;&#10;&lt;!-- Scatter / Bubble --&gt;&#10;&lt;scatter-chart x-field=&quot;weight&quot; y-field=&quot;height&quot; dot-size=&quot;5&quot; height=&quot;300&quot; /&gt;&#10;&lt;bubble-chart x-field=&quot;gdp&quot; y-field=&quot;life_expectancy&quot; size-field=&quot;population&quot;&#10;              min-radius=&quot;5&quot; max-radius=&quot;35&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Heatmap --&gt;&#10;&lt;heatmap-chart x-field=&quot;day&quot; y-field=&quot;hour&quot; value-field=&quot;count&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Radar --&gt;&#10;&lt;radar-chart categories='[&quot;Speed&quot;,&quot;Strength&quot;,...]'&#10;            y-fields='[&quot;warrior&quot;,&quot;mage&quot;]' max-value=&quot;100&quot; height=&quot;300&quot; /&gt;&#10;&#10;&lt;!-- Pyramid / Funnel --&gt;&#10;&lt;pyramid-chart label-field=&quot;stage&quot; value-field=&quot;count&quot; height=&quot;300&quot; /&gt;&#10;&lt;funnel-chart label-field=&quot;step&quot; value-field=&quot;users&quot; height=&quot;300&quot; /&gt;" />
+                    </panel>
+                  </tab-item>
+                </tabs>
+              </panel>
+              </route>
+
+              <!-- SVG page -->
+              <route path="/svg">
+              <panel template="content_page">
+                <label id="svg_title" text="SVG" size="lg" />
+                <text id="svg_desc" content="The SVG component renders vector graphics from a file or URL (src) or from inline markup like this icon. Inline bodies are captured verbatim; the graphic rasterizes as one image, so click/hover handlers target it as a whole." />
+
+                <tabs id="svg_tabs">
+                  <tab-item id="svg_tabs_preview" label="Preview">
+                    <stack id="svg_preview" direction="vertical" spacing="12">
+                      <label id="svg_section_icon" text="Icon in a Rounded Panel" size="sm" />
+                      <stack id="svg_icon_row" direction="horizontal" spacing="8" align="center">
+                        <panel id="svg_icon_frame" width="128" height="128" rounded="xl" shadow="md">
+                          <stack id="svg_icon_center" direction="horizontal" align="center" justify="center" flex="1">
+                            <svg id="svg_beaker" width="64" height="64">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                            </svg>
+                            </svg>
+                          </stack>
+                        </panel>
+                        <panel id="svg_icon_frame_lg" width="192" height="192" rounded="xl" shadow="md">
+                          <stack id="svg_icon_center_lg" direction="horizontal" align="center" justify="center" flex="1">
+                            <svg id="svg_beaker_lg" width="96" height="96">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                            </svg>
+                            </svg>
+                          </stack>
+                        </panel>
+                      </stack>
+                    </stack>
+                  </tab-item>
+                  <tab-item id="svg_tabs_code" label="Code">
+                    <panel id="svg_code_panel">
+                      <code-editor id="svg_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;svg id=&quot;beaker&quot; width=&quot;64&quot; height=&quot;64&quot;&gt;&#10;  &lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; fill=&quot;none&quot; viewBox=&quot;0 0 24 24&quot; stroke-width=&quot;1.5&quot; stroke=&quot;currentColor&quot;&gt;&#10;    &lt;path stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; d=&quot;M9.75 3.104v5.714...&quot; /&gt;&#10;  &lt;/svg&gt;&#10;&lt;/svg&gt;&#10;&#10;&lt;panel width=&quot;128&quot; height=&quot;128&quot; rounded=&quot;xl&quot;&gt;&#10;  &lt;stack direction=&quot;horizontal&quot; align=&quot;center&quot; justify=&quot;center&quot; flex=&quot;1&quot;&gt;&#10;    &lt;svg id=&quot;beaker&quot; width=&quot;64&quot; height=&quot;64&quot;&gt; ... &lt;/svg&gt;&#10;  &lt;/stack&gt;&#10;&lt;/panel&gt;" />
                     </panel>
                   </tab-item>
                 </tabs>
