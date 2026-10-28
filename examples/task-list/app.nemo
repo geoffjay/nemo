@@ -46,14 +46,15 @@
                script (set_component_property "tasks_table" "data" …); the cells
                are text-only, so "done" shows as a ✓ glyph rather than a live
                checkbox. -->
-          <table id="tasks_table" height="440" stripe="true" bordered="true"
-                 columns='[
-                   {"key":"num","label":"#","width":48},
-                   {"key":"done","label":"✓","width":48},
-                   {"key":"label","label":"Task","width":420},
-                   {"key":"due","label":"Due","width":180},
-                   {"key":"status","label":"Status","width":130}
-                 ]' />
+          <table id="tasks_table" height="440" stripe="true" bordered="true">
+            <table-header>
+              <table-column field="num" width="48">#</table-column>
+              <table-column field="done" width="48">✓</table-column>
+              <table-column field="label" width="420">Task</table-column>
+              <table-column field="due" width="180">Due</table-column>
+              <table-column field="status" width="130">Status</table-column>
+            </table-header>
+          </table>
 
           <!-- Row-level actions. Because table cells can't hold live controls,
                editing is keyed by the row number shown in the "#" column. -->

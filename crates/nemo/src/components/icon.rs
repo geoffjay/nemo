@@ -55,6 +55,9 @@ pub(crate) fn map_icon_name(name: &str) -> IconName {
         "eye" => IconName::Eye,
         "eye-off" => IconName::EyeOff,
         "file" => IconName::File,
+        // No `file-code` in the legacy component subset; `file-text` is the
+        // closest available file glyph.
+        "file-code" => IconName::FileText,
         "folder" => IconName::Folder,
         "folder-closed" => IconName::FolderClosed,
         "folder-open" => IconName::FolderOpen,

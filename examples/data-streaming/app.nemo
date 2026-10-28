@@ -123,8 +123,15 @@
             <panel id="table_section" padding="16" border="2" border-color="theme.border" shadow="md">
               <stack id="table_content" direction="vertical" spacing="8">
                 <label id="table_heading" text="All Channels Summary" size="sm" />
-                <table id="stats_table" stripe="true" height="500"
-                       columns='[{"key":"channel","label":"Channel","width":140},{"key":"mean","label":"Mean","width":100},{"key":"min","label":"Min","width":100},{"key":"max","label":"Max","width":100},{"key":"stddev","label":"StdDev","width":100},{"key":"count","label":"Samples","width":100}]'>
+                <table id="stats_table" stripe="true" height="500">
+                  <table-header>
+                    <table-column field="channel" width="140">Channel</table-column>
+                    <table-column field="mean" width="100">Mean</table-column>
+                    <table-column field="min" width="100">Min</table-column>
+                    <table-column field="max" width="100">Max</table-column>
+                    <table-column field="stddev" width="100">StdDev</table-column>
+                    <table-column field="count" width="100">Samples</table-column>
+                  </table-header>
                   <binding source="data.stats.summary" target="data" />
                 </table>
               </stack>

@@ -1727,7 +1727,8 @@ impl XmlParser {
         let mut component = IndexMap::new();
 
         // Element name becomes the type
-        if let Some(element_type) = obj.get("__type__").and_then(|v| v.as_str()) {
+        let element_type = obj.get("__type__").and_then(|v| v.as_str()).unwrap_or("");
+        if !element_type.is_empty() {
             component.insert("type".to_string(), Value::String(element_type.to_string()));
         }
 
@@ -1739,6 +1740,27 @@ impl XmlParser {
                 _ => {
                     component.insert(key.clone(), val.clone());
                 }
+            }
+        }
+
+        // Element text content becomes the `content` property for the
+        // child-item types whose label reads naturally inline:
+        // `<tree-node>Label</tree-node>`, `<table-column>Name</table-column>`.
+        // Other components keep dropping stray text (their schemas do not
+        // declare `content`, so capturing it would trip the unknown-attribute
+        // lint on existing configs).
+        const TEXT_LABEL_TYPES: [&str; 5] = [
+            "tree_node",
+            "table_header",
+            "table_column",
+            "table_row",
+            "table_cell",
+        ];
+        if TEXT_LABEL_TYPES.contains(&element_type) {
+            if let Some(cdata) = obj.get("__cdata__").and_then(|v| v.as_str()) {
+                component
+                    .entry("content".to_string())
+                    .or_insert_with(|| Value::String(cdata.to_string()));
             }
         }
 
@@ -2621,6 +2643,103 @@ mod tests {
         let bh = vars.get("button_height").unwrap();
         assert_eq!(bh.get("type"), Some(&Value::String("int".to_string())));
         assert_eq!(bh.get("default"), Some(&Value::Integer(48)));
+    }
+
+    #[test]
+    fn test_parse_child_item_text_content() {
+        // Element text content becomes the `content` property for the
+        // child-item types; other components keep dropping stray text.
+        let xml = r#"
+        <nemo>
+            <layout type="stack">
+              <tree-node label="attr">Body</tree-node>
+              <panel>stray</panel>
+            </layout>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+        let layout = value.get("layout").unwrap();
+        let components = layout.get("component").unwrap();
+        let comp_obj = components.as_object().unwrap();
+
+        // tree_node has BOTH the body text (as content) and the attribute.
+        let node = comp_obj.get("__anon_1").unwrap();
+        assert_eq!(
+            node.get("type"),
+            Some(&Value::String("tree_node".to_string()))
+        );
+        assert_eq!(
+            node.get("content"),
+            Some(&Value::String("Body".to_string()))
+        );
+        assert_eq!(node.get("label"), Some(&Value::String("attr".to_string())));
+
+        // `panel` keeps dropping stray text.
+        let panel = comp_obj.get("__anon_2").unwrap();
+        assert!(panel.get("content").is_none());
+    }
+
+    #[test]
+    fn test_parse_table_child_items() {
+        let xml = r#"
+        <nemo>
+            <layout type="stack">
+              <table id="t">
+                <table-header>
+                  <table-column field="name" width="120">Name</table-column>
+                </table-header>
+                <table-row col-span="2">
+                  <table-cell col-span="2" row-span="3">Merged</table-cell>
+                </table-row>
+              </table>
+            </layout>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+        let table = value
+            .get("layout")
+            .and_then(|l| l.get("component"))
+            .and_then(|c| c.get("t"))
+            .unwrap();
+        let comp_obj = table.get("component").unwrap().as_object().unwrap();
+
+        let header = comp_obj.get("__anon_1").unwrap();
+        assert_eq!(
+            header.get("type"),
+            Some(&Value::String("table_header".to_string()))
+        );
+        let cols = header.get("component").unwrap().as_object().unwrap();
+        let column = cols.get("__anon_2").unwrap();
+        assert_eq!(
+            column.get("type"),
+            Some(&Value::String("table_column".to_string()))
+        );
+        // The heading label comes from the element's text content.
+        assert_eq!(
+            column.get("content"),
+            Some(&Value::String("Name".to_string()))
+        );
+        assert_eq!(
+            column.get("field"),
+            Some(&Value::String("name".to_string()))
+        );
+        assert_eq!(column.get("width"), Some(&Value::Integer(120)));
+
+        let row = comp_obj.get("__anon_3").unwrap();
+        assert_eq!(row.get("col_span"), Some(&Value::Integer(2)));
+        // Attribute keys are kebab→snake normalized at parse time.
+        let cells = row.get("component").unwrap().as_object().unwrap();
+        let cell = cells.get("__anon_4").unwrap();
+        assert_eq!(cell.get("col_span"), Some(&Value::Integer(2)));
+        assert_eq!(cell.get("row_span"), Some(&Value::Integer(3)));
+        assert_eq!(
+            cell.get("content"),
+            Some(&Value::String("Merged".to_string()))
+        );
     }
 
     #[test]

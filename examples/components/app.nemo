@@ -32,7 +32,7 @@
 
   <template name="app">
     <!-- App shell: a sidenav of section menu items plus the gallery below. -->
-    <app-shell id="app_shell" sidenav-width="220">
+    <app-shell id="app_shell" sidenav-width="220" default-page="components">
         <app-sidenav>
           <sidenav-item id="nav_overview" icon="layout-dashboard" label="Overview" target="overview" />
           <sidenav-item id="nav_styling" icon="palette" label="Styling" target="styling" />
@@ -733,14 +733,27 @@
                 <tabs id="table_tabs">
                   <tab-item id="table_tabs_preview" label="Preview">
                     <stack id="table_preview" direction="vertical" spacing="8">
-                      <table id="table_demo" stripe="true"
+                      <table id="table_demo" stripe="true" height="220">
+                        <table-header>
+                          <table-column field="name" width="150">Name</table-column>
+                          <table-column field="email" width="220">Email</table-column>
+                          <table-column field="role" width="120">Role</table-column>
+                          <table-column field="status" width="100">Status</table-column>
+                        </table-header>
+                        <table-row>
+                          <table-cell>Alice Johnson</table-cell>
+                          <table-cell>alice@example.com</table-cell>
+                          <table-cell col-span="2">Admin (Active)</table-cell>
+                        </table-row>
+                      </table>
+                      <table id="table_demo_data" stripe="true" height="200"
                         columns='[{"key":"name","label":"Name","width":150},{"key":"email","label":"Email","width":220},{"key":"role","label":"Role","width":120},{"key":"status","label":"Status","width":100}]'
                         data='[{"name":"Alice Johnson","email":"alice@example.com","role":"Admin","status":"Active"},{"name":"Bob Smith","email":"bob@example.com","role":"Editor","status":"Active"},{"name":"Carol White","email":"carol@example.com","role":"Viewer","status":"Inactive"},{"name":"Dave Brown","email":"dave@example.com","role":"Editor","status":"Active"},{"name":"Eve Davis","email":"eve@example.com","role":"Admin","status":"Active"}]' />
                     </stack>
                   </tab-item>
                   <tab-item id="table_tabs_code" label="Code">
                     <panel id="table_code_panel">
-                      <code-editor id="table_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;table stripe=&quot;true&quot;&#10;       columns='[{&quot;key&quot;:&quot;name&quot;,&quot;label&quot;:&quot;Name&quot;,&quot;width&quot;:150},&#10;                {&quot;key&quot;:&quot;email&quot;,&quot;label&quot;:&quot;Email&quot;,&quot;width&quot;:220},&#10;                {&quot;key&quot;:&quot;role&quot;,&quot;label&quot;:&quot;Role&quot;,&quot;width&quot;:120},&#10;                {&quot;key&quot;:&quot;status&quot;,&quot;label&quot;:&quot;Status&quot;,&quot;width&quot;:100}]'&#10;       data='[{&quot;name&quot;:&quot;Alice Johnson&quot;,&quot;email&quot;:&quot;alice@example.com&quot;,&quot;role&quot;:&quot;Admin&quot;,&quot;status&quot;:&quot;Active&quot;},&#10;             {&quot;name&quot;:&quot;Bob Smith&quot;,&quot;email&quot;:&quot;bob@example.com&quot;,&quot;role&quot;:&quot;Editor&quot;,&quot;status&quot;:&quot;Active&quot;}]' /&gt;" />
+                      <code-editor id="table_code" language="html" line-number="false" searchable="false" rows="22" default-value="&lt;!-- Declared: columns and rows as child components --&gt;&amp;#10;&amp;lt;table id=&quot;table_demo&quot; stripe=&quot;true&quot;&amp;gt;&amp;#10;  &amp;lt;table-header&amp;gt;&amp;#10;    &amp;lt;table-column field=&quot;name&quot; width=&quot;150&quot;&amp;gt;Name&amp;lt;/table-column&amp;gt;&amp;#10;    &amp;lt;table-column field=&quot;email&quot; width=&quot;220&quot;&amp;gt;Email&amp;lt;/table-column&amp;gt;&amp;#10;  &amp;lt;/table-header&amp;gt;&amp;#10;  &amp;lt;table-row&amp;gt;&amp;#10;    &amp;lt;table-cell&amp;gt;Alice Johnson&amp;lt;/table-cell&amp;gt;&amp;#10;    &amp;lt;table-cell col-span=&quot;2&quot;&amp;gt;alice@example.com (Admin / Active)&amp;lt;/table-cell&amp;gt;&amp;#10;  &amp;lt;/table-row&amp;gt;&amp;#10;&amp;lt;/table&amp;gt;&amp;#10;&amp;#10;&amp;lt;!-- Data mode: bound rows; columns from table-column children or the columns attr --&gt;&amp;#10;&amp;lt;table id=&quot;table_demo_data&quot; stripe=&quot;true&quot; columns=&apos;[...]&apos; /&amp;gt;" />
                     </panel>
                   </tab-item>
                 </tabs>
@@ -756,12 +769,31 @@
                 <tabs id="tree_tabs">
                   <tab-item id="tree_tabs_preview" label="Preview">
                     <stack id="tree_preview" direction="vertical" spacing="8">
-                      <tree id="tree_demo" items='[{"id":"src","label":"src","expanded":true,"children":[{"id":"src/main.rs","label":"main.rs"},{"id":"src/lib.rs","label":"lib.rs"},{"id":"src/components","label":"components","expanded":true,"children":[{"id":"src/components/mod.rs","label":"mod.rs"},{"id":"src/components/table.rs","label":"table.rs"},{"id":"src/components/tree.rs","label":"tree.rs"}]}]},{"id":"Cargo.toml","label":"Cargo.toml"},{"id":"README.md","label":"README.md"}]' />
+                      <tree id="tree_demo" height="240">
+                        <tree-node id="tree_demo_src" expanded="true">
+                          <icon name="folder" />
+                          <text content="src" />
+                          <tree-node id="tree_demo_main">
+                            <icon name="file" />
+                            <text content="main.rs" />
+                          </tree-node>
+                          <tree-node id="tree_demo_lib">lib.rs</tree-node>
+                          <tree-node id="tree_demo_components" expanded="true">
+                            <icon name="folder-open" />
+                            <text content="components" />
+                            <tree-node id="tree_demo_mod">mod.rs</tree-node>
+                            <tree-node id="tree_demo_table">table.rs</tree-node>
+                            <tree-node id="tree_demo_tree">tree.rs</tree-node>
+                          </tree-node>
+                        </tree-node>
+                        <tree-node id="tree_demo_cargo">Cargo.toml</tree-node>
+                        <tree-node id="tree_demo_readme" label="README.md" />
+                      </tree>
                     </stack>
                   </tab-item>
                   <tab-item id="tree_tabs_code" label="Code">
                     <panel id="tree_code_panel">
-                      <code-editor id="tree_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;tree items='[{&quot;id&quot;:&quot;src&quot;,&quot;label&quot;:&quot;src&quot;,&quot;expanded&quot;:true,&#10;  &quot;children&quot;:[&#10;    {&quot;id&quot;:&quot;src/main.rs&quot;,&quot;label&quot;:&quot;main.rs&quot;},&#10;    {&quot;id&quot;:&quot;src/lib.rs&quot;,&quot;label&quot;:&quot;lib.rs&quot;},&#10;    {&quot;id&quot;:&quot;src/components&quot;,&quot;label&quot;:&quot;components&quot;,&quot;expanded&quot;:true,&#10;     &quot;children&quot;:[&#10;       {&quot;id&quot;:&quot;src/components/mod.rs&quot;,&quot;label&quot;:&quot;mod.rs&quot;},&#10;       {&quot;id&quot;:&quot;src/components/table.rs&quot;,&quot;label&quot;:&quot;table.rs&quot;},&#10;       {&quot;id&quot;:&quot;src/components/tree.rs&quot;,&quot;label&quot;:&quot;tree.rs&quot;}&#10;     ]}&#10;  ]&#10;},{&quot;id&quot;:&quot;Cargo.toml&quot;,&quot;label&quot;:&quot;Cargo.toml&quot;},&#10; {&quot;id&quot;:&quot;README.md&quot;,&quot;label&quot;:&quot;README.md&quot;}]' /&gt;" />
+                      <code-editor id="tree_code" language="html" line-number="false" searchable="false" rows="22" default-value="&lt;tree id=&quot;tree_demo&quot;&amp;gt;&amp;#10;  &amp;lt;tree-node id=&quot;src&quot; expanded=&quot;true&quot;&amp;gt;&amp;#10;    &amp;lt;icon name=&quot;folder&quot; /&amp;gt;&amp;#10;    &amp;lt;text content=&quot;src&quot; /&amp;gt;&amp;#10;    &amp;lt;tree-node id=&quot;main&quot;&amp;gt;&amp;#10;      &amp;lt;icon name=&quot;file&quot; /&amp;gt;&amp;#10;      &amp;lt;text content=&quot;main.rs&quot; /&amp;gt;&amp;#10;    &amp;lt;/tree-node&amp;gt;&amp;#10;    &amp;lt;tree-node id=&quot;lib&quot;&amp;gt;lib.rs&amp;lt;/tree-node&amp;gt;&amp;#10;  &amp;lt;/tree-node&amp;gt;&amp;#10;  &amp;lt;tree-node id=&quot;cargo&quot;&amp;gt;Cargo.toml&amp;lt;/tree-node&amp;gt;&amp;#10;&amp;lt;/tree&amp;gt;&amp;#10;&amp;#10;&amp;lt;!-- node children are its label content; tree-node children nest --&gt;" />
                     </panel>
                   </tab-item>
                 </tabs>

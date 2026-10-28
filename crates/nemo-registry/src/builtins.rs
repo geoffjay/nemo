@@ -150,7 +150,8 @@ fn register_container_components(registry: &ComponentRegistry) {
                 "sidenav_width",
                 PropertySchema::integer().with_default(200i64),
             )
-            .property("collapsed", PropertySchema::boolean().with_default(false)),
+            .property("collapsed", PropertySchema::boolean().with_default(false))
+            .property("default_page", PropertySchema::string()),
     );
 
     reg(
@@ -664,6 +665,51 @@ fn register_data_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "table_header",
+        ComponentCategory::Data,
+        "Table Header",
+        "The header row of a table, holding table-column children",
+        ConfigSchema::new("table_header"),
+    );
+
+    reg(
+        registry,
+        "table_column",
+        ComponentCategory::Data,
+        "Table Column",
+        "A column definition inside a table-header; text content is the label",
+        // `field` names the data field the column maps to in a data-driven
+        // table; `key` is reserved by the n:for directive pass.
+        ConfigSchema::new("table_column")
+            .property("field", PropertySchema::string())
+            .property("width", PropertySchema::integer())
+            .property("align", PropertySchema::string().with_default("left")),
+    );
+
+    reg(
+        registry,
+        "table_row",
+        ComponentCategory::Data,
+        "Table Row",
+        "A row inside a table; its table-cell children are the row content",
+        ConfigSchema::new("table_row")
+            .property("col_span", PropertySchema::integer().with_default(1i64)),
+    );
+
+    reg(
+        registry,
+        "table_cell",
+        ComponentCategory::Data,
+        "Table Cell",
+        "A cell inside a table-row; children are the cell content; cells are positional",
+        ConfigSchema::new("table_cell")
+            .property("col_span", PropertySchema::integer().with_default(1i64))
+            .property("row_span", PropertySchema::integer().with_default(1i64))
+            .property("align", PropertySchema::string().with_default("left")),
+    );
+
+    reg(
+        registry,
         "list",
         ComponentCategory::Data,
         "List",
@@ -685,8 +731,21 @@ fn register_data_components(registry: &ComponentRegistry) {
         "tree",
         ComponentCategory::Data,
         "Tree",
-        "A tree view",
+        "A tree view, built from tree-node children or an items array",
         ConfigSchema::new("tree").property("items", PropertySchema::array(PropertySchema::any())),
+    );
+
+    reg(
+        registry,
+        "tree_node",
+        ComponentCategory::Data,
+        "Tree Node",
+        "A node inside a Tree or another tree-node; text content or non-tree-node children are the node label",
+        ConfigSchema::new("tree_node")
+            .property("id", PropertySchema::string())
+            .property("label", PropertySchema::string())
+            .property("expanded", PropertySchema::boolean().with_default(false))
+            .property("disabled", PropertySchema::boolean().with_default(false)),
     );
 }
 

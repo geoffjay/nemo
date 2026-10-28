@@ -681,10 +681,33 @@ Options may also be supplied declaratively as `option` children (each with `valu
 ### table
 ```xml
 <table id="users" height="400" stripe="true" bordered="true" on-click="handle_row_click">
+  <table-header>
+    <table-column field="name" width="150">Name</table-column>
+    <table-column field="email" width="220">Email</table-column>
+  </table-header>
   <binding source="data.api" target="data" />
 </table>
 ```
-IMPORTANT: Must have a parent with definite height (the `height` property sets this).
+Two authoring modes, chosen automatically:
+
+* **Data mode** — `data` (array of row objects, usually via `<binding>`).
+  Virtualized scrolling through the kit's data table; needs a parent with
+  definite height (`height` property). Columns come from `<table-header>`
+  `<table-column>` children, or the legacy `columns` JSON attribute
+  (`[{"key":"name","label":"Name","width":150}]`), or auto-detection from the
+  first row. Cells show row values keyed by each column's `field`.
+* **Declared mode** — when `<table-row>` children exist and no `data` arrays
+  arrive: content is authored inline. Rows are `<table-row>` elements holding
+  positional `<table-cell>` children; each cell's text content or component
+  children are its content. HTML-style spans: `col-span` (cell or row) merges
+  columns; `row-span` merges rows (`<table-cell row-span="2">`); a
+  `<table-row col-span="N">` with one cell is a full-width row. Declared
+  tables are content-sized (no virtualization, no height requirement) and
+  cells may hold live components (buttons, checkboxes).
+
+`table_column` attributes: `field` (row-object key; `key` is reserved by the
+`n:for` directive), `width` (px), `align` (`left`/`center`/`right`); text
+content is the heading label.
 
 ### tree
 ```xml
@@ -692,6 +715,32 @@ IMPORTANT: Must have a parent with definite height (the `height` property sets t
   <binding source="data.filesystem" target="items" />
 </tree>
 ```
+Two authoring modes:
+
+* **Data mode** — `items` (array of `{id,label,expanded?,disabled?,children}`
+  objects, usually via `<binding>`); virtualized, definite height required
+  (`height` property).
+* **Declared mode** — `<tree-node>` children author the structure:
+```xml
+<tree id="files" height="300">
+  <tree-node id="src" expanded="true">
+    <icon name="folder" />
+    <text content="src" />
+    <tree-node id="main"><icon name="file" /><text content="main.rs" /></tree-node>
+    <tree-node id="lib">lib.rs</tree-node>
+  </tree-node>
+</tree>
+```
+Rule: among a node's children, `tree-node` elements nest as child nodes; every
+other child (icon, text, ...) is the node's label content. Element text
+content (`<tree-node>Label</tree-node>`) is the label directly;
+`label="..."` works as an attribute alternative. Node attributes: `id`,
+`expanded` (default false), `disabled`. Expansion/selection state is
+interactive (click toggles; chevrons show disclosure state). Node content is
+plain data (leading icon, label, trailing icon); deeper custom content
+(e.g. a stack of components) is not supported in tree rows — the row renderer
+must rebuild from data on every frame because the kit's virtualized list
+renders rows once per layout pass and once per paint pass.
 
 ### list
 ```xml

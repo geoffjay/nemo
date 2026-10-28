@@ -655,9 +655,19 @@ impl Render for Workspace {
         if self.pending_initial_route {
             self.pending_initial_route = false;
             if let Some(route) = self.initial_route.clone() {
-                window.defer(cx, move |window, cx| {
-                    use_navigate(window, cx).push(route.as_str());
-                });
+                // `router=/path` qualifiers are handled by the runtime's lazy
+                // per-router init (`set_initial_route`); pushing the raw spec
+                // string here would navigate to a literal "main=/table" path.
+                // A plain route (no qualifier) is pushed as-is.
+                let plain = match route.split_once('=') {
+                    Some((_, p)) => Some(p.to_string()),
+                    None => Some(route.clone()),
+                };
+                if let Some(route) = plain {
+                    window.defer(cx, move |window, cx| {
+                        use_navigate(window, cx).push(route.as_str());
+                    });
+                }
             }
         }
 
