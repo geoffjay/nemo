@@ -27,21 +27,21 @@
         <page id="overview">
           <stack direction="vertical" padding="24" spacing="12">
             <label text="Overview" size="xl" />
-            <text content="Welcome to the App Shell example. Pick an item on the left to switch pages." />
+            <text>Welcome to the App Shell example. Pick an item on the left to switch pages.</text>
           </stack>
         </page>
 
         <page id="reports">
           <stack direction="vertical" padding="24" spacing="12">
             <label text="Reports" size="xl" />
-            <text content="This is the Reports page. Its content is only rendered while active." />
+            <text>This is the Reports page. Its content is only rendered while active.</text>
           </stack>
         </page>
 
         <page id="settings">
           <stack direction="vertical" padding="24" spacing="12">
             <label text="Settings" size="xl" />
-            <text content="This is the Settings page." />
+            <text>This is the Settings page.</text>
           </stack>
         </page>
       </app-content>

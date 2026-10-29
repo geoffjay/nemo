@@ -44,7 +44,7 @@
           <route path="/dashboard">
             <stack id="page_dashboard" direction="vertical" spacing="12" padding="24">
               <label id="dash_title" text="Dashboard" size="lg" />
-              <text id="dash_desc" content="Overview of application state with live data from timer sources." />
+              <text id="dash_desc">Overview of application state with live data from timer sources.</text>
 
               <!-- Status cards using included template -->
               <stack id="dash_cards" direction="horizontal" spacing="16" align="stretch">
@@ -95,7 +95,7 @@
           <route path="/monitoring">
             <stack id="page_monitoring" direction="vertical" spacing="12" padding="24">
               <label id="mon_title" text="Monitoring" size="lg" />
-              <text id="mon_desc" content="Live data monitoring with real-time updates from data sources." />
+              <text id="mon_desc">Live data monitoring with real-time updates from data sources.</text>
 
               <stack id="mon_status_row" direction="horizontal" spacing="8">
                 <tag id="mon_tag_active" label="Active" variant="success" />
@@ -125,7 +125,7 @@
           <route path="/settings">
             <stack id="page_settings" direction="vertical" spacing="12" padding="24">
               <label id="settings_title" text="Settings" size="lg" />
-              <text id="settings_desc" content="Application settings. The demo-settings plugin provides additional configuration options." />
+              <text id="settings_desc">Application settings. The demo-settings plugin provides additional configuration options.</text>
 
               <label id="settings_app_title" text="Application" size="md" />
               <panel id="settings_app_panel" padding="16" border="1" border-color="theme.border" rounded="md">

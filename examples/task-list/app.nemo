@@ -76,7 +76,7 @@
       field submits too (the input's on-change fires on Enter).
     -->
     <modal id="add_modal" title="Add a task" open="false">
-      <text id="add_hint" content="Describe the task and (optionally) a due date." />
+      <text id="add_hint">Describe the task and (optionally) a due date.</text>
       <stack id="add_fields" direction="vertical" spacing="12">
         <input id="new_task_input" placeholder="Task description" value="" on-change="submit_add" />
         <input id="new_due_input" placeholder="Due date (YYYY-MM-DD, optional)" value="" on-change="submit_add" />

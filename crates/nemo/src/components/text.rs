@@ -7,6 +7,8 @@ use nemo_macros::NemoComponent;
 ///
 /// ```xml
 /// <text id="description" content="Some paragraph text here." />
+/// <!-- equivalently, the element body is the content -->
+/// <text id="description">Some paragraph text here.</text>
 /// ```
 ///
 /// # Properties

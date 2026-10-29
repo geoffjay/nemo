@@ -1743,18 +1743,20 @@ impl XmlParser {
             }
         }
 
-        // Element text content becomes the `content` property for the
-        // child-item types whose label reads naturally inline:
-        // `<tree-node>Label</tree-node>`, `<table-column>Name</table-column>`.
-        // Other components keep dropping stray text (their schemas do not
-        // declare `content`, so capturing it would trip the unknown-attribute
-        // lint on existing configs).
-        const TEXT_LABEL_TYPES: [&str; 5] = [
+        // Element text content becomes the `content` property for the types
+        // whose text reads naturally inline: `<tree-node>Label</tree-node>`,
+        // `<table-column>Name</table-column>`, and `<text>Body</text>`
+        // (alternative to the `content` attribute, which still wins when both
+        // are given). Other components keep dropping stray text (their schemas
+        // do not declare `content`, so capturing it would trip the
+        // unknown-attribute lint on existing configs).
+        const TEXT_LABEL_TYPES: [&str; 6] = [
             "tree_node",
             "table_header",
             "table_column",
             "table_row",
             "table_cell",
+            "text",
         ];
         if TEXT_LABEL_TYPES.contains(&element_type) {
             if let Some(cdata) = obj.get("__cdata__").and_then(|v| v.as_str()) {
@@ -2682,6 +2684,49 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_text_inline_body() {
+        // `<text>Body</text>` promotes the element text to the `content`
+        // property; an explicit content attribute still wins. Whitespace-only
+        // bodies produce no property.
+        let xml = r#"
+        <nemo>
+            <layout type="stack">
+              <text>Inline body</text>
+              <text id="both" content="attr">Inline</text>
+              <text>   </text>
+            </layout>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+        let components = value
+            .get("layout")
+            .unwrap()
+            .get("component")
+            .unwrap()
+            .as_object()
+            .unwrap();
+
+        let inline = components.get("__anon_1").unwrap();
+        assert_eq!(
+            inline.get("content"),
+            Some(&Value::String("Inline body".to_string()))
+        );
+
+        let both = components.get("both").unwrap();
+        assert_eq!(
+            both.get("content"),
+            Some(&Value::String("attr".to_string())),
+            "explicit attribute must win over inline body"
+        );
+
+        let blank = components.get("__anon_2").unwrap();
+        assert_eq!(blank.get("type"), Some(&Value::String("text".to_string())));
+        assert!(blank.get("content").is_none(), "whitespace-only body");
+    }
+
+    #[test]
     fn test_parse_table_child_items() {
         let xml = r#"
         <nemo>
@@ -3555,11 +3600,16 @@ mod tests {
         assert!(value.get("app").is_some());
         assert!(value.get("templates").is_some());
         assert!(value.get("layout").is_some());
-        let templates = value.get("templates").unwrap();
-        let template = templates.get("template").unwrap();
-        // The components gallery navigates via <router>/<route>/<nav-link> now;
-        // `content_page` is the remaining template wrapper.
-        assert!(template.get("content_page").is_some());
+        let sfc = value.get("sfc").unwrap();
+        // The gallery's shared page chrome lives in SFC templates imported
+        // from templates/ (component-page, component-example, content-page);
+        // page bodies (overview, styling) are SFCs too.
+        assert!(
+            sfc.get("component_page").is_some(),
+            "shared component-page SFC missing"
+        );
+        assert!(sfc.get("component_example").is_some());
+        assert!(sfc.get("overview").is_some());
     }
 
     #[test]

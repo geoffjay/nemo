@@ -1,6 +1,25 @@
 # Knowledge Base Update Log
 
 ## 2026-10-28
+* **Migration (examples)**: every `<text content="…"/>` in `examples/**` converted
+  to the inline-body form `<text>…</text>` (84 sites across 9 files), including
+  `bind-content` placeholders (body + `bind-content` coexist — the binding
+  overrides the property the body seeds) and the sample markup inside
+  `code-editor default-value` strings (including a double-escaped
+  `tree_code` sample). The 4 gallery Code-slot texts whose bodies are raw
+  component markup use explicit CDATA (`<text slot="code"><![CDATA[…]]></text>`)
+  since raw `<` is only lenient in attributes, not element bodies. `nemo
+  validate` passes on every example; suites green.
+* **Feature (`<text>` inline body)**: element text content now promotes to the
+  `content` property for `<text>` — `<text>Body</text>` is equivalent to
+  `<text content="Body" />`. Implemented by adding `text` to `TEXT_LABEL_TYPES`
+  in `process_component_element` (`crates/nemo-config/src/xml_parser.rs`), the
+  existing inline-promotion list for tree/table child items; an explicit
+  `content` attribute still wins (`.or_insert_with`), whitespace-only bodies
+  are ignored (the parser already drops whitespace-only text events). SFC
+  templates inherit it for free (same parse path). Tests:
+  `test_parse_text_inline_body`; verified via screenshot (inline body renders,
+  attribute wins when both present).
 * **Fix (SFC nested-instance id scoping)**: `expand_template` collected
   template-owned ids from the RAW template body, but nested SFC/template
   instances are expanded first, minting ids that exist only afterwards

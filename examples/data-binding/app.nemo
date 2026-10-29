@@ -60,7 +60,7 @@
             <label id="api_url" text="URL: waiting...">
               <binding source="data.api" target="text" transform="url" />
             </label>
-            <text id="api_raw" content="Waiting for API response..." bind-content="data.api" />
+            <text id="api_raw" bind-content="data.api">Waiting for API response...</text>
           </panel>
 
           <!-- MQTT source -->
@@ -72,7 +72,7 @@
             <label id="mqtt_payload" text="Payload: --">
               <binding source="data.sensors" target="text" transform="payload" />
             </label>
-            <text id="mqtt_raw" content="No MQTT data yet" bind-content="data.sensors" />
+            <text id="mqtt_raw" bind-content="data.sensors">No MQTT data yet</text>
           </panel>
 
           <!-- Redis source -->
@@ -84,7 +84,7 @@
             <label id="redis_payload" text="Payload: --">
               <binding source="data.events" target="text" transform="payload" />
             </label>
-            <text id="redis_raw" content="No Redis data yet" bind-content="data.events" />
+            <text id="redis_raw" bind-content="data.events">No Redis data yet</text>
           </panel>
 
           <!-- NATS source -->
@@ -96,7 +96,7 @@
             <label id="nats_payload" text="Payload: --">
               <binding source="data.messages" target="text" transform="payload" />
             </label>
-            <text id="nats_raw" content="No NATS data yet" bind-content="data.messages" />
+            <text id="nats_raw" bind-content="data.messages">No NATS data yet</text>
           </panel>
 
           <!-- Interactive section -->

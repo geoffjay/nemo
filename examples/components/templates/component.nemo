@@ -32,7 +32,7 @@
   <panel>
     <stack direction="vertical" spacing="24" padding="32">
       <label text="${name}" size="lg" />
-      <text content="${description}" />
+      <text>${description}</text>
 
       <!-- One slot per dedicated container: a `slot` marker is recorded on the
            slot element's PARENT (last-wins if slots are siblings), and

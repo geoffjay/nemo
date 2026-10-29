@@ -82,10 +82,12 @@ pattern). Two conventions for the new items:
 
 * **Element text content is the label.** `process_component_element`
   (`crates/nemo-config/src/xml_parser.rs`) demotes an element's text nodes to
-  a `content` property for the child-item types only
-  (`tree_node`, `table_column`, `table_row`, `table_cell`, `table_header`) —
-  other components still drop stray text so unknown-attribute lints stay
-  quiet. `<tree-node>Label</tree-node>` works without a `label` attribute.
+  a `content` property for the inline-text types (`text`, `tree_node`,
+  `table_column`, `table_row`, `table_cell`, `table_header`) — other components
+  still drop stray text so unknown-attribute lints stay quiet.
+  `<tree-node>Label</tree-node>` works without a `label` attribute, and
+  `<text>Body</text>` is an alternative to `content="Body"` (explicit
+  attribute wins when both are given).
 * **Structure vs content is type-based.** A `tree-node`'s `tree_node` children
   are its nested nodes; any other child (icon/text/…) is its label content.
   No `label-ref` attributes and no wrapper elements.

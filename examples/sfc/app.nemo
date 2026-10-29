@@ -21,17 +21,17 @@
     <stack id="sfc_row" direction="horizontal" spacing="20" align="start">
       <card>
         <label id="c1_title" slot="header" text="First card" size="lg" />
-        <text id="c1_body" content="The title above went to the header slot; this went to the default slot." />
+        <text id="c1_body">The title above went to the header slot; this went to the default slot.</text>
         <labeled-button id="btn_a" label="Press me" />
       </card>
       <card>
         <label id="c2_title" slot="header" text="Second card" size="lg" />
-        <text id="c2_body" content="A second instance, sharing the same .nemo definition." />
+        <text id="c2_body">A second instance, sharing the same .nemo definition.</text>
         <labeled-button id="btn_b" label="And me" />
       </card>
       <card>
         <label id="c3_title" slot="header" text="Prop defaults" size="lg" />
-        <text id="c3_body" content="This button omits label and variant — both come from the SFC's declared prop defaults." />
+        <text id="c3_body">This button omits label and variant — both come from the SFC's declared prop defaults.</text>
         <labeled-button id="btn_c" />
       </card>
     </stack>
@@ -39,7 +39,7 @@
     <!-- Static n:for (compile-time): expanded from a literal array. -->
     <card>
       <label id="c5_title" slot="header" text="Static n:for" size="lg" />
-      <text id="c5_body" content="The chips below are expanded at compile time from a literal array with n:for." />
+      <text id="c5_body">The chips below are expanded at compile time from a literal array with n:for.</text>
       <stack direction="horizontal" spacing="8">
         <label id="chip" n:for="tag in ['config', 'sfc', 'runtime']" n:key="tag"
                text="#${tag}" background="theme.muted" padding="6" rounded="md" />
@@ -49,22 +49,22 @@
     <!-- n:if (compile-time binding): visible while data.ui.show_details == 'yes'. -->
     <card>
       <label id="c6_title" slot="header" text="Conditional with n:if" size="lg" />
-      <text id="c6_body" content="The details panel below is shown only while data.ui.show_details == 'yes'." />
+      <text id="c6_body">The details panel below is shown only while data.ui.show_details == 'yes'.</text>
       <button id="btn_toggle" label="Toggle details" variant="primary" on-click="on_toggle_details" />
       <panel id="details" n:if="data.ui.show_details == 'yes'"
              background="theme.muted" padding="12" rounded="md">
-        <text id="details_text" content="Now you see me. Toggle again and n:if hides this whole panel." />
+        <text id="details_text">Now you see me. Toggle again and n:if hides this whole panel.</text>
       </panel>
     </card>
 
     <!-- Live-data n:for (runtime): one row per task in data.tasks. -->
     <card>
       <label id="c7_title" slot="header" text="Live-data n:for" size="lg" />
-      <text id="c7_body" content="One row per task in data.tasks. Add/Remove create and tear down instances." />
+      <text id="c7_body">One row per task in data.tasks. Add/Remove create and tear down instances.</text>
       <stack id="task_list" n:for="task in data.tasks" n:key="task.id"
              direction="horizontal" spacing="8">
         <label text="•" />
-        <text content="${task.name}" />
+        <text>${task.name}</text>
       </stack>
       <stack direction="horizontal" spacing="8">
         <button id="btn_add_task" label="Add task" variant="primary" on-click="on_add_task" />
