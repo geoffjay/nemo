@@ -18,6 +18,9 @@ pub use error::ExtensionError;
 pub use loader::{ExtensionLoader, ExtensionManifest, ExtensionType};
 pub use plugin::{LoadedPlugin, PluginHost, PluginInitResult};
 
+/// Per-script persistent-scope variable snapshot: `(script_id, [(name, json)])`.
+pub type ScriptVariables = Vec<(String, Vec<(String, serde_json::Value)>)>;
+
 /// Information about a settings page registered by a plugin.
 #[derive(Debug, Clone)]
 pub struct SettingsPageInfo {
@@ -170,9 +173,7 @@ impl ExtensionManager {
     /// `(script_id, [(name, json)])` pairs. Used by the runtime to seed `{{ }}`
     /// layout interpolation (component variables) from top-level
     /// `let`/`const` declarations.
-    pub fn script_variables(
-        &self,
-    ) -> Result<Vec<(String, Vec<(String, serde_json::Value)>)>, ExtensionError> {
+    pub fn script_variables(&self) -> Result<ScriptVariables, ExtensionError> {
         let mut all = Vec::new();
         for id in self.rhai_engine.list_scripts() {
             let bindings: Vec<(String, serde_json::Value)> = self

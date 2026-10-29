@@ -141,7 +141,8 @@ struct SfcBlocks {
     /// `on-load`, `features`) — the raw-text capture path skips XML parsing,
     /// so without these the attributes would be silently dropped.
     script_attrs: IndexMap<String, Value>,
-    /// Same for `<style>` (e.g. `media`); currently carried for completeness.
+    /// Same for `<style>` (e.g. `media`); carried but unprocessed for now.
+    #[allow(dead_code)]
     style_attrs: IndexMap<String, Value>,
 }
 
