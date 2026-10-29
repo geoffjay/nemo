@@ -167,6 +167,34 @@ impl LayoutManager {
         self.components.get(id)
     }
 
+    /// Resolves a component id against the built tree, falling back to a
+    /// scoped-suffix match.
+    ///
+    /// SFC/template expansion prefixes template-authored ids with the
+    /// instance key (`<instance>_<id>`), but scripts address widgets by the
+    /// literal id authored in the template. Exact hit wins; otherwise we
+    /// accept ids ending with `_<id>` when exactly one matches. Zero or
+    /// multiple matches stay unresolved (callers treat that as "not found"),
+    /// so this can never silently target the wrong instance.
+    ///
+    /// Returns the resolved id (which may differ from the input) on success.
+    pub fn resolve_id(&self, id: &str) -> Option<String> {
+        if self.components.contains_key(id) {
+            return Some(id.to_string());
+        }
+        let suffix = format!("_{}", id);
+        let matches: Vec<&String> = self
+            .components
+            .keys()
+            .filter(|key| key.ends_with(&suffix))
+            .collect();
+        if matches.len() == 1 {
+            Some(matches[0].clone())
+        } else {
+            None
+        }
+    }
+
     /// Gets a mutable component by ID.
     pub fn get_component_mut(&mut self, id: &str) -> Option<&mut BuiltComponent> {
         self.components.get_mut(id)
@@ -257,9 +285,15 @@ impl LayoutManager {
         property: &str,
         value: Value,
     ) -> Result<(), LayoutError> {
+        let resolved = self
+            .resolve_id(component_id)
+            .ok_or_else(|| LayoutError::InvalidConfig {
+                component_id: component_id.to_string(),
+                reason: "Component not found".to_string(),
+            })?;
         let component =
             self.components
-                .get_mut(component_id)
+                .get_mut(&resolved)
                 .ok_or_else(|| LayoutError::InvalidConfig {
                     component_id: component_id.to_string(),
                     reason: "Component not found".to_string(),
@@ -503,6 +537,86 @@ mod tests {
         manager.apply_layout(config).unwrap();
 
         assert_eq!(manager.root_id(), Some("root".to_string()));
+    }
+
+    #[test]
+    fn test_resolve_id_exact_wins() {
+        let mut manager = setup_manager();
+
+        let root = LayoutNode::new("stack").with_id("inst_status").with_child(
+            LayoutNode::new("button")
+                .with_id("status")
+                .with_prop("label", Value::String("S".into())),
+        );
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        // Exact key present even though another id matches as a suffix.
+        assert_eq!(
+            manager.resolve_id("inst_status"),
+            Some("inst_status".into())
+        );
+    }
+
+    #[test]
+    fn test_resolve_id_suffix_single_match() {
+        let mut manager = setup_manager();
+
+        let root = LayoutNode::new("stack").with_id("inst_root").with_child(
+            LayoutNode::new("button")
+                .with_id("inst_status")
+                .with_prop("label", Value::String("Hi".into())),
+        );
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        // Script addresses the widget by its template-author id; expansion
+        // scoped it to `<instance>_id`.
+        assert_eq!(
+            manager.resolve_id("status"),
+            Some("inst_status".to_string())
+        );
+
+        // set_property resolves through the same path.
+        manager
+            .set_property("status", "label", Value::String("Poked".into()))
+            .unwrap();
+        assert_eq!(
+            manager
+                .get_component("inst_status")
+                .unwrap()
+                .properties
+                .get("label"),
+            Some(&Value::String("Poked".into()))
+        );
+    }
+
+    #[test]
+    fn test_resolve_id_ambiguous_and_missing() {
+        let mut manager = setup_manager();
+
+        let root = LayoutNode::new("stack").with_id("root").with_child(
+            LayoutNode::new("stack")
+                .with_id("g1")
+                .with_child(
+                    LayoutNode::new("button")
+                        .with_id("a_status")
+                        .with_prop("label", Value::String("A".into())),
+                )
+                .with_child(
+                    LayoutNode::new("button")
+                        .with_id("b_status")
+                        .with_prop("label", Value::String("B".into())),
+                ),
+        );
+        manager
+            .apply_layout(LayoutConfig::new(LayoutType::Stack, root))
+            .unwrap();
+
+        assert_eq!(manager.resolve_id("status"), None);
+        assert_eq!(manager.resolve_id("no_such"), None);
     }
 
     #[test]

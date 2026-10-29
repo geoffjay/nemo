@@ -13,12 +13,6 @@ fn on_toggle_modal(component_id, event_data) {
     }
 }
 
-// Button page callback demo: records which instance fired.
-fn on_button_click_demo(component_id, event_data) {
-    set_component_property("btn_click_status", "content",
-        "Last click: " + component_id + " (" + event_data + ")");
-}
-
 // Dropdown menu-item handler: proves <menu-item on-click> is wired.
 // `component_id` is the clicked menu item's id, so the same handler can
 // report which entry fired.

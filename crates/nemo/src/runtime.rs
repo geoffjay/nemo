@@ -3243,8 +3243,9 @@ impl PluginContext for RuntimeContext {
 
     fn get_component_property(&self, component_id: &str, property: &str) -> Option<PluginValue> {
         if let Ok(layout_manager) = self.layout_manager.try_read() {
+            let resolved = layout_manager.resolve_id(component_id)?;
             layout_manager
-                .get_component(component_id)
+                .get_component(&resolved)
                 .and_then(|component| component.properties.get(property))
                 .map(value_to_plugin_value)
         } else {

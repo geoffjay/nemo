@@ -30,6 +30,18 @@ stripped before flattening, but its *parent stack* needs the id. Prefer stable,
 meaningful ids (`page_title`, `example_preview`) since they become visible
 per-instance scoped ids used for lookups in scripts/styles.
 
+## Script-side ids (resolved 2026-10-29)
+Expansion prefixes template-authored ids with the instance key, so an SFC
+script cannot (previously) target its own widgets by the literal id authored
+in the template — `set_component_property("btn_click_status", …)` failed with
+"Component not found" (`<instance>_btn_click_status` is the runtime id). Fix:
+`LayoutManager::resolve_id` (`crates/nemo-layout/src/manager.rs`) backs
+`get_/set_component_property` with exact-then-unique-suffix matching
+(`*_btn_click_status`); 0 or 2+ suffix matches → not found / "Component not
+found" (ambiguous across instances is a deliberate failure, never a silent
+wrong-instance write). So SFC scripts may use the template-authored id as
+long as it is unique across all instances of that template in the app.
+
 ## Status
 - Workaround applied (2026-10-29): `examples/components/templates/component.nemo`
   and `component-example.nemo` got ids; gallery `/button` page verified

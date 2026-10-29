@@ -21,6 +21,15 @@ let callbacks_code = ##"<button label="Click me" variant="primary" on-click="on_
 fn on_button_click_demo(component_id, event_data) {
   set_component_property("btn_click_status", "content", "Last click: " + component_id);
 }"##;
+
+// Button page callback demo: records which instance fired.
+fn on_button_click_demo(component_id, event_data) {
+    set_component_property(
+      "btn_click_status",
+      "content",
+      "Last click: " + component_id + " (" + event_data + ")"
+    );
+}
 </script>
 
 <template name="component-page-button">
