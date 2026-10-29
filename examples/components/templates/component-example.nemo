@@ -18,11 +18,13 @@
 </props>
 
 <template name="component-example">
-  <stack direction="vertical" spacing="8">
-    <label text="${label}" size="sm" />
-    <tabs>
-      <tab-item label="Preview"><slot /></tab-item>
-      <tab-item label="Code"><slot name="code" /></tab-item>
+  <!-- Every child needs an explicit id — see component.nemo for why
+       (parse-time __anon_N keys collide across this file's instances). -->
+  <stack id="example_root" direction="vertical" spacing="8">
+    <label id="example_label" text="${label}" size="md" />
+    <tabs id="example_tabs">
+      <tab-item id="example_preview" label="Preview"><slot /></tab-item>
+      <tab-item id="example_code_item" label="Code"><slot name="code" /></tab-item>
     </tabs>
   </stack>
 </template>

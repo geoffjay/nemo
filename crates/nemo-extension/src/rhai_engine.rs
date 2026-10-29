@@ -318,6 +318,30 @@ impl RhaiEngine {
         self.engine.eval(expr).map_err(|e| e.into())
     }
 
+    /// Snapshots a script's persistent scope as `(name, json)` pairs — the
+    /// top-level `let`/`const` declarations seeded at load time.
+    ///
+    /// The runtime uses this to expose script variables to `{{ }}` layout
+    /// interpolation (component variables). Values convert via
+    /// [`dynamic_to_json`](self): scalars keep their type, composites become
+    /// JSON, and anything unrepresentable falls back to its string form.
+    pub fn variable_bindings(
+        &self,
+        script_id: &str,
+    ) -> Result<Vec<(String, Dynamic)>, ExtensionError> {
+        let script = self
+            .scripts
+            .get(script_id)
+            .ok_or_else(|| ExtensionError::NotFound {
+                id: script_id.to_string(),
+            })?;
+        Ok(script
+            .scope
+            .iter()
+            .map(|(name, _is_constant, value)| (name.to_string(), value))
+            .collect())
+    }
+
     /// Evaluates an expression with a scope.
     pub fn eval_with_scope<T: Clone + Send + Sync + 'static>(
         &self,
@@ -942,7 +966,7 @@ fn json_to_dynamic(value: serde_json::Value) -> Dynamic {
 }
 
 /// Convert a RHAI `Dynamic` to a `serde_json::Value` for serialization.
-fn dynamic_to_json(value: &Dynamic) -> serde_json::Value {
+pub(crate) fn dynamic_to_json(value: &Dynamic) -> serde_json::Value {
     if value.is_unit() {
         serde_json::Value::Null
     } else if value.is_bool() {

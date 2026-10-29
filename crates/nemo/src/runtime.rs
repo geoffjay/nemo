@@ -179,6 +179,11 @@ pub struct NemoRuntime {
     /// `set_roundness()` Rhai calls / plugins. Applied with `cx` by the App poll
     /// loop via [`Self::take_pending_roundness`] (needs the gpui `Theme`).
     roundness_intents: Arc<Mutex<Vec<String>>>,
+    /// Component variables: top-level script `let`/`const` values snapshot
+    /// after scripts load, merged across scripts (later script wins). Feeds
+    /// `{{ var }}` interpolation over the layout in
+    /// [`Self::apply_layout_from_config`].
+    script_variables: RwLock<HashMap<String, Value>>,
 }
 
 impl NemoRuntime {
@@ -226,6 +231,7 @@ impl NemoRuntime {
             initial_route: Arc::new(Mutex::new(None)),
             pending_initial_enters: Arc::new(Mutex::new(Vec::new())),
             roundness_intents: Arc::new(Mutex::new(Vec::new())),
+            script_variables: RwLock::new(HashMap::new()),
         })
     }
 
@@ -564,6 +570,51 @@ impl NemoRuntime {
             }
         }
 
+        // Load inline `<script>` bodies (top-level raw-text/CDATA scripts) as
+        // id "handlers" when that id is free — bare `on-click="foo"` names
+        // default to the "handlers" script, so an app's inline script with
+        // handlers must land there. If "handlers" is already taken (a
+        // scripts-dir `handlers.rhai` loaded above), fall back to `inline_<n>`
+        // ids (handlers in them resolve only as `inline_<n>::fn`).
+        {
+            let inline_sources: Vec<String> = {
+                let config = self.config.read().expect("config lock poisoned");
+                config
+                    .get("scripts")
+                    .and_then(|s| s.get("inline"))
+                    .and_then(|v| v.as_array())
+                    .map(|arr| {
+                        arr.iter()
+                            .filter_map(|v| v.as_str())
+                            .filter(|s| !s.trim().is_empty())
+                            .map(|s| s.to_string())
+                            .collect()
+                    })
+                    .unwrap_or_default()
+            };
+            if !inline_sources.is_empty() {
+                let mut ext = self
+                    .extension_manager
+                    .write()
+                    .expect("extension_manager lock poisoned");
+                for (i, source) in inline_sources.iter().enumerate() {
+                    let id = if i == 0
+                        && !ext
+                            .list_compiled_scripts()
+                            .contains(&"handlers".to_string())
+                    {
+                        "handlers".to_string()
+                    } else {
+                        format!("inline_{}", i)
+                    };
+                    match ext.load_script_source(&id, source) {
+                        Ok(()) => info!("Loaded inline script: {}", id),
+                        Err(e) => tracing::warn!("Failed to load inline script {}: {}", id, e),
+                    }
+                }
+            }
+        }
+
         // Load single-file component (`.nemo` SFC) `<script>` bodies under
         // `sfc:<tag>` ids. One script serves every instance of the tag; the
         // instance is distinguished by the `component_id` its handlers receive.
@@ -630,6 +681,13 @@ impl NemoRuntime {
             ext.init_plugins(context);
         }
 
+        // Snapshot component variables: top-level `let`/`const` values from
+        // every loaded script's persistent scope, merged across scripts (a
+        // later-loaded script shadows an earlier one on name clash). Runs
+        // before `apply_layout_from_config` (initialize order), so `{{ var }}`
+        // interpolation sees them on the first layout build.
+        self.snapshot_script_variables();
+
         // Note: WASM plugin ticking is driven by `tick_wasm_plugins()` which is
         // called from `apply_pending_data_updates()` on the main/UI thread.
         // ExtensionManager is not Send/Sync (due to RhaiEngine), so we cannot
@@ -694,6 +752,50 @@ impl NemoRuntime {
         Ok(())
     }
 
+    /// Snapshots component variables from every loaded script's persistent
+    /// scope (see [`RhaiEngine::variable_bindings`]). Scalars keep their
+    /// type; composites arrive as JSON strings and are re-parsed so `{{ var }}`
+    /// interpolation can render them compactly.
+    fn snapshot_script_variables(&self) {
+        let bindings = {
+            let ext = self
+                .extension_manager
+                .read()
+                .expect("extension_manager lock poisoned");
+            match ext.script_variables() {
+                Ok(all) => all,
+                Err(e) => {
+                    tracing::warn!("Failed to snapshot script variables: {}", e);
+                    return;
+                }
+            }
+        };
+        let mut vars = HashMap::new();
+        for (_script_id, kv) in bindings {
+            for (name, json) in kv {
+                let value = Value::from(json);
+                if !value.is_null() {
+                    vars.insert(name, value);
+                }
+            }
+        }
+        if !vars.is_empty() {
+            info!("Component variables: {:?}", vars.keys().collect::<Vec<_>>());
+        }
+        if let Ok(mut guard) = self.script_variables.write() {
+            *guard = vars;
+        }
+    }
+
+    /// Returns the component-variable snapshot (top-level script variables
+    /// available to `{{ var }}` interpolation).
+    pub fn script_variables(&self) -> HashMap<String, Value> {
+        self.script_variables
+            .read()
+            .map(|v| v.clone())
+            .unwrap_or_default()
+    }
+
     /// Calls an event handler.
     ///
     /// Handler format: "script_id::function_name" or just "function_name" (uses default script)
@@ -744,7 +846,12 @@ impl NemoRuntime {
 
         let layout_config = {
             let config = self.config.read().expect("config lock poisoned");
-            parse_layout_config(&config, &extra_templates, Some(&self.registry))
+            parse_layout_config(
+                &config,
+                &extra_templates,
+                Some(&self.registry),
+                &self.script_variables(),
+            )
         };
 
         if let Some(layout_config) = layout_config {
@@ -2195,6 +2302,74 @@ fn scope_owned_descendants(
     Value::Object(result)
 }
 
+/// Renders a component variable for `{{ }}` interpolation. Scalars render via
+/// their display form; composites (arrays/maps) serialize as compact JSON.
+fn mustache_value_string(v: &Value) -> String {
+    match v {
+        Value::String(s) => s.clone(),
+        Value::Array(_) | Value::Object(_) => {
+            let json = serde_json::to_value(v).unwrap_or(serde_json::Value::Null);
+            json.to_string()
+        }
+        Value::Bool(b) => b.to_string(),
+        Value::Integer(i) => i.to_string(),
+        Value::Float(f) => f.to_string(),
+        Value::Null => String::new(),
+    }
+}
+
+/// Replaces `{{ name }}` (inner whitespace-insensitive) in a string with the
+/// variable's rendered value. Unknown names render as empty (a typo degrades
+/// to absence, consistent with `${}` resolution leniency); an unclosed `{{`
+/// is left verbatim. `{{ }}` never collides with the `${}` machinery (SFC
+/// template props / `n:for` loop vars), so both can coexist in one body.
+fn interpolate_mustache_str(s: &str, vars: &HashMap<String, Value>) -> String {
+    if !s.contains("{{") {
+        return s.to_string();
+    }
+    let mut result = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(pos) = rest.find("{{") {
+        result.push_str(&rest[..pos]);
+        let after = &rest[pos + 2..];
+        match after.find("}}") {
+            Some(end) => {
+                let name = after[..end].trim();
+                let replacement = vars
+                    .get(name)
+                    .map(mustache_value_string)
+                    .unwrap_or_default();
+                result.push_str(&replacement);
+                rest = &after[end + 2..];
+            }
+            None => {
+                result.push_str("{{");
+                rest = after;
+            }
+        }
+    }
+    result.push_str(rest);
+    result
+}
+
+/// Recursively applies `{{ var }}` component-variable interpolation over a
+/// config Value tree: every string (attribute value or inline text body) may
+/// reference top-level script variables.
+fn interpolate_mustache(value: &Value, vars: &HashMap<String, Value>) -> Value {
+    match value {
+        Value::String(s) => Value::String(interpolate_mustache_str(s, vars)),
+        Value::Object(obj) => Value::Object(
+            obj.iter()
+                .map(|(k, v)| (k.clone(), interpolate_mustache(v, vars)))
+                .collect(),
+        ),
+        Value::Array(arr) => {
+            Value::Array(arr.iter().map(|v| interpolate_mustache(v, vars)).collect())
+        }
+        other => other.clone(),
+    }
+}
+
 /// Iterates over all `component` children and expands templates in each.
 fn expand_children(
     value: &Value,
@@ -2695,6 +2870,7 @@ fn parse_layout_config(
     config: &Value,
     extra_templates: &TemplateMap,
     registry: Option<&ComponentRegistry>,
+    script_variables: &HashMap<String, Value>,
 ) -> Option<LayoutConfig> {
     let layout = config.get("layout")?;
     let mut templates = extract_templates(config);
@@ -2704,6 +2880,23 @@ fn parse_layout_config(
         templates
             .entry(name.clone())
             .or_insert_with(|| value.clone());
+    }
+
+    // Component variables: top-level script `let`/`const` values snapshot,
+    // interpolated as `{{ var }}` over the layout tree and every template
+    // body BEFORE expansion — SFC template bodies and slotted children get
+    // it the same way plain layout nodes do.
+    let owned_layout;
+    let layout: &Value = if script_variables.is_empty() {
+        layout
+    } else {
+        owned_layout = interpolate_mustache(layout, script_variables);
+        &owned_layout
+    };
+    if !script_variables.is_empty() {
+        for body in templates.values_mut() {
+            *body = interpolate_mustache(body, script_variables);
+        }
     }
 
     // Compile single-file components (`.nemo` SFCs): each imported SFC becomes a
@@ -2725,6 +2918,11 @@ fn parse_layout_config(
                     };
                     let body = rewrite_sfc_tags(&body, &sfc_tags, &sfc_props);
                     let body = rewrite_sfc_handlers(&body, tag);
+                    let body = if script_variables.is_empty() {
+                        body
+                    } else {
+                        interpolate_mustache(&body, script_variables)
+                    };
                     templates.entry(tag.clone()).or_insert(body);
                 }
             }
@@ -3419,7 +3617,8 @@ mod sfc_tests {
     #[test]
     fn test_sfc_multi_instance_id_scoping_and_slots() {
         let config = sfc_config();
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let root = layout.root;
 
         // Two cards + one button.
@@ -3522,7 +3721,8 @@ mod sfc_tests {
             ),
         ]);
 
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let mut inner_ids: Vec<String> = Vec::new();
         fn collect_inners(node: &nemo_layout::LayoutNode, out: &mut Vec<String>) {
             if let Some(id) = &node.id {
@@ -3585,7 +3785,8 @@ mod sfc_tests {
             ),
         ]);
 
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let labels: Vec<Option<String>> = layout
             .root
             .children
@@ -3644,7 +3845,8 @@ mod sfc_tests {
             ),
         ]);
 
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let panel = &layout.root.children[0];
         assert_eq!(panel.component_type, "panel");
 
@@ -3740,7 +3942,8 @@ mod sfc_tests {
             ),
         ]);
 
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let panel = layout
             .root
             .children
@@ -3787,7 +3990,8 @@ mod sfc_tests {
     #[test]
     fn test_sfc_interpolation_and_scoped_handler() {
         let config = sfc_config();
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
 
         let button = layout
             .root
@@ -4030,7 +4234,8 @@ mod sfc_tests {
             ),
         ]);
 
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let page = &layout.root.children[0];
         assert_eq!(page.component_type, "panel");
 
@@ -4415,7 +4620,8 @@ mod runtime_tests {
                 ),
             ]),
         )]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         assert_eq!(layout.root.children.len(), 1);
         assert_eq!(layout.root.children[0].component_type, "button");
     }
@@ -4423,14 +4629,15 @@ mod runtime_tests {
     #[test]
     fn test_parse_layout_config_dock() {
         let config = obj(vec![("layout", obj(vec![("type", s("dock"))]))]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         assert_eq!(layout.root.component_type, "dock");
     }
 
     #[test]
     fn test_parse_layout_config_missing() {
         let config = obj(vec![("app", obj(vec![]))]);
-        assert!(parse_layout_config(&config, &TemplateMap::new(), None).is_none());
+        assert!(parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).is_none());
     }
 
     #[test]
@@ -4448,7 +4655,8 @@ mod runtime_tests {
                 ),
             ]),
         )]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         let btn = &layout.root.children[0];
         assert_eq!(
             btn.handlers.get("click").map(|s| s.as_str()),
@@ -4474,7 +4682,8 @@ mod runtime_tests {
                 ),
             ]),
         )]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         let lbl = &layout.root.children[0];
         assert_eq!(lbl.config.bindings.len(), 1);
         assert_eq!(lbl.config.bindings[0].source, "data.sensors.temperature");
@@ -5169,7 +5378,8 @@ mod template_tests_continued {
             ),
         ]);
         let layout_config =
-            parse_layout_config(&config, &TemplateMap::new(), None).expect("Layout parse failed");
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+                .expect("Layout parse failed");
         let root = &layout_config.root;
 
         // page_a's inner child should be "page_a_inner"
@@ -5214,7 +5424,8 @@ mod template_tests_continued {
             ),
         ]);
         let layout_config =
-            parse_layout_config(&config, &TemplateMap::new(), None).expect("Layout parse failed");
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+                .expect("Layout parse failed");
 
         let nav = &layout_config.root.children[0];
         assert_eq!(
@@ -5296,7 +5507,8 @@ mod template_tests_continued {
             ),
         ]);
         let layout_config =
-            parse_layout_config(&config, &TemplateMap::new(), None).expect("Layout parse failed");
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+                .expect("Layout parse failed");
 
         // nav_btn should be a ghost button with label
         let root = &layout_config.root;
@@ -5785,35 +5997,39 @@ mod error_path_tests {
     #[test]
     fn test_parse_layout_config_unknown_type_defaults_to_stack() {
         let config = obj(vec![("layout", obj(vec![("type", s("foobar"))]))]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         assert_eq!(layout.root.component_type, "stack");
     }
 
     #[test]
     fn test_parse_layout_config_missing_type_defaults_to_stack() {
         let config = obj(vec![("layout", obj(vec![]))]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         assert_eq!(layout.root.component_type, "stack");
     }
 
     #[test]
     fn test_parse_layout_config_grid_type() {
         let config = obj(vec![("layout", obj(vec![("type", s("grid"))]))]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         assert_eq!(layout.root.component_type, "grid");
     }
 
     #[test]
     fn test_parse_layout_config_tiles_type() {
         let config = obj(vec![("layout", obj(vec![("type", s("tiles"))]))]);
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).unwrap();
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
         assert_eq!(layout.root.component_type, "tiles");
     }
 
     #[test]
     fn test_parse_layout_config_no_layout_key() {
         let config = obj(vec![("app", obj(vec![("title", s("Test"))]))]);
-        assert!(parse_layout_config(&config, &TemplateMap::new(), None).is_none());
+        assert!(parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).is_none());
     }
 
     #[test]
@@ -5846,7 +6062,7 @@ mod error_path_tests {
             ),
         ]);
         // Should not panic — falls back to raw layout on expansion failure
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None);
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new());
         assert!(layout.is_some());
     }
 
@@ -5901,7 +6117,8 @@ mod error_path_tests {
 
         let config = nemo_config::XmlParser::new().parse(xml).unwrap();
         let layout_config =
-            parse_layout_config(&config, &TemplateMap::new(), None).expect("layout should parse");
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+                .expect("layout should parse");
 
         let registry = Arc::new(ComponentRegistry::new());
         register_all_builtins(&registry);
@@ -6290,6 +6507,116 @@ mod error_path_tests {
         assert_eq!(lm.get_property("lbl", "visible"), Some(&Value::Bool(false)));
     }
 
+    // ── Component variables (`{{ var }}`) ──────────────────────────────
+
+    /// Component variables: a top-level inline `<script>`'s `let` values are
+    /// loaded (inline scripts were never loaded before this feature),
+    /// snapshotted, and interpolated as `{{ var }}` across text bodies and
+    /// attributes before layout expansion.
+    #[test]
+    fn test_component_variables_interpolate_from_inline_script() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<template name="app">
+  <stack id="root">
+    <text id="t1">
+      say {{ greeting }} count {{ count }}
+    </text>
+    <label id="t2" text="attr {{ greeting }}" />
+    <button id="b1" on-click="on_click" label="Go" />
+  </stack>
+</template>
+<script on-load="on_load">
+let greeting = "hello";
+let count = 42;
+fn on_load(component_id, event_data) {
+  set_component_property("t1", "content", "hydrated");
+}
+</script>"#,
+        )
+        .unwrap();
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+        rt.initialize().unwrap();
+
+        // Inline script loaded under the default "handlers" id — bare
+        // handler names (on-click / on-load) resolve against it.
+        assert!(rt
+            .extension_manager
+            .read()
+            .unwrap()
+            .list_compiled_scripts()
+            .contains(&"handlers".to_string()));
+
+        // The snapshot is exposed.
+        let vars = rt.script_variables();
+        assert_eq!(
+            vars.get("greeting"),
+            Some(&Value::String("hello".to_string()))
+        );
+        assert_eq!(vars.get("count"), Some(&Value::Integer(42)));
+
+        // Interpolated into the built layout.
+        let lm = rt.layout_manager.read().unwrap();
+        assert_eq!(
+            lm.get_property("t1", "content").and_then(|v| v.as_str()),
+            Some("say hello count 42")
+        );
+        assert_eq!(
+            lm.get_property("t2", "text").and_then(|v| v.as_str()),
+            Some("attr hello")
+        );
+        // Children with no `{{ }}` are untouched.
+        assert_eq!(
+            lm.get_property("b1", "label").and_then(|v| v.as_str()),
+            Some("Go")
+        );
+    }
+
+    /// `{{ var }}` naming an undefined variable (in a tree WITH other
+    /// variables present, so interpolation runs) renders as empty; with no
+    /// variables at all the tree is left untouched (verbatim `{{ ... }}`).
+    #[test]
+    fn test_component_variables_unknown_name_renders_empty() {
+        // Variables present, unknown name referenced → empty replacement.
+        let config = serde_json::from_str::<Value>(
+            r#"{"layout":{"type":"stack","component":{"t":{"type":"text","content":"x {{ missing }} y {{ known }}"}}}}"#,
+        )
+        .unwrap();
+        let mut vars = HashMap::new();
+        vars.insert("known".to_string(), Value::String("K".to_string()));
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &vars).expect("layout");
+
+        fn find<'a>(node: &'a LayoutNode, id: &str) -> Option<&'a LayoutNode> {
+            if node.id.as_deref() == Some(id) {
+                return Some(node);
+            }
+            node.children.iter().find_map(|c| find(c, id))
+        }
+        let t = find(&layout.root, "t").expect("t node");
+        assert_eq!(
+            t.config.properties.get("content").and_then(|v| v.as_str()),
+            Some("x  y K")
+        );
+
+        // No variables at all → untouched (verbatim).
+        let config = serde_json::from_str::<Value>(
+            r#"{"layout":{"type":"stack","component":{"t":{"type":"text","content":"x {{ missing }} y"}}}}"#,
+        )
+        .unwrap();
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
+        let t = find(&layout.root, "t").expect("t node");
+        assert_eq!(
+            t.config.properties.get("content").and_then(|v| v.as_str()),
+            Some("x {{ missing }} y")
+        );
+    }
+
     // ── Router navigation (deferred apply) ─────────────────────────────
 
     /// End-to-end regression guard that a navigation applied through the
@@ -6659,7 +6986,8 @@ mod control_flow_directive_tests {
         let config = loader
             .load_xml_string(xml, "test.xml", None)
             .expect("config should load");
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let registry = Arc::new(ComponentRegistry::new());
         register_all_builtins(&registry);
         let mut manager = LayoutManager::new(registry);
@@ -6730,7 +7058,8 @@ mod control_flow_directive_tests {
         let config = loader
             .load_xml_string(xml, "test.xml", None)
             .expect("config loads");
-        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
         let labels: Vec<String> = layout
             .root
             .children

@@ -29,24 +29,37 @@
 </props>
 
 <template name="component-page">
-  <panel>
-    <stack direction="vertical" spacing="24" padding="32">
-      <label text="${name}" size="lg" />
-      <text>${description}</text>
-
-      <!-- One slot per dedicated container: a `slot` marker is recorded on the
-           slot element's PARENT (last-wins if slots are siblings), and
-           injection treats a slot container as a leaf — so a slot container
-           must own exactly one slot and nest no further slots. -->
-      <stack direction="vertical" spacing="12">
-        <slot required="true" />
+  <!-- IMPORTANT: every child of an SFC template needs an explicit id. Id-less
+       children get parse-time `__anon_N` keys that are identical for every
+       instance of this file; the flat id-keyed component map then collapses
+       chrome across instances/pages (dropped headings, children escaping
+       slots, empty named-slot panels). See docs/knowledgebase/plans/sfc-anon-ids.md. -->
+  <stack id="page_root" direction="vertical" spacing="24" padding="16">
+    <label id="page_title" text="${name}" size="xl" />
+    <text id="page_desc">${description}</text>
+    <panel id="page_examples_panel">
+      <stack id="page_examples" direction="vertical" spacing="24" padding="24">
+        <label id="page_examples_label" text="Examples" size="lg" />
+        <stack id="page_examples_slot" direction="vertical" spacing="12">
+          <slot required="true" />
+        </stack>
       </stack>
-      <stack direction="vertical" spacing="8">
-        <slot name="properties" />
+    </panel>
+    <panel id="page_properties_panel">
+      <stack id="page_properties" direction="vertical" spacing="24" padding="24">
+        <label id="page_properties_label" text="Properties" size="lg" />
+        <stack id="page_properties_slot" direction="vertical" spacing="8">
+          <slot name="properties" />
+        </stack>
       </stack>
-      <stack direction="vertical" spacing="8">
-        <slot name="callbacks" />
+    </panel>
+    <panel id="page_callbacks_panel">
+      <stack id="page_callbacks" direction="vertical" spacing="24" padding="24">
+        <label id="page_callbacks_label" text="Callbacks" size="lg" />
+        <stack id="page_callbacks_slot" direction="vertical" spacing="8">
+          <slot name="callbacks" />
+        </stack>
       </stack>
-    </stack>
-  </panel>
+    </panel>
+  </stack>
 </template>

@@ -9,6 +9,9 @@ use nemo_macros::NemoComponent;
 /// <text id="description" content="Some paragraph text here." />
 /// <!-- equivalently, the element body is the content -->
 /// <text id="description">Some paragraph text here.</text>
+/// <!-- inline bodies are whitespace-normalized (trim + collapse internal
+///      runs to single spaces); opt out to keep the body verbatim -->
+/// <text xml:space="preserve">preformatted   body</text>
 /// ```
 ///
 /// # Properties

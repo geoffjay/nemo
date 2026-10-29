@@ -6,6 +6,8 @@
 //! - Extension discovery and registration
 //! - Sandboxed script execution
 
+use crate::rhai_engine::dynamic_to_json;
+
 pub mod error;
 pub mod loader;
 pub mod plugin;
@@ -164,6 +166,26 @@ impl ExtensionManager {
         self.rhai_engine.load_script(id, source)
     }
 
+    /// Snapshots every loaded script's persistent scope variables as
+    /// `(script_id, [(name, json)])` pairs. Used by the runtime to seed `{{ }}`
+    /// layout interpolation (component variables) from top-level
+    /// `let`/`const` declarations.
+    pub fn script_variables(
+        &self,
+    ) -> Result<Vec<(String, Vec<(String, serde_json::Value)>)>, ExtensionError> {
+        let mut all = Vec::new();
+        for id in self.rhai_engine.list_scripts() {
+            let bindings: Vec<(String, serde_json::Value)> = self
+                .rhai_engine
+                .variable_bindings(&id)?
+                .into_iter()
+                .map(|(name, value)| (name, dynamic_to_json(&value)))
+                .collect();
+            all.push((id, bindings));
+        }
+        Ok(all)
+    }
+
     /// Loads a plugin by path.
     pub fn load_plugin(&mut self, path: &std::path::Path) -> Result<String, ExtensionError> {
         let id = self.plugin_host.load(path)?;
@@ -210,6 +232,13 @@ impl ExtensionManager {
     /// Lists all loaded scripts.
     pub fn list_scripts(&self) -> Vec<String> {
         self.registry.list_scripts()
+    }
+
+    /// Lists the ids of scripts compiled in the Rhai engine (path-loaded and
+    /// source-loaded alike). The registry-based [`list_scripts`](Self::list_scripts)
+    /// only covers file-backed scripts.
+    pub fn list_compiled_scripts(&self) -> Vec<String> {
+        self.rhai_engine.list_scripts()
     }
 
     /// Lists all loaded plugins.

@@ -1,0 +1,80 @@
+<template name="component-page-button">
+  <component-page name="Button" description="Buttons trigger actions. A button carries a label and one of the style variants below, and fires its on-click handler when pressed.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="8">
+        <button id="btn_default" label="Button" />
+      </stack>
+      <text slot="code">EMPTY1</text>
+    </component-example>
+
+    <component-example label="Variants">
+      <stack direction="horizontal" spacing="8">
+        <button id="btn_primary" label="Primary" variant="primary" />
+        <button id="btn_secondary" label="Secondary" variant="secondary" />
+        <button id="btn_danger" label="Danger" variant="danger" />
+        <button id="btn_ghost" label="Ghost" variant="ghost" />
+        <button id="btn_warning" label="Warning" variant="warning" />
+        <button id="btn_success" label="Success" variant="success" />
+        <button id="btn_info" label="Info" variant="info" />
+      </stack>
+      <text slot="code">EMPTY2</text>
+    </component-example>
+
+    <component-example label="Custom (disabled, sizes)">
+      <stack direction="horizontal" spacing="8">
+        <button id="btn_disabled_1" label="Disabled Primary" variant="primary" disabled="true" />
+        <button id="btn_disabled_2" label="Disabled Secondary" disabled="true" />
+        <button id="btn_small" label="Small" size="sm" />
+        <button id="btn_large" label="Large" size="lg" />
+      </stack>
+      <text slot="code">EMPTY3</text>
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label text="label" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"Button"</table-cell>
+        <table-cell>Button text.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="variant" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"secondary"</table-cell>
+        <table-cell>Style variant: primary, secondary, danger, ghost, warning, success, info.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="size" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"md"</table-cell>
+        <table-cell>Button size: xs, sm, md, lg, xl.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="disabled" size="sm" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disables interaction and dims the button.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="full-width" size="sm" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Stretch the button to fill its container width.</table-cell>
+      </table-row>
+    </table>
+
+    <component-example label="on-click" slot="callbacks">
+      <stack direction="horizontal" spacing="8">
+        <button id="btn_click_demo" label="Click me" variant="primary" on-click="on_button_click_demo" />
+        <text id="btn_click_status">Last click: none</text>
+      </stack>
+      <text slot="code">EMPTY4</text>
+    </component-example>
+  </component-page>
+</template>

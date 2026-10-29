@@ -51,6 +51,32 @@ functions. `load_script` runs the script's top-level statements once against a
 persistent `Scope` (seeding `let`/`const` declarations), and `call` reuses that
 scope across invocations.
 
+**Component variables (`{{ var }}`).** A top-level inline `<script>` body's
+`let`/`const` values are snapshotted after load (later-loaded scripts win on
+name clashes) and interpolated into the layout before expansion — every
+attribute value and inline text body may reference them:
+
+```xml
+<script on-load="hydrate">
+let value = "something something";
+fn hydrate(component_id, event_data) { /* hydrate UI */ }
+</script>
+
+<template name="app">
+  <text>{{ value }}</text>              <!-- → "something something" -->
+  <label text="count: {{ count }}" />   <!-- attributes too -->
+</template>
+```
+
+Semantics: `{{ name }}` is whitespace-insensitive; scalars render as their
+display value, composites (arrays/maps) as JSON; an unknown name renders as
+the empty string; an unclosed `{{` stays verbatim. `{{ }}` never collides with
+the `${}` machinery (SFC template props / `n:for` loop vars). Inline scripts
+load under the `handlers` id when free — so their bare handler names resolve
+like a scripts-dir `handlers.rhai` — else `inline_<n>`. This is
+load-time-only interpolation: it does not track later `set_data`/handler
+mutations (use data bindings for live values).
+
 **Startup hook.** `<script on-load="fn_name" />` names a handler that the runtime
 calls exactly once, after scripts are loaded and the layout is built, from
 `App::new` (via `NemoRuntime::on_load_handler`). It is invoked as
@@ -58,7 +84,10 @@ calls exactly once, after scripts are loaded and the layout is built, from
 use it to hydrate the UI from persisted state at startup, so the first paint
 already reflects it rather than deferring the sync onto the first user
 interaction. The `on-load` attribute is parsed into `scripts.on_load` (attribute
-keys are kebab→snake normalized, so `on-load` arrives as `on_load`).
+keys are kebab→snake normalized, so `on-load` arrives as `on_load`). This works
+for both self-closing `<script src=… on-load=… />` and raw-text inline
+`<script on-load=…>` bodies (the raw-text capture path preserves the open
+tag's attributes).
 
 **Router navigation.** `navigate(path)` (primary router) / `navigate(router,
 path)`, `back()` / `back(router)`, and `forward()` / `forward(router)` are

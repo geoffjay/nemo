@@ -87,7 +87,9 @@ pattern). Two conventions for the new items:
   still drop stray text so unknown-attribute lints stay quiet.
   `<tree-node>Label</tree-node>` works without a `label` attribute, and
   `<text>Body</text>` is an alternative to `content="Body"` (explicit
-  attribute wins when both are given).
+  attribute wins when both are given). Inline bodies are whitespace-normalized
+  by default (trim + collapse internal runs — newlines and indentation — to one
+  space); `xml:space="preserve"` on the element keeps the body verbatim.
 * **Structure vs content is type-based.** A `tree-node`'s `tree_node` children
   are its nested nodes; any other child (icon/text/…) is its label content.
   No `label-ref` attributes and no wrapper elements.

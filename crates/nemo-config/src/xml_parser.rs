@@ -35,6 +35,10 @@ pub struct SfcDefinition {
     pub style: Option<String>,
     /// Raw `<script>` body (Rhai), if present. Loaded under `sfc:<tag>`.
     pub script: Option<String>,
+    /// The raw-text `<script>` element's open-tag attributes (`on-load`,
+    /// `features`): `split_sfc_blocks` captures them, since the raw-text path
+    /// bypasses the XML reader. Empty for attribute-less/absent scripts.
+    pub script_attrs: IndexMap<String, Value>,
     /// Declared props from an optional `<props>` block. Empty when omitted (props
     /// are then stringly-typed and have no defaults).
     pub props: Vec<SfcProp>,
@@ -133,6 +137,12 @@ struct SfcBlocks {
     template_xml: String,
     script: Option<String>,
     style: Option<String>,
+    /// The raw-text `<script>` element's open-tag attributes (e.g.
+    /// `on-load`, `features`) — the raw-text capture path skips XML parsing,
+    /// so without these the attributes would be silently dropped.
+    script_attrs: IndexMap<String, Value>,
+    /// Same for `<style>` (e.g. `media`); currently carried for completeness.
+    style_attrs: IndexMap<String, Value>,
 }
 
 /// Splits a `.nemo` SFC into its `<template>`/`<props>` half (kept as XML) and
@@ -160,6 +170,8 @@ fn split_sfc_blocks(content: &str) -> SfcBlocks {
     let len = bytes.len();
     let mut script: Option<String> = None;
     let mut style: Option<String> = None;
+    let mut script_attrs = IndexMap::new();
+    let mut style_attrs = IndexMap::new();
     let mut removals: Vec<(usize, usize)> = Vec::new();
     let mut depth: usize = 0;
     let mut i = 0usize;
@@ -224,6 +236,16 @@ fn split_sfc_blocks(content: &str) -> SfcBlocks {
                 // A raw-text element at the top level: capture its verbatim
                 // body up to the first literal `</name>` close tag.
                 if depth == 0 && (name == "script" || name == "style") {
+                    // Capture the open tag's attributes (after the element
+                    // name, before the `>`); the body itself is raw text, so
+                    // these would otherwise be dropped.
+                    if let Some(attrs) = parse_raw_text_attrs(&content[j..tag_end.min(len)]) {
+                        match name {
+                            "script" => script_attrs = attrs,
+                            "style" => style_attrs = attrs,
+                            _ => {}
+                        }
+                    }
                     let body_start = (tag_end + 1).min(len);
                     let close = format!("</{}>", name);
                     let close_b = close.as_bytes();
@@ -271,6 +293,8 @@ fn split_sfc_blocks(content: &str) -> SfcBlocks {
         template_xml,
         script: script.filter(|s| !s.trim().is_empty()),
         style: style.filter(|s| !s.trim().is_empty()),
+        script_attrs,
+        style_attrs,
     }
 }
 
@@ -1285,6 +1309,7 @@ impl XmlParser {
             template,
             style: blocks.style,
             script: blocks.script,
+            script_attrs: blocks.script_attrs,
             props,
             slots,
             app_blocks: if has_app_blocks {
@@ -1732,11 +1757,17 @@ impl XmlParser {
             component.insert("type".to_string(), Value::String(element_type.to_string()));
         }
 
-        // Copy attributes (excluding internal keys)
+        // Copy attributes (excluding internal keys). `xml:space` is consumed
+        // here (below) and never becomes a component property.
+        let mut xml_space_preserve = false;
         for (key, val) in obj {
             match key.as_str() {
                 "__type__" | "__children__" | "__cdata__" => continue,
                 "id" => continue, // id is used as the map key, not a property
+                "xml:space" => {
+                    xml_space_preserve = val.as_str() == Some("preserve");
+                    continue;
+                }
                 _ => {
                     component.insert(key.clone(), val.clone());
                 }
@@ -1750,6 +1781,20 @@ impl XmlParser {
         // are given). Other components keep dropping stray text (their schemas
         // do not declare `content`, so capturing it would trip the
         // unknown-attribute lint on existing configs).
+        //
+        // Inline bodies are XML-whitespace-normalized by DEFAULT (leading/
+        // trailing whitespace trimmed; internal whitespace runs — including
+        // newlines and the source indentation of continuation lines — collapsed
+        // to single spaces), so pretty-printed markup
+        //
+        //     <text>
+        //       first line
+        //       second line
+        //     </text>
+        //
+        // renders as `first line second line`. Author `<text
+        // xml:space="preserve">` to keep the raw body verbatim (multi-line
+        // ASCII art, preformatted samples).
         const TEXT_LABEL_TYPES: [&str; 6] = [
             "tree_node",
             "table_header",
@@ -1760,9 +1805,12 @@ impl XmlParser {
         ];
         if TEXT_LABEL_TYPES.contains(&element_type) {
             if let Some(cdata) = obj.get("__cdata__").and_then(|v| v.as_str()) {
-                component
-                    .entry("content".to_string())
-                    .or_insert_with(|| Value::String(cdata.to_string()));
+                let value = if xml_space_preserve {
+                    Value::String(cdata.to_string())
+                } else {
+                    Value::String(normalize_xml_whitespace(cdata))
+                };
+                component.entry("content".to_string()).or_insert(value);
             }
         }
 
@@ -2165,6 +2213,31 @@ impl XmlParser {
                 .entry("scripts".to_string())
                 .or_insert_with(|| Value::Object(IndexMap::new()));
             if let Value::Object(scripts_obj) = scripts {
+                // The raw-text capture path bypasses the XML reader, so the
+                // element's attributes (features / on-load / …) were captured
+                // by split_sfc_blocks and arrive here instead of having been
+                // processed by process_script. Only the special keys need
+                // translating; unknown ones are carried through.
+                for (k, v) in &sfc.script_attrs {
+                    match k.as_str() {
+                        "features" => {
+                            if let Some(s) = v.as_str() {
+                                let list: Vec<Value> = s
+                                    .split(',')
+                                    .map(|t| t.trim())
+                                    .filter(|t| !t.is_empty())
+                                    .map(|t| Value::String(t.to_string()))
+                                    .collect();
+                                if !list.is_empty() {
+                                    scripts_obj.insert("features".to_string(), Value::Array(list));
+                                }
+                            }
+                        }
+                        _ => {
+                            scripts_obj.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
                 let inline = scripts_obj
                     .entry("inline".to_string())
                     .or_insert_with(|| Value::Array(Vec::new()));
@@ -2187,6 +2260,93 @@ impl Default for XmlParser {
 /// Converts kebab-case to snake_case.
 fn kebab_to_snake(s: &str) -> String {
     s.replace('-', "_")
+}
+
+/// XML attribute-value-style whitespace normalization: trims leading/trailing
+/// whitespace and collapses every internal whitespace run (spaces, tabs,
+/// newlines, carriage returns) into a single space. Applied to element text
+/// promoted to `content` (see `process_component_element`) so pretty-printed
+/// inline bodies render as one flowing line; `xml:space="preserve"` opts out.
+fn normalize_xml_whitespace(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Parses raw-text open-tag attributes (` name="value" name2='value2'`) from
+/// the open tag's source text. Values keep their raw (entity-unescaped?) form
+/// — the splitter sees the same characters the XML reader would, so plain
+/// attribute values pass through; only the four XML entities are decoded.
+fn parse_raw_text_attrs(src: &str) -> Option<IndexMap<String, Value>> {
+    let mut attrs: IndexMap<String, Value> = IndexMap::new();
+    let bytes = src.as_bytes();
+    let len = bytes.len();
+    let mut i = 0usize;
+    while i < len {
+        // Skip whitespace between attributes.
+        while i < len && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        let name_start = i;
+        while i < len && !bytes[i].is_ascii_whitespace() && bytes[i] != b'=' && bytes[i] != b'>' {
+            i += 1;
+        }
+        let name = &src[name_start..i];
+        // Self-closing marker or end of tag: stop.
+        if name == "/" || name.is_empty() {
+            break;
+        }
+        // Skip optional whitespace before `=`.
+        while i < len && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        if i >= len || bytes[i] != b'=' {
+            // Attribute without a value (e.g. `disabled`): record as true.
+            attrs.insert(kebab_to_snake(name), Value::Bool(true));
+            continue;
+        }
+        i += 1; // consume `=`
+        while i < len && bytes[i].is_ascii_whitespace() {
+            i += 1;
+        }
+        let quote = if i < len && (bytes[i] == b'"' || bytes[i] == b'\'') {
+            i += 1;
+            bytes[i - 1]
+        } else {
+            // Unquoted single-token value (matches the XML reader's leniency).
+            let value_start = i;
+            while i < len && !bytes[i].is_ascii_whitespace() && bytes[i] != b'>' {
+                i += 1;
+            }
+            let value = decode_basic_entities(&src[value_start..i]);
+            attrs.insert(kebab_to_snake(name), coerce_value(&value));
+            continue;
+        };
+        let value_start = i;
+        while i < len && bytes[i] != quote {
+            i += 1;
+        }
+        if i >= len {
+            // Unterminated attribute value: stop (malformed open tag).
+            break;
+        }
+        let value = decode_basic_entities(&src[value_start..i]);
+        i += 1; // closing quote
+        attrs.insert(kebab_to_snake(name), coerce_value(&value));
+    }
+    if attrs.is_empty() {
+        None
+    } else {
+        Some(attrs)
+    }
+}
+
+/// Decodes the four basic XML entities in attribute values (`&lt;` `&gt;`
+/// `&amp;` `&quot;` `&apos;`), matching what the XML reader does.
+fn decode_basic_entities(s: &str) -> String {
+    s.replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("&amp;", "&")
 }
 
 /// Returns `true` if `v` is a non-empty `Value::Object` (the shape `process_root`
@@ -2686,8 +2846,8 @@ mod tests {
     #[test]
     fn test_parse_text_inline_body() {
         // `<text>Body</text>` promotes the element text to the `content`
-        // property; an explicit content attribute still wins. Whitespace-only
-        // bodies produce no property.
+        // property (XML-whitespace-normalized by default); an explicit content
+        // attribute still wins. Whitespace-only bodies produce no property.
         let xml = r#"
         <nemo>
             <layout type="stack">
@@ -2724,6 +2884,56 @@ mod tests {
         let blank = components.get("__anon_2").unwrap();
         assert_eq!(blank.get("type"), Some(&Value::String("text".to_string())));
         assert!(blank.get("content").is_none(), "whitespace-only body");
+    }
+
+    #[test]
+    fn test_parse_text_inline_body_whitespace_normalized() {
+        // Pretty-printed bodies default to XML whitespace normalization:
+        // trimmed ends, internal runs (newlines + indentation) collapsed to
+        // single spaces. `xml:space="preserve"` keeps the body verbatim.
+        let xml = r#"
+        <nemo>
+            <layout type="stack">
+              <text>
+                this is the first line
+                this is the second line
+              </text>
+              <text xml:space="preserve">
+                verbatim
+                  indented
+              </text>
+            </layout>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+        let components = value
+            .get("layout")
+            .unwrap()
+            .get("component")
+            .unwrap()
+            .as_object()
+            .unwrap();
+
+        let normalized = components.get("__anon_1").unwrap();
+        assert_eq!(
+            normalized.get("content"),
+            Some(&Value::String(
+                "this is the first line this is the second line".to_string()
+            ))
+        );
+
+        let preserved = components.get("__anon_2").unwrap();
+        // Note: quick-xml's `trim_text` strips text-event ends before we see
+        // them, so `preserve` keeps the INTERIOR whitespace verbatim; the
+        // leading/trailing newlines of the body are gone regardless.
+        assert_eq!(
+            preserved.get("content"),
+            Some(&Value::String(
+                "verbatim\n                  indented".to_string()
+            ))
+        );
     }
 
     #[test]
@@ -4006,6 +4216,69 @@ button:hover { opacity: 0.8; }
         );
         // The full tree matches too.
         assert_eq!(xml_value, sfc_value);
+    }
+
+    /// Component variables: a raw-text `<script on-load …>` keeps its
+    /// open-tag attributes (the raw-text capture bypasses the XML reader),
+    /// and a top-level `.nemo` component `<script>` (a component `.nemo`
+    /// without app blocks) still exposes script + attrs for
+    /// `{{ var }}`-style runtime use.
+    #[test]
+    fn test_app_sfc_raw_text_script_attrs_preserved() {
+        let app_nemo = r#"<template name="app">
+  <stack id="root"><label id="hi" text="Hi" /></stack>
+</template>
+<script features="file-io" on-load="bootstrap">
+let name = "world";
+fn bootstrap(component_id, event_data) { log_info("loaded"); }
+</script>"#;
+
+        let value = XmlParser::new().compile_app_sfc(app_nemo).unwrap();
+        let scripts = value.get("scripts").unwrap();
+
+        let on_load = scripts.get("on_load").unwrap();
+        assert_eq!(on_load, &Value::String("bootstrap".to_string()));
+
+        let features = scripts.get("features").unwrap().as_array().unwrap();
+        assert_eq!(features, &vec![Value::String("file-io".to_string())]);
+
+        let inline = scripts.get("inline").unwrap().as_array().unwrap();
+        assert_eq!(inline.len(), 1);
+        assert!(inline[0]
+            .as_str()
+            .unwrap()
+            .contains("let name = \"world\";"));
+    }
+
+    /// `{{ name }}` (component-variable) syntax must survive config loading
+    /// untouched: no `${}`-style resolution errors on it, no mangling.
+    #[test]
+    fn test_mustache_survives_load_resolution() {
+        let app_nemo = r#"<template name="app">
+  <stack id="root">
+    <text id="t1">
+      say {{ greeting }} please
+    </text>
+    <label id="t2" text="plain {{ greeting }} text" />
+  </stack>
+</template>"#;
+
+        let value = XmlParser::new().compile_app_sfc(app_nemo).unwrap();
+        let layout = value.get("layout").unwrap();
+        // The template root (the <stack id="root">) IS the layout root; its
+        // children live directly under layout["component"].
+        let stack_children = layout.get("component").unwrap().as_object().unwrap();
+
+        let t1 = stack_children.get("t1").unwrap();
+        assert_eq!(
+            t1.get("content"),
+            Some(&Value::String("say {{ greeting }} please".to_string()))
+        );
+        let t2 = stack_children.get("t2").unwrap();
+        assert_eq!(
+            t2.get("text"),
+            Some(&Value::String("plain {{ greeting }} text".to_string()))
+        );
     }
 
     /// Round-trip with `<imports>`: an `<import>` in app.nemo must register the

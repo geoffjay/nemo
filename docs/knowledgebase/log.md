@@ -1,6 +1,56 @@
 # Knowledge Base Update Log
 
 ## 2026-10-28
+* **SFC template ids required**: id-less children inside an SFC `<template>`
+  emit parse-time `__anon_N` keys that are identical for every instance of the
+  file; multi-level composition (`component-page-button` → `component-page` →
+  `component-example`) then collapses them in the flat id-keyed component map
+  (dropped chrome, children escaping slots, empty named-slot panels). Fixed in
+  the gallery templates by giving every template child an explicit id;
+  analyzed in `plans/sfc-anon-ids.md` (engine-level per-instance id minting is
+  a possible follow-up).
+* **Feature (component variables, `{{ var }}`)**: top-level `<script>` `let`/`const`
+  values are now exposed to the layout as component variables and interpolate via
+  `{{ name }}` (whitespace-insensitive, unknown name → empty, unclosed `{{` verbatim;
+  composites render as JSON; `xml:space="preserve"` text bodies unaffected since
+  interpolation runs after parse):
+
+      <script on-load="hydrate">
+      let value = "something";
+      </script>
+      <text>{{ value }}</text>
+
+  Three enabling fixes:
+  1. **Inline scripts were never loaded** — `scripts.inline` was parsed but
+     `load_scripts_from_config` had no consumer for it. Now loaded under the
+     `handlers` id when free (bare `on-click="fn"` then resolves), else
+     `inline_<n>`.
+  2. **Raw-text `<script>` attributes were silently dropped** —
+     `split_sfc_blocks` skipped the open tag; `<script on-load="fn">body</script>`
+     lost `on-load`. Now captured (`parse_raw_text_attrs`) and merged into
+     `scripts` in `app_sfc_to_value` (`features` translated to the array form).
+  3. `RhaiEngine::variable_bindings` / `ExtensionManager::script_variables()`
+     snapshot the persistent scope (`Scope::iter`); runtime merges across
+     scripts (later wins), stores in `NemoRuntime::script_variables`, and
+     `parse_layout_config` interpolates over the layout + every template body
+     (incl. SFC bodies) before expansion — one code path for source and
+     `--dist`. Never collides with `${}` (SFC props / `n:for` loop vars).
+  Tests: `test_component_variables_interpolate_from_inline_script`,
+  `test_component_variables_unknown_name_renders_empty` (runtime),
+  `test_app_sfc_raw_text_script_attrs_preserved`,
+  `test_mustache_survives_load_resolution` (config).
+* **Feature (inline-body whitespace normalization)**: element text promoted to
+  `content` is XML-whitespace-normalized by DEFAULT (trim ends; internal
+  whitespace runs — newlines + source indentation — collapse to single spaces),
+  so a pretty-printed `<text>first line\n  second line</text>` renders as
+  `first line second line`. Opt out with `xml:space="preserve"` (keeps interior
+  whitespace verbatim; note quick-xml's `trim_text` already strips
+  text-event ends, so leading/trailing body newlines are gone either way).
+  Implemented in `process_component_element` + `normalize_xml_whitespace`
+  (`crates/nemo-config/src/xml_parser.rs`); `xml:space` is consumed there and
+  never becomes a component property (no unknown-attribute lint). The 4 gallery
+  Code-slot CDATA texts are marked `xml:space="preserve"` to keep their literal
+  multi-line markup. Tests: `test_parse_text_inline_body_whitespace_normalized`.
 * **Migration (examples)**: every `<text content="…"/>` in `examples/**` converted
   to the inline-body form `<text>…</text>` (84 sites across 9 files), including
   `bind-content` placeholders (body + `bind-content` coexist — the binding
