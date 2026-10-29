@@ -44,7 +44,7 @@
 
 <template name="app">
   <!-- App shell: a sidenav of section menu items plus the gallery below. -->
-  <app-shell id="app_shell" sidenav-width="220" default-page="components">
+  <app-shell id="app_shell" sidenav-width="220" default-page="overview">
     <app-sidenav>
       <sidenav-item id="nav_overview" icon="layout-dashboard" label="Overview" target="overview" />
       <sidenav-item id="nav_styling" icon="palette" label="Styling" target="styling" />
@@ -115,7 +115,7 @@
             <!-- The page router: only the active route's body is mounted. Left
                   content-sized (no flex) so the enclosing scroll stack scrolls a
                   tall page, exactly as the visibility-toggled panels did before. -->
-            <router id="main" default="/button" primary="true">
+            <router id="main" default="/accordion" primary="true">
               <route path="/button"><component-page-button /></route>
               <route path="/label">
                 <panel template="page_content">

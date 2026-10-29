@@ -1,10 +1,43 @@
+<script>
+let default_code = #"<button label="Button" />"#;
+
+let variants_code = #"<button label="Primary" variant="primary" />
+<button label="Secondary" variant="secondary" />
+<button label="Danger" variant="danger" />
+<button label="Ghost" variant="ghost" />
+<button label="Warning" variant="warning" />
+<button label="Success" variant="success" />
+<button label="Info" variant="info" />"#;
+
+let custom_code = #"<button label="Disabled" variant="primary" disabled="true" />
+<button label="Small" size="sm" />
+<button label="Large" size="lg" />"#;
+
+let callbacks_code = ##"<button label="Click me" variant="primary" on-click="on_button_click_demo" />
+<text content="Last click: none" />
+
+# handlers.rhai
+# Every handler receives (component_id, event_data).
+fn on_button_click_demo(component_id, event_data) {
+  set_component_property("btn_click_status", "content", "Last click: " + component_id);
+}"##;
+</script>
+
 <template name="component-page-button">
   <component-page name="Button" description="Buttons trigger actions. A button carries a label and one of the style variants below, and fires its on-click handler when pressed.">
     <component-example label="Default">
       <stack direction="horizontal" spacing="8">
         <button id="btn_default" label="Button" />
       </stack>
-      <text slot="code">EMPTY1</text>
+      <code-editor
+        id="code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ default_code }}"
+      />
     </component-example>
 
     <component-example label="Variants">
@@ -17,7 +50,15 @@
         <button id="btn_success" label="Success" variant="success" />
         <button id="btn_info" label="Info" variant="info" />
       </stack>
-      <text slot="code">EMPTY2</text>
+      <code-editor
+        id="code_variants"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ variants_code }}"
+      />
     </component-example>
 
     <component-example label="Custom (disabled, sizes)">
@@ -27,7 +68,15 @@
         <button id="btn_small" label="Small" size="sm" />
         <button id="btn_large" label="Large" size="lg" />
       </stack>
-      <text slot="code">EMPTY3</text>
+      <code-editor
+        id="code_custom"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ custom_code }}"
+      />
     </component-example>
 
     <table slot="properties" stripe="true">
@@ -74,7 +123,15 @@
         <button id="btn_click_demo" label="Click me" variant="primary" on-click="on_button_click_demo" />
         <text id="btn_click_status">Last click: none</text>
       </stack>
-      <text slot="code">EMPTY4</text>
+      <code-editor
+        id="code_callbacks"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ callbacks_code }}"
+      />
     </component-example>
   </component-page>
 </template>
