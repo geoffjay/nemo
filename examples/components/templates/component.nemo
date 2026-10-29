@@ -1,0 +1,52 @@
+<!--
+  component.nemo — the shared layout template for component reference pages in
+  the gallery.
+
+  Every component page is laid out identically:
+
+    <component-page name="Button"
+                    description="A clickable button that triggers actions.">
+
+      One or more example blocks (<component-example>). Untargeted children of
+      <component-page> land in the Examples region.
+
+      <component-example label="Variants">
+        <button label="Primary" variant="primary" />
+        ...
+      </component-example>
+
+      Optional: property reference rows (Name | Type | Default | Description),
+      authored as `<text>` rows or a declared `<table>`.
+
+    </component-page>
+
+  The template supplies the page chrome (H1 + description + the
+  Preview/Code tab pair per section) so individual pages declare only content.
+-->
+<props>
+  <prop name="name" type="string" required="true" />
+  <prop name="description" type="string" default="" />
+</props>
+
+<template name="component-page">
+  <panel>
+    <stack direction="vertical" spacing="24" padding="32">
+      <label text="${name}" size="lg" />
+      <text content="${description}" />
+
+      <!-- One slot per dedicated container: a `slot` marker is recorded on the
+           slot element's PARENT (last-wins if slots are siblings), and
+           injection treats a slot container as a leaf — so a slot container
+           must own exactly one slot and nest no further slots. -->
+      <stack direction="vertical" spacing="12">
+        <slot required="true" />
+      </stack>
+      <stack direction="vertical" spacing="8">
+        <slot name="properties" />
+      </stack>
+      <stack direction="vertical" spacing="8">
+        <slot name="callbacks" />
+      </stack>
+    </stack>
+  </panel>
+</template>

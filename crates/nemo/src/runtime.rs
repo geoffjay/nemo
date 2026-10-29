@@ -2018,20 +2018,27 @@ fn expand_template(
         .ok_or_else(|| format!("Unknown template: '{}'", template_name))?
         .clone();
 
-    // Collect all template-originated component IDs (including nested descendants)
-    // so we can prefix them for uniqueness without touching instance-injected IDs.
-    let mut template_owned_ids = std::collections::HashSet::new();
-    collect_all_component_ids(&template_def, &mut template_owned_ids);
-    let template_child_ids: Vec<String> = template_def
-        .get("component")
-        .and_then(|c| c.as_object())
-        .map(|obj| obj.keys().cloned().collect())
-        .unwrap_or_default();
-
     // Recursively expand the template itself (template-of-template)
     expansion_stack.push(template_name.clone());
     let expanded_template = expand_template(&template_def, templates, expansion_stack, None)?;
     expansion_stack.pop();
+
+    // Collect all template-originated component IDs (including nested
+    // descendants) so we can prefix them for uniqueness without touching
+    // instance-injected IDs. Collected from the EXPANDED template, not the raw
+    // definition: expanding a nested SFC/template instance generates ids that
+    // don't exist in the raw body (e.g. `<stack id="inner">` inside the
+    // nested SFC scope becomes `__anon_2_inner`). Collecting from the raw
+    // definition missed those, so repeated nested instances across sibling
+    // pages produced identical unscoped ids and silently overwrote each other
+    // in the flat id-keyed component map (last insert wins).
+    let mut template_owned_ids = std::collections::HashSet::new();
+    collect_all_component_ids(&expanded_template, &mut template_owned_ids);
+    let template_child_ids: Vec<String> = expanded_template
+        .get("component")
+        .and_then(|c| c.as_object())
+        .map(|obj| obj.keys().cloned().collect())
+        .unwrap_or_default();
 
     // Interpolate template variables from instance vars block
     let vars = extract_vars(instance)?;
@@ -3448,6 +3455,99 @@ mod sfc_tests {
     }
 
     #[test]
+    fn test_sfc_nested_sfc_instances_scope_generated_ids() {
+        // Regression: a page SFC whose template nests another slotted SFC
+        // (`card` — anonymous children get parser-generated `__anon_N` keys,
+        // and expanding the nested instance mints `<key>_inner`). The owned-id
+        // set must be collected AFTER nested expansion, so the generated id is
+        // in it and gets prefixed per outer instance. Collecting from the raw
+        // template missed it: two pages each with a nested card produced the
+        // same unscoped `__anon_2_inner`, and the second silently overwrote the
+        // first in the flat id-keyed component map (both pages rendered the
+        // same body).
+        let card_template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![(
+                    "inner",
+                    obj(vec![
+                        ("type", s("stack")),
+                        ("direction", s("vertical")),
+                        ("slot", Value::Bool(true)),
+                    ]),
+                )]),
+            ),
+        ]);
+        // page SFC: its template body contains a nested <card> instance.
+        let page_template = obj(vec![
+            ("type", s("stack")),
+            (
+                "component",
+                obj(vec![(
+                    "__anon_1",
+                    obj(vec![
+                        ("type", s("card")),
+                        (
+                            "component",
+                            obj(vec![(
+                                "lbl",
+                                obj(vec![("type", s("label")), ("text", s("page body"))]),
+                            )]),
+                        ),
+                    ]),
+                )]),
+            ),
+        ]);
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![
+                    ("card", obj(vec![("template", card_template)])),
+                    ("page", obj(vec![("template", page_template)])),
+                ]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            ("__anon_3", obj(vec![("type", s("page"))])),
+                            ("__anon_4", obj(vec![("type", s("page"))])),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let mut inner_ids: Vec<String> = Vec::new();
+        fn collect_inners(node: &nemo_layout::LayoutNode, out: &mut Vec<String>) {
+            if let Some(id) = &node.id {
+                if id.ends_with("_inner") {
+                    out.push(id.clone());
+                }
+            }
+            for child in &node.children {
+                collect_inners(child, out);
+            }
+        }
+        collect_inners(&layout.root, &mut inner_ids);
+
+        assert_eq!(
+            inner_ids.len(),
+            2,
+            "both nested cards kept their inner stack: {inner_ids:?}"
+        );
+        assert_ne!(
+            inner_ids[0], inner_ids[1],
+            "generated nested-SFC ids must be scoped per instance (no duplicate): {inner_ids:?}"
+        );
+    }
+
+    #[test]
     fn test_sfc_prop_defaults() {
         // A widget SFC with a `label` prop defaulting to "Button".
         let template = obj(vec![("type", s("button")), ("label", s("${label}"))]);
@@ -3710,6 +3810,261 @@ mod sfc_tests {
             button.handlers.get("click").map(|s| s.as_str()),
             Some("sfc:labeled-button::handleClick")
         );
+    }
+
+    /// Composition regression (`examples/components/templates/*`): an SFC
+    /// template whose body uses another SFC (component-example inside
+    /// component-page), with consumer children routed into the inner template's
+    /// named `code` slot. Guards two failure modes seen in the gallery:
+    ///
+    /// 1. Sibling `<slot>`s under one container — the parser records the slot
+    ///    marker on the slot's parent, so the last one wins and the others are
+    ///    silently dropped ("has no an unnamed <slot/>" warning).
+    /// 2. Nested slot containers — `inject_named_slots` treats a slot container
+    ///    as a leaf and stops recursing, so a slot nested inside another slot
+    ///    container is never found.
+    #[test]
+    fn test_sfc_nested_template_slot_composition() {
+        // page template: three sibling slot CONTAINERS (one slot each).
+        let page_template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![
+                    (
+                        "examples",
+                        obj(vec![
+                            ("type", s("stack")),
+                            (
+                                "component",
+                                obj(vec![(
+                                    "examples_slot",
+                                    obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
+                                )]),
+                            ),
+                        ]),
+                    ),
+                    (
+                        "properties",
+                        obj(vec![
+                            ("type", s("stack")),
+                            (
+                                "component",
+                                obj(vec![(
+                                    "props_slot",
+                                    obj(vec![("type", s("stack")), ("slot", s("properties"))]),
+                                )]),
+                            ),
+                        ]),
+                    ),
+                    (
+                        "callbacks",
+                        obj(vec![
+                            ("type", s("stack")),
+                            (
+                                "component",
+                                obj(vec![(
+                                    "cb_slot",
+                                    obj(vec![("type", s("stack")), ("slot", s("callbacks"))]),
+                                )]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
+        // example template: Preview/Code tab pair, each tab its own slot.
+        let example_template = obj(vec![
+            ("type", s("stack")),
+            (
+                "component",
+                obj(vec![
+                    (
+                        "head",
+                        obj(vec![("type", s("label")), ("text", s("${label}"))]),
+                    ),
+                    (
+                        "tabs",
+                        obj(vec![
+                            ("type", s("tabs")),
+                            (
+                                "component",
+                                obj(vec![
+                                    (
+                                        "preview",
+                                        obj(vec![
+                                            ("type", s("tab_item")),
+                                            ("label", s("Preview")),
+                                            (
+                                                "component",
+                                                obj(vec![(
+                                                    "preview_slot",
+                                                    obj(vec![
+                                                        ("type", s("stack")),
+                                                        ("slot", Value::Bool(true)),
+                                                    ]),
+                                                )]),
+                                            ),
+                                        ]),
+                                    ),
+                                    (
+                                        "code",
+                                        obj(vec![
+                                            ("type", s("tab_item")),
+                                            ("label", s("Code")),
+                                            (
+                                                "component",
+                                                obj(vec![(
+                                                    "code_slot",
+                                                    obj(vec![
+                                                        ("type", s("stack")),
+                                                        ("slot", s("code")),
+                                                    ]),
+                                                )]),
+                                            ),
+                                        ]),
+                                    ),
+                                ]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![
+                    ("component_page", obj(vec![("template", page_template)])),
+                    (
+                        "component_example",
+                        obj(vec![("template", example_template)]),
+                    ),
+                ]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![(
+                            "page1",
+                            obj(vec![
+                                ("type", s("component_page")),
+                                ("name", s("Button")),
+                                (
+                                    "component",
+                                    obj(vec![
+                                        // Default-slot children: two examples.
+                                        (
+                                            "ex1",
+                                            obj(vec![
+                                                ("type", s("component_example")),
+                                                ("label", s("Default")),
+                                                (
+                                                    "component",
+                                                    obj(vec![
+                                                        (
+                                                            "w1",
+                                                            obj(vec![
+                                                                ("type", s("button")),
+                                                                ("label", s("One")),
+                                                            ]),
+                                                        ),
+                                                        (
+                                                            "c1",
+                                                            obj(vec![
+                                                                ("type", s("text")),
+                                                                ("slot", s("code")),
+                                                                ("content", s("<button />")),
+                                                            ]),
+                                                        ),
+                                                    ]),
+                                                ),
+                                            ]),
+                                        ),
+                                        (
+                                            "ex2",
+                                            obj(vec![
+                                                ("type", s("component_example")),
+                                                ("label", s("Variants")),
+                                                (
+                                                    "component",
+                                                    obj(vec![(
+                                                        "w2",
+                                                        obj(vec![
+                                                            ("type", s("button")),
+                                                            ("label", s("Two")),
+                                                        ]),
+                                                    )]),
+                                                ),
+                                            ]),
+                                        ),
+                                        // Named slot: the callbacks region.
+                                        (
+                                            "cb1",
+                                            obj(vec![
+                                                ("type", s("component_example")),
+                                                ("label", s("Callbacks")),
+                                                ("slot", s("callbacks")),
+                                                (
+                                                    "component",
+                                                    obj(vec![(
+                                                        "w3",
+                                                        obj(vec![
+                                                            ("type", s("button")),
+                                                            ("label", s("Go")),
+                                                        ]),
+                                                    )]),
+                                                ),
+                                            ]),
+                                        ),
+                                    ]),
+                                ),
+                            ]),
+                        )]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None).expect("layout");
+        let page = &layout.root.children[0];
+        assert_eq!(page.component_type, "panel");
+
+        // Both default-slot examples expanded inside the examples container.
+        let ex1 = find_node(page, "ex1").expect("ex1 survived");
+        let ex2 = find_node(page, "ex2").expect("ex2 survived (not dropped with ex1)");
+        // The code-slot text landed inside ex1's Code tab (nested slot routing).
+        let code_text = find_node(ex1, "c1").expect("code-slot text injected into Code tab");
+        assert_eq!(
+            code_text
+                .config
+                .properties
+                .get("content")
+                .and_then(|v| v.as_str()),
+            Some("<button />")
+        );
+        assert!(!code_text.config.properties.contains_key("slot"));
+        // Unslotted ex2 widget stayed in the Preview tab.
+        assert!(find_node(ex2, "w2").is_some(), "preview widget survived");
+        // The callbacks-targeted example landed in the callbacks container.
+        let cb = find_node(page, "cb1").expect("callbacks-targeted child routed");
+        assert!(find_node(cb, "w3").is_some());
+        assert!(!cb.config.properties.contains_key("slot"));
+    }
+
+    /// Depth-first search for a node by id in a `LayoutNode` subtree.
+    fn find_node<'a>(
+        node: &'a nemo_layout::LayoutNode,
+        id: &str,
+    ) -> Option<&'a nemo_layout::LayoutNode> {
+        if node.id.as_deref() == Some(id) {
+            return Some(node);
+        }
+        node.children.iter().find_map(|c| find_node(c, id))
     }
 }
 

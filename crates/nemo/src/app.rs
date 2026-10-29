@@ -375,11 +375,13 @@ impl App {
                 // child; otherwise the cell's children are the content.
                 let content: Vec<AnyElement> =
                     if let Some(Value::String(text)) = cell.properties.get("content") {
-                        // Text cells render the string directly; the id derives
-                        // from the cell's component id so sibling cells stay
-                        // distinct.
+                        // Text cells render the string directly. The element id
+                        // derives from the CELL's component id — two cells may
+                        // hold the same string (e.g. a `"false"` default column),
+                        // and gpui's a11y pass panics on duplicate element ids
+                        // in debug builds.
                         vec![gpui::Text::new(
-                            gpui::ElementId::Name(text.clone().into()),
+                            gpui::ElementId::Name(SharedString::from(format!("{}_text", cell.id))),
                             text.clone().into(),
                         )
                         .into_any_element()]

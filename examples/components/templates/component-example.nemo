@@ -1,0 +1,28 @@
+<!--
+  component-example.nemo — one titled example section on a component page.
+
+  Structure it renders:
+
+      <label size="sm">Variants</label>
+      <tabs>
+        <tab-item label="Preview"> ...live widgets (default slot)... </tab-item>
+        <tab-item label="Code">    ...markup (code slot)...          </tab-item>
+      </tabs>
+
+  The `label` prop names the section heading (defaults to "Default"). Author
+  the live example in the default slot and the copy-ready markup in the `code`
+  slot as plain text children of a `<text>`.
+-->
+<props>
+  <prop name="label" type="string" default="Default" />
+</props>
+
+<template name="component-example">
+  <stack direction="vertical" spacing="8">
+    <label text="${label}" size="sm" />
+    <tabs>
+      <tab-item label="Preview"><slot /></tab-item>
+      <tab-item label="Code"><slot name="code" /></tab-item>
+    </tabs>
+  </stack>
+</template>

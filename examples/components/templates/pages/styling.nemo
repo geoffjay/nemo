@@ -1,0 +1,154 @@
+<template name="styling">
+  <page id="styling">
+    <stack direction="vertical" scroll="true" flex="1" padding="20">
+      <content-page>
+        <label id="styling_title" text="Styling" size="lg" />
+        <text id="styling_desc" content="All components support shared styling attributes via apply_layout_styles: padding, margin, border, shadow, and rounded. These wrap any component in a styled container." />
+
+        <!-- Padding -->
+        <label id="styling_padding_title" text="Padding" size="sm" />
+        <tabs id="styling_padding_tabs">
+          <tab-item id="styling_padding_tabs_preview" label="Preview">
+            <stack id="styling_padding_preview" direction="vertical" spacing="8">
+              <label id="styling_pad_uniform" text="padding = 16" padding="16" border="1" border-color="theme.border" />
+              <stack id="styling_pad_xy_row" direction="horizontal" spacing="8">
+                <label id="styling_pad_x" text="padding_x = 24" padding-x="24" border="1" border-color="theme.border" />
+                <label id="styling_pad_y" text="padding_y = 24" padding-y="24" border="1" border-color="theme.border" />
+              </stack>
+              <stack id="styling_pad_dir_row" direction="horizontal" spacing="8">
+                <label id="styling_pad_left" text="padding_left = 32" padding-left="32" border="1" border-color="theme.border" />
+                <label id="styling_pad_right" text="padding_right = 32" padding-right="32" border="1" border-color="theme.border" />
+                <label id="styling_pad_top" text="padding_top = 32" padding-top="32" border="1" border-color="theme.border" />
+                <label id="styling_pad_bottom" text="padding_bottom = 32" padding-bottom="32" border="1" border-color="theme.border" />
+              </stack>
+            </stack>
+          </tab-item>
+          <tab-item id="styling_padding_tabs_code" label="Code">
+            <panel id="styling_padding_code_panel">
+              <code-editor id="styling_padding_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Uniform padding on all sides --&gt;&#10;&lt;label padding=&quot;16&quot; /&gt;&#10;&#10;&lt;!-- Axis padding (horizontal / vertical) --&gt;&#10;&lt;label padding-x=&quot;24&quot; /&gt;&#10;&lt;label padding-y=&quot;24&quot; /&gt;&#10;&#10;&lt;!-- Directional padding --&gt;&#10;&lt;label padding-left=&quot;32&quot; /&gt;&#10;&lt;label padding-right=&quot;32&quot; /&gt;&#10;&lt;label padding-top=&quot;32&quot; /&gt;&#10;&lt;label padding-bottom=&quot;32&quot; /&gt;" />
+            </panel>
+          </tab-item>
+        </tabs>
+
+        <!-- Margin -->
+        <label id="styling_margin_title" text="Margin" size="sm" />
+        <tabs id="styling_margin_tabs">
+          <tab-item id="styling_margin_tabs_preview" label="Preview">
+            <stack id="styling_margin_preview" direction="vertical" spacing="12">
+              <stack id="styling_margin_uniform_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                <label id="styling_margin_box1" text="margin = 4" margin="4" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_box2" text="margin = 12" margin="12" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_box3" text="margin = 24" margin="24" border="1" border-color="theme.primary" padding="8" />
+              </stack>
+              <stack id="styling_margin_axis_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                <label id="styling_margin_x" text="margin_x = 20" margin-x="20" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_y" text="margin_y = 20" margin-y="20" border="1" border-color="theme.primary" padding="8" />
+              </stack>
+              <stack id="styling_margin_dir_row" direction="horizontal" spacing="0" border="1" border-color="theme.border">
+                <label id="styling_margin_left" text="margin_left = 24" margin-left="24" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_right" text="margin_right = 24" margin-right="24" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_top" text="margin_top = 16" margin-top="16" border="1" border-color="theme.primary" padding="8" />
+                <label id="styling_margin_bottom" text="margin_bottom = 16" margin-bottom="16" border="1" border-color="theme.primary" padding="8" />
+              </stack>
+            </stack>
+          </tab-item>
+          <tab-item id="styling_margin_tabs_code" label="Code">
+            <panel id="styling_margin_code_panel">
+              <code-editor id="styling_margin_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Uniform margin on all sides --&gt;&#10;&lt;label margin=&quot;12&quot; /&gt;&#10;&#10;&lt;!-- Axis margin (horizontal / vertical) --&gt;&#10;&lt;label margin-x=&quot;20&quot; /&gt;&#10;&lt;label margin-y=&quot;20&quot; /&gt;&#10;&#10;&lt;!-- Directional margin --&gt;&#10;&lt;label margin-left=&quot;24&quot; /&gt;&#10;&lt;label margin-right=&quot;24&quot; /&gt;&#10;&lt;label margin-top=&quot;16&quot; /&gt;&#10;&lt;label margin-bottom=&quot;16&quot; /&gt;" />
+            </panel>
+          </tab-item>
+        </tabs>
+
+        <!-- Border -->
+        <label id="styling_border_title" text="Border" size="sm" />
+        <tabs id="styling_border_tabs">
+          <tab-item id="styling_border_tabs_preview" label="Preview">
+            <stack id="styling_border_preview" direction="vertical" spacing="12">
+              <stack id="styling_border_uniform_row" direction="horizontal" spacing="12">
+                <label id="styling_border_1" text="border = 1" border="1" border-color="theme.border" padding="12" />
+                <label id="styling_border_2" text="border = 2" border="2" border-color="theme.border" padding="12" />
+                <label id="styling_border_primary" text="theme.primary" border="2" border-color="theme.primary" padding="12" />
+                <label id="styling_border_danger" text="theme.danger" border="2" border-color="theme.danger" padding="12" />
+              </stack>
+              <stack id="styling_border_axis_row" direction="horizontal" spacing="12">
+                <label id="styling_border_x" text="border_x = 2" border-x="2" border-color="theme.primary" padding="12" />
+                <label id="styling_border_y" text="border_y = 2" border-y="2" border-color="theme.primary" padding="12" />
+              </stack>
+              <stack id="styling_border_dir_row" direction="horizontal" spacing="12">
+                <label id="styling_border_left" text="border_left = 3" border-left="3" border-color="theme.primary" padding="12" />
+                <label id="styling_border_right" text="border_right = 3" border-right="3" border-color="theme.primary" padding="12" />
+                <label id="styling_border_top" text="border_top = 3" border-top="3" border-color="theme.primary" padding="12" />
+                <label id="styling_border_bottom" text="border_bottom = 3" border-bottom="3" border-color="theme.primary" padding="12" />
+              </stack>
+            </stack>
+          </tab-item>
+          <tab-item id="styling_border_tabs_code" label="Code">
+            <panel id="styling_border_code_panel">
+              <code-editor id="styling_border_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Uniform border on all sides --&gt;&#10;&lt;label border=&quot;1&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label border=&quot;2&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&#10;&lt;!-- Axis border (horizontal / vertical) --&gt;&#10;&lt;label border-x=&quot;2&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-y=&quot;2&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&#10;&lt;!-- Directional border --&gt;&#10;&lt;label border-left=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-right=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-top=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-bottom=&quot;3&quot; border-color=&quot;theme.primary&quot; /&gt;&#10;&#10;&lt;!-- Border color (theme references or hex) --&gt;&#10;&lt;label border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label border-color=&quot;theme.primary&quot; /&gt;&#10;&lt;label border-color=&quot;#FF6600&quot; /&gt;" />
+            </panel>
+          </tab-item>
+        </tabs>
+
+        <!-- Shadow -->
+        <label id="styling_shadow_title" text="Shadow" size="sm" />
+        <tabs id="styling_shadow_tabs">
+          <tab-item id="styling_shadow_tabs_preview" label="Preview">
+            <stack id="styling_shadow_preview" direction="horizontal" spacing="20">
+              <label id="styling_shadow_sm" text="sm" shadow="sm" padding="16" rounded="md" />
+              <label id="styling_shadow_md" text="md" shadow="md" padding="16" rounded="md" />
+              <label id="styling_shadow_lg" text="lg" shadow="lg" padding="16" rounded="md" />
+              <label id="styling_shadow_xl" text="xl" shadow="xl" padding="16" rounded="md" />
+              <label id="styling_shadow_2xl" text="2xl" shadow="2xl" padding="16" rounded="md" />
+            </stack>
+          </tab-item>
+          <tab-item id="styling_shadow_tabs_code" label="Code">
+            <panel id="styling_shadow_code_panel">
+              <code-editor id="styling_shadow_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Shadow sizes: sm, md, lg, xl, 2xl --&gt;&#10;&lt;label shadow=&quot;sm&quot; /&gt;&#10;&lt;label shadow=&quot;md&quot; /&gt;&#10;&lt;label shadow=&quot;lg&quot; /&gt;&#10;&lt;label shadow=&quot;xl&quot; /&gt;&#10;&lt;label shadow=&quot;2xl&quot; /&gt;" />
+            </panel>
+          </tab-item>
+        </tabs>
+
+        <!-- Rounded -->
+        <label id="styling_rounded_title" text="Rounded" size="sm" />
+        <tabs id="styling_rounded_tabs">
+          <tab-item id="styling_rounded_tabs_preview" label="Preview">
+            <stack id="styling_rounded_preview" direction="horizontal" spacing="12">
+              <label id="styling_rounded_sm" text="sm" rounded="sm" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_md" text="md" rounded="md" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_lg" text="lg" rounded="lg" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_xl" text="xl" rounded="xl" border="2" border-color="theme.border" padding="16" />
+              <label id="styling_rounded_full" text="full" rounded="full" border="2" border-color="theme.border" padding="16" />
+            </stack>
+          </tab-item>
+          <tab-item id="styling_rounded_tabs_code" label="Code">
+            <panel id="styling_rounded_code_panel">
+              <code-editor id="styling_rounded_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;!-- Rounded sizes: sm, md, lg, xl, full --&gt;&#10;&lt;label rounded=&quot;sm&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;md&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;lg&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;xl&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;&#10;&lt;label rounded=&quot;full&quot; border=&quot;2&quot; border-color=&quot;theme.border&quot; /&gt;" />
+            </panel>
+          </tab-item>
+        </tabs>
+
+        <!-- Combined -->
+        <label id="styling_combined_title" text="Combined" size="sm" />
+        <tabs id="styling_combined_tabs">
+          <tab-item id="styling_combined_tabs_preview" label="Preview">
+            <stack id="styling_combined_preview" direction="horizontal" spacing="16">
+              <stack id="styling_card1" direction="vertical" spacing="8" padding="24" border="1" border-color="theme.border" shadow="md" rounded="lg">
+                <label id="styling_card1_title" text="Styled Card" size="md" />
+                <text id="styling_card1_body" content="This card combines border, shadow, rounded, and padding to create a polished container." />
+              </stack>
+              <stack id="styling_card2" direction="vertical" spacing="8" padding="24" border="2" border-color="theme.primary" shadow="lg" rounded="xl">
+                <label id="styling_card2_title" text="Accent Card" size="md" />
+                <text id="styling_card2_body" content="An accent-bordered card with a larger shadow and rounder corners." />
+              </stack>
+            </stack>
+          </tab-item>
+          <tab-item id="styling_combined_tabs_code" label="Code">
+            <panel id="styling_combined_code_panel">
+              <code-editor id="styling_combined_code" language="html" line-number="false" searchable="false" rows="20" default-value="&lt;stack direction=&quot;vertical&quot; spacing=&quot;8&quot; padding=&quot;24&quot;&#10;      border=&quot;1&quot; border-color=&quot;theme.border&quot;&#10;      shadow=&quot;md&quot; rounded=&quot;lg&quot;&gt;&#10;  &lt;label text=&quot;Styled Card&quot; size=&quot;md&quot; /&gt;&#10;  &lt;text content=&quot;Card content here.&quot; /&gt;&#10;&lt;/stack&gt;" />
+            </panel>
+          </tab-item>
+        </tabs>
+      </content-page>
+    </stack>
+  </page>
+</template>

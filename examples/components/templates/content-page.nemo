@@ -1,0 +1,7 @@
+<template name="content-page">
+  <panel>
+    <stack id="inner" direction="vertical" spacing="12" padding="32">
+      <slot />
+    </stack>
+  </panel>
+</template>

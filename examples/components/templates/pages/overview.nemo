@@ -1,0 +1,19 @@
+<template name="overview">
+  <page id="overview">
+    <stack direction="vertical" scroll="true" flex="1" padding="20">
+      <content-page>
+        <label id="overview_title" text="Nemo Component Gallery" size="xl" />
+        <text id="overview_desc" content="Nemo is a GPUI-powered desktop application framework configured entirely with XML. Applications compose built-in components — layout containers, widgets, charts, and navigation primitives — into a layout tree, and this gallery exercises every one of them in one running app. The shell you are looking at is the app-shell component: a sidenav of icon menu items that switches between the three sections below." />
+
+        <label id="overview_section_styling" text="Styling" size="lg" />
+        <text id="overview_styling" content="Every component accepts the shared styling attributes — padding, margin, border, shadow, and rounded — applied by apply_layout_styles. The Styling section demonstrates each attribute family with live side-by-side previews and the exact markup that produced them, from single paddings to fully composed cards." />
+
+        <label id="overview_section_components" text="Components" size="lg" />
+        <text id="overview_components" content="The Components section is the full reference catalogue, served by the same navigation as before: Basic (button, label, icon, text, image, checkbox, progress, accordion, alert, avatar, badge, collapsible, dropdown button, spinner, tag, tooltip), Form (input, textarea, code editor, text editor, select, radio, slider, switch, toggle), Layout (panel and stack, list, notification, modal), Advanced (table, tree, charts), and Navigation (sidenav bar). Each page shows the component live under Preview, with a Code tab holding copy-ready markup." />
+
+        <label id="overview_section_theme" text="Themes" size="lg" />
+        <text id="overview_theme" content="The header-bar menu switches the roundness preset, and the settings entry toggles dark or light mode and the theme set. Every page re-renders with the new palette, so the previews you see here are a live theme holder as well." />
+      </content-page>
+    </stack>
+  </page>
+</template>
