@@ -1,0 +1,7 @@
+<template name="component-page-list">
+  <component-page
+    name="List"
+    description="A list built from list-item children"
+  >
+  </component-page>
+</template>

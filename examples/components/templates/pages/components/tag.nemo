@@ -1,0 +1,7 @@
+<template name="component-page-tag">
+  <component-page
+    name="Tag"
+    description="A small label tag"
+  >
+  </component-page>
+</template>

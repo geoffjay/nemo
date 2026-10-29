@@ -1,0 +1,7 @@
+<template name="component-page-collapsible">
+  <component-page
+    name="Collapsible"
+    description="A collapsible content section"
+  >
+  </component-page>
+</template>

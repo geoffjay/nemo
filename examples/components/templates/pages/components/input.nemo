@@ -1,0 +1,7 @@
+<template name="component-page-input">
+  <component-page
+    name="Text Input"
+    description="A text input field"
+  >
+  </component-page>
+</template>

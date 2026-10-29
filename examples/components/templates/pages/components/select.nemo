@@ -1,0 +1,7 @@
+<template name="component-page-select">
+  <component-page
+    name="Select"
+    description="A select input built from option children"
+  >
+  </component-page>
+</template>

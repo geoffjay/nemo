@@ -1,0 +1,7 @@
+<template name="component-page-label">
+  <component-page
+    name="Label"
+    description="A text label"
+  >
+  </component-page>
+</template>

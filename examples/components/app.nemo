@@ -29,6 +29,39 @@
   <import src="./templates/pages/overview.nemo" />
   <import src="./templates/pages/styling.nemo" />
   <import src="./templates/pages/components/button.nemo" />
+  <import src="./templates/pages/components/accordion.nemo" />
+  <import src="./templates/pages/components/alert.nemo" />
+  <import src="./templates/pages/components/avatar.nemo" />
+  <import src="./templates/pages/components/badge.nemo" />
+  <import src="./templates/pages/components/charts.nemo" />
+  <import src="./templates/pages/components/checkbox.nemo" />
+  <import src="./templates/pages/components/code-editor.nemo" />
+  <import src="./templates/pages/components/collapsible.nemo" />
+  <import src="./templates/pages/components/dropdown-button.nemo" />
+  <import src="./templates/pages/components/icon.nemo" />
+  <import src="./templates/pages/components/image.nemo" />
+  <import src="./templates/pages/components/input.nemo" />
+  <import src="./templates/pages/components/label.nemo" />
+  <import src="./templates/pages/components/list.nemo" />
+  <import src="./templates/pages/components/modal.nemo" />
+  <import src="./templates/pages/components/notification.nemo" />
+  <import src="./templates/pages/components/panel.nemo" />
+  <import src="./templates/pages/components/progress.nemo" />
+  <import src="./templates/pages/components/radio.nemo" />
+  <import src="./templates/pages/components/select.nemo" />
+  <import src="./templates/pages/components/sidenavbar.nemo" />
+  <import src="./templates/pages/components/slider.nemo" />
+  <import src="./templates/pages/components/spinner.nemo" />
+  <import src="./templates/pages/components/svg.nemo" />
+  <import src="./templates/pages/components/switch.nemo" />
+  <import src="./templates/pages/components/table.nemo" />
+  <import src="./templates/pages/components/tag.nemo" />
+  <import src="./templates/pages/components/text-editor.nemo" />
+  <import src="./templates/pages/components/text.nemo" />
+  <import src="./templates/pages/components/textarea.nemo" />
+  <import src="./templates/pages/components/toggle.nemo" />
+  <import src="./templates/pages/components/tooltip.nemo" />
+  <import src="./templates/pages/components/tree.nemo" />
 </imports>
 
 <!-- Templates -->
@@ -112,9 +145,6 @@
           </panel>
 
           <stack id="content" direction="vertical" spacing="0" padding="16" scroll="true">
-            <!-- The page router: only the active route's body is mounted. Left
-                  content-sized (no flex) so the enclosing scroll stack scrolls a
-                  tall page, exactly as the visibility-toggled panels did before. -->
             <router id="main" default="/accordion" primary="true">
               <route path="/button"><component-page-button /></route>
               <route path="/label">

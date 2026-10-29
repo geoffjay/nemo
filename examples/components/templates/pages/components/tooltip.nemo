@@ -1,0 +1,7 @@
+<template name="component-page-tooltip">
+  <component-page
+    name="Tooltip"
+    description="A tooltip popup"
+  >
+  </component-page>
+</template>

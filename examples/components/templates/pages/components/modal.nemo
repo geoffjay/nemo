@@ -1,0 +1,7 @@
+<template name="component-page-modal">
+  <component-page
+    name="Modal"
+    description="A modal dialog"
+  >
+  </component-page>
+</template>

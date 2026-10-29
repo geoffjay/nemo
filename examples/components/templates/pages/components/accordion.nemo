@@ -1,0 +1,7 @@
+<template name="component-page-accordion">
+  <component-page
+    name="Accordion"
+    description="A collapsible accordion containing accordion-item children"
+  >
+  </component-page>
+</template>

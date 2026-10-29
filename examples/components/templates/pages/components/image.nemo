@@ -1,0 +1,7 @@
+<template name="component-page-image">
+  <component-page
+    name="Image"
+    description="An image display"
+  >
+  </component-page>
+</template>

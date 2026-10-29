@@ -1,0 +1,7 @@
+<template name="component-page-sidenavbar">
+  <component-page
+    name="Sidenav Bar"
+    description="A vertical navigation sidebar with collapsible icon+label items"
+  >
+  </component-page>
+</template>

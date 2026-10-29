@@ -1,0 +1,7 @@
+<template name="component-page-table">
+  <component-page
+    name="Table"
+    description="A data table"
+  >
+  </component-page>
+</template>

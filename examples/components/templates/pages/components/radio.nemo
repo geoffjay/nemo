@@ -1,0 +1,7 @@
+<template name="component-page-radio">
+  <component-page
+    name="Radio"
+    description="A radio button group built from option children"
+  >
+  </component-page>
+</template>

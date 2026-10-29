@@ -1,0 +1,7 @@
+<template name="component-page-dropdown-button">
+  <component-page
+    name="Dropdown Button"
+    description="A button with a dropdown menu built from menu-item children"
+  >
+  </component-page>
+</template>

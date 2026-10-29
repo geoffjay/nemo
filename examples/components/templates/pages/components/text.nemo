@@ -1,0 +1,7 @@
+<template name="component-page-text">
+  <component-page
+    name="Text"
+    description="A text content block"
+  >
+  </component-page>
+</template>

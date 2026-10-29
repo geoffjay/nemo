@@ -1,0 +1,7 @@
+<template name="component-page-toggle">
+  <component-page
+    name="Toggle"
+    description="A toggle button"
+  >
+  </component-page>
+</template>

@@ -1,0 +1,7 @@
+<template name="component-page-svg">
+  <component-page
+    name="SVG"
+    description="Renders SVG vector graphics from a file/URL (`src`) or embedded inline markup"
+  >
+  </component-page>
+</template>

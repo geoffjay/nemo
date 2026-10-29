@@ -1,0 +1,7 @@
+<template name="component-page-badge">
+  <component-page
+    name="Badge"
+    description="A badge indicator with count or dot"
+  >
+  </component-page>
+</template>

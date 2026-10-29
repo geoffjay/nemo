@@ -1,0 +1,7 @@
+<template name="component-page-progress">
+  <component-page
+    name="Progress"
+    description="A progress indicator"
+  >
+  </component-page>
+</template>

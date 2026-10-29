@@ -1,0 +1,7 @@
+<template name="component-page-textarea">
+  <component-page
+    name="Textarea"
+    description="A multi-line text input area"
+  >
+  </component-page>
+</template>

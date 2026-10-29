@@ -1,0 +1,7 @@
+<template name="component-page-avatar">
+  <component-page
+    name="Avatar"
+    description="A user avatar showing initials"
+  >
+  </component-page>
+</template>

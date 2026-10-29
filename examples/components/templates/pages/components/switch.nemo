@@ -1,0 +1,7 @@
+<template name="component-page-switch">
+  <component-page
+    name="Switch"
+    description="A toggle switch"
+  >
+  </component-page>
+</template>

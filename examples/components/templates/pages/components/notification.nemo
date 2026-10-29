@@ -1,0 +1,7 @@
+<template name="component-page-notification">
+  <component-page
+    name="Notification"
+    description="A notification toast"
+  >
+  </component-page>
+</template>

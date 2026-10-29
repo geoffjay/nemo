@@ -1,0 +1,7 @@
+<template name="component-page-code-editor">
+  <component-page
+    name="Code Editor"
+    description="A code editor with syntax highlighting and line numbers"
+  >
+  </component-page>
+</template>

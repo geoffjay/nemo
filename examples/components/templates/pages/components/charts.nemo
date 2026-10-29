@@ -1,0 +1,7 @@
+<template name="component-page-charts">
+  <component-page
+    name="Charts"
+    description="Chart visualizations: line, realtime, bar, area, pie, candlestick, column, stacked, clustered, scatter, bubble, heatmap, radar, pyramid, and funnel charts"
+  >
+  </component-page>
+</template>

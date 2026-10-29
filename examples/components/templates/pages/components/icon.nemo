@@ -1,0 +1,7 @@
+<template name="component-page-icon">
+  <component-page
+    name="Icon"
+    description="An icon display"
+  >
+  </component-page>
+</template>

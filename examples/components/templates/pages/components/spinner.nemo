@@ -1,0 +1,7 @@
+<template name="component-page-spinner">
+  <component-page
+    name="Spinner"
+    description="A loading spinner indicator"
+  >
+  </component-page>
+</template>

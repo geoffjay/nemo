@@ -1,0 +1,7 @@
+<template name="component-page-checkbox">
+  <component-page
+    name="Checkbox"
+    description="A checkbox input"
+  >
+  </component-page>
+</template>

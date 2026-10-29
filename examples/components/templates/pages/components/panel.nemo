@@ -1,0 +1,7 @@
+<template name="component-page-panel">
+  <component-page
+    name="Panel"
+    description="A generic container panel"
+  >
+  </component-page>
+</template>

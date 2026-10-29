@@ -1,0 +1,7 @@
+<template name="component-page-alert">
+  <component-page
+    name="Alert"
+    description="A status alert message"
+  >
+  </component-page>
+</template>

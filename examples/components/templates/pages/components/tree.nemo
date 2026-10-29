@@ -1,0 +1,7 @@
+<template name="component-page-tree">
+  <component-page
+    name="Tree"
+    description="A tree view, built from tree-node children or an items array"
+  >
+  </component-page>
+</template>

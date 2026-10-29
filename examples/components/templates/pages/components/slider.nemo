@@ -1,0 +1,7 @@
+<template name="component-page-slider">
+  <component-page
+    name="Slider"
+    description="A range slider input"
+  >
+  </component-page>
+</template>

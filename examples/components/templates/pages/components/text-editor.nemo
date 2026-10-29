@@ -1,0 +1,7 @@
+<template name="component-page-text-editor">
+  <component-page
+    name="Text Editor"
+    description="A rich text editor with formatting toolbar"
+  >
+  </component-page>
+</template>
