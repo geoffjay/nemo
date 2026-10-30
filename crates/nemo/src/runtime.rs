@@ -3813,6 +3813,66 @@ mod sfc_tests {
         assert!(texts.contains(&"B".to_string()));
     }
 
+    /// Regression: a component-SFC `<template>` ROOT carrying an `id` must NOT
+    /// inject that id into the expanded instances — every instance of the SFC
+    /// would share one id and the flat id-keyed component map would let one
+    /// body overwrite the others (a router rendering several SFC page bodies
+    /// showed the last route for every path). Instance ids come from the
+    /// consumer's map key and per-instance scoping; only an `app.nemo`
+    /// template root (the layout root) keeps its authored id (see
+    /// `test_sfc_template_root_id_reachable`).
+    #[test]
+    fn test_sfc_component_template_root_id_not_leaked() {
+        // `card` template root would be `<card id="shared">` in source — the
+        // parse drops the root id from the body, so simulate the stored value
+        // WITHOUT the id property (parse_sfc drops it): instances keyed
+        // `inst1`/`inst2` must expand to distinct panel roots keyed by their
+        // consumer keys.
+        let card_template = obj(vec![
+            ("type", s("panel")),
+            (
+                "component",
+                obj(vec![(
+                    "inner",
+                    obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
+                )]),
+            ),
+        ]);
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![("card", obj(vec![("template", card_template)]))]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![
+                            ("inst1", obj(vec![("type", s("card"))])),
+                            ("inst2", obj(vec![("type", s("card"))])),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
+        let layout = parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new())
+            .expect("layout");
+        let panels: Vec<&LayoutNode> = layout
+            .root
+            .children
+            .iter()
+            .filter(|c| c.component_type == "panel")
+            .collect();
+        assert_eq!(panels.len(), 2, "both instances expanded");
+        // Distinct instance ids — neither equals the other, and neither is a
+        // shared template-authored id.
+        let ids: Vec<String> = panels.iter().filter_map(|p| p.id.clone()).collect();
+        assert_eq!(ids.len(), 2);
+        assert_ne!(ids[0], ids[1]);
+    }
+
     #[test]
     fn test_sfc_nested_sfc_instances_scope_generated_ids() {
         // Regression: a page SFC whose template nests another slotted SFC

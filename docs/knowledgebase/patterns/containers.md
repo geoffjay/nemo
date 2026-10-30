@@ -63,6 +63,10 @@ fn on_toggle_nav(component_id, event_data) {
 }
 ```
 
+The missing property reads back as `()` (Rhai unit) — compare against `true`,
+never `false`, so the first press treats "absent" as expanded (the same idiom
+`<modal>` toggling uses).
+
 A common trigger is a `<header-bar>` `<header-button>` (icon in the app chrome,
 left of the menu) — see `examples/components/` (`on_toggle_nav`).
 

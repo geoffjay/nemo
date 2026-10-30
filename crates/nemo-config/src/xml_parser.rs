@@ -45,6 +45,12 @@ pub struct SfcDefinition {
     /// Slots declared by `<slot [name] [required] [multiple]/>` in the template,
     /// in document order. Used for slot validation and schema export.
     pub slots: Vec<SfcSlot>,
+    /// The template root element's `id`, if authored. For an `app.nemo` SFC the
+    /// template root IS the layout root, so `compile_app_sfc` forwards this id
+    /// onto it (scripts address the root by id — e.g. an `<app-shell>` collapse
+    /// toggle). Component `.nemo` roots ignore it: an instance id comes from
+    /// the consumer's map key and per-instance scoping instead.
+    pub template_root_id: Option<String>,
     /// App-level blocks (an `app.nemo` SFC). `None` for a component `.nemo`.
     ///
     /// * `app` — the `<app>` block processed by `process_app` (window/theme/etc).
@@ -1128,6 +1134,7 @@ impl XmlParser {
             .unwrap_or_default();
 
         let mut name: Option<String> = None;
+        let mut template_root_id: Option<String> = None;
         let mut template: Option<Value> = None;
         let mut props: Vec<SfcProp> = Vec::new();
         let mut slots: Vec<SfcSlot> = Vec::new();
@@ -1245,19 +1252,15 @@ impl XmlParser {
                     // Collect declared slots from the raw element tree (before
                     // flattening loses the `required`/`multiple` attributes).
                     Self::collect_slot_specs(root_child, &mut slots);
-                    let mut template_body = self.process_component_element(root_child);
-                    // `process_component_element` drops the `id` attribute (it
-                    // is normally consumed as the parent component-map key). A
-                    // template ROOT has no such map, so carry the id as a
-                    // property: for `app.nemo`, `app_sfc_to_value` forwards it
-                    // onto the layout root so scripts can address the root
-                    // component (e.g. an `<app-shell id>` collapse toggle).
-                    if let Some(id) = root_child.get("id").and_then(|v| v.as_str()) {
-                        if let Some(obj) = template_body.as_object_mut() {
-                            obj.insert("id".to_string(), Value::String(id.to_string()));
-                        }
-                    }
-                    template = Some(template_body);
+                    // The root's `id` is NOT kept in the body: component-SFC
+                    // instances take ids from the consumer and per-instance
+                    // scoping. It is captured separately so an `app.nemo`
+                    // (template root = layout root) can still forward it.
+                    template_root_id = root_child
+                        .get("id")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    template = Some(self.process_component_element(root_child));
                 }
                 // App-level blocks (app.nemo). Each delegates to the same
                 // process_* function process_root uses, accumulating into
@@ -1338,6 +1341,7 @@ impl XmlParser {
         Ok(SfcDefinition {
             name,
             template,
+            template_root_id,
             style: blocks.style,
             script: blocks.script,
             script_attrs: blocks.script_attrs,
@@ -2199,11 +2203,19 @@ impl XmlParser {
         // the synthetic `__layout_root__`.
         for (key, val) in template_obj {
             match key.as_str() {
-                "type" | "component" => continue,
+                "type" | "id" | "component" => continue,
                 _ => {
                     layout.insert(key.clone(), val.clone());
                 }
             }
+        }
+        // The template root's `id` becomes the layout root's id
+        // (`parse_layout_node_as_root` pins it instead of the synthetic
+        // `__layout_root__`) so scripts can address the root component — e.g.
+        // an `<app-shell id>` collapse toggle. Component-SFC roots never read
+        // it (instances are keyed/scoped by the consumer).
+        if let Some(id) = &sfc.template_root_id {
+            layout.insert("id".to_string(), Value::String(id.clone()));
         }
         // The template root's children become the layout's `component` map,
         // matching process_layout's `children_to_component_map`.

@@ -21,7 +21,9 @@ fn on_menu_roundness_round(component_id, event_data) {
 // Header-bar sidenav collapse toggle: flips the app-shell's `collapsed`
 // property; the UI re-renders because property mutations wake the App loop.
 fn on_toggle_nav(component_id, event_data) {
+    // Missing property reads back as () — compare against `true`, never
+    // `false`, so the first press treats "absent" as expanded.
     let current = get_component_property("app_shell", "collapsed");
-    set_component_property("app_shell", "collapsed", current == false);
-    log_info("Toggled nav collapse: " + (current == false));
+    set_component_property("app_shell", "collapsed", current != true);
+    log_info("Toggled nav collapse");
 }
