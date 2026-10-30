@@ -92,6 +92,14 @@ Import components individually, or auto-discover a whole directory:
   attribute; children without one go to the default slot. A child targeting a
   slot the template does not declare is dropped with a warning. Each slot lives
   in its own container node, so a template can have as many as it needs.
+* **Slot-conditional sections.** Inside an SFC template, `n:if="slot:<name>"`
+  conditionally renders an element on whether the named slot received children:
+  filled → renders as authored; empty (or the name targets no declared slot) →
+  forced `visible=false` at expansion time, occupying no space. Unlike
+  data-path conditions this resolves at template-expansion time (`expand_template`),
+  since slot fill is only known once instance children route. The canonical use:
+  a shared page layout whose Properties/Callbacks panels appear only when a page
+  provides them (`examples/components/templates/component.nemo`).
 
 ```xml
 <!-- components/card.nemo -->

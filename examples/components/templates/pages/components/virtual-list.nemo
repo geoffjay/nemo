@@ -1,0 +1,10 @@
+<!-- virtual-list.nemo — placeholder page for the gpui-kit Virtual List component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-virtual-list">
+  <component-page name="Virtual List" description="A list that renders a windowed subset of a large collection.">
+    <stack id="virtual_list_status" direction="vertical" spacing="4" align="start">
+      <label id="virtual_list_not_implemented" text="Not implemented" size="lg" />
+      <label id="virtual_list_source" text="Source: https://gpui-kit.com/component/virtual-list" size="sm" />
+    </stack>
+  </component-page>
+</template>

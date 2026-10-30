@@ -1,0 +1,10 @@
+<!-- stepper.nemo — placeholder page for the gpui-kit Stepper component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-stepper">
+  <component-page name="Stepper" description="A step-by-step progress for navigating through a series of steps or stages.">
+    <stack id="stepper_status" direction="vertical" spacing="4" align="start">
+      <label id="stepper_not_implemented" text="Not implemented" size="lg" />
+      <label id="stepper_source" text="Source: https://gpui-kit.com/component/stepper" size="sm" />
+    </stack>
+  </component-page>
+</template>

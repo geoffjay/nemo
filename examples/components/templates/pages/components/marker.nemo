@@ -1,0 +1,10 @@
+<!-- marker.nemo — placeholder page for the gpui-kit Marker component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-marker">
+  <component-page name="Marker" description="A compact, composable row for conversation status and system markers.">
+    <stack id="marker_status" direction="vertical" spacing="4" align="start">
+      <label id="marker_not_implemented" text="Not implemented" size="lg" />
+      <label id="marker_source" text="Source: https://gpui-kit.com/component/marker" size="sm" />
+    </stack>
+  </component-page>
+</template>

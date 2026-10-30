@@ -2194,8 +2194,14 @@ fn expand_template(
         _ => merged,
     };
 
+    // Resolve slot-conditional `n:if` conditions (`bind_visible = "slot:<name>"`)
+    // now that slot fill state is known: filled → leave `visible` untouched,
+    // empty → force `visible = false`. Conditions referencing unknown slot
+    // names are treated as empty (the consumer targeted a nonexistent slot).
+    let with_slot_conds = resolve_slot_conditions(&with_slots, instance_children.as_ref());
+
     // Strip consumed keys
-    let stripped = strip_keys(&with_slots, &["template", "slot", "vars"]);
+    let stripped = strip_keys(&with_slot_conds, &["template", "slot", "vars"]);
 
     // Prefix template-originated child IDs with the instance ID for uniqueness.
     // This prevents ID collisions when the same template is used by multiple
@@ -2266,6 +2272,73 @@ fn collect_all_component_ids(value: &Value, ids: &mut std::collections::HashSet<
             }
         }
     }
+}
+
+/// Resolves slot-conditional `n:if` conditions after template slot injection.
+///
+/// The compile pass (`nemo-config`'s `directives.rs`) leaves `n:if="slot:<name>"`
+/// conditions in place as `bind_visible = "slot:<name>"` — the fill state of a
+/// named slot is only known at template-expansion time, once
+/// [`inject_named_slots`] has routed the instance's children. This walk finds
+/// every `bind_visible = "slot:<name>"` marker in the expanded tree and:
+/// * slot `<name>` received children → remove the marker, leave `visible`
+///   untouched (the panel renders);
+/// * slot `<name>` empty (or the name targets no declared slot) → remove the
+///   marker and force `visible = false` (renders as an empty element that
+///   occupies no space — the same semantics `App::render_component` applies
+///   to an `n:if` data condition).
+///
+/// `instance_children` is the raw child map as authored on the instance; the
+/// slot routing keys off `slot` targeting properties, which are stripped from
+/// each child before injection, so passing the raw map preserves that info.
+fn resolve_slot_conditions(node: &Value, instance_children: Option<&Value>) -> Value {
+    // Which slot names did the instance actually fill?
+    let filled: HashSet<String> = instance_children
+        .map(|children| {
+            partition_children_by_slot(children)
+                .into_iter()
+                .filter(|(_, group)| match group {
+                    Value::Object(o) => !o.is_empty(),
+                    Value::Array(a) => !a.is_empty(),
+                    _ => false,
+                })
+                .map(|(name, _)| name)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    fn walk(node: &Value, filled: &HashSet<String>) -> Value {
+        if let Some(obj) = node.as_object() {
+            let slot_cond = obj
+                .get("bind_visible")
+                .and_then(|v| v.as_str())
+                .and_then(|s| s.strip_prefix("slot:"))
+                .map(String::from);
+
+            if let Some(slot_name) = slot_cond {
+                let mut out = obj.clone();
+                out.shift_remove("bind_visible");
+                if !filled.contains(&slot_name) {
+                    out.insert("visible".to_string(), Value::Bool(false));
+                }
+                let out_val = Value::Object(out);
+                // Recurse: slot conditions can appear at any depth.
+                return walk(&out_val, filled);
+            }
+
+            let mut new_obj = indexmap::IndexMap::new();
+            for (k, v) in obj {
+                new_obj.insert(k.clone(), walk(v, filled));
+            }
+            return Value::Object(new_obj);
+        }
+        if let Some(arr) = node.as_array() {
+            return Value::Array(arr.iter().map(|v| walk(v, filled)).collect());
+        }
+        node.clone()
+    }
+
+    walk(node, &filled)
 }
 
 /// Recursively prefixes nested component IDs with `parent_id`, but only
@@ -3985,6 +4058,151 @@ mod sfc_tests {
                 .get("content")
                 .and_then(|v| v.as_str()),
             Some("B")
+        );
+    }
+
+    #[test]
+    fn test_sfc_slot_conditional_visible() {
+        // Template: a body stack (default slot) plus a panel rendered only
+        // when the `footer` slot receives children (n:if="slot:footer").
+        let template = obj(vec![
+            ("type", s("stack")),
+            (
+                "component",
+                obj(vec![
+                    (
+                        "body",
+                        obj(vec![("type", s("stack")), ("slot", Value::Bool(true))]),
+                    ),
+                    (
+                        "footer_panel",
+                        obj(vec![
+                            ("type", s("panel")),
+                            ("bind_visible", s("slot:footer")),
+                            (
+                                "component",
+                                obj(vec![(
+                                    "foot",
+                                    obj(vec![("type", s("stack")), ("slot", s("footer"))]),
+                                )]),
+                            ),
+                        ]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let make_config = |template: &Value, with_footer: bool| {
+            let mut page_pairs: Vec<(&str, Value)> = vec![("type", s("page"))];
+            if with_footer {
+                page_pairs.push((
+                    "component",
+                    obj(vec![(
+                        "f",
+                        obj(vec![
+                            ("type", s("label")),
+                            ("slot", s("footer")),
+                            ("text", s("F")),
+                        ]),
+                    )]),
+                ));
+            }
+            let page = obj(page_pairs);
+            obj(vec![
+                (
+                    "sfc",
+                    obj(vec![("page", obj(vec![("template", template.clone())]))]),
+                ),
+                (
+                    "layout",
+                    obj(vec![
+                        ("type", s("stack")),
+                        ("component", obj(vec![("p", page)])),
+                    ]),
+                ),
+            ])
+        };
+
+        // Footer slot filled → panel visible (marker consumed, no visible forced).
+        let config = make_config(&template, true);
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
+        let page = &layout.root.children[0];
+        let footer_panel = page
+            .children
+            .iter()
+            .find(|c| c.id.as_deref() == Some("p_footer_panel"))
+            .expect("footer panel present");
+        assert!(
+            !footer_panel.config.properties.contains_key("visible"),
+            "filled slot leaves visible untouched"
+        );
+        assert_eq!(footer_panel.children.len(), 1, "footer child injected");
+
+        // Footer slot empty → panel forced invisible.
+        let config = make_config(&template, false);
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
+        let page = &layout.root.children[0];
+        let footer_panel = page
+            .children
+            .iter()
+            .find(|c| c.id.as_deref() == Some("p_footer_panel"))
+            .expect("footer panel present");
+        assert_eq!(
+            footer_panel.config.properties.get("visible"),
+            Some(&Value::Bool(false)),
+            "empty slot forces visible=false"
+        );
+        assert!(
+            !footer_panel
+                .config
+                .bindings
+                .iter()
+                .any(|b| b.source.starts_with("slot:")),
+            "marker consumed"
+        );
+
+        // Instance children targeting an UNDECLARED slot name → also empty.
+        let page_unknown = obj(vec![
+            ("type", s("page")),
+            (
+                "component",
+                obj(vec![(
+                    "x",
+                    obj(vec![
+                        ("type", s("label")),
+                        ("slot", s("sidebar")),
+                        ("text", s("X")),
+                    ]),
+                )]),
+            ),
+        ]);
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![("page", obj(vec![("template", template.clone())]))]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    ("component", obj(vec![("p", page_unknown)])),
+                ]),
+            ),
+        ]);
+        let layout =
+            parse_layout_config(&config, &TemplateMap::new(), None, &HashMap::new()).unwrap();
+        let page = &layout.root.children[0];
+        let footer_panel = page
+            .children
+            .iter()
+            .find(|c| c.id.as_deref() == Some("p_footer_panel"))
+            .expect("footer panel present");
+        assert_eq!(
+            footer_panel.config.properties.get("visible"),
+            Some(&Value::Bool(false)),
+            "unknown slot name treated as empty"
         );
     }
 

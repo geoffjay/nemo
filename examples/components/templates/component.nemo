@@ -45,7 +45,11 @@
         </stack>
       </stack>
     </panel>
-    <panel id="page_properties_panel">
+    <!-- Properties and Callbacks panels render only when the page fills the
+         matching slot: `n:if="slot:<name>"` resolves at template-expansion
+         time (see runtime.rs `resolve_slot_conditions`) — filled slot leaves
+         `visible` untouched, empty slot forces `visible=false`. -->
+    <panel id="page_properties_panel" n:if="slot:properties">
       <stack id="page_properties" direction="vertical" spacing="24" padding="24">
         <label id="page_properties_label" text="Properties" size="lg" />
         <stack id="page_properties_slot" direction="vertical" spacing="8">
@@ -53,7 +57,7 @@
         </stack>
       </stack>
     </panel>
-    <panel id="page_callbacks_panel">
+    <panel id="page_callbacks_panel" n:if="slot:callbacks">
       <stack id="page_callbacks" direction="vertical" spacing="24" padding="24">
         <label id="page_callbacks_label" text="Callbacks" size="lg" />
         <stack id="page_callbacks_slot" direction="vertical" spacing="8">

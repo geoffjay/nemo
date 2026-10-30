@@ -1,0 +1,10 @@
+<!-- questionnaire.nemo — placeholder page for the gpui-kit Questionnaire component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-questionnaire">
+  <component-page name="Questionnaire" description="Composable questionnaire controls — choices, inputs, validation, and progress.">
+    <stack id="questionnaire_status" direction="vertical" spacing="4" align="start">
+      <label id="questionnaire_not_implemented" text="Not implemented" size="lg" />
+      <label id="questionnaire_source" text="Source: https://gpui-kit.com/component/questionnaire" size="sm" />
+    </stack>
+  </component-page>
+</template>

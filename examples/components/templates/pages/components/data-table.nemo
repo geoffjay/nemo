@@ -1,0 +1,10 @@
+<!-- data-table.nemo — placeholder page for the gpui-kit Data Table component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-data-table">
+  <component-page name="Data Table" description="A data table with virtual scrolling and column management.">
+    <stack id="data_table_status" direction="vertical" spacing="4" align="start">
+      <label id="data_table_not_implemented" text="Not implemented" size="lg" />
+      <label id="data_table_source" text="Source: https://gpui-kit.com/component/data-table" size="sm" />
+    </stack>
+  </component-page>
+</template>

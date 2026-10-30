@@ -1,0 +1,10 @@
+<!-- calendar.nemo — placeholder page for the gpui-kit Calendar component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-calendar">
+  <component-page name="Calendar" description="A calendar view for picking and browsing dates.">
+    <stack id="calendar_status" direction="vertical" spacing="4" align="start">
+      <label id="calendar_not_implemented" text="Not implemented" size="lg" />
+      <label id="calendar_source" text="Source: https://gpui-kit.com/component/calendar/" size="sm" />
+    </stack>
+  </component-page>
+</template>

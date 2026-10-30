@@ -1,0 +1,10 @@
+<!-- carousel.nemo — placeholder page for the gpui-kit Carousel component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-carousel">
+  <component-page name="Carousel" description="A composable carousel with a scrollable content area and optional controls.">
+    <stack id="carousel_status" direction="vertical" spacing="4" align="start">
+      <label id="carousel_not_implemented" text="Not implemented" size="lg" />
+      <label id="carousel_source" text="Source: https://gpui-kit.com/component/carousel/" size="sm" />
+    </stack>
+  </component-page>
+</template>

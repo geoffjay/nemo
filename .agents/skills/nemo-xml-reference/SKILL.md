@@ -371,6 +371,7 @@ pass before layout building.
 |-----------|------|-------------|
 | `n:if="path"` | compile-time | `bind-visible` on `path`'s truthiness |
 | `n:if="path == 'x'"` (or `!=`) | compile-time | a `visible` binding with a comparison transform |
+| `n:if="slot:<name>"` (SFC templates only) | expansion-time | `visible=false` when the named slot is empty; renders untouched when filled |
 | `n:for="i in ['a','b']"` (literal array) | compile-time | N sibling nodes, `${i}`/`${i.field}` substituted |
 | `n:for="i in data.x.y"` (`data.*` path) | runtime | a list container the runtime grows/shrinks as the array changes |
 

@@ -1,0 +1,10 @@
+<!-- attachment.nemo — placeholder page for the gpui-kit Attachment component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-attachment">
+  <component-page name="Attachment" description="File attachment cards with status and a remove control.">
+    <stack id="attachment_status" direction="vertical" spacing="4" align="start">
+      <label id="attachment_not_implemented" text="Not implemented" size="lg" />
+      <label id="attachment_source" text="Source: https://gpui-kit.com/component/attachment/" size="sm" />
+    </stack>
+  </component-page>
+</template>

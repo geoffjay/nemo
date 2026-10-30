@@ -1,0 +1,10 @@
+<!-- command.nemo — placeholder page for the gpui-kit Command component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-command">
+  <component-page name="Command" description="A command palette — a search field over a filtered list of commands.">
+    <stack id="command_status" direction="vertical" spacing="4" align="start">
+      <label id="command_not_implemented" text="Not implemented" size="lg" />
+      <label id="command_source" text="Source: https://gpui-kit.com/component/command" size="sm" />
+    </stack>
+  </component-page>
+</template>

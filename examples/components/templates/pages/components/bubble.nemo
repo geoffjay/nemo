@@ -1,0 +1,10 @@
+<!-- bubble.nemo — placeholder page for the gpui-kit Bubble component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-bubble">
+  <component-page name="Bubble" description="Chat bubbles with visual variants and optional reaction feedback.">
+    <stack id="bubble_status" direction="vertical" spacing="4" align="start">
+      <label id="bubble_not_implemented" text="Not implemented" size="lg" />
+      <label id="bubble_source" text="Source: https://gpui-kit.com/component/bubble/" size="sm" />
+    </stack>
+  </component-page>
+</template>

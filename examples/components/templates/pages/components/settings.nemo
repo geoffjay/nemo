@@ -1,0 +1,10 @@
+<!-- settings.nemo — placeholder page for the gpui-kit Settings component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-settings">
+  <component-page name="Settings" description="A settings structure with pages, groups, and items for application preferences.">
+    <stack id="settings_status" direction="vertical" spacing="4" align="start">
+      <label id="settings_not_implemented" text="Not implemented" size="lg" />
+      <label id="settings_source" text="Source: https://gpui-kit.com/component/settings" size="sm" />
+    </stack>
+  </component-page>
+</template>

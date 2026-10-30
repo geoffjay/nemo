@@ -1,0 +1,10 @@
+<!-- dock.nemo — placeholder page for the gpui-kit Dock component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-dock">
+  <component-page name="Dock" description="A dockable panel layout with tabs, draggable panels, and resize handles.">
+    <stack id="dock_status" direction="vertical" spacing="4" align="start">
+      <label id="dock_not_implemented" text="Not implemented" size="lg" />
+      <label id="dock_source" text="Source: https://gpui-kit.com/component/dock" size="sm" />
+    </stack>
+  </component-page>
+</template>

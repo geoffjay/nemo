@@ -1,0 +1,10 @@
+<!-- skeleton.nemo — placeholder page for the gpui-kit Skeleton component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-skeleton">
+  <component-page name="Skeleton" description="A skeleton loading placeholder element.">
+    <stack id="skeleton_status" direction="vertical" spacing="4" align="start">
+      <label id="skeleton_not_implemented" text="Not implemented" size="lg" />
+      <label id="skeleton_source" text="Source: https://gpui-kit.com/component/skeleton" size="sm" />
+    </stack>
+  </component-page>
+</template>

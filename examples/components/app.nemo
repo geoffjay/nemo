@@ -62,6 +62,27 @@
   <import src="./templates/pages/components/toggle.nemo" />
   <import src="./templates/pages/components/tooltip.nemo" />
   <import src="./templates/pages/components/tree.nemo" />
+  <!-- Placeholder pages (gpui-kit components pending wrappers) -->
+  <import src="./templates/pages/components/attachment.nemo" />
+  <import src="./templates/pages/components/bubble.nemo" />
+  <import src="./templates/pages/components/calendar.nemo" />
+  <import src="./templates/pages/components/carousel.nemo" />
+  <import src="./templates/pages/components/command.nemo" />
+  <import src="./templates/pages/components/data-table.nemo" />
+  <import src="./templates/pages/components/diff.nemo" />
+  <import src="./templates/pages/components/dock.nemo" />
+  <import src="./templates/pages/components/kbd.nemo" />
+  <import src="./templates/pages/components/marker.nemo" />
+  <import src="./templates/pages/components/menu.nemo" />
+  <import src="./templates/pages/components/message.nemo" />
+  <import src="./templates/pages/components/message-scroller.nemo" />
+  <import src="./templates/pages/components/pagination.nemo" />
+  <import src="./templates/pages/components/questionnaire.nemo" />
+  <import src="./templates/pages/components/rating.nemo" />
+  <import src="./templates/pages/components/settings.nemo" />
+  <import src="./templates/pages/components/skeleton.nemo" />
+  <import src="./templates/pages/components/stepper.nemo" />
+  <import src="./templates/pages/components/virtual-list.nemo" />
 </imports>
 
 <!-- Templates -->
@@ -97,17 +118,28 @@
               <label id="cat_basic" text="Basic" size="sm" />
               <nav-link router="main" route="/accordion" label="Accordion" />
               <nav-link router="main" route="/alert" label="Alert" />
+              <nav-link router="main" route="/attachment" label="Attachment" />
               <nav-link router="main" route="/avatar" label="Avatar" />
               <nav-link router="main" route="/badge" label="Badge" />
+              <nav-link router="main" route="/bubble" label="Bubble" />
               <nav-link router="main" route="/button" label="Button" />
               <nav-link router="main" route="/checkbox" label="Checkbox" />
               <nav-link router="main" route="/collapsible" label="Collapsible" />
               <nav-link router="main" route="/dropdown-button" label="Dropdown Button" />
               <nav-link router="main" route="/icon" label="Icon" />
               <nav-link router="main" route="/image" label="Image" />
+              <nav-link router="main" route="/kbd" label="Kbd" />
               <nav-link router="main" route="/label" label="Label" />
+              <nav-link router="main" route="/marker" label="Marker" />
+              <nav-link router="main" route="/message" label="Message" />
+              <nav-link router="main" route="/message-scroller" label="Message Scroller" />
+              <nav-link router="main" route="/pagination" label="Pagination" />
               <nav-link router="main" route="/progress" label="Progress" />
+              <nav-link router="main" route="/questionnaire" label="Questionnaire" />
+              <nav-link router="main" route="/rating" label="Rating" />
+              <nav-link router="main" route="/skeleton" label="Skeleton" />
               <nav-link router="main" route="/spinner" label="Spinner" />
+              <nav-link router="main" route="/stepper" label="Stepper" />
               <nav-link router="main" route="/tag" label="Tag" />
               <nav-link router="main" route="/text" label="Text" />
               <nav-link router="main" route="/tooltip" label="Tooltip" />
@@ -133,10 +165,19 @@
 
               <!-- Advanced -->
               <label id="cat_advanced" text="Advanced" size="sm" />
+              <nav-link router="main" route="/calendar" label="Calendar" />
+              <nav-link router="main" route="/carousel" label="Carousel" />
               <nav-link router="main" route="/charts" label="Charts" />
+              <nav-link router="main" route="/command" label="Command" />
+              <nav-link router="main" route="/data-table" label="Data Table" />
+              <nav-link router="main" route="/diff" label="Diff" />
+              <nav-link router="main" route="/dock" label="Dock" />
+              <nav-link router="main" route="/menu" label="Menu" />
+              <nav-link router="main" route="/settings" label="Settings" />
               <nav-link router="main" route="/svg" label="SVG" />
               <nav-link router="main" route="/table" label="Table" />
               <nav-link router="main" route="/tree" label="Tree" />
+              <nav-link router="main" route="/virtual-list" label="Virtual List" />
 
               <!-- Navigation -->
               <label id="cat_navigation" text="Navigation" size="sm" />
@@ -180,6 +221,27 @@
               <route path="/switch"><component-page-switch /></route>
               <route path="/toggle"><component-page-toggle /></route>
               <route path="/sidenavbar"><component-page-sidenavbar /></route>
+              <!-- Placeholder pages (gpui-kit components pending wrappers) -->
+              <route path="/attachment"><component-page-attachment /></route>
+              <route path="/bubble"><component-page-bubble /></route>
+              <route path="/kbd"><component-page-kbd /></route>
+              <route path="/marker"><component-page-marker /></route>
+              <route path="/message"><component-page-message /></route>
+              <route path="/message-scroller"><component-page-message-scroller /></route>
+              <route path="/pagination"><component-page-pagination /></route>
+              <route path="/questionnaire"><component-page-questionnaire /></route>
+              <route path="/rating"><component-page-rating /></route>
+              <route path="/skeleton"><component-page-skeleton /></route>
+              <route path="/stepper"><component-page-stepper /></route>
+              <route path="/calendar"><component-page-calendar /></route>
+              <route path="/carousel"><component-page-carousel /></route>
+              <route path="/command"><component-page-command /></route>
+              <route path="/data-table"><component-page-data-table /></route>
+              <route path="/diff"><component-page-diff /></route>
+              <route path="/dock"><component-page-dock /></route>
+              <route path="/menu"><component-page-menu /></route>
+              <route path="/settings"><component-page-settings /></route>
+              <route path="/virtual-list"><component-page-virtual-list /></route>
             </router>
           </stack>
         </stack>

@@ -1,0 +1,10 @@
+<!-- diff.nemo — placeholder page for the gpui-kit Diff component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-diff">
+  <component-page name="Diff" description="Source diff presentation with hunks, line markers, and review affordances.">
+    <stack id="diff_status" direction="vertical" spacing="4" align="start">
+      <label id="diff_not_implemented" text="Not implemented" size="lg" />
+      <label id="diff_source" text="Source: https://gpui-kit.com/component/diff" size="sm" />
+    </stack>
+  </component-page>
+</template>

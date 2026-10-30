@@ -186,6 +186,10 @@ fn compile_children_map(node: &mut Value) {
 ///   that path's value.
 /// * A comparison (`data.api.status == 'error'`) — binds `visible` to a
 ///   transform that evaluates the comparison at apply time.
+/// * `slot:<name>` — resolved at template-expansion time ([`crate::runtime`]'s
+///   `expand_template`): `visible` is left untouched when the named slot is
+///   filled and forced `false` when it is empty. Compile keeps the raw
+///   `bind_visible = "slot:<name>"` marker for that pass to interpret.
 fn apply_n_if(node: &mut Value, condition: &str) {
     let Some(obj) = node.as_object_mut() else {
         return;

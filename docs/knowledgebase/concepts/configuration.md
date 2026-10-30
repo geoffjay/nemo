@@ -139,7 +139,11 @@ the one runtime case.
   (truthiness); an `==`/`!=` comparison (`data.api.status == 'error'`) becomes
   an explicit `binding { source, target: "visible", transform: "== 'error'" }`
   the binding system's `apply_transform` evaluates to a `Bool` at apply time.
-  `App::render_component` skips any component whose `visible` is `false`. No
+  `App::render_component` skips any component whose `visible` is `false`. A
+  third form, `n:if="slot:<name>"`, is valid only inside an SFC template: it
+  survives compile as `bind_visible = "slot:<name>"` and is resolved at
+  template-expansion time (`expand_template` → `resolve_slot_conditions`) —
+  filled slot → renders as authored; empty → forced `visible=false`. No
   runtime additions.
 * **`n:for` over a static list (compile-time).** `n:for="tab in ['home','settings']"`
   (single- or double-quoted literal array) expands the element into N sibling

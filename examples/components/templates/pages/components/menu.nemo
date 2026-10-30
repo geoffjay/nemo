@@ -1,0 +1,10 @@
+<!-- menu.nemo — placeholder page for the gpui-kit Menu component. Not yet
+     wrapped by nemo; the status block below goes away once examples are added. -->
+<template name="component-page-menu">
+  <component-page name="Menu" description="Popup, context, and dropdown menus built from menu items.">
+    <stack id="menu_status" direction="vertical" spacing="4" align="start">
+      <label id="menu_not_implemented" text="Not implemented" size="lg" />
+      <label id="menu_source" text="Source: https://gpui-kit.com/component/menu" size="sm" />
+    </stack>
+  </component-page>
+</template>
