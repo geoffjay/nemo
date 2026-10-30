@@ -2,24 +2,24 @@
 let default_code = #"<icon name="search" />"#;
 
 let grid_code = #"<icon name="search" />
-<icon name="settings" />
-<icon name="bell" />
-<icon name="check" />
-<icon name="close" />
-<icon name="github" />
-<icon name="globe" />
-<icon name="user" />
-<icon name="heart" />
-<icon name="star" />
-<icon name="plus" />
-<icon name="minus" />
-<icon name="sun" />
-<icon name="moon" />
-<icon name="inbox" />
-<icon name="copy" />
-<icon name="trash" />
-<icon name="eye" />
-<icon name="menu" />"#;
+  <icon name="settings" />
+  <icon name="bell" />
+  <icon name="check" />
+  <icon name="close" />
+  <icon name="github" />
+  <icon name="globe" />
+  <icon name="user" />
+  <icon name="heart" />
+  <icon name="star" />
+  <icon name="plus" />
+  <icon name="minus" />
+  <icon name="sun" />
+  <icon name="moon" />
+  <icon name="inbox" />
+  <icon name="copy" />
+  <icon name="trash" />
+  <icon name="eye" />
+  <icon name="menu" />"#;
 </script>
 
 <template name="component-page-icon">

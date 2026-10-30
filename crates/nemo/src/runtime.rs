@@ -182,8 +182,14 @@ pub struct NemoRuntime {
     /// Component variables: top-level script `let`/`const` values snapshot
     /// after scripts load, merged across scripts (later script wins). Feeds
     /// `{{ var }}` interpolation over the layout in
-    /// [`Self::apply_layout_from_config`].
+    /// [`Self::apply_layout_from_config`]. SFC scripts (`sfc:<tag>` ids) are
+    /// excluded — their variables are scoped per component in `sfc_variables`.
     script_variables: RwLock<HashMap<String, Value>>,
+    /// Per-SFC component variables: `tag → vars` from each SFC's `<script>`
+    /// top-level `let`/`const`, snapshotted alongside `script_variables`.
+    /// Feeds `{{ var }}` interpolation over that SFC's template body only, so
+    /// same-named variables in different SFC scripts never collide.
+    sfc_variables: RwLock<HashMap<String, HashMap<String, Value>>>,
 }
 
 impl NemoRuntime {
@@ -232,6 +238,7 @@ impl NemoRuntime {
             pending_initial_enters: Arc::new(Mutex::new(Vec::new())),
             roundness_intents: Arc::new(Mutex::new(Vec::new())),
             script_variables: RwLock::new(HashMap::new()),
+            sfc_variables: RwLock::new(HashMap::new()),
         })
     }
 
@@ -756,6 +763,12 @@ impl NemoRuntime {
     /// scope (see [`RhaiEngine::variable_bindings`]). Scalars keep their
     /// type; composites arrive as JSON strings and are re-parsed so `{{ var }}`
     /// interpolation can render them compactly.
+    ///
+    /// SFC scripts (ids `sfc:<tag>`) are separated out: their variables are
+    /// stored per-tag in `sfc_variables` and only interpolate that SFC's own
+    /// template body — script content in one SFC is scoped to that component,
+    /// so same-named `let`s in two SFC scripts don't shadow each other
+    /// (previously every script merged into one map, later scripts winning).
     fn snapshot_script_variables(&self) {
         let bindings = {
             let ext = self
@@ -771,19 +784,37 @@ impl NemoRuntime {
             }
         };
         let mut vars = HashMap::new();
-        for (_script_id, kv) in bindings {
+        let mut sfc_vars: HashMap<String, HashMap<String, Value>> = HashMap::new();
+        for (script_id, kv) in bindings {
+            let tag = script_id.strip_prefix("sfc:").map(|t| t.to_string());
+            let target: &mut HashMap<String, Value> = match &tag {
+                Some(t) => sfc_vars.entry(t.clone()).or_default(),
+                None => &mut vars,
+            };
             for (name, json) in kv {
                 let value = Value::from(json);
                 if !value.is_null() {
-                    vars.insert(name, value);
+                    target.insert(name, value);
                 }
             }
         }
         if !vars.is_empty() {
             info!("Component variables: {:?}", vars.keys().collect::<Vec<_>>());
         }
+        if !sfc_vars.is_empty() {
+            info!(
+                "SFC component variables: {:?}",
+                sfc_vars
+                    .iter()
+                    .map(|(tag, m)| (tag, m.keys().collect::<Vec<_>>()))
+                    .collect::<Vec<_>>()
+            );
+        }
         if let Ok(mut guard) = self.script_variables.write() {
             *guard = vars;
+        }
+        if let Ok(mut guard) = self.sfc_variables.write() {
+            *guard = sfc_vars;
         }
     }
 
@@ -791,6 +822,16 @@ impl NemoRuntime {
     /// available to `{{ var }}` interpolation).
     pub fn script_variables(&self) -> HashMap<String, Value> {
         self.script_variables
+            .read()
+            .map(|v| v.clone())
+            .unwrap_or_default()
+    }
+
+    /// Returns the per-SFC component-variable snapshot (`tag → variables`).
+    /// Each SFC `<script>`'s top-level `let`/`const` values, scoped to that
+    /// tag's template body only.
+    pub fn sfc_variables(&self) -> HashMap<String, HashMap<String, Value>> {
+        self.sfc_variables
             .read()
             .map(|v| v.clone())
             .unwrap_or_default()
@@ -846,11 +887,12 @@ impl NemoRuntime {
 
         let layout_config = {
             let config = self.config.read().expect("config lock poisoned");
-            parse_layout_config(
+            parse_layout_config_impl(
                 &config,
                 &extra_templates,
                 Some(&self.registry),
                 &self.script_variables(),
+                &self.sfc_variables(),
             )
         };
 
@@ -2945,6 +2987,26 @@ fn parse_layout_config(
     registry: Option<&ComponentRegistry>,
     script_variables: &HashMap<String, Value>,
 ) -> Option<LayoutConfig> {
+    parse_layout_config_impl(
+        config,
+        extra_templates,
+        registry,
+        script_variables,
+        &HashMap::new(),
+    )
+}
+
+/// `sfc_variables` maps each SFC tag to its own `<script>` top-level
+/// variables; they take precedence over the global `script_variables` when
+/// interpolating that tag's template body, so same-named variables in
+/// different SFC scripts stay scoped to their component.
+fn parse_layout_config_impl(
+    config: &Value,
+    extra_templates: &TemplateMap,
+    registry: Option<&ComponentRegistry>,
+    script_variables: &HashMap<String, Value>,
+    sfc_variables: &HashMap<String, HashMap<String, Value>>,
+) -> Option<LayoutConfig> {
     let layout = config.get("layout")?;
     let mut templates = extract_templates(config);
 
@@ -2991,10 +3053,19 @@ fn parse_layout_config(
                     };
                     let body = rewrite_sfc_tags(&body, &sfc_tags, &sfc_props);
                     let body = rewrite_sfc_handlers(&body, tag);
-                    let body = if script_variables.is_empty() {
+                    // Per-SFC `{{ var }}` interpolation: this SFC's own script
+                    // variables override any global ones of the same name and
+                    // are only visible inside this template body.
+                    let body = if script_variables.is_empty() && sfc_variables.is_empty() {
                         body
                     } else {
-                        interpolate_mustache(&body, script_variables)
+                        let mut vars = script_variables.clone();
+                        if let Some(own) = sfc_variables.get(tag) {
+                            for (k, v) in own {
+                                vars.insert(k.clone(), v.clone());
+                            }
+                        }
+                        interpolate_mustache(&body, &vars)
                     };
                     templates.entry(tag.clone()).or_insert(body);
                 }
@@ -4489,6 +4560,91 @@ mod sfc_tests {
             return Some(node);
         }
         node.children.iter().find_map(|c| find_node(c, id))
+    }
+
+    /// Two SFCs whose `<script>`s declare the same top-level variable name:
+    /// each template body must interpolate ITS OWN variable, not the merged
+    /// global pool (which would let the later-loaded script win everywhere).
+    #[test]
+    fn test_sfc_variables_scoped_per_component() {
+        // Global (handlers-script) variables also exist and must lose to an
+        // SFC's own name collision.
+        let global_vars = HashMap::from([
+            ("snippet".to_string(), s("global-snippet")),
+            ("shared".to_string(), s("global-shared")),
+        ]);
+        let mut sfc_vars = HashMap::new();
+        sfc_vars.insert(
+            "page_a".to_string(),
+            HashMap::from([("snippet".to_string(), s("A-snippet"))]),
+        );
+        sfc_vars.insert(
+            "page_b".to_string(),
+            HashMap::from([("snippet".to_string(), s("B-snippet"))]),
+        );
+        let sfc_vars: HashMap<String, HashMap<String, Value>> = sfc_vars;
+
+        let template = |_fallback: &str| {
+            obj(vec![
+                ("type", s("code-editor")),
+                ("default_value", s("{{ snippet }}")), // SFC-scoped name
+                ("fallback", s("{{ global-fallback }}")),
+                ("shared", s("{{ shared }}")),
+            ])
+        };
+        let config = obj(vec![
+            (
+                "sfc",
+                obj(vec![
+                    ("page_a", obj(vec![("template", template("global"))])),
+                    ("page_b", obj(vec![("template", template("global"))])),
+                ]),
+            ),
+            (
+                "layout",
+                obj(vec![
+                    ("type", s("stack")),
+                    (
+                        "component",
+                        obj(vec![("a", obj(vec![("template", s("page_a"))]))]),
+                    ),
+                ]),
+            ),
+        ]);
+
+        let layout =
+            parse_layout_config_impl(&config, &TemplateMap::new(), None, &global_vars, &sfc_vars)
+                .expect("layout");
+
+        // page_a's editor shows page_a's `snippet`; page_b's shows page_b's.
+        let a = find_node(&layout.root, "a_default_value")
+            .or_else(|| {
+                layout
+                    .root
+                    .children
+                    .iter()
+                    .find(|c| c.component_type == "code-editor")
+            })
+            .expect("editor expanded");
+        assert_eq!(
+            a.config
+                .properties
+                .get("default_value")
+                .and_then(|v| v.as_str()),
+            Some("A-snippet"),
+            "page_a body uses page_a's own `snippet`, not another SFC's"
+        );
+        // Global variable NOT shadowed by the SFC renders through.
+        assert_eq!(
+            a.config.properties.get("shared").and_then(|v| v.as_str()),
+            Some("global-shared"),
+            "global script vars still interpolate inside SFC bodies"
+        );
+        assert_eq!(
+            a.config.properties.get("fallback").and_then(|v| v.as_str()),
+            Some(""),
+            "names absent from both pools render as empty (lenient)"
+        );
     }
 }
 

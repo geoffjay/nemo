@@ -70,7 +70,10 @@ fn hydrate(component_id, event_data) { /* hydrate UI */ }
 
 Semantics: `{{ name }}` is whitespace-insensitive; scalars render as their
 display value, composites (arrays/maps) as JSON; an unknown name renders as
-the empty string; an unclosed `{{` stays verbatim. `{{ }}` never collides with
+the empty string; an unclosed `{{` stays verbatim. **SFC `<script>` bodies are
+excluded from this merged pool** — their variables interpolate only that SFC's
+own template body (per-tag scoping, see
+[Single-file components](../patterns/single-file-components.md)). `{{ }}` never collides with
 the `${}` machinery (SFC template props / `n:for` loop vars). Inline scripts
 load under the `handlers` id when free — so their bare handler names resolve
 like a scripts-dir `handlers.rhai` — else `inline_<n>`. This is

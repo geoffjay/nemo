@@ -83,6 +83,13 @@ Import components individually, or auto-discover a whole directory:
   distinct from load-time `${var.x}`/`${env.x}` resolution — the resolver skips
   the SFC subtree, so bare placeholders survive to expand time. Data still flows
   through `bind_*`/`<binding>`.
+* **`{{ var }}` is scoped per SFC.** Each SFC `<script>`'s top-level
+  `let`/`const` values interpolate only that SFC's template body: same-named
+  variables in two SFC scripts don't collide or shadow each other (the runtime
+  snapshots SFC scripts separately, keyed by tag — non-SFC/handler scripts
+  still share one global pool). A global script variable of the same name loses
+  to the SFC's own inside its body; names absent from both pools render empty
+  (lenient).
 * **Slots inject components, not text.** Consumer children are injected into the
   template's `<slot/>`; raw text between tags is dropped (as everywhere in nemo).
   Provide text via a child component (`<label text="…"/>`) or an interpolation
