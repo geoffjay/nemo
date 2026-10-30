@@ -101,7 +101,8 @@ jobs:
         run: |
           set -e
           failed=0
-          for config in examples/*/app.xml; do
+          shopt -s nullglob
+          for config in examples/*/app.nemo; do
             echo "::group::Validating $config"
             if ! ./target/debug/nemo validate "$config" --strict; then
               failed=1

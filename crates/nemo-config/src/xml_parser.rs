@@ -3896,7 +3896,10 @@ mod tests {
     fn test_parse_example_components() {
         let value = parse_example("components");
         assert!(value.get("app").is_some());
-        assert!(value.get("templates").is_some());
+        // The shared `<templates>` block (page_content) was replaced by
+        // component SFCs imported from templates/ (commit 90610de), so no
+        // `templates` key is emitted anymore.
+        assert!(value.get("templates").is_none());
         assert!(value.get("layout").is_some());
         let sfc = value.get("sfc").unwrap();
         // The gallery's shared page chrome lives in SFC templates imported
@@ -4235,7 +4238,7 @@ button:hover { opacity: 0.8; }
     <source name="api" type="http" url="https://api.example.com" interval="30" />
   </data>
   <script src="./scripts" on-load="on_load" />
-  <layout type="stack" direction="vertical" spacing="20" padding="32">
+  <layout type="stack" id="root" direction="vertical" spacing="20" padding="32">
     <label id="title" text="Dashboard" size="xl" />
   </layout>
 </nemo>"#;
@@ -4274,7 +4277,7 @@ button:hover { opacity: 0.8; }
     #[test]
     fn test_app_sfc_inline_script_equals_cdata() {
         let app_xml = r#"<nemo>
-  <layout type="stack">
+  <layout type="stack" id="root">
     <label id="hi" text="Hi" />
   </layout>
   <script><![CDATA[
@@ -4387,7 +4390,7 @@ fn bootstrap(component_id, event_data) { log_info("loaded"); }
   <imports>
     <import src="./card.nemo" />
   </imports>
-  <layout type="stack">
+  <layout type="stack" id="root">
     <card />
   </layout>
 </nemo>"#

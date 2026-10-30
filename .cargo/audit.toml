@@ -59,6 +59,9 @@ ignore = [
     "RUSTSEC-2026-0363",
     "RUSTSEC-2026-0379",
     "RUSTSEC-2026-0380",
+    # 2026-10-29: unchecked memory usage transferring borrowed resources
+    # between components. Same pin as the block above.
+    "RUSTSEC-2026-0424",
 
     # --- zstd / zstd-safe / zstd-sys (vulnerability-class only): also
     # transitive via wasmtime 29 (wasmtime-cache → zstd 0.13/zstd-safe 7/

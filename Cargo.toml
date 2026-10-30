@@ -27,7 +27,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.9.4"
+version = "0.10.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/geoffjay/nemo"
@@ -51,7 +51,9 @@ gpui-router = { version = "0.7", default-features = false, features = [
 
 # Async
 tokio = { version = "1", features = ["full"] }
-async-trait = "0.1"
+# 0.1.92+: clippy 1.99 `double_must_use` no longer fires on the macro's
+# generated `#[must_use]` impls (breaks `-D warnings` in CI below 0.1.92).
+async-trait = "0.1.92"
 futures = "0.3.32"
 
 # Serialization
@@ -114,7 +116,7 @@ nemo-data = { path = "crates/nemo-data" }
 nemo-extension = { path = "crates/nemo-extension" }
 nemo-integration = { path = "crates/nemo-integration" }
 nemo-events = { path = "crates/nemo-events" }
-nemo-plugin-api = { version = "0.9.1", path = "crates/nemo-plugin-api" }
-nemo-plugin = { version = "0.9.1", path = "crates/nemo-plugin" }
+nemo-plugin-api = { version = "0.10.0", path = "crates/nemo-plugin-api" }
+nemo-plugin = { version = "0.10.0", path = "crates/nemo-plugin" }
 nemo-macros = { path = "crates/nemo-macros" }
 nemo-wasm = { path = "crates/nemo-wasm" }

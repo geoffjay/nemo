@@ -520,13 +520,13 @@ checksum = "8b75356056920673b02621b35afd0f7dda9306d03c79a30f5c56c44cf256e3de"
 
 [[package]]
 name = "async-trait"
-version = "0.1.89"
+version = "0.1.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
+checksum = "82f6aeea286b8eb4dd3431a1be1b59d290ace00f5bfd8e2a159bc2a05e2c1667"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.114",
+ "syn 3.0.9",
 ]
 
 [[package]]
@@ -4715,7 +4715,7 @@ dependencies = [
 
 [[package]]
 name = "nemo"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -4750,7 +4750,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-config"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "miette",
@@ -4767,7 +4767,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-data"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "async-nats",
  "async-trait",
@@ -4791,7 +4791,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-events"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -4805,7 +4805,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-extension"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "libloading",
@@ -4833,7 +4833,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-integration"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "async-nats",
  "async-trait",
@@ -4854,7 +4854,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-layout"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "nemo-config",
@@ -4868,7 +4868,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-macros"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4877,7 +4877,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-plugin"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "nemo-plugin-api",
@@ -4885,7 +4885,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-plugin-api"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "semver",
@@ -4896,7 +4896,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-registry"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "nemo-config",
@@ -4909,11 +4909,11 @@ dependencies = [
 
 [[package]]
 name = "nemo-tokens"
-version = "0.9.4"
+version = "0.10.0"
 
 [[package]]
 name = "nemo-wasm"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "indexmap",
  "nemo-plugin-api",
@@ -4927,7 +4927,7 @@ dependencies = [
 
 [[package]]
 name = "nemo-wasm-guest"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "wit-bindgen 0.36.0",
 ]
@@ -11237,7 +11237,7 @@ checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
 name = "xtask"
-version = "0.9.4"
+version = "0.10.0"
 dependencies = [
  "anyhow",
  "clap",

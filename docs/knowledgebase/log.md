@@ -1,6 +1,27 @@
 # Knowledge Base Update Log
 
 ## 2026-10-30
+* **Fix**: Repaired all three failing CI jobs (`Test`, `Clippy`, `Validate examples`
+  in `.github/workflows/ci.yml`). (1) `Clippy` — Rust 1.99's new
+  `double_must_use` lint fires on `async_trait` 0.1.89's generated
+  `#[must_use]` impls (`crates/nemo-data/src/{source.rs,action.rs}`, hard
+  error under `-D warnings`); bumped `async-trait` to **0.1.92** in the
+  workspace root `Cargo.toml` + `Cargo.lock` (the version that stopped
+  emitting `must_use`). (2) `Test` — commit `68c6452` (SFC template-root id
+  forwarding) makes `compile_app_sfc` emit `layout.id="root"` for SFCs whose
+  template root carries `id="root"`, so the three round-trip tests'
+  `app.xml` fixtures needed the matching `<layout … id="root">`; and commit
+  `90610de` removed the `<templates>` block from
+  `examples/components/app.nemo` (page chrome moved to imported SFCs), so
+  `test_parse_example_components` now asserts `templates` is absent.
+  (3) `Validate examples` — the job still globbed `examples/*/app.xml`, but
+  every example migrated to `app.nemo` (`48892d5` "full app.xml deprecation")
+  and the validator hard-errors on `app.xml` entries
+  (`deprecated-xml-entry`); with no matches, bash passed the literal glob,
+  which the validator then rejected. The job now globs `examples/*/app.nemo`
+  with `shopt -s nullglob`. Verified locally: workspace tests (0 failures),
+  `cargo clippy --all-targets -- -D warnings`, `cargo fmt --check`, and the
+  exact CI validate loop over all 14 `app.nemo` examples (exit 0).
 * **Feature**: Built-in **`http-server` data source** — apps can serve a REST
   API from pure config + a Rhai handler, no plugin. New
   `crates/nemo-data/src/sources/http_server.rs`: hand-rolled HTTP/1.1 over
