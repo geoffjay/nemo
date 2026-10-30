@@ -214,7 +214,7 @@ impl DevPanel {
     }
 
     /// Renders the object-browser page: node tree (left) + details (right).
-    fn render_object_browser(&mut self, cx: &mut Context<Self>) -> Div {
+    fn render_object_browser(&mut self, window: &mut Window, cx: &mut Context<Self>) -> Div {
         let bg = cx.theme().colors.background;
         let panel_bg = cx.theme().colors.title_bar;
         let border = cx.theme().colors.border;
@@ -236,8 +236,14 @@ impl DevPanel {
         });
         let node_count = self.object_browser.snapshot.len();
 
+        // Fixed 40% of the panel window width, min 320px (user spec; no
+        // resizable-split component exists in the kit yet).
+        let window_width = window.viewport_size().width;
+        let tree_width = window_width.max(px(640.)) * 0.40;
+
         let tree_panel = v_flex()
-            .w(px(280.))
+            .w(tree_width.min(window_width))
+            .min_w(px(320.))
             .h_full()
             .bg(panel_bg)
             .border_r_1()
@@ -295,7 +301,9 @@ impl DevPanel {
             });
 
         div()
-            .size_full()
+            .flex_1()
+            .h_full()
+            .overflow_hidden()
             .h_flex()
             .child(tree_panel)
             .child(details_panel)
@@ -420,13 +428,12 @@ impl Render for DevPanel {
             }
         }
 
+        // Poll for tree selection changes (TreeState has no events).
         if self.active_tab == Tab::Objects {
             self.process_object_selection(cx);
-            return self.render_object_browser(cx);
+        } else {
+            self.process_tree_selection(window, cx);
         }
-
-        // Poll for tree selection changes (TreeState has no events).
-        self.process_tree_selection(window, cx);
 
         let bg = cx.theme().colors.background;
         let panel_bg = cx.theme().colors.title_bar;
@@ -575,14 +582,18 @@ impl Render for DevPanel {
                 ),
         );
 
-        v_flex().size_full().bg(bg).child(toolbar).child(
+        let body = if self.active_tab == Tab::Objects {
+            self.render_object_browser(window, cx)
+        } else {
             h_flex()
                 .flex_1()
                 .h_full()
                 .overflow_hidden()
                 .child(tree_panel)
-                .child(editor_area),
-        )
+                .child(editor_area)
+        };
+
+        v_flex().size_full().bg(bg).child(toolbar).child(body)
     }
 }
 
