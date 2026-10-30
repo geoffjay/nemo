@@ -183,6 +183,120 @@ fn delete_task(component_id, event_data) {
     }
 }
 
+// ── REST API (http-server data source) ──────────────────────────────────────
+// Wired via `<source name="rest" type="http-server" port="8420"
+// on-request="on_request" />`. The runtime hands each inbound HTTP request to
+// `on_request` on the main thread as a map:
+//   { id, method, path, headers, body }  plus `query` when the URL had one;
+//     body is a parsed JSON map when the request body was valid JSON, else a
+//     string.
+// The handler returns #{ status: <int>, body: <string>, content_type?: <str> }.
+// Routes (row numbers are the 1-based `#` column):
+//   GET    /tasks      → {"tasks": [...]}
+//   POST   /tasks      body {"label", "due"?} → 201 created task
+//   GET    /tasks/<n>  → that task
+//   PUT    /tasks/<n>  body {"label"?, "due"?, "done"?} → updated task
+//   DELETE /tasks/<n>  → {"removed": <label>} and the UI re-renders
+
+fn on_request(req) {
+    log_info("REST " + req.method + " " + req.path);
+
+    let tasks = load_tasks();
+    // Leading slash first (rhai keeps the empty string when splitting
+    // "/a/b"): "/tasks" → "tasks", "/tasks/3" → "tasks/3". Then split.
+    let route = if req.path.starts_with("/") { req.path.sub_string(1) } else { req.path };
+    let segs = route.split("/");
+
+    // Only /tasks and /tasks/<n> exist.
+    if len(segs) == 0 || segs[0] != "tasks" || len(segs) > 2 {
+        return rest_error(404, "unknown route: " + req.path);
+    }
+    let row = if len(segs) == 2 { segs[1] } else { "" };
+
+    // Collection level: GET lists, POST appends.
+    if row == "" {
+        if req.method == "GET" {
+            return rest_json(200, #{ tasks: tasks });
+        }
+        if req.method == "POST" {
+            let body = req.body;
+            let label_missing = body == () || body.label == ();
+            let label_blank = !label_missing && ("" + body.label).trim() == "";
+            if label_missing || label_blank {
+                return rest_error(400, "POST body must include a non-empty \"label\"");
+            }
+            let label = ("" + body.label).trim();
+            let due = field_or_blank(body.due);
+            let task = #{ label: label, done: false, due: due };
+            tasks.push(task);
+            save_tasks(tasks);
+            render_tasks(tasks);
+            return rest_json(201, task);
+        }
+        return rest_error(405, "method " + req.method + " not supported on /tasks");
+    }
+
+    // Row level: everything below addresses one task.
+    let idx = parse_int_safe(row);
+    if idx < 1 || idx > len(tasks) {
+        return rest_error(404, "no task " + row);
+    }
+    let i = idx - 1;
+
+    if req.method == "GET" {
+        return rest_json(200, tasks[i]);
+    }
+
+    if req.method == "PUT" {
+        if req.body != () {
+            if req.body.label != () { tasks[i].label = "" + req.body.label; }
+            if req.body.due != () { tasks[i].due = "" + req.body.due; }
+            if req.body.done != () { tasks[i].done = req.body.done; }
+        }
+        save_tasks(tasks);
+        render_tasks(tasks);
+        return rest_json(200, tasks[i]);
+    }
+
+    if req.method == "DELETE" {
+        let removed = tasks[i];
+        tasks.remove(i);
+        save_tasks(tasks);
+        render_tasks(tasks);
+        return rest_json(200, #{ removed: removed.label });
+    }
+
+    rest_error(405, "method " + req.method + " not supported");
+}
+
+// ── REST helpers ─────────────────────────────────────────────────────────────
+
+// Serialize a reply map as JSON with the default 200 status.
+fn rest_json(status, value) {
+    #{ status: status, body: json_stringify(value) }
+}
+
+// Plain-text error reply.
+fn rest_error(status, message) {
+    #{ status: status, body: message, content_type: "text/plain" }
+}
+
+// Optional JSON string field → "" when absent.
+fn field_or_blank(value) {
+    if value == () { "" } else { "" + value }
+}
+
+// parse_int that returns -1 instead of raising on non-numeric input.
+fn parse_int_safe(raw) {
+    let n = -1;
+    try {
+        n = parse_int(raw);
+    } catch (err) {
+        return -1;
+    }
+    n
+}
+
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 // Read a component's `value` property as a trimmed string ("" if unset).

@@ -21,6 +21,24 @@
   <script src="./scripts" features="file-io" on-load="on_load" />
 
   <!--
+    REST API over the task list. Starts an HTTP server on localhost:8420;
+    every inbound request is handed to the `on_request` handler in
+    scripts/handlers.rhai, which answers from the same tasks.json the UI uses:
+
+      GET    /tasks        → {"tasks": [...]}
+      POST   /tasks        body {"label": "...", "due": "..."} → 201 created
+      PUT    /tasks/<n>    body {"label"?, "due"?, "done"?}    → updated task
+      DELETE /tasks/<n>    → {"removed": …} (n is the 1-based row number)
+
+    Try it while the app runs:
+      curl http://127.0.0.1:8420/tasks
+      curl -X POST -d '{"label":"From curl","due":"2026-12-01"}' http://127.0.0.1:8420/tasks
+  -->
+  <data>
+    <source name="rest" type="http-server" port="8420" on-request="on_request" />
+  </data>
+
+  <!--
     Layout notes
     ============
     center_row grows (flex="1") to fill the window and justify="center" centers

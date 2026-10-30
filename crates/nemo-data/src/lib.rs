@@ -84,9 +84,10 @@ pub use source::{
     UpdateType,
 };
 pub use sources::{
-    create_source, FileFormat, FileSource, FileSourceConfig, HttpSource, HttpSourceConfig,
-    MqttSource, MqttSourceConfig, NatsSource, NatsSourceConfig, RedisSource, RedisSourceConfig,
-    TimerSource, TimerSourceConfig, WebSocketSource, WebSocketSourceConfig,
+    create_source, send_response, FileFormat, FileSource, FileSourceConfig, HttpServerSource,
+    HttpServerSourceConfig, HttpSource, HttpSourceConfig, MqttSource, MqttSourceConfig, NatsSource,
+    NatsSourceConfig, RedisSource, RedisSourceConfig, ServerResponse, TimerSource,
+    TimerSourceConfig, WebSocketSource, WebSocketSourceConfig,
 };
 pub use transform::{
     FilterTransform, MapTransform, Pipeline, SelectTransform, SkipTransform, SortTransform,

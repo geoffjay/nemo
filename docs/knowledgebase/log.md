@@ -1,5 +1,32 @@
 # Knowledge Base Update Log
 
+## 2026-10-30
+* **Feature**: Built-in **`http-server` data source** — apps can serve a REST
+  API from pure config + a Rhai handler, no plugin. New
+  `crates/nemo-data/src/sources/http_server.rs`: hand-rolled HTTP/1.1 over
+  tokio's `TcpListener` (no new deps; Content-Length bodies only, no TLS);
+  each inbound request emits a `DataUpdate::full` of the request object
+  (`{id, method, path, query?, headers, body}` with body parsed when JSON),
+  the repo holding the **latest** request at `data.<id>`; the source keeps a
+  per-request oneshot and completes it from a global registry of response
+  channels (`nemo_data::send_response(server_id, ServerResponse{request_id,
+  status, body, content_type})`), 408 after `timeout` (default 30s), 429 at
+  `max_concurrent`. Script side: `<data><source name="rest"
+  type="http-server" port="8420" on-request="on_request" /></data>` — the
+  runtime bridge `service_http_server_requests`
+  (`crates/nemo/src/runtime.rs`, called from `apply_pending_data_updates`)
+  dedupes by request id, passes the request as JSON via the new
+  `ExtensionManager::call_script_with_json_arg` (serde_json → Dynamic in;
+  handler's `{status, body, content_type?}` map return → serde_json out —
+  `Dynamic` is `!Send`, so conversion happens inside nemo-extension), and
+  sends the response. Handlers run on the main/GPUI thread (scripts are
+  main-thread-only; `PluginContext` is Send+Sync but the engine isn't).
+  Migrated `examples/task-list`: same `tasks.json` serves GET/POST/PUT/DELETE
+  `/tasks[/<n>]`; REST mutations call the shared `render_tasks` so the UI
+  updates live (verified end-to-end: 8 curl cases + screenshot showing a
+  REST-added row). Caveat: `run_headless` never polls, so the bridge only
+  fires in GUI runs. Docs: data-flow.md source list; task-list README.
+
 ## 2026-10-28
 * **SFC template ids required**: id-less children inside an SFC `<template>`
   emit parse-time `__anon_N` keys that are identical for every instance of the

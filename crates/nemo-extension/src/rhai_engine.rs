@@ -313,6 +313,46 @@ impl RhaiEngine {
             })
     }
 
+    /// Calls a script function with a single JSON-serializable argument and
+    /// returns the handler's result as JSON.
+    ///
+    /// Used by the HTTP-server bridge: the inbound request object travels in
+    /// as a Rhai map (`serde_json` → `Dynamic`, nested objects/arrays
+    /// preserved), and the handler's map return value (`status`, `body`,
+    /// `content_type`) travels back out as JSON.
+    pub fn call_script_with_json_arg(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        arg_json: &str,
+    ) -> Result<serde_json::Value, ExtensionError> {
+        let arg = json_to_dynamic(serde_json::from_str(arg_json).map_err(|e| {
+            ExtensionError::ScriptError {
+                script_id: script_id.to_string(),
+                reason: format!("invalid request JSON: {e}"),
+            }
+        })?);
+        // Call as `Dynamic` (a script map is not auto-convertible to
+        // `PluginValue` via the typed-call path), then convert.
+        let script = self
+            .scripts
+            .get_mut(script_id)
+            .ok_or_else(|| ExtensionError::NotFound {
+                id: script_id.to_string(),
+            })?;
+        let result: Dynamic = self
+            .engine
+            .call_fn(&mut script.scope, &script.ast, function, (arg,))
+            .map_err(|e| ExtensionError::ScriptError {
+                script_id: script_id.to_string(),
+                reason: e.to_string(),
+            })?;
+        Ok(
+            serde_json::to_value(dynamic_to_plugin_value(result))
+                .unwrap_or(serde_json::Value::Null),
+        )
+    }
+
     /// Evaluates an expression.
     pub fn eval<T: Clone + Send + Sync + 'static>(&self, expr: &str) -> Result<T, ExtensionError> {
         self.engine.eval(expr).map_err(|e| e.into())
@@ -1627,6 +1667,181 @@ mod tests {
             serde_json::json!("Buy groceries")
         );
         assert_eq!(table_len(&ctx), 1);
+    }
+
+    #[test]
+    fn test_task_list_rest_on_request_end_to_end() {
+        // Drive the REST `on_request` handler the way the runtime bridge does:
+        // each request arrives as JSON via `call_script_with_json_arg`, the
+        // returned map must be `{status, body}` JSON. Covers all five routes
+        // plus the 404/405/400 error paths, and that REST mutations keep the
+        // UI table (mock `tasks_table.data`) in sync with tasks.json.
+        let raw = include_str!("../../../examples/task-list/scripts/handlers.rhai");
+        let tmp = tempfile::tempdir().unwrap();
+        let data_file = tmp.path().join("tasks.json");
+        let script = raw.replace(
+            "\"examples/task-list/tasks.json\"",
+            &format!("{:?}", data_file.to_str().unwrap()),
+        );
+
+        let config = RhaiConfig {
+            features: RhaiFeatures {
+                file_io: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let mut engine = RhaiEngine::new(config);
+        let ctx = Arc::new(MockContext::default());
+        engine.register_context(ctx.clone());
+        engine
+            .load_script("handlers", &script)
+            .expect("task-list handlers.rhai should compile");
+
+        engine
+            .call::<()>(
+                "handlers",
+                "on_load",
+                ("app".to_string(), "load".to_string()),
+            )
+            .unwrap();
+
+        // Seed one task through the API itself.
+        let reply = engine
+            .call_script_with_json_arg(
+                "handlers",
+                "on_request",
+                r#"{"id":"r1","method":"POST","path":"/tasks",
+                    "body":{"label":"From curl","due":"2026-12-01"}}"#,
+            )
+            .expect("POST /tasks should succeed");
+        assert_eq!(reply["status"], serde_json::json!(201));
+        let created: serde_json::Value =
+            serde_json::from_str(reply["body"].as_str().unwrap()).unwrap();
+        assert_eq!(created["label"], serde_json::json!("From curl"));
+
+        // The UI table re-rendered with the REST-added task.
+        assert_eq!(
+            ctx.get_component_property("tasks_table", "data")
+                .map(|v| match v {
+                    PluginValue::Array(rows) => rows.len(),
+                    _ => 0,
+                }),
+            Some(1)
+        );
+
+        // List the collection.
+        let reply = engine
+            .call_script_with_json_arg(
+                "handlers",
+                "on_request",
+                r#"{"id":"r2","method":"GET","path":"/tasks"}"#,
+            )
+            .unwrap();
+        assert_eq!(reply["status"], serde_json::json!(200));
+        let listed: serde_json::Value =
+            serde_json::from_str(reply["body"].as_str().unwrap()).unwrap();
+        assert_eq!(
+            listed["tasks"].as_array().unwrap().len(),
+            1,
+            "GET /tasks should list the created task"
+        );
+        let body = reply["body"].as_str().unwrap();
+        assert!(body.contains("From curl"), "body: {body}");
+
+        // Read one row (1-based).
+        let reply = engine
+            .call_script_with_json_arg(
+                "handlers",
+                "on_request",
+                r#"{"id":"r3","method":"GET","path":"/tasks/1"}"#,
+            )
+            .unwrap();
+        assert_eq!(reply["status"], serde_json::json!(200));
+        let row: serde_json::Value = serde_json::from_str(reply["body"].as_str().unwrap()).unwrap();
+        assert_eq!(row["due"], serde_json::json!("2026-12-01"));
+
+        // Update the row.
+        let reply = engine
+            .call_script_with_json_arg(
+                "handlers",
+                "on_request",
+                r#"{"id":"r4","method":"PUT","path":"/tasks/1","body":{"done":true}}"#,
+            )
+            .unwrap();
+        assert_eq!(reply["status"], serde_json::json!(200));
+        let updated: serde_json::Value =
+            serde_json::from_str(reply["body"].as_str().unwrap()).unwrap();
+        assert_eq!(updated["done"], serde_json::json!(true));
+        let parsed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
+        assert_eq!(parsed["tasks"][0]["done"], serde_json::json!(true));
+        assert_eq!(
+            ctx.get_component_property("tasks_table", "data")
+                .map(|v| match v {
+                    PluginValue::Array(rows) => match &rows[0] {
+                        PluginValue::Object(row) => row
+                            .get("status")
+                            .map(|s| matches!(s, PluginValue::String(s) if s == "Completed"))
+                            .unwrap_or(false),
+                        _ => false,
+                    },
+                    _ => false,
+                }),
+            Some(true),
+            "PUT should flip the rendered status to Completed"
+        );
+
+        // Delete the row.
+        let reply = engine
+            .call_script_with_json_arg(
+                "handlers",
+                "on_request",
+                r#"{"id":"r5","method":"DELETE","path":"/tasks/1"}"#,
+            )
+            .unwrap();
+        assert_eq!(reply["status"], serde_json::json!(200));
+        let removed: serde_json::Value =
+            serde_json::from_str(reply["body"].as_str().unwrap()).unwrap();
+        assert_eq!(removed["removed"], serde_json::json!("From curl"));
+        let parsed: serde_json::Value =
+            serde_json::from_str(&std::fs::read_to_string(&data_file).unwrap()).unwrap();
+        assert_eq!(parsed["tasks"].as_array().unwrap().len(), 0);
+
+        // Error paths: unknown route, missing row, row-addressed POST (on an
+        // existing row — 405), empty label.
+        engine
+            .call_script_with_json_arg(
+                "handlers",
+                "on_request",
+                r#"{"id":"r10","method":"POST","path":"/tasks","body":{"label":"Temp"}}"#,
+            )
+            .unwrap();
+        for (payload, status) in [
+            (r#"{"id":"r6","method":"GET","path":"/nope"}"#, 404),
+            (r#"{"id":"r7","method":"GET","path":"/tasks/9"}"#, 404),
+            (
+                r#"{"id":"r8","method":"POST","path":"/tasks/1","body":{"label":"x"}}"#,
+                405,
+            ),
+            (
+                r#"{"id":"r9","method":"POST","path":"/tasks","body":{"nolabel":1}}"#,
+                400,
+            ),
+        ] {
+            let reply = engine
+                .call_script_with_json_arg("handlers", "on_request", payload)
+                .unwrap();
+            assert_eq!(
+                reply["status"],
+                serde_json::json!(status),
+                "payload: {payload}"
+            );
+            assert!(
+                reply["body"].is_string(),
+                "error replies carry plain-text bodies"
+            );
+        }
     }
 
     #[cfg(feature = "pkg-env")]

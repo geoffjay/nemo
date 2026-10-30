@@ -39,6 +39,27 @@ The window opens **maximized** (full screen) using the **nord** dark theme.
 - **Live due-date countdown.** Each due date is formatted from its stored ISO
   date using [rhai-chrono](https://crates.io/crates/rhai-chrono) — `Due in 3d`,
   `Overdue (2d)`, `Due today`, or `No due date`.
+- **REST API on the same data.** An `http-server` data source
+  (`<data><source name="rest" type="http-server" port="8420"
+  on-request="on_request" /></data>`) serves the task list over HTTP while the
+  app runs. Every inbound request is handed to the `on_request` handler
+  (main thread), which reads/writes the same `tasks.json` and re-renders the
+  table, so REST mutations appear in the UI immediately:
+
+  | Method | Path | Body | Result |
+  |---|---|---|---|
+  | `GET` | `/tasks` | — | `{"tasks": [...]}` |
+  | `POST` | `/tasks` | `{"label": "…", "due": "…"}` | `201` created task |
+  | `GET` | `/tasks/<n>` | — | that task (`n` = the 1-based `#` column) |
+  | `PUT` | `/tasks/<n>` | `{"label"?, "due"?, "done"?}` | updated task |
+  | `DELETE` | `/tasks/<n>` | — | `{"removed": "<label>"}` |
+
+  ```sh
+  curl http://127.0.0.1:8420/tasks
+  curl -X POST -d '{"label":"From curl","due":"2026-12-01"}' http://127.0.0.1:8420/tasks
+  curl -X PUT -d '{"done":true}' http://127.0.0.1:8420/tasks/1
+  curl -X DELETE http://127.0.0.1:8420/tasks/1
+  ```
 
 ## How it works
 
@@ -56,6 +77,14 @@ Two framework capabilities make the example possible, both introduced with it:
 - **Input value readback** keeps each `<input>`'s typed text in its `value`
   property, so `get_component_property(id, "value")` returns live text a handler
   can read, and a script can clear a field by setting `value` back to `""`.
+
+The REST endpoints ride two more framework pieces (see
+[Data flow](../../docs/knowledgebase/concepts/data-flow.md)):
+the built-in `http-server` **data source** owns the socket and turns each
+request into a repository update, and a runtime **bridge** invokes the script's
+`on_request` function on the main thread for each request, sending the returned
+`{status, body, content_type?}` map back to the HTTP client. Scripts stay pure
+Rhai — no plugin, and no server code beyond the handler function.
 
 ## Layout notes / known limitations
 

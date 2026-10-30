@@ -205,6 +205,18 @@ impl ExtensionManager {
         self.rhai_engine.call(script_id, function, args)
     }
 
+    /// Calls a script function with a single JSON argument, returning the
+    /// handler result as JSON. See [`RhaiEngine::call_script_with_json_arg`].
+    pub fn call_script_with_json_arg(
+        &mut self,
+        script_id: &str,
+        function: &str,
+        arg_json: &str,
+    ) -> Result<serde_json::Value, ExtensionError> {
+        self.rhai_engine
+            .call_script_with_json_arg(script_id, function, arg_json)
+    }
+
     /// Evaluates a RHAI expression.
     pub fn eval<T: Clone + Send + Sync + 'static>(&self, expr: &str) -> Result<T, ExtensionError> {
         self.rhai_engine.eval(expr)

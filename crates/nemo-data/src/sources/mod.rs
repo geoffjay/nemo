@@ -2,6 +2,7 @@
 
 mod file;
 mod http;
+mod http_server;
 mod mqtt;
 mod nats;
 mod redis;
@@ -10,6 +11,9 @@ mod websocket;
 
 pub use self::file::{FileFormat, FileSource, FileSourceConfig};
 pub use self::http::{HttpMethod, HttpSource, HttpSourceConfig};
+pub use self::http_server::{
+    send_response, HttpServerSource, HttpServerSourceConfig, ServerRequest, ServerResponse,
+};
 pub use self::mqtt::{MqttSource, MqttSourceConfig};
 pub use self::nats::{NatsSource, NatsSourceConfig};
 pub use self::redis::{RedisSource, RedisSourceConfig};
@@ -28,6 +32,10 @@ use std::collections::HashMap;
 /// so numeric header values are tolerated. Header values authored as
 /// `${env.TOKEN}` / `${var.x}` are already resolved by the config resolver before
 /// reaching here.
+fn default_http_server_timeout() -> std::time::Duration {
+    std::time::Duration::from_secs(30)
+}
+
 fn parse_http_headers(value: Option<&Value>) -> HashMap<String, String> {
     let mut headers = HashMap::new();
 
@@ -125,6 +133,24 @@ pub fn create_source(name: &str, source_type: &str, config: &Value) -> Option<Bo
                 ..Default::default()
             };
             Some(Box::new(HttpSource::new(cfg)))
+        }
+        "http-server" => {
+            let cfg = HttpServerSourceConfig {
+                id: name.to_string(),
+                host: config
+                    .get("host")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("127.0.0.1")
+                    .to_string(),
+                port: config.get("port").and_then(|v| v.as_i64()).unwrap_or(8080) as u16,
+                timeout: config
+                    .get("timeout")
+                    .and_then(|v| v.as_i64())
+                    .map(|secs| std::time::Duration::from_secs(secs as u64))
+                    .unwrap_or_else(default_http_server_timeout),
+                ..Default::default()
+            };
+            Some(Box::new(HttpServerSource::new(cfg)))
         }
         "websocket" => {
             let url = config.get("url").and_then(|v| v.as_str())?.to_string();

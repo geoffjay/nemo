@@ -161,6 +161,13 @@ pub struct NemoRuntime {
     shutdown: Arc<tokio::sync::Notify>,
     /// Sink configurations for outbound data publishing.
     pub sink_configs: Arc<RwLock<HashMap<String, SinkConfig>>>,
+    /// HTTP-server sources wired to a script handler: server id → `on-request`
+    /// script function name. The bridge in `apply_pending_data_updates` calls
+    /// the handler for each inbound request and sends its return value back.
+    http_request_handlers: Arc<RwLock<HashMap<String, String>>>,
+    /// Last request id handled per server id, so each request triggers the
+    /// handler exactly once.
+    http_handled_requests: Arc<Mutex<HashMap<String, String>>>,
     /// Paths written by plugins that need binding propagation.
     plugin_dirty_paths: Arc<RwLock<HashSet<String>>>,
     /// Host-side router state (history + params) keyed by router id.
@@ -231,6 +238,8 @@ impl NemoRuntime {
             data_notify: Arc::new(tokio::sync::Notify::new()),
             shutdown: Arc::new(tokio::sync::Notify::new()),
             sink_configs: Arc::new(RwLock::new(HashMap::new())),
+            http_request_handlers: Arc::new(RwLock::new(HashMap::new())),
+            http_handled_requests: Arc::new(Mutex::new(HashMap::new())),
             plugin_dirty_paths: Arc::new(RwLock::new(HashSet::new())),
             router_states: Arc::new(RwLock::new(HashMap::new())),
             nav_intents: Arc::new(Mutex::new(Vec::new())),
@@ -720,12 +729,32 @@ impl NemoRuntime {
     pub fn run_headless(&self) -> Result<()> {
         info!("Running in headless mode...");
 
+        // Headless runs must poll the same "pending work" loop the GUI's
+        // `App` task runs (`apply_pending_data_updates`): without it the
+        // HTTP-server bridge never drains its inbound requests; a headless
+        // app with an `http-server` data source should still serve. The
+        // async block borrows `self` (`NemoRuntime` is not `Send` — its
+        // `ExtensionManager` guards that) so the task can't be spawned onto
+        // worker threads; `block_on` drives it on the calling thread.
         self.tokio_runtime.block_on(async {
-            tokio::signal::ctrl_c()
-                .await
-                .context("Failed to listen for ctrl-c")?;
-            info!("Received shutdown signal");
-            Ok(())
+            loop {
+                tokio::select! {
+                    _ = tokio::signal::ctrl_c() => {
+                        info!("Received shutdown signal");
+                        break;
+                    }
+                    _ = self.data_notify.notified() => {
+                        // `apply_pending_data_updates` nests `block_on` calls
+                        // of its own (engine queries) — only legal off the
+                        // async context, so hop out via `block_in_place`.
+                        let _ = tokio::task::block_in_place(|| {
+                            self.apply_pending_navigations();
+                            self.apply_pending_data_updates()
+                        });
+                    }
+                }
+            }
+            Ok::<(), anyhow::Error>(())
         })
     }
 
@@ -962,6 +991,22 @@ impl NemoRuntime {
                     source_name, source_type
                 );
 
+                // HTTP-server sources may name a script handler (`on-request="fn"`)
+                // that answers each inbound request; the bridge in
+                // `apply_pending_data_updates` invokes it on the main thread.
+                if source_type == "http-server" {
+                    if let Some(handler) = source_config
+                        .get("on_request")
+                        .and_then(|v| v.as_str())
+                        .filter(|s| !s.trim().is_empty())
+                    {
+                        self.http_request_handlers
+                            .write()
+                            .map_err(|e| anyhow::anyhow!("handler map lock poisoned: {e}"))?
+                            .insert(source_name.clone(), handler.to_string());
+                    }
+                }
+
                 match nemo_data::create_source(source_name, source_type, source_config) {
                     Some(source) => {
                         self.data_engine.register_source(source).await;
@@ -1116,6 +1161,11 @@ impl NemoRuntime {
             }
         }
 
+        // HTTP-server bridge: for each server with an `on-request` handler,
+        // pass the latest request object to the script and send the handler's
+        // return value back to the awaiting connection. Deduped by request id.
+        any_updates |= self.service_http_server_requests();
+
         // Propagate plugin-written data paths through bindings
         let dirty_paths: Vec<String> = {
             if let Ok(mut paths) = self.plugin_dirty_paths.try_write() {
@@ -1144,6 +1194,115 @@ impl NemoRuntime {
         }
 
         any_updates
+    }
+
+    /// Bridges inbound HTTP-server requests to script handlers.
+    ///
+    /// For each configured server, reads `data.<server-id>` from the repository
+    /// (the latest emitted request object), dedupes by its `id` field, calls the
+    /// `on-request` script function with the request, and routes the returned
+    /// map `{status, body, content_type?}` back through
+    /// `nemo_data::send_response`. Must run on the main thread — it calls into
+    /// the `!Send` `ExtensionManager`.
+    fn service_http_server_requests(&self) -> bool {
+        let handlers = match self.http_request_handlers.try_read() {
+            Ok(h) => h,
+            Err(_) => return false,
+        };
+        if handlers.is_empty() {
+            return false;
+        }
+
+        let mut any = false;
+        for (server_id, handler) in handlers.iter() {
+            let value = match self
+                .data_engine
+                .repository
+                .get(&nemo_data::DataPath::from_source(server_id))
+            {
+                Some(v) => v,
+                None => continue,
+            };
+            let obj = match value.as_object() {
+                Some(o) => o,
+                None => continue,
+            };
+            let request_id = match obj.get("id").and_then(|v| v.as_str()) {
+                Some(id) => id.to_string(),
+                None => continue,
+            };
+
+            let mut handled = self
+                .http_handled_requests
+                .lock()
+                .expect("http_handled_requests lock poisoned");
+            if handled
+                .get(server_id)
+                .map(|last| last == &request_id)
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            handled.insert(server_id.clone(), request_id.clone());
+            drop(handled);
+
+            // Request object → JSON argument for the script handler.
+            let request_json = serde_json::to_string(&value).unwrap_or_else(|_| "null".to_string());
+
+            let result: Result<serde_json::Value, _> = {
+                let mut ext = self
+                    .extension_manager
+                    .write()
+                    .expect("extension_manager lock poisoned");
+                ext.call_script_with_json_arg("handlers", handler, &request_json)
+            };
+
+            let response = match result {
+                Ok(json) => {
+                    let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
+                    let body = json
+                        .get("body")
+                        .map(|v| match v {
+                            serde_json::Value::String(s) => s.clone(),
+                            other => other.to_string(),
+                        })
+                        .unwrap_or_default();
+                    let content_type = json
+                        .get("content_type")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string());
+                    nemo_data::ServerResponse {
+                        request_id: request_id.clone(),
+                        status,
+                        body,
+                        content_type,
+                    }
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        "on-request handler '{}' failed for server '{}': {}",
+                        handler,
+                        server_id,
+                        e
+                    );
+                    nemo_data::ServerResponse {
+                        request_id: request_id.clone(),
+                        status: 500,
+                        body: format!("handler error: {e}"),
+                        content_type: Some("text/plain".to_string()),
+                    }
+                }
+            };
+            if !nemo_data::send_response(server_id, response) {
+                tracing::debug!(
+                    "No pending connection for request {} on server '{}'",
+                    request_id,
+                    server_id
+                );
+            }
+            any = true;
+        }
+        any
     }
 
     // ── Router / navigation ────────────────────────────────────────────────

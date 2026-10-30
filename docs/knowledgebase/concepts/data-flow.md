@@ -30,6 +30,18 @@ Sources implement the async `DataSource` trait
   Parsed in `create_source` (`crates/nemo-data/src/sources/mod.rs`).
 * **Streaming** — `websocket` (tokio-tungstenite, auto-reconnect), `mqtt`
   (rumqttc), `redis` (pub/sub), `nats` (subjects).
+* **Inbound serving** — `http-server` (hand-rolled HTTP/1.1 over tokio, binds
+  `host:port`). Each request is emitted as a full update of the request object
+  (`{id, method, path, query?, headers, body}` — body parsed from JSON when
+  valid) and, when the source declares `on-request="<fn>"`, the runtime bridge
+  (`service_http_server_requests`, `crates/nemo/src/runtime.rs`) calls that
+  Rhai handler with the request on the main thread and sends its
+  `{status, body, content_type?}` map back to the client
+  (`nemo_data::send_response`). Unanswered requests 408 after the source's
+  `timeout` (default 30s). Caveats: HTTP/1.1 and Content-Length bodies only,
+  no TLS; the repository holds only the *latest* request while responses are
+  matched by request id; handlers run on the main/GPUI thread, so keep them
+  light; headless runs (`run_headless`) never poll, so the bridge never fires.
 * **Hybrid** — `file` (JSON/YAML/TOML/CSV/lines/raw, optional `notify` watch).
 
 Sources are configured under `<data><source name="…" type="…" /></data>`,
