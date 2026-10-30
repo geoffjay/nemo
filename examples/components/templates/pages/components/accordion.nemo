@@ -1,7 +1,126 @@
+<script>
+let default_code = #"<accordion>
+  <accordion-item title="What is Nemo?" open="true">
+    <text>Nemo is a GPUI desktop app framework.</text>
+  </accordion-item>
+  <accordion-item title="How do I get started?">
+    <text>Create an app.xml file.</text>
+  </accordion-item>
+</accordion>"#;
+
+let multi_code = #"<accordion multiple="true" bordered="false">
+  <accordion-item title="Section A" open="true">...</accordion-item>
+  <accordion-item title="Section B" open="true">...</accordion-item>
+</accordion>"#;
+</script>
+
 <template name="component-page-accordion">
-  <component-page
-    name="Accordion"
-    description="A collapsible accordion containing accordion-item children"
-  >
+  <component-page name="Accordion" description="A collapsible accordion containing accordion-item children. Supports multiple open items and bordered styles.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="12">
+        <accordion id="accordion_demo">
+          <accordion-item id="acc_q1" title="What is Nemo?" open="true">
+            <text id="acc_a1">Nemo is a GPUI desktop application framework configured with XML.</text>
+          </accordion-item>
+          <accordion-item id="acc_q2" title="How do I get started?">
+            <text id="acc_a2">Create an app.xml file and define your layout with components.</text>
+          </accordion-item>
+          <accordion-item id="acc_q3" title="Can I use custom themes?">
+            <text id="acc_a3">Yes, Nemo supports theme configuration via the app.theme block.</text>
+          </accordion-item>
+        </accordion>
+      </stack>
+      <code-editor
+        id="accordion_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Multiple Open (no border)">
+      <stack direction="vertical" spacing="12">
+        <accordion id="accordion_multi" multiple="true" bordered="false">
+          <accordion-item id="acc_sa" title="Section A" open="true">
+            <text id="acc_sa_body">Content for section A.</text>
+          </accordion-item>
+          <accordion-item id="acc_sb" title="Section B" open="true">
+            <text id="acc_sb_body">Content for section B.</text>
+          </accordion-item>
+          <accordion-item id="acc_sc" title="Section C">
+            <text id="acc_sc_body">Content for section C.</text>
+          </accordion-item>
+        </accordion>
+      </stack>
+      <code-editor
+        id="accordion_code_multi"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ multi_code }}"
+      />
+    </component-example>
+
+    <component-example label="Rich Content">
+      <stack direction="vertical" spacing="12">
+        <text id="accordion_rich_desc">An accordion item's children can be any components, not just text.</text>
+        <accordion id="accordion_rich">
+          <accordion-item id="acc_rich_actions" title="Item with actions" open="true">
+            <stack id="acc_rich_actions_body" direction="vertical" spacing="8">
+              <text id="acc_rich_actions_text">This item's body holds a row of buttons.</text>
+              <stack id="acc_rich_actions_row" direction="horizontal" spacing="8">
+                <button id="acc_rich_btn_save" label="Save" variant="primary" />
+                <button id="acc_rich_btn_cancel" label="Cancel" variant="ghost" />
+              </stack>
+            </stack>
+          </accordion-item>
+          <accordion-item id="acc_rich_mixed" title="Item with mixed content">
+            <stack id="acc_rich_mixed_body" direction="vertical" spacing="12">
+              <alert id="acc_rich_alert" title="Heads up" message="This panel composes several components." variant="info" />
+              <input id="acc_rich_input" placeholder="Enter a value..." />
+              <progress id="acc_rich_progress" value="60" />
+            </stack>
+          </accordion-item>
+        </accordion>
+      </stack>
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="multiple" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Allow several items open at once.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="bordered" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Draw borders around items.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="title (accordion-item)" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Section header text.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="open (accordion-item)" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the item starts expanded.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

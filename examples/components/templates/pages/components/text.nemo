@@ -1,7 +1,56 @@
+<script>
+let default_code = #"<text>This is a simple text block. It renders
+plain content without any special formatting.</text>"#;
+
+let paragraphs_code = #"<text>Text components are useful for displaying
+descriptions, help text, and other content.</text>"#;
+</script>
+
 <template name="component-page-text">
-  <component-page
-    name="Text"
-    description="A text content block"
-  >
+  <component-page name="Text" description="A text content block. Renders plain content; use for paragraphs or descriptions.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="8">
+        <text id="text_example_1">This is a simple text block. It renders plain content without any special formatting.</text>
+      </stack>
+      <code-editor
+        id="text_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Paragraphs">
+      <stack direction="vertical" spacing="8">
+        <text id="text_example_2">Text components are useful for displaying descriptions, help text, and other informational content within your application layout.</text>
+      </stack>
+      <code-editor
+        id="text_code_paragraphs"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ paragraphs_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="content" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Text to display; element text content is equivalent. Required when the content attribute is used.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

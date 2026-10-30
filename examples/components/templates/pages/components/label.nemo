@@ -1,7 +1,68 @@
+<script>
+let default_code = #"<label text="Label" />"#;
+
+let sizes_code = #"<label text="Extra small (xs)" size="xs" />
+<label text="Small (sm)" size="sm" />
+<label text="Medium (md) — default" size="md" />
+<label text="Large (lg)" size="lg" />
+<label text="Extra large (xl)" size="xl" />"#;
+</script>
+
 <template name="component-page-label">
-  <component-page
-    name="Label"
-    description="A text label"
-  >
+  <component-page name="Label" description="A text label. Renders a single line of text at one of five sizes; size md is the default.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="8">
+        <label id="lbl_default" text="Label" />
+      </stack>
+      <code-editor
+        id="lbl_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Sizes">
+      <stack direction="vertical" spacing="8">
+        <label id="lbl_xs" text="Extra small label (xs)" size="xs" />
+        <label id="lbl_sm" text="Small label (sm)" size="sm" />
+        <label id="lbl_md" text="Medium label (md) — default" size="md" />
+        <label id="lbl_lg" text="Large label (lg)" size="lg" />
+        <label id="lbl_xl" text="Extra large label (xl)" size="xl" />
+      </stack>
+      <code-editor
+        id="lbl_code_sizes"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ sizes_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="text" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Label text. Required.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="size" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"md"</table-cell>
+        <table-cell>Label size: xs, sm, md, lg, xl.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

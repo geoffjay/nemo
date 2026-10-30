@@ -1,7 +1,72 @@
+<script>
+let default_code = #"<checkbox label="Unchecked" checked="false" />"#;
+
+let states_code = #"<checkbox label="Unchecked" checked="false" />
+<checkbox label="Checked" checked="true" />
+<checkbox label="Disabled" checked="false" disabled="true" />
+<checkbox label="Disabled checked" checked="true" disabled="true" />"#;
+</script>
+
 <template name="component-page-checkbox">
-  <component-page
-    name="Checkbox"
-    description="A checkbox input"
-  >
+  <component-page name="Checkbox" description="A checkbox input. Toggles boolean state; supports a label and disabled state.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="8">
+        <checkbox id="cb_default" label="Checkbox" />
+      </stack>
+      <code-editor
+        id="cb_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="States">
+      <stack direction="vertical" spacing="8">
+        <checkbox id="cb_unchecked" label="Unchecked" checked="false" />
+        <checkbox id="cb_checked" label="Checked" checked="true" />
+        <checkbox id="cb_disabled" label="Disabled checkbox" checked="false" disabled="true" />
+        <checkbox id="cb_disabled_checked" label="Disabled checked" checked="true" disabled="true" />
+      </stack>
+      <code-editor
+        id="cb_code_states"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ states_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="label" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Text shown next to the checkbox.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="checked" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the checkbox is checked.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disables interaction and dims the checkbox.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

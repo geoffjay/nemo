@@ -1,7 +1,120 @@
+<script>
+let default_code = #"<textarea placeholder="Enter your message..." rows="4" />"#;
+
+let autogrow_code = #"<textarea placeholder="Start typing and the textarea will grow..."
+          auto-grow-min="1" auto-grow-max="6" />"#;
+
+let default_value_code = #"<textarea rows="3" default-value="This textarea has a default value.
+It supports multiple lines of text." />"#;
+
+let disabled_code = #"<textarea placeholder="Cannot edit" rows="3" disabled="true" />"#;
+</script>
+
 <template name="component-page-textarea">
-  <component-page
-    name="Textarea"
-    description="A multi-line text input area"
-  >
+  <component-page name="Textarea" description="A multi-line text input. Supports configurable rows, placeholder text, auto-grow, and default values.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="8">
+        <textarea id="textarea_basic" placeholder="Enter your message..." rows="4" />
+      </stack>
+      <code-editor
+        id="textarea_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Auto-grow (1-6 rows)">
+      <stack direction="vertical" spacing="8">
+        <textarea id="textarea_autogrow" placeholder="Start typing and the textarea will grow..." auto-grow-min="1" auto-grow-max="6" />
+      </stack>
+      <code-editor
+        id="textarea_code_autogrow"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ autogrow_code }}"
+      />
+    </component-example>
+
+    <component-example label="With Default Value">
+      <stack direction="vertical" spacing="8">
+        <textarea id="textarea_default" rows="3" default-value="This textarea has a default value.&#10;It supports multiple lines of text." />
+      </stack>
+      <code-editor
+        id="textarea_code_default_value"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ default_value_code }}"
+      />
+    </component-example>
+
+    <component-example label="Disabled">
+      <stack direction="vertical" spacing="8">
+        <textarea id="textarea_disabled" placeholder="Cannot edit" rows="3" disabled="true" />
+      </stack>
+      <code-editor
+        id="textarea_code_disabled"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ disabled_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="placeholder" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Hint text shown when the field is empty.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="default-value" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Pre-filled content; supports multiple lines.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="rows" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Visible row count.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="auto-grow-min" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Minimum rows when auto-growing.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="auto-grow-max" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Maximum rows when auto-growing.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disables editing and dims the field.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

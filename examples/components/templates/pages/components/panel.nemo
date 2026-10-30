@@ -1,7 +1,94 @@
+<script>
+let nested_code = #"<panel>
+  <label text="Outer panel" />
+  <panel>
+    <label text="Inner nested panel" />
+  </panel>
+</panel>"#;
+
+let horizontal_code = #"<stack direction="horizontal" spacing="8">
+  <panel><label text="Column 1" /></panel>
+  <panel><label text="Column 2" /></panel>
+  <panel><label text="Column 3" /></panel>
+</stack>"#;
+</script>
+
 <template name="component-page-panel">
-  <component-page
-    name="Panel"
-    description="A generic container panel"
-  >
+  <component-page name="Panel" description="A generic container panel with padding and background. Stacks arrange children vertically or horizontally with configurable spacing.">
+    <component-example label="Nested Panels">
+      <stack direction="vertical" spacing="12">
+        <panel id="panel_outer">
+          <label id="panel_outer_label" text="Outer panel" />
+          <panel id="panel_inner">
+            <label id="panel_inner_label" text="Inner nested panel" />
+          </panel>
+        </panel>
+      </stack>
+      <code-editor
+        id="panel_code_nested"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ nested_code }}"
+      />
+    </component-example>
+
+    <component-example label="Horizontal Stack">
+      <stack id="panel_h_stack" direction="horizontal" spacing="8">
+        <panel id="panel_h_item1">
+          <label id="panel_h_item1_label" text="Column 1" />
+        </panel>
+        <panel id="panel_h_item2">
+          <label id="panel_h_item2_label" text="Column 2" />
+        </panel>
+        <panel id="panel_h_item3">
+          <label id="panel_h_item3_label" text="Column 3" />
+        </panel>
+      </stack>
+      <code-editor
+        id="panel_code_horizontal"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ horizontal_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="children" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Panels and stacks are generic containers; any child components nest inside.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="direction (stack)" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"vertical"</table-cell>
+        <table-cell>Stack layout direction: vertical or horizontal.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="spacing (stack)" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Gap between stack children in pixels.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="padding" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Shared styling attribute: inner padding in pixels.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

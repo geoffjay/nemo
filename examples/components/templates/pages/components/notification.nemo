@@ -1,7 +1,49 @@
+<script>
+let types_code = #"<notification message="This is an informational message." kind="info" />
+<notification message="Operation completed successfully!" kind="success" />
+<notification message="Warning: please review before proceeding." kind="warning" />
+<notification message="Error: something went wrong." kind="error" />"#;
+</script>
+
 <template name="component-page-notification">
-  <component-page
-    name="Notification"
-    description="A notification toast"
-  >
+  <component-page name="Notification" description="A notification toast displaying status messages. Kinds: info, success, warning, error.">
+    <component-example label="Notification Types">
+      <stack direction="vertical" spacing="8">
+        <notification id="notif_info" message="This is an informational message." kind="info" />
+        <notification id="notif_success" message="Operation completed successfully!" kind="success" />
+        <notification id="notif_warning" message="Warning: please review before proceeding." kind="warning" />
+        <notification id="notif_error" message="Error: something went wrong." kind="error" />
+      </stack>
+      <code-editor
+        id="notif_code_types"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ types_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="message" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Notification text. Required.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="kind" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"info"</table-cell>
+        <table-cell>Notification kind: info, success, warning, error.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

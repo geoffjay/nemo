@@ -1,7 +1,62 @@
+<script>
+let default_code = #"<avatar name="Alice Johnson" />"#;
+
+let row_code = #"<stack direction="horizontal" spacing="12">
+  <avatar name="Alice Johnson" />
+  <avatar name="Bob Smith" />
+  <avatar name="Carol White" />
+  <avatar name="Dave Brown" />
+</stack>"#;
+</script>
+
 <template name="component-page-avatar">
-  <component-page
-    name="Avatar"
-    description="A user avatar showing initials"
-  >
+  <component-page name="Avatar" description="A user avatar showing initials. Provide a name to generate initials automatically.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="12">
+        <avatar id="avatar_default" name="Alice Johnson" />
+      </stack>
+      <code-editor
+        id="avatar_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Row of Avatars">
+      <stack direction="horizontal" spacing="12">
+        <avatar id="avatar_alice" name="Alice Johnson" />
+        <avatar id="avatar_bob" name="Bob Smith" />
+        <avatar id="avatar_carol" name="Carol White" />
+        <avatar id="avatar_dave" name="Dave Brown" />
+      </stack>
+      <code-editor
+        id="avatar_code_row"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ row_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="name" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Person's name; initials are derived automatically.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

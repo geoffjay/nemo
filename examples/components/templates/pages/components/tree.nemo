@@ -1,7 +1,85 @@
+<script>
+let default_code = #"<tree>
+  <tree-node expanded="true">
+    <icon name="folder" />
+    <text>src</text>
+    <tree-node>
+      <icon name="file" />
+      <text>main.rs</text>
+    </tree-node>
+    <tree-node>lib.rs</tree-node>
+  </tree-node>
+  <tree-node>Cargo.toml</tree-node>
+</tree>"#;
+</script>
+
 <template name="component-page-tree">
-  <component-page
-    name="Tree"
-    description="A tree view, built from tree-node children or an items array"
-  >
+  <component-page name="Tree" description="A tree view built from tree-node children. Displays hierarchical data with expand/collapse and keyboard navigation.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="8">
+        <tree id="tree_demo" height="240">
+          <tree-node id="tree_demo_src" expanded="true">
+            <icon id="tree_demo_src_icon" name="folder" />
+            <text id="tree_demo_src_text">src</text>
+            <tree-node id="tree_demo_main">
+              <icon id="tree_demo_main_icon" name="file" />
+              <text id="tree_demo_main_text">main.rs</text>
+            </tree-node>
+            <tree-node id="tree_demo_lib">lib.rs</tree-node>
+            <tree-node id="tree_demo_components" expanded="true">
+              <icon id="tree_demo_components_icon" name="folder-open" />
+              <text id="tree_demo_components_text">components</text>
+              <tree-node id="tree_demo_mod">mod.rs</tree-node>
+              <tree-node id="tree_demo_table">table.rs</tree-node>
+              <tree-node id="tree_demo_tree">tree.rs</tree-node>
+            </tree-node>
+          </tree-node>
+          <tree-node id="tree_demo_cargo">Cargo.toml</tree-node>
+          <tree-node id="tree_demo_readme" label="README.md" />
+        </tree>
+      </stack>
+      <code-editor
+        id="tree_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="20"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="items" /></table-cell>
+        <table-cell>array&lt;any&gt;</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Data-driven nodes; omit when declaring tree-node children instead.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="label (tree-node)" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Node text; element text content is equivalent.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="expanded (tree-node)" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the node starts expanded.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled (tree-node)" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disables interaction with the node.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

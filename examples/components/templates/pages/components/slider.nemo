@@ -1,7 +1,72 @@
+<script>
+let basic_code = #"<slider min="0" max="100" step="1" value="50" />"#;
+
+let fine_code = #"<slider min="0.0" max="1.0" step="0.1" value="0.5" />"#;
+</script>
+
 <template name="component-page-slider">
-  <component-page
-    name="Slider"
-    description="A range slider input"
-  >
+  <component-page name="Slider" description="A range slider input. Selects a numeric value within a range; supports min, max, step, and default value.">
+    <component-example label="Basic Slider (0-100)">
+      <stack direction="vertical" spacing="8">
+        <slider id="slider_basic" min="0" max="100" step="1" value="50" />
+      </stack>
+      <code-editor
+        id="slider_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Fine Step (0-1, step 0.1)">
+      <stack direction="vertical" spacing="8">
+        <slider id="slider_fine" min="0.0" max="1.0" step="0.1" value="0.5" />
+      </stack>
+      <code-editor
+        id="slider_code_fine"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ fine_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="min" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>0.0</table-cell>
+        <table-cell>Lower bound of the range.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="max" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>100.0</table-cell>
+        <table-cell>Upper bound of the range.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="step" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>1.0</table-cell>
+        <table-cell>Value increment per step.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="value" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>0.0</table-cell>
+        <table-cell>Initial slider value.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

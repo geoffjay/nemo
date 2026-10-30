@@ -1,7 +1,80 @@
+<script>
+let icon_code = #"<svg width="64" height="64">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+       stroke-width="1.5" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9.75 3.104v5.714..." />
+  </svg>
+</svg>"#;
+
+let larger_code = #"<svg width="96" height="96">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+       stroke-width="1.5" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9.75 3.104v5.714..." />
+  </svg>
+</svg>"#;
+</script>
+
 <template name="component-page-svg">
-  <component-page
-    name="SVG"
-    description="Renders SVG vector graphics from a file/URL (`src`) or embedded inline markup"
-  >
+  <component-page name="SVG" description="Renders SVG vector graphics from a file/URL (src) or embedded inline markup. Inline bodies are captured verbatim; the graphic rasterizes as one image, so click/hover handlers target it as a whole.">
+    <component-example label="Icon in a Rounded Panel">
+      <stack direction="horizontal" spacing="8" align="center">
+        <panel id="svg_icon_frame" width="128" height="128" rounded="xl" shadow="md">
+          <stack id="svg_icon_center" direction="horizontal" align="center" justify="center" flex="1">
+            <svg id="svg_beaker" width="64" height="64">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+            </svg>
+            </svg>
+          </stack>
+        </panel>
+        <panel id="svg_icon_frame_lg" width="192" height="192" rounded="xl" shadow="md">
+          <stack id="svg_icon_center_lg" direction="horizontal" align="center" justify="center" flex="1">
+            <svg id="svg_beaker_lg" width="96" height="96">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+            </svg>
+            </svg>
+          </stack>
+        </panel>
+      </stack>
+      <code-editor
+        id="svg_code_icon"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ icon_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="src" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>SVG file path or URL; omit to embed inline markup.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="content" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Inline SVG markup as an attribute; element children are equivalent.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="width / height" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Rendered size in pixels.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

@@ -1,7 +1,55 @@
+<script>
+let variants_code = #"<alert title="Information" message="This is an informational alert message." variant="info" />
+<alert title="Success" message="The operation completed successfully." variant="success" />
+<alert title="Warning" message="Please review the changes before continuing." variant="warning" />
+<alert title="Error" message="Something went wrong. Please try again." variant="error" />"#;
+</script>
+
 <template name="component-page-alert">
-  <component-page
-    name="Alert"
-    description="A status alert message"
-  >
+  <component-page name="Alert" description="A status alert message. Variants: info, success, warning, error.">
+    <component-example label="Variants">
+      <stack direction="vertical" spacing="8">
+        <alert id="alert_info" title="Information" message="This is an informational alert message." variant="info" />
+        <alert id="alert_success" title="Success" message="The operation completed successfully." variant="success" />
+        <alert id="alert_warning" title="Warning" message="Please review the changes before continuing." variant="warning" />
+        <alert id="alert_error" title="Error" message="Something went wrong. Please try again." variant="error" />
+      </stack>
+      <code-editor
+        id="alert_code_variants"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ variants_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="message" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Alert body text. Required.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="title" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Alert heading text.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="variant" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"info"</table-cell>
+        <table-cell>Style variant: info, success, warning, error.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

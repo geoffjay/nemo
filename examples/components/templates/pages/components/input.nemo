@@ -1,7 +1,66 @@
+<script>
+let default_code = #"<input placeholder="Type something..." />"#;
+
+let disabled_code = #"<input placeholder="Cannot edit" disabled="true" />"#;
+</script>
+
 <template name="component-page-input">
-  <component-page
-    name="Text Input"
-    description="A text input field"
-  >
+  <component-page name="Input" description="A text input field for user data entry. Supports placeholder text and disabled state.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="8">
+        <input id="inp_basic" placeholder="Type something..." />
+      </stack>
+      <code-editor
+        id="inp_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Disabled">
+      <stack direction="vertical" spacing="8">
+        <input id="inp_disabled" placeholder="Cannot edit" disabled="true" />
+      </stack>
+      <code-editor
+        id="inp_code_disabled"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ disabled_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="placeholder" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Hint text shown when the field is empty.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="value" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Current field value.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disables editing and dims the field.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

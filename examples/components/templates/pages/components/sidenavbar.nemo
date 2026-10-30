@@ -1,7 +1,141 @@
+<script>
+let default_code = #"<sidenav-bar collapsed="true">
+  <sidenav-bar-item icon="globe" label="Home" />
+  <sidenav-bar-item icon="inbox" label="Inbox" />
+  <sidenav-bar-item icon="search" label="Search" />
+  <sidenav-bar-item icon="settings" label="Settings" />
+</sidenav-bar>"#;
+
+let expanded_code = #"<sidenav-bar collapsed="false">
+  <sidenav-bar-item icon="globe" label="Home" />
+  <sidenav-bar-item icon="inbox" label="Inbox" />
+  <sidenav-bar-item icon="search" label="Search" />
+  <sidenav-bar-item icon="settings" label="Settings" />
+  <button label="Toggle" variant="ghost" size="sm" icon="menu" on-click="on_toggle_sidenav" />
+</sidenav-bar>"#;
+
+let callbacks_code = ##"<sidenav-bar collapsed="false">
+  ...
+  <button label="Toggle" variant="ghost" size="sm"
+          icon="menu" on-click="on_toggle_sidenav" />
+</sidenav-bar>
+
+# component file script
+fn on_toggle_sidenav(component_id, event_data) {
+  let current = get_component_property("sidenav_center_expanded", "collapsed");
+  set_component_property("sidenav_center_expanded", "collapsed", current != true);
+}"##;
+
+// Sidenav page callback: toggles collapsed state of the center demo bar.
+fn on_toggle_sidenav(component_id, event_data) {
+    let current = get_component_property("sidenav_center_expanded", "collapsed");
+    if current == true {
+        set_component_property("sidenav_center_expanded", "collapsed", false);
+    } else {
+        set_component_property("sidenav_center_expanded", "collapsed", true);
+    }
+}
+</script>
+
 <template name="component-page-sidenavbar">
-  <component-page
-    name="Sidenav Bar"
-    description="A vertical navigation sidebar with collapsible icon+label items"
-  >
+  <component-page name="Sidenav Bar" description="A vertical navigation sidebar with icon and label items. Supports collapsed (icon-only) and expanded (icon + label) modes.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="24">
+        <sidenav-bar id="sidenav_default" collapsed="true">
+          <sidenav-bar-item id="snb_item_home" icon="globe" label="Home" />
+          <sidenav-bar-item id="snb_item_inbox" icon="inbox" label="Inbox" />
+          <sidenav-bar-item id="snb_item_search" icon="search" label="Search" />
+          <sidenav-bar-item id="snb_item_settings" icon="settings" label="Settings" />
+        </sidenav-bar>
+      </stack>
+      <code-editor
+        id="sidenav_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Expanded (with toggle)">
+      <stack direction="horizontal" spacing="0" width="360" height="300" border="1" align="stretch">
+        <sidenav-bar id="sidenav_center_expanded" collapsed="false">
+          <sidenav-bar-item id="snce_item_home" icon="globe" label="Home" />
+          <sidenav-bar-item id="snce_item_inbox" icon="inbox" label="Inbox" />
+          <sidenav-bar-item id="snce_item_search" icon="search" label="Search" />
+          <sidenav-bar-item id="snce_item_settings" icon="settings" label="Settings" />
+          <button id="snce_toggle_btn" label="Toggle" variant="ghost" size="sm" icon="menu" on-click="on_toggle_sidenav" />
+        </sidenav-bar>
+      </stack>
+      <code-editor
+        id="sidenav_code_expanded"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ expanded_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="collapsed" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Icon-only mode when true; icon + label when false.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="width" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>200</table-cell>
+        <table-cell>Bar width in pixels (expanded mode).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="border-left" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Draw the bar's left border.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="border-right" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Draw the bar's right border.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="&lt;sidenav-bar-item&gt;" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Child items with icon and label attributes.</table-cell>
+      </table-row>
+    </table>
+
+    <component-example label="on-click (toggle)" slot="callbacks">
+      <stack direction="horizontal" spacing="0" width="360" height="300" border="1" align="stretch">
+        <sidenav-bar id="sidenav_toggle_demo" collapsed="false">
+          <sidenav-bar-item id="sntd_item_home" icon="globe" label="Home" />
+          <sidenav-bar-item id="sntd_item_settings" icon="settings" label="Settings" />
+          <button id="sntd_toggle_btn" label="Toggle" variant="ghost" size="sm" icon="menu" on-click="on_toggle_sidenav" />
+        </sidenav-bar>
+      </stack>
+      <code-editor
+        id="sidenav_code_callbacks"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="12"
+        default-value="{{ callbacks_code }}"
+      />
+    </component-example>
   </component-page>
 </template>

@@ -1,7 +1,80 @@
+<script>
+let basic_code = #"<toggle label="Off" checked="false" />
+<toggle label="On" checked="true" />
+<toggle label="Disabled" checked="false" disabled="true" />"#;
+
+let icons_code = #"<toggle label="Star" icon="star" checked="false" />
+<toggle label="Heart" icon="heart" checked="true" />
+<toggle label="Bell" icon="bell" checked="false" />"#;
+</script>
+
 <template name="component-page-toggle">
-  <component-page
-    name="Toggle"
-    description="A toggle button"
-  >
+  <component-page name="Toggle" description="A toggle button. Switches between on/off states; supports labels and icons.">
+    <component-example label="Basic Toggles">
+      <stack direction="horizontal" spacing="8">
+        <toggle id="toggle_off" label="Off" checked="false" />
+        <toggle id="toggle_on" label="On" checked="true" />
+        <toggle id="toggle_disabled" label="Disabled" checked="false" disabled="true" />
+      </stack>
+      <code-editor
+        id="toggle_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="With Icons">
+      <stack direction="horizontal" spacing="8">
+        <toggle id="toggle_star" label="Star" icon="star" checked="false" />
+        <toggle id="toggle_heart" label="Heart" icon="heart" checked="true" />
+        <toggle id="toggle_bell" label="Bell" icon="bell" checked="false" />
+      </stack>
+      <code-editor
+        id="toggle_code_icons"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ icons_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="checked" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the toggle is on.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="label" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Text shown inside the toggle.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="icon" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Icon name shown inside the toggle.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disables interaction and dims the toggle.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

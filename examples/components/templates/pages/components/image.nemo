@@ -1,7 +1,61 @@
+<script>
+let fallback_code = #"<image alt="Placeholder: no image source provided" />"#;
+
+let src_code = #"<image src="https://example.com/logo.png" alt="Logo" />"#;
+</script>
+
 <template name="component-page-image">
-  <component-page
-    name="Image"
-    description="An image display"
-  >
+  <component-page name="Image" description="An image display. Renders an image from a source path; falls back to alt text when no source is provided.">
+    <component-example label="Alt Text Fallback">
+      <stack direction="vertical" spacing="8">
+        <image id="image_no_src" alt="Placeholder: no image source provided" />
+        <image id="image_another" alt="Another image placeholder with alt text" />
+      </stack>
+      <code-editor
+        id="image_code_fallback"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ fallback_code }}"
+      />
+    </component-example>
+
+    <component-example label="With Source">
+      <stack direction="vertical" spacing="8">
+        <image id="image_with_src" src="https://example.com/logo.png" alt="Logo" />
+      </stack>
+      <code-editor
+        id="image_code_src"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ src_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="src" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Image path or URL; without it the alt text renders as a placeholder.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="alt" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Alternative text and fallback content.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

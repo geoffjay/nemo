@@ -1,7 +1,123 @@
+<script>
+let variants_code = #"<dropdown-button label="Actions">
+  <menu-item label="Copy" />
+  <menu-item label="Paste" />
+  <menu-item label="Cut" />
+</dropdown-button>
+
+<dropdown-button label="Save" variant="primary">
+  <menu-item label="Save as Draft" />
+  <menu-item label="Save and Publish" />
+</dropdown-button>
+
+<dropdown-button label="Delete" variant="danger">
+  <menu-item label="Move to Trash" />
+  <menu-item label="Delete Permanently" />
+</dropdown-button>"#;
+
+let callbacks_code = ##"<dropdown-button label="Actions">
+  <menu-item label="Copy" on-click="on_dropdown_select" />
+  <menu-item label="Paste" on-click="on_dropdown_select" />
+  <menu-item label="Cut" on-click="on_dropdown_select" />
+</dropdown-button>
+
+# component file script
+fn on_dropdown_select(component_id, event_data) {
+  set_component_property("dropdown_status", "content",
+    "Selected: " + component_id);
+}"##;
+
+// Dropdown page callback: proves <menu-item on-click> is wired.
+// `component_id` is the clicked item's id, so the same handler reports
+// which entry fired.
+fn on_dropdown_select(component_id, event_data) {
+    let action = if component_id == "dropdown_item_copy" {
+        "Copy"
+    } else if component_id == "dropdown_item_paste" {
+        "Paste"
+    } else if component_id == "dropdown_item_cut" {
+        "Cut"
+    } else {
+        component_id
+    };
+    set_component_property("dropdown_status", "content", "Selected: " + action);
+}
+</script>
+
 <template name="component-page-dropdown-button">
-  <component-page
-    name="Dropdown Button"
-    description="A button with a dropdown menu built from menu-item children"
-  >
+  <component-page name="Dropdown Button" description="A button with a dropdown menu built from menu-item children. Supports button variants.">
+    <component-example label="Variants">
+      <stack direction="horizontal" spacing="8">
+        <dropdown-button id="dropdown_default" label="Actions">
+          <menu-item id="dropdown_item_copy" label="Copy" />
+          <menu-item id="dropdown_item_paste" label="Paste" />
+          <menu-item id="dropdown_item_cut" label="Cut" />
+        </dropdown-button>
+        <dropdown-button id="dropdown_primary" label="Save" variant="primary">
+          <menu-item id="dropdown_item_draft" label="Save as Draft" />
+          <menu-item id="dropdown_item_publish" label="Save and Publish" />
+        </dropdown-button>
+        <dropdown-button id="dropdown_danger" label="Delete" variant="danger">
+          <menu-item id="dropdown_item_trash" label="Move to Trash" />
+          <menu-item id="dropdown_item_delete" label="Delete Permanently" />
+        </dropdown-button>
+      </stack>
+      <code-editor
+        id="dropdown_code_variants"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="16"
+        default-value="{{ variants_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="label" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"Action"</table-cell>
+        <table-cell>Button label.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="variant" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"secondary"</table-cell>
+        <table-cell>Style variant: primary, secondary, danger, ghost.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="&lt;menu-item&gt; children" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Each menu-item is an entry; its label attribute is the row text and on-click fires when picked.</table-cell>
+      </table-row>
+    </table>
+
+    <component-example label="on-click (menu items)" slot="callbacks">
+      <stack direction="vertical" spacing="8">
+        <dropdown-button id="dropdown_actionable" label="Actions">
+          <menu-item id="dropdown_item_copy_cb" label="Copy" on-click="on_dropdown_select" />
+          <menu-item id="dropdown_item_paste_cb" label="Paste" on-click="on_dropdown_select" />
+          <menu-item id="dropdown_item_cut_cb" label="Cut" on-click="on_dropdown_select" />
+        </dropdown-button>
+        <text id="dropdown_status">No action selected yet — open Actions and pick an item.</text>
+      </stack>
+      <code-editor
+        id="dropdown_code_callbacks"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="12"
+        default-value="{{ callbacks_code }}"
+      />
+    </component-example>
   </component-page>
 </template>

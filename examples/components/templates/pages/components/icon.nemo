@@ -1,7 +1,102 @@
+<script>
+let default_code = #"<icon name="search" />"#;
+
+let grid_code = #"<icon name="search" />
+<icon name="settings" />
+<icon name="bell" />
+<icon name="check" />
+<icon name="close" />
+<icon name="github" />
+<icon name="globe" />
+<icon name="user" />
+<icon name="heart" />
+<icon name="star" />
+<icon name="plus" />
+<icon name="minus" />
+<icon name="sun" />
+<icon name="moon" />
+<icon name="inbox" />
+<icon name="copy" />
+<icon name="trash" />
+<icon name="eye" />
+<icon name="menu" />"#;
+</script>
+
 <template name="component-page-icon">
-  <component-page
-    name="Icon"
-    description="An icon display"
-  >
+  <component-page name="Icon" description="An icon display. Renders a named vector icon from the gpui-component icon set.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="8">
+        <icon id="icon_default" name="search" />
+      </stack>
+      <code-editor
+        id="icon_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="Available Icons">
+      <stack direction="horizontal" spacing="16">
+        <icon id="icon_row1_search" name="search" />
+        <icon id="icon_row1_settings" name="settings" />
+        <icon id="icon_row1_bell" name="bell" />
+        <icon id="icon_row1_check" name="check" />
+        <icon id="icon_row1_close" name="close" />
+        <icon id="icon_row1_file" name="file" />
+        <icon id="icon_row1_folder" name="folder" />
+      </stack>
+      <stack direction="horizontal" spacing="16">
+        <icon id="icon_row2_github" name="github" />
+        <icon id="icon_row2_globe" name="globe" />
+        <icon id="icon_row2_user" name="user" />
+        <icon id="icon_row2_heart" name="heart" />
+        <icon id="icon_row2_star" name="star" />
+        <icon id="icon_row2_plus" name="plus" />
+        <icon id="icon_row2_minus" name="minus" />
+      </stack>
+      <stack direction="horizontal" spacing="16">
+        <icon id="icon_row3_sun" name="sun" />
+        <icon id="icon_row3_moon" name="moon" />
+        <icon id="icon_row3_inbox" name="inbox" />
+        <icon id="icon_row3_copy" name="copy" />
+        <icon id="icon_row3_trash" name="trash" />
+        <icon id="icon_row3_eye" name="eye" />
+        <icon id="icon_row3_menu" name="menu" />
+      </stack>
+      <code-editor
+        id="icon_code_grid"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ grid_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="name" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Icon name from the gpui-component icon set. Required.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="size" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>16</table-cell>
+        <table-cell>Icon size in pixels.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

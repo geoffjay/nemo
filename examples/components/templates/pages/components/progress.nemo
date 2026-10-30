@@ -1,7 +1,56 @@
+<script>
+let values_code = #"<progress value="0" />
+<progress value="25" />
+<progress value="50" />
+<progress value="75" />
+<progress value="100" />"#;
+</script>
+
 <template name="component-page-progress">
-  <component-page
-    name="Progress"
-    description="A progress indicator"
-  >
+  <component-page name="Progress" description="A progress indicator. Set value (0-100) and an optional max.">
+    <component-example label="Various Values">
+      <stack direction="vertical" spacing="8">
+        <label id="prog_label_0" text="0%" size="xs" />
+        <progress id="prog_0" value="0" />
+        <label id="prog_label_25" text="25%" size="xs" />
+        <progress id="prog_25" value="25" />
+        <label id="prog_label_50" text="50%" size="xs" />
+        <progress id="prog_50" value="50" />
+        <label id="prog_label_75" text="75%" size="xs" />
+        <progress id="prog_75" value="75" />
+        <label id="prog_label_100" text="100%" size="xs" />
+        <progress id="prog_100" value="100" />
+      </stack>
+      <code-editor
+        id="prog_code_values"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ values_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="value" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Current progress value.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="max" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>100.0</table-cell>
+        <table-cell>Maximum of the progress range.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

@@ -1,7 +1,47 @@
+<script>
+let default_code = #"<list>
+  <list-item><text>First item</text></list-item>
+  <list-item><text>Second item</text></list-item>
+  <list-item><text>Third item</text></list-item>
+</list>"#;
+</script>
+
 <template name="component-page-list">
-  <component-page
-    name="List"
-    description="A list built from list-item children"
-  >
+  <component-page name="List" description="A list built from list-item children. Renders items as a vertical list with hover highlighting.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="8">
+        <list id="list_basic">
+          <list-item id="list_item_1"><text id="list_item_1_text">First item</text></list-item>
+          <list-item id="list_item_2"><text id="list_item_2_text">Second item</text></list-item>
+          <list-item id="list_item_3"><text id="list_item_3_text">Third item</text></list-item>
+          <list-item id="list_item_4"><text id="list_item_4_text">Fourth item</text></list-item>
+          <list-item id="list_item_5"><text id="list_item_5_text">Fifth item</text></list-item>
+        </list>
+      </stack>
+      <code-editor
+        id="list_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="&lt;list-item&gt; children" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Each list-item is one row; its children are that row's content.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

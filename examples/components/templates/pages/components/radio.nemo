@@ -1,7 +1,82 @@
+<script>
+let vertical_code = #"<radio value="Option A">
+  <option value="Option A" />
+  <option value="Option B" />
+  <option value="Option C" />
+</radio>"#;
+
+let horizontal_code = #"<radio value="Medium" direction="horizontal">
+  <option value="Small" />
+  <option value="Medium" />
+  <option value="Large" />
+</radio>"#;
+</script>
+
 <template name="component-page-radio">
-  <component-page
-    name="Radio"
-    description="A radio button group built from option children"
-  >
+  <component-page name="Radio" description="A radio button group built from option children. Allows selecting one option from a set; vertical or horizontal layout.">
+    <component-example label="Vertical (default)">
+      <stack direction="vertical" spacing="8">
+        <radio id="radio_vertical" value="Option A">
+          <option id="radio_va_a" value="Option A" />
+          <option id="radio_va_b" value="Option B" />
+          <option id="radio_va_c" value="Option C" />
+        </radio>
+      </stack>
+      <code-editor
+        id="radio_code_vertical"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ vertical_code }}"
+      />
+    </component-example>
+
+    <component-example label="Horizontal">
+      <stack direction="vertical" spacing="8">
+        <radio id="radio_horizontal" value="Medium" direction="horizontal">
+          <option id="radio_h_s" value="Small" />
+          <option id="radio_h_m" value="Medium" />
+          <option id="radio_h_l" value="Large" />
+        </radio>
+      </stack>
+      <code-editor
+        id="radio_code_horizontal"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ horizontal_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="value" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Currently selected option value.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="direction" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"vertical"</table-cell>
+        <table-cell>Option layout: vertical or horizontal.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="&lt;option&gt; children" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Each option declares a selectable choice by value.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

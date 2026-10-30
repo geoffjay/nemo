@@ -1,7 +1,110 @@
+<script>
+let declared_code = #"<table stripe="true">
+  <table-header>
+    <table-column field="name" width="150">Name</table-column>
+    <table-column field="email" width="220">Email</table-column>
+    <table-column field="role" width="120">Role</table-column>
+    <table-column field="status" width="100">Status</table-column>
+  </table-header>
+  <table-row>
+    <table-cell>Alice Johnson</table-cell>
+    <table-cell>alice@example.com</table-cell>
+    <table-cell col-span="2">Admin (Active)</table-cell>
+  </table-row>
+</table>"#;
+
+let data_code = #"<table stripe="true"
+  columns='[{"key":"name","label":"Name","width":150},
+            {"key":"email","label":"Email","width":220},
+            {"key":"role","label":"Role","width":120},
+            {"key":"status","label":"Status","width":100}]'
+  data='[{"name":"Alice Johnson","email":"alice@example.com","role":"Admin","status":"Active"},
+         {"name":"Bob Smith","email":"bob@example.com","role":"Editor","status":"Active"}]' />"#;
+</script>
+
 <template name="component-page-table">
-  <component-page
-    name="Table"
-    description="A data table"
-  >
+  <component-page name="Table" description="A data table. Displays tabular rows with columns, styling, and row selection; declared rows or data-driven arrays.">
+    <component-example label="Declared Columns and Rows">
+      <stack direction="vertical" spacing="8">
+        <table id="table_demo" stripe="true" height="220">
+          <table-header>
+            <table-column field="name" width="150">Name</table-column>
+            <table-column field="email" width="220">Email</table-column>
+            <table-column field="role" width="120">Role</table-column>
+            <table-column field="status" width="100">Status</table-column>
+          </table-header>
+          <table-row>
+            <table-cell>Alice Johnson</table-cell>
+            <table-cell>alice@example.com</table-cell>
+            <table-cell col-span="2">Admin (Active)</table-cell>
+          </table-row>
+        </table>
+      </stack>
+      <code-editor
+        id="table_code_declared"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="14"
+        default-value="{{ declared_code }}"
+      />
+    </component-example>
+
+    <component-example label="Data-Driven">
+      <stack direction="vertical" spacing="8">
+        <table id="table_demo_data" stripe="true" height="200"
+          columns='[{"key":"name","label":"Name","width":150},{"key":"email","label":"Email","width":220},{"key":"role","label":"Role","width":120},{"key":"status","label":"Status","width":100}]'
+          data='[{"name":"Alice Johnson","email":"alice@example.com","role":"Admin","status":"Active"},{"name":"Bob Smith","email":"bob@example.com","role":"Editor","status":"Active"},{"name":"Carol White","email":"carol@example.com","role":"Viewer","status":"Inactive"},{"name":"Dave Brown","email":"dave@example.com","role":"Editor","status":"Active"},{"name":"Eve Davis","email":"eve@example.com","role":"Admin","status":"Active"}]' />
+      </stack>
+      <code-editor
+        id="table_code_data"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ data_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="columns" /></table-cell>
+        <table-cell>array&lt;object&gt;</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Data-driven columns: [{key, label, width}]. Omit when declaring table-column children instead.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="data" /></table-cell>
+        <table-cell>any</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Row data as an array of objects keyed by column key.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="stripe" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Alternate row shading.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="bordered" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Draw table cell borders.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="col-span (table-cell)" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>1</table-cell>
+        <table-cell>Columns spanned by a declared cell.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

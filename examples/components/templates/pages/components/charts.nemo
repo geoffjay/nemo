@@ -1,7 +1,189 @@
+<script>
+let line_code = #"<line-chart x-field="month" y-field="revenue" dot="true" height="300"
+  data='[{"month":"Jan","revenue":186},{"month":"Feb","revenue":305},...]' />"#;
+
+let bar_code = #"<bar-chart x-field="month" y-field="visitors" show-label="true" height="300"
+  data='[{"month":"Jan","visitors":275},{"month":"Feb","visitors":200},...]' />"#;
+
+let multi_code = #"<area-chart x-field="month" y-fields='["desktop","mobile"]' height="300"
+  data='[{"month":"Jan","desktop":186,"mobile":80},...]'
+
+<pie-chart value-field="amount" height="300"
+  data='[{"label":"Chrome","amount":275},...]'
+  <!-- donut: -->
+<pie-chart value-field="value" inner-radius="60.0" height="300"
+  data='[{"name":"Rent","value":1200},...]' />"#;
+</script>
+
 <template name="component-page-charts">
-  <component-page
-    name="Charts"
-    description="Chart visualizations: line, realtime, bar, area, pie, candlestick, column, stacked, clustered, scatter, bubble, heatmap, radar, pyramid, and funnel charts"
-  >
+  <component-page name="Charts" description="Chart components for data visualization. Line, bar, area, pie, candlestick, column, stacked, clustered, scatter, bubble, heatmap, radar, pyramid, and funnel charts — all driven by a data array plus field selectors.">
+    <component-example label="Line Chart">
+      <line-chart id="line_chart_demo" x-field="month" y-field="revenue" dot="true" height="300"
+        data='[{"month":"Jan","revenue":186},{"month":"Feb","revenue":305},{"month":"Mar","revenue":237},{"month":"Apr","revenue":73},{"month":"May","revenue":209},{"month":"Jun","revenue":214}]' />
+      <code-editor
+        id="chart_code_line"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ line_code }}"
+      />
+    </component-example>
+
+    <component-example label="Bar Chart">
+      <bar-chart id="bar_chart_demo" x-field="month" y-field="visitors" show-label="true" height="300"
+        data='[{"month":"Jan","visitors":275},{"month":"Feb","visitors":200},{"month":"Mar","visitors":187},{"month":"Apr","visitors":173},{"month":"May","visitors":90},{"month":"Jun","visitors":301}]' />
+      <code-editor
+        id="chart_code_bar"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ bar_code }}"
+      />
+    </component-example>
+
+    <component-example label="Area Chart (Multi-Series)">
+      <area-chart id="area_chart_demo" x-field="month" y-fields='["desktop","mobile"]' height="300"
+        data='[{"month":"Jan","desktop":186,"mobile":80},{"month":"Feb","desktop":305,"mobile":200},{"month":"Mar","desktop":237,"mobile":120},{"month":"Apr","desktop":73,"mobile":190},{"month":"May","desktop":209,"mobile":130},{"month":"Jun","desktop":214,"mobile":140}]' />
+    </component-example>
+
+    <component-example label="Pie &amp; Donut">
+      <pie-chart id="pie_chart_demo" value-field="amount" height="300"
+        data='[{"label":"Chrome","amount":275},{"label":"Safari","amount":200},{"label":"Firefox","amount":187},{"label":"Edge","amount":173},{"label":"Other","amount":90}]' />
+      <pie-chart id="donut_chart_demo" value-field="value" inner-radius="60.0" height="300"
+        data='[{"name":"Rent","value":1200},{"name":"Food","value":450},{"name":"Transport","value":200},{"name":"Utilities","value":150}]' />
+      <code-editor
+        id="chart_code_pie"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ multi_code }}"
+      />
+    </component-example>
+
+    <component-example label="Candlestick Chart">
+      <candlestick-chart id="candlestick_chart_demo" x-field="date" open-field="open" high-field="high" low-field="low" close-field="close" height="300"
+        data='[{"date":"Mon","open":100.0,"high":110.0,"low":95.0,"close":108.0},{"date":"Tue","open":108.0,"high":115.0,"low":102.0,"close":104.0},{"date":"Wed","open":104.0,"high":112.0,"low":100.0,"close":111.0},{"date":"Thu","open":111.0,"high":120.0,"low":108.0,"close":118.0},{"date":"Fri","open":118.0,"high":122.0,"low":110.0,"close":112.0}]' />
+    </component-example>
+
+    <component-example label="Column Charts (Stacked &amp; Clustered)">
+      <column-chart id="column_chart_demo" x-field="month" y-field="sales" show-label="true" height="300"
+        data='[{"month":"Jan","sales":320},{"month":"Feb","sales":410},{"month":"Mar","sales":280},{"month":"Apr","sales":390},{"month":"May","sales":450},{"month":"Jun","sales":370}]' />
+      <stacked-column-chart id="stacked_column_chart_demo" x-field="quarter" y-fields='["product_a","product_b","product_c"]' height="300"
+        data='[{"quarter":"Q1","product_a":120,"product_b":90,"product_c":60},{"quarter":"Q2","product_a":150,"product_b":110,"product_c":80},{"quarter":"Q3","product_a":130,"product_b":100,"product_c":95},{"quarter":"Q4","product_a":170,"product_b":120,"product_c":70}]' />
+      <clustered-column-chart id="clustered_column_chart_demo" x-field="region" y-fields='["sales","returns"]' height="300"
+        data='[{"region":"North","sales":420,"returns":30},{"region":"South","sales":380,"returns":45},{"region":"East","sales":510,"returns":25},{"region":"West","sales":290,"returns":50}]' />
+    </component-example>
+
+    <component-example label="Bar Charts (Stacked &amp; Clustered)">
+      <stacked-bar-chart id="stacked_bar_chart_demo" y-field="department" x-fields='["budget","spent"]' height="300"
+        data='[{"department":"Engineering","budget":500,"spent":420},{"department":"Marketing","budget":300,"spent":280},{"department":"Sales","budget":400,"spent":350},{"department":"Support","budget":200,"spent":180}]' />
+      <clustered-bar-chart id="clustered_bar_chart_demo" y-field="language" x-fields='["stars","forks"]' height="300"
+        data='[{"language":"Rust","stars":850,"forks":120},{"language":"Go","stars":720,"forks":190},{"language":"Python","stars":950,"forks":310},{"language":"TypeScript","stars":680,"forks":150}]' />
+    </component-example>
+
+    <component-example label="Scatter &amp; Bubble">
+      <scatter-chart id="scatter_chart_demo" x-field="weight" y-field="height" dot-size="5.0" height="300"
+        data='[{"weight":60,"height":165},{"weight":72,"height":178},{"weight":55,"height":160},{"weight":85,"height":185},{"weight":68,"height":172},{"weight":90,"height":190},{"weight":63,"height":168},{"weight":78,"height":180},{"weight":50,"height":155},{"weight":95,"height":188}]' />
+      <bubble-chart id="bubble_chart_demo" x-field="gdp" y-field="life_expectancy" size-field="population" min-radius="5.0" max-radius="35.0" height="300"
+        data='[{"gdp":10,"life_expectancy":72,"population":50},{"gdp":35,"life_expectancy":78,"population":120},{"gdp":50,"life_expectancy":82,"population":30},{"gdp":25,"life_expectancy":75,"population":200},{"gdp":45,"life_expectancy":80,"population":80},{"gdp":15,"life_expectancy":68,"population":150}]' />
+    </component-example>
+
+    <component-example label="Heatmap">
+      <heatmap-chart id="heatmap_chart_demo" x-field="day" y-field="hour" value-field="count" height="300"
+        data='[{"day":"Mon","hour":"9am","count":12},{"day":"Mon","hour":"12pm","count":25},{"day":"Mon","hour":"3pm","count":18},{"day":"Tue","hour":"9am","count":8},{"day":"Tue","hour":"12pm","count":30},{"day":"Tue","hour":"3pm","count":22},{"day":"Wed","hour":"9am","count":15},{"day":"Wed","hour":"12pm","count":20},{"day":"Wed","hour":"3pm","count":28},{"day":"Thu","hour":"9am","count":10},{"day":"Thu","hour":"12pm","count":35},{"day":"Thu","hour":"3pm","count":16},{"day":"Fri","hour":"9am","count":5},{"day":"Fri","hour":"12pm","count":18},{"day":"Fri","hour":"3pm","count":10}]' />
+    </component-example>
+
+    <component-example label="Radar">
+      <radar-chart id="radar_chart_demo" categories='["Speed","Strength","Defense","Magic","Stamina","Luck"]' y-fields='["warrior","mage"]' max-value="100.0" height="300"
+        data='[{"Speed":80,"Strength":90,"Defense":70,"Magic":30,"Stamina":85,"Luck":50},{"Speed":60,"Strength":40,"Defense":50,"Magic":95,"Stamina":55,"Luck":75}]' />
+    </component-example>
+
+    <component-example label="Pyramid &amp; Funnel">
+      <pyramid-chart id="pyramid_chart_demo" label-field="stage" value-field="count" height="300"
+        data='[{"stage":"Awareness","count":10000},{"stage":"Interest","count":6500},{"stage":"Consideration","count":3200},{"stage":"Intent","count":1800},{"stage":"Purchase","count":900}]' />
+      <funnel-chart id="funnel_chart_demo" label-field="step" value-field="users" height="300"
+        data='[{"step":"Visited","users":5000},{"step":"Signed Up","users":3200},{"step":"Activated","users":2100},{"step":"Subscribed","users":1400},{"step":"Retained","users":800}]' />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="data" /></table-cell>
+        <table-cell>any</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Row data array; field attributes name which entries to plot. Required on every chart.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="x-field / y-field" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Single-series field names. Required on cartesian charts.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="y-fields / x-fields" /></table-cell>
+        <table-cell>array&lt;string&gt;</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Multi-series field names (area, stacked, clustered, radar).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="value-field" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Value field for pie, heatmap, pyramid, funnel.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="label-field" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Category field for pyramid and funnel.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="height" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Chart height in pixels (all charts).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="dot / dot-size" /></table-cell>
+        <table-cell>bool / float</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Show dots (line) and their size (scatter).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="show-label" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Show value labels (bar, column).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="inner-radius" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>0.0</table-cell>
+        <table-cell>Donut hole radius (pie).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="min-radius / max-radius" /></table-cell>
+        <table-cell>float</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Bubble size range (bubble chart).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="categories (radar)" /></table-cell>
+        <table-cell>array&lt;string&gt;</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Axes labels; max-value caps the radial scale. Both required.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

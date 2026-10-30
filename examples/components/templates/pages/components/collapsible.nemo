@@ -1,7 +1,68 @@
+<script>
+let open_code = #"<collapsible title="Click to collapse" open="true">
+  <text>Visible by default.</text>
+</collapsible>"#;
+
+let closed_code = #"<collapsible title="Click to expand" open="false">
+  <text>Hidden by default.</text>
+</collapsible>"#;
+</script>
+
 <template name="component-page-collapsible">
-  <component-page
-    name="Collapsible"
-    description="A collapsible content section"
-  >
+  <component-page name="Collapsible" description="A collapsible content section. Expands and collapses to reveal child content.">
+    <component-example label="Open">
+      <stack direction="vertical" spacing="8">
+        <collapsible id="collapsible_open" title="Click to collapse" open="true">
+          <text id="collapsible_open_content">This content is visible by default because open = true.</text>
+        </collapsible>
+      </stack>
+      <code-editor
+        id="collapsible_code_open"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ open_code }}"
+      />
+    </component-example>
+
+    <component-example label="Closed">
+      <stack direction="vertical" spacing="8">
+        <collapsible id="collapsible_closed" title="Click to expand" open="false">
+          <text id="collapsible_closed_content">This content is hidden by default and will show when expanded.</text>
+        </collapsible>
+      </stack>
+      <code-editor
+        id="collapsible_code_closed"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ closed_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="title" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"Details"</table-cell>
+        <table-cell>Header text of the collapsible section.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="open" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the section starts expanded.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

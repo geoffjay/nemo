@@ -1,7 +1,73 @@
+<script>
+let default_code = #"<text-editor placeholder="Start writing..." rows="6" />"#;
+
+let default_value_code = ##"<text-editor rows="8"
+             default-value="# Welcome to the Text Editor">"##;
+</script>
+
 <template name="component-page-text-editor">
-  <component-page
-    name="Text Editor"
-    description="A rich text editor with formatting toolbar"
-  >
+  <component-page name="Text Editor" description="A rich-text editing area with a toolbar for basic formatting: Bold, Italic, and Underline. Uses markdown-style markers.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="8">
+        <text-editor id="text_editor_basic" placeholder="Start writing..." rows="6" />
+      </stack>
+      <code-editor
+        id="text_editor_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="With Default Value">
+      <stack direction="vertical" spacing="8">
+        <text-editor id="text_editor_default" rows="8" default-value="# Welcome to the Text Editor&#10;&#10;Use the toolbar above to insert **bold**, _italic_, or __underline__ markers.&#10;&#10;This is a simple rich-text editing experience." />
+      </stack>
+      <code-editor
+        id="text_editor_code_default_value"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ default_value_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="placeholder" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Hint text shown when the editor is empty.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="default-value" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Initial content; markdown-style markers render formatted.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="rows" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Visible row count (height hint).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Read-only editing surface.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

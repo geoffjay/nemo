@@ -1,7 +1,81 @@
+<script>
+let count_code = #"<badge count="5">
+  <button label="Notifications" variant="secondary" />
+</badge>
+
+<badge count="99">
+  <button label="Messages" variant="secondary" />
+</badge>"#;
+
+let dot_code = #"<badge dot="true">
+  <button label="Updates" variant="secondary" />
+</badge>"#;
+</script>
+
 <template name="component-page-badge">
-  <component-page
-    name="Badge"
-    description="A badge indicator with count or dot"
-  >
+  <component-page name="Badge" description="A badge indicator with count or dot. Shows notification counts or dot indicators on child elements.">
+    <component-example label="Count Badge">
+      <stack direction="horizontal" spacing="16">
+        <badge id="badge_count_demo" count="5">
+          <button id="badge_count_btn" label="Notifications" variant="secondary" />
+        </badge>
+        <badge id="badge_count_large" count="99">
+          <button id="badge_count_large_btn" label="Messages" variant="secondary" />
+        </badge>
+      </stack>
+      <code-editor
+        id="badge_code_count"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ count_code }}"
+      />
+    </component-example>
+
+    <component-example label="Dot Badge">
+      <stack direction="horizontal" spacing="16">
+        <badge id="badge_dot_demo" dot="true">
+          <button id="badge_dot_btn" label="Updates" variant="secondary" />
+        </badge>
+      </stack>
+      <code-editor
+        id="badge_code_dot"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ dot_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="count" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Count shown in the badge.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="dot" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Show a small dot instead of a count.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="children" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>The content the badge anchors to, e.g. a button.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

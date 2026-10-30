@@ -1,7 +1,55 @@
+<script>
+let default_code = #"<select value="Cherry">
+  <option value="Apple" />
+  <option value="Banana" />
+  <option value="Cherry" />
+  <option value="Date" />
+  <option value="Elderberry" />
+</select>"#;
+</script>
+
 <template name="component-page-select">
-  <component-page
-    name="Select"
-    description="A select input built from option children"
-  >
+  <component-page name="Select" description="A select input built from option children. Presents a list of options for the user to choose from.">
+    <component-example label="Default">
+      <stack direction="vertical" spacing="8">
+        <select id="sel_basic" value="Cherry">
+          <option id="sel_opt_apple" value="Apple" />
+          <option id="sel_opt_banana" value="Banana" />
+          <option id="sel_opt_cherry" value="Cherry" />
+          <option id="sel_opt_date" value="Date" />
+          <option id="sel_opt_elderberry" value="Elderberry" />
+        </select>
+      </stack>
+      <code-editor
+        id="sel_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="value" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Currently selected option value.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="&lt;option&gt; children" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Each option declares a value (and optional label) via its value attribute.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

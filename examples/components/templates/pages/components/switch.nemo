@@ -1,7 +1,55 @@
+<script>
+let states_code = #"<switch label="Off by default" checked="false" />
+<switch label="On by default" checked="true" />
+<switch label="Disabled switch" checked="false" disabled="true" />
+<switch label="Disabled (on)" checked="true" disabled="true" />"#;
+</script>
+
 <template name="component-page-switch">
-  <component-page
-    name="Switch"
-    description="A toggle switch"
-  >
+  <component-page name="Switch" description="A toggle switch. Toggles boolean state, similar to a checkbox but with a sliding visual style.">
+    <component-example label="States">
+      <stack direction="vertical" spacing="8">
+        <switch id="switch_off" label="Off by default" checked="false" />
+        <switch id="switch_on" label="On by default" checked="true" />
+        <switch id="switch_disabled" label="Disabled switch" checked="false" disabled="true" />
+        <switch id="switch_disabled_on" label="Disabled (on)" checked="true" disabled="true" />
+      </stack>
+      <code-editor
+        id="switch_code_states"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ states_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="checked" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the switch is on.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="label" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Text shown next to the switch.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disables interaction and dims the switch.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

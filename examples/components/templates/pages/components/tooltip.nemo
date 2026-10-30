@@ -1,7 +1,68 @@
+<script>
+let default_code = #"<tooltip content="This is a helpful tooltip">
+  <button label="Hover me" variant="primary" />
+</tooltip>"#;
+
+let more_code = #"<tooltip content="Another tooltip with more info">
+  <button label="More info" variant="secondary" />
+</tooltip>"#;
+</script>
+
 <template name="component-page-tooltip">
-  <component-page
-    name="Tooltip"
-    description="A tooltip popup"
-  >
+  <component-page name="Tooltip" description="A tooltip popup. Shows additional information on hover.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="8">
+        <tooltip id="tooltip_demo1" content="This is a helpful tooltip">
+          <button id="tooltip_btn1" label="Hover me" variant="primary" />
+        </tooltip>
+      </stack>
+      <code-editor
+        id="tooltip_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <component-example label="More Info">
+      <stack direction="horizontal" spacing="8">
+        <tooltip id="tooltip_demo2" content="Another tooltip with more info">
+          <button id="tooltip_btn2" label="More info" variant="secondary" />
+        </tooltip>
+      </stack>
+      <code-editor
+        id="tooltip_code_more"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ more_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="content" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Tooltip text shown on hover. Required.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="children" /></table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>The element the tooltip anchors to.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

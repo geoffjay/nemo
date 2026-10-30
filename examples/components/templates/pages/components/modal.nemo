@@ -1,7 +1,87 @@
+<script>
+let default_code = #"<button label="Open Modal" variant="primary" on-click="on_toggle_modal" />
+
+<modal title="Example Modal" open="false">
+  <text>Modal content here.</text>
+  <button label="Close" variant="danger" on-click="on_toggle_modal" />
+</modal>"#;
+
+let callbacks_code = ##"<button label="Open Modal" variant="primary" on-click="on_toggle_modal" />
+<modal title="Example Modal" open="false">...</modal>
+
+# component file script
+fn on_toggle_modal(component_id, event_data) {
+  let current = get_component_property("demo_modal", "open");
+  set_component_property("demo_modal", "open", current != true);
+}"##;
+
+// Modal page callback: toggles the demo modal's open state.
+fn on_toggle_modal(component_id, event_data) {
+    let current = get_component_property("demo_modal", "open");
+    if current == true {
+        set_component_property("demo_modal", "open", false);
+    } else {
+        set_component_property("demo_modal", "open", true);
+    }
+}
+</script>
+
 <template name="component-page-modal">
-  <component-page
-    name="Modal"
-    description="A modal dialog"
-  >
+  <component-page name="Modal" description="A modal dialog. Toggle the open property to show or hide the overlay.">
+    <component-example label="Default">
+      <stack direction="horizontal" spacing="8">
+        <button id="modal_toggle_btn" label="Open Modal" variant="primary" on-click="on_toggle_modal" />
+        <modal id="demo_modal" title="Example Modal" open="false">
+          <text id="modal_content_text">This is the modal content. Click the button again to close.</text>
+          <button id="modal_close_btn" label="Close" variant="danger" on-click="on_toggle_modal" />
+        </modal>
+      </stack>
+      <code-editor
+        id="modal_code_default"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ default_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="title" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Title shown in the modal header.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="open" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the modal is visible; toggle to show or hide.</table-cell>
+      </table-row>
+    </table>
+
+    <component-example label="on-click" slot="callbacks">
+      <stack direction="horizontal" spacing="8">
+        <button id="modal_callback_btn" label="Open Modal" variant="primary" on-click="on_toggle_modal" />
+        <text id="modal_callback_status">Click to toggle the modal's open property.</text>
+      </stack>
+      <code-editor
+        id="modal_code_callbacks"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ callbacks_code }}"
+      />
+    </component-example>
   </component-page>
 </template>

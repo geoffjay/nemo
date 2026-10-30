@@ -1,7 +1,80 @@
+<script>
+let filled_code = #"<tag label="Primary" variant="primary" />
+<tag label="Secondary" variant="secondary" />
+<tag label="Danger" variant="danger" />
+<tag label="Success" variant="success" />
+<tag label="Warning" variant="warning" />
+<tag label="Info" variant="info" />"#;
+
+let outline_code = #"<tag label="Primary" variant="primary" outline="true" />
+<tag label="Danger" variant="danger" outline="true" />
+<tag label="Success" variant="success" outline="true" />"#;
+</script>
+
 <template name="component-page-tag">
-  <component-page
-    name="Tag"
-    description="A small label tag"
-  >
+  <component-page name="Tag" description="A small label tag for categorization. Variants: primary, secondary, danger, success, warning, info; filled or outline.">
+    <component-example label="Filled Tags">
+      <stack direction="horizontal" spacing="8">
+        <tag id="tag_primary" label="Primary" variant="primary" />
+        <tag id="tag_secondary" label="Secondary" variant="secondary" />
+        <tag id="tag_danger" label="Danger" variant="danger" />
+        <tag id="tag_success" label="Success" variant="success" />
+        <tag id="tag_warning" label="Warning" variant="warning" />
+        <tag id="tag_info" label="Info" variant="info" />
+      </stack>
+      <code-editor
+        id="tag_code_filled"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ filled_code }}"
+      />
+    </component-example>
+
+    <component-example label="Outline Tags">
+      <stack direction="horizontal" spacing="8">
+        <tag id="tag_outline_primary" label="Primary" variant="primary" outline="true" />
+        <tag id="tag_outline_danger" label="Danger" variant="danger" outline="true" />
+        <tag id="tag_outline_success" label="Success" variant="success" outline="true" />
+      </stack>
+      <code-editor
+        id="tag_code_outline"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ outline_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="label" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"Tag"</table-cell>
+        <table-cell>Tag text.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="variant" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"secondary"</table-cell>
+        <table-cell>Style variant: primary, secondary, danger, success, warning, info.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="outline" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Render as outlined rather than filled.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

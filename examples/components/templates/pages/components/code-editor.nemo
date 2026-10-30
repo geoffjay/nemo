@@ -1,7 +1,173 @@
+<script>
+let rust_code = #"fn main() {
+    println!("Hello, world!");
+}
+
+struct App {
+    name: String,
+    version: u32,
+}"#;
+
+let js_code = #"function greet(name) {
+  return 'Hello, ' + name + '!';
+}
+
+const result = greet('World');
+console.log(result);"#;
+
+let python_code = #"def hello():
+    print("Hello from Python!")
+
+hello()"#;
+
+let go_code = #"package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("Hello, Go!")
+}"#;
+</script>
+
 <template name="component-page-code-editor">
-  <component-page
-    name="Code Editor"
-    description="A code editor with syntax highlighting and line numbers"
-  >
+  <component-page name="Code Editor" description="A code editor with syntax highlighting, optional line numbers, search, hard tabs, and configurable indentation.">
+    <component-example label="Rust">
+      <code-editor
+        id="code_editor_rust"
+        language="rust"
+        line-number="true"
+        searchable="true"
+        tab-size="4"
+        rows="8"
+        default-value="{{ rust_code }}"
+      />
+      <code-editor
+        id="code_editor_code_rust"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="<code-editor language=&quot;rust&quot; line-number=&quot;true&quot;&#10;            searchable=&quot;true&quot; tab-size=&quot;4&quot; />"
+      />
+    </component-example>
+
+    <component-example label="JavaScript">
+      <code-editor
+        id="code_editor_js"
+        language="javascript"
+        line-number="true"
+        tab-size="2"
+        rows="8"
+        default-value="{{ js_code }}"
+      />
+      <code-editor
+        id="code_editor_code_js"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="<code-editor language=&quot;javascript&quot; line-number=&quot;true&quot;&#10;            tab-size=&quot;2&quot; />"
+      />
+    </component-example>
+
+    <component-example label="No Line Numbers">
+      <code-editor
+        id="code_editor_python"
+        language="python"
+        line-number="false"
+        searchable="false"
+        tab-size="4"
+        rows="4"
+        default-value="{{ python_code }}"
+      />
+      <code-editor
+        id="code_editor_code_python"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="<code-editor language=&quot;python&quot; line-number=&quot;false&quot;&#10;            searchable=&quot;false&quot; tab-size=&quot;4&quot; />"
+      />
+    </component-example>
+
+    <component-example label="Hard Tabs">
+      <code-editor
+        id="code_editor_go"
+        language="go"
+        line-number="true"
+        hard-tabs="true"
+        rows="8"
+        default-value="{{ go_code }}"
+      />
+      <code-editor
+        id="code_editor_code_go"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="<code-editor language=&quot;go&quot; line-number=&quot;true&quot;&#10;            hard-tabs=&quot;true&quot; />"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="140">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="language" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>"plain"</table-cell>
+        <table-cell>Syntax language: rust, javascript, python, go, html, and more.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="line-number" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Show the line-number gutter.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="searchable" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Enable in-editor search.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="default-value" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Initial editor content.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="tab-size" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>4</table-cell>
+        <table-cell>Spaces per tab stop.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="hard-tabs" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Insert real tab characters instead of spaces.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="rows" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Visible row count (height hint).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Read-only editing surface.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>
