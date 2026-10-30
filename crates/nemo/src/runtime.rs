@@ -2981,6 +2981,9 @@ fn apply_style_rules(node: &Value, id: Option<&str>, rules: &[StyleRule]) -> Val
 /// `extra_templates` are templates registered by native plugins, merged
 /// with any templates defined in the XML config. Plugin templates are
 /// added first so XML-defined templates can override them.
+/// Legacy-compatible wrapper: calls [`parse_layout_config_impl`] without SFC
+/// variable overrides (`cfg(test)` — production callers pass `sfc_variables()`).
+#[cfg(test)]
 fn parse_layout_config(
     config: &Value,
     extra_templates: &TemplateMap,
