@@ -734,9 +734,10 @@ impl XmlParser {
     }
 
     /// Processes a `<header-bar>` element: copies its attributes and collects any
-    /// `<menu-item>` children into a `menu_items` array. The generic
-    /// `process_nested_block` would otherwise collapse repeated `menu-item`
-    /// children into a single `menu_item` key, losing all but the last.
+    /// `<menu-item>` children into a `menu_items` array (and `<header-button>`
+    /// children into an `actions` array). The generic `process_nested_block`
+    /// would otherwise collapse repeated children into a single key, losing all
+    /// but the last.
     fn process_header_bar(&self, obj: &IndexMap<String, Value>) -> Value {
         let mut block = IndexMap::new();
 
@@ -751,6 +752,7 @@ impl XmlParser {
 
         if let Some(children) = obj.get("__children__").and_then(|v| v.as_array()) {
             let mut menu_items = Vec::new();
+            let mut actions = Vec::new();
             for child in children {
                 if let Some(child_obj) = child.as_object() {
                     let child_type = child_obj
@@ -770,11 +772,27 @@ impl XmlParser {
                             }
                         }
                         menu_items.push(Value::Object(item));
+                    } else if child_type == "header_button" {
+                        // `<header-button icon="…" on-click="…" />` — a plain
+                        // icon button in the header bar.
+                        let mut item = IndexMap::new();
+                        for (k, v) in child_obj {
+                            match k.as_str() {
+                                "__type__" | "__children__" => continue,
+                                _ => {
+                                    item.insert(k.clone(), v.clone());
+                                }
+                            }
+                        }
+                        actions.push(Value::Object(item));
                     }
                 }
             }
             if !menu_items.is_empty() {
                 block.insert("menu_items".to_string(), Value::Array(menu_items));
+            }
+            if !actions.is_empty() {
+                block.insert("actions".to_string(), Value::Array(actions));
             }
         }
 
@@ -1227,7 +1245,19 @@ impl XmlParser {
                     // Collect declared slots from the raw element tree (before
                     // flattening loses the `required`/`multiple` attributes).
                     Self::collect_slot_specs(root_child, &mut slots);
-                    template = Some(self.process_component_element(root_child));
+                    let mut template_body = self.process_component_element(root_child);
+                    // `process_component_element` drops the `id` attribute (it
+                    // is normally consumed as the parent component-map key). A
+                    // template ROOT has no such map, so carry the id as a
+                    // property: for `app.nemo`, `app_sfc_to_value` forwards it
+                    // onto the layout root so scripts can address the root
+                    // component (e.g. an `<app-shell id>` collapse toggle).
+                    if let Some(id) = root_child.get("id").and_then(|v| v.as_str()) {
+                        if let Some(obj) = template_body.as_object_mut() {
+                            obj.insert("id".to_string(), Value::String(id.to_string()));
+                        }
+                    }
+                    template = Some(template_body);
                 }
                 // App-level blocks (app.nemo). Each delegates to the same
                 // process_* function process_root uses, accumulating into
@@ -2161,12 +2191,15 @@ impl XmlParser {
                 .unwrap_or(Value::String("stack".to_string())),
         );
         // Copy every remaining attribute the template root carries, except
-        // `type` (already emitted), `id` (the template root's id is a document-
-        // unique key for the SFC, not a layout property — process_layout never
-        // sees one), and `component` (children — emitted separately below).
+        // `type` (already emitted), and `component` (children — emitted
+        // separately below). The root's `id` is forwarded: when the template
+        // root IS the layout root (e.g. the whole app is one `<app-shell
+        // id="shell">`), scripts address it by that id —
+        // `parse_layout_node_as_root` pins it onto the root node instead of
+        // the synthetic `__layout_root__`.
         for (key, val) in template_obj {
             match key.as_str() {
-                "type" | "id" | "component" => continue,
+                "type" | "component" => continue,
                 _ => {
                     layout.insert(key.clone(), val.clone());
                 }
@@ -2788,6 +2821,48 @@ mod tests {
         assert_eq!(
             items[2].get("label"),
             Some(&Value::String("About".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_header_bar_actions() {
+        let xml = r#"
+        <nemo>
+            <app title="My App">
+                <window title="Test">
+                    <header-bar>
+                        <header-button icon="panel-left" on-click="on_toggle_nav" />
+                        <header-button icon="search" on-click="on_search" />
+                    </header-bar>
+                </window>
+            </app>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let header_bar = value
+            .get("app")
+            .and_then(|a| a.get("window"))
+            .and_then(|w| w.get("header_bar"))
+            .unwrap();
+        let actions = header_bar
+            .get("actions")
+            .and_then(|v| v.as_array())
+            .unwrap();
+        assert_eq!(actions.len(), 2);
+        assert_eq!(
+            actions[0].get("icon"),
+            Some(&Value::String("panel-left".to_string()))
+        );
+        assert_eq!(
+            actions[0].get("on_click"),
+            Some(&Value::String("on_toggle_nav".to_string()))
+        );
+        assert_eq!(
+            actions[1].get("on_click"),
+            Some(&Value::String("on_search".to_string()))
         );
     }
 

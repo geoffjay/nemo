@@ -72,22 +72,66 @@ pub fn menu_items_from_config(runtime: &Arc<NemoRuntime>) -> Vec<MenuItemConfig>
         .collect()
 }
 
+/// A plain icon button declared in the header bar via `<header-button>`.
+#[derive(Clone)]
+pub struct HeaderActionConfig {
+    pub icon: String,
+    pub handler: Option<String>,
+    pub tooltip: Option<String>,
+}
+
+/// Reads `<header-bar>` `<header-button>` children (parsed as the `actions`
+/// array) into a list of [`HeaderActionConfig`]. Returns empty when none are
+/// declared — the header chrome stays opt-in.
+pub fn header_actions_from_config(runtime: &Arc<NemoRuntime>) -> Vec<HeaderActionConfig> {
+    let Some(actions) = runtime
+        .get_config("app.window.header_bar.actions")
+        .and_then(|v| v.as_array().cloned())
+    else {
+        return Vec::new();
+    };
+
+    actions
+        .iter()
+        .filter_map(|item| {
+            let obj = item.as_object()?;
+            let icon = obj.get("icon").and_then(|v| v.as_str())?.to_string();
+            let handler = obj
+                .get("on_click")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            let tooltip = obj
+                .get("tooltip")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            Some(HeaderActionConfig {
+                icon,
+                handler,
+                tooltip,
+            })
+        })
+        .collect()
+}
+
 pub struct HeaderBar {
     title: String,
     github_url: Option<String>,
     theme_toggle: bool,
     menu_items: Vec<MenuItemConfig>,
+    actions: Vec<HeaderActionConfig>,
     runtime: Arc<NemoRuntime>,
     /// Whether the app was launched via `nemo dev` (shows the dev-panel button).
     dev_mode: bool,
 }
 
 impl HeaderBar {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         title: String,
         github_url: Option<String>,
         theme_toggle: bool,
         menu_items: Vec<MenuItemConfig>,
+        actions: Vec<HeaderActionConfig>,
         runtime: Arc<NemoRuntime>,
         dev_mode: bool,
     ) -> Self {
@@ -96,6 +140,7 @@ impl HeaderBar {
             github_url,
             theme_toggle,
             menu_items,
+            actions,
             runtime,
             dev_mode,
         }
@@ -119,7 +164,25 @@ impl Render for HeaderBar {
         let show_dev_button = self.dev_mode;
         let show_theme_toggle = self.theme_toggle;
 
-        // Far-left hamburger menu, shown only when the app declared entries.
+        // Far-left declared `<header-button>` actions, then the hamburger menu
+        // (shown only when the app declared entries).
+        let mut left = h_flex().items_center().gap_t(Space::Xs);
+        for (idx, action) in self.actions.iter().enumerate() {
+            let mut button = Button::new(SharedString::from(format!("header-action-{idx}")))
+                .icon(map_icon_name(&action.icon))
+                .small()
+                .ghost();
+            if let Some(tooltip) = &action.tooltip {
+                button = button.tooltip(tooltip.clone());
+            }
+            if let Some(handler) = action.handler.clone() {
+                let runtime = Arc::clone(&self.runtime);
+                button = button.on_click(move |_ev, _window, _cx| {
+                    runtime.call_handler(&handler, "header-bar", "click");
+                });
+            }
+            left = left.child(button);
+        }
         let menu = if self.menu_items.is_empty() {
             None
         } else {
@@ -204,6 +267,7 @@ impl Render for HeaderBar {
                     h_flex()
                         .items_center()
                         .gap_t(Space::Xs)
+                        .child(left)
                         .when_some(menu, |this, menu| this.child(menu))
                         .child(Label::new(title).text_t(FontSize::Xs)),
                 )

@@ -459,12 +459,14 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false);
                         let menu_items = workspace::menu_items_from_config(&rt);
+                        let actions = workspace::header_actions_from_config(&rt);
                         let header_bar = cx.new(|_cx| {
                             HeaderBar::new(
                                 title,
                                 github_url,
                                 theme_toggle,
                                 menu_items,
+                                actions,
                                 Arc::clone(&rt),
                                 dev_mode,
                             )

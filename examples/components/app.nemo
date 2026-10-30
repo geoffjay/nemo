@@ -8,6 +8,7 @@
 
   <window title="Component Gallery" width="1200" height="800">
     <header-bar github-url="https://github.com/geoffjay/nemo/tree/main/examples/components" theme-toggle="true">
+      <header-button icon="panel-left" tooltip="Toggle navigation" on-click="on_toggle_nav" />
       <menu-item label="Roundness - Square" icon="settings" on-click="on_menu_roundness_square" />
       <menu-item label="Roundness - Sharp" icon="settings" on-click="on_menu_roundness_sharp" />
       <menu-item label="Roundness - Default" icon="settings" on-click="on_menu_roundness_default" />
@@ -84,17 +85,6 @@
   <import src="./templates/pages/components/stepper.nemo" />
   <import src="./templates/pages/components/virtual-list.nemo" />
 </imports>
-
-<!-- Templates -->
-<templates>
-  <template name="page_content">
-    <panel>
-      <stack id="inner" direction="vertical" spacing="12" padding="32">
-        <slot />
-      </stack>
-    </panel>
-  </template>
-</templates>
 
 <template name="app">
   <!-- App shell: a sidenav of section menu items plus the gallery below. -->

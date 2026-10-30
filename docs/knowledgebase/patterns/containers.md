@@ -43,6 +43,29 @@ The first container. A standard app frame:
   `render_component` collects them by `component_type` (like `sidenav_bar`), so
   they get no-op standalone arms.
 
+# Collapsing the sidenav
+
+`app-shell` honours a `collapsed` bool prop on every render (icon-only sidenav at
+48px). Config fixes it at launch; to toggle at runtime, flip the property from a
+script — the App re-renders because `set_component_property` wakes the UI poll
+loop:
+
+```xml
+<app-shell id="shell" sidenav-width="220">
+  ...
+</app-shell>
+```
+
+```rhai
+fn on_toggle_nav(component_id, event_data) {
+  let current = get_component_property("shell", "collapsed");
+  set_component_property("shell", "collapsed", current != true);
+}
+```
+
+A common trigger is a `<header-bar>` `<header-button>` (icon in the app chrome,
+left of the menu) — see `examples/components/` (`on_toggle_nav`).
+
 # Slot-region routing
 
 Regions are found by type, not position: the container filters

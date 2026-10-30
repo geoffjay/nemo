@@ -3148,11 +3148,16 @@ fn parse_layout_node_as_root(
         .unwrap_or_else(|| fallback.to_string());
 
     // Parse the layout object as a component (attributes, children, handlers,
-    // bindings), then pin the resolved root type + synthetic root id.
+    // bindings), then pin the resolved root type + root id. An explicit
+    // `id` attribute on the layout (SFC `<template name="app">` root, e.g. an
+    // `<app-shell>`) becomes the root's id so scripts can address it; only
+    // id-less layouts get the synthetic `__layout_root__`.
     let mut root = parse_component_from_value(layout, Some("__layout_root__"))
         .unwrap_or_else(|| LayoutNode::new(&root_type));
     root.component_type = root_type;
-    root.id = Some("__layout_root__".to_string());
+    if root.id.is_none() {
+        root.id = Some("__layout_root__".to_string());
+    }
     Some(root)
 }
 
@@ -3410,7 +3415,14 @@ impl PluginContext for RuntimeContext {
             let config_value = plugin_value_to_config_value(value);
             layout_manager
                 .set_property(component_id, property, config_value)
-                .map_err(|e| PluginError::ComponentFailed(e.to_string()))
+                .map_err(|e| PluginError::ComponentFailed(e.to_string()))?;
+            // Property mutations from scripts happen outside the UI render
+            // path (a header-bar button, a timer, a data event) — wake the
+            // App's poll loop so the change is picked up by the next render
+            // pass. Harmless for already-rendered widget state.
+            self.data_dirty.store(true, Ordering::Release);
+            self.data_notify.notify_one();
+            Ok(())
         } else {
             Err(PluginError::ComponentFailed(
                 "Layout manager is locked".to_string(),
@@ -6952,6 +6964,45 @@ fn on_load(component_id, event_data) {
             lm.get_property("b1", "label").and_then(|v| v.as_str()),
             Some("Go")
         );
+    }
+
+    /// A component at the `<template name="app">` root keeps its `id`: the
+    /// template root's id is forwarded onto the layout root (instead of the
+    /// synthetic `__layout_root__`) so scripts can address it — e.g. an
+    /// `<app-shell id="shell">` toggled via `set_component_property`.
+    #[test]
+    fn test_sfc_template_root_id_reachable() {
+        let dir = tempfile::tempdir().unwrap();
+        let config_path = dir.path().join("app.nemo");
+        std::fs::write(
+            &config_path,
+            r#"<template name="app">
+  <app-shell id="app_shell" sidenav-width="200" default-page="main">
+    <app-sidenav>
+      <sidenav-item id="nav_main" icon="layout-dashboard" label="Main" target="main" />
+    </app-sidenav>
+    <app-content>
+      <page id="main"><label id="page_label" text="Page one" /></page>
+    </app-content>
+  </app-shell>
+</template>"#,
+        )
+        .unwrap();
+
+        let rt = NemoRuntime::new(&config_path).unwrap();
+        rt.load_config().unwrap();
+        rt.initialize().unwrap();
+
+        let lm = rt.layout_manager.read().unwrap();
+        // Root carries the author's id, not the synthetic layout-root id...
+        assert_eq!(lm.root_id().as_deref(), Some("app_shell"));
+        // ...and is addressable as an ordinary component.
+        assert_eq!(
+            lm.get_property("app_shell", "sidenav_width"),
+            Some(&Value::Integer(200))
+        );
+        // Children keep their ids as before.
+        assert!(lm.get_component("nav_main").is_some());
     }
 
     /// `{{ var }}` naming an undefined variable (in a tree WITH other

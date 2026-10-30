@@ -58,12 +58,15 @@ key. `<header-bar>` is the one special case: `process_header_bar` copies its
 attributes (`github_url`, `theme_toggle`) and collects any `<menu-item>`
 children into a `menu_items` **array** at
 `app.window.header_bar.menu_items` (each item an object of its snake-cased
-attributes: `label`, `icon`, `on_click`, `separator`). Without that special
-case the repeated `<menu-item>` elements would collapse and all but the last
-would be lost. The header renders this as an opt-in far-left hamburger menu
+attributes: `label`, `icon`, `on_click`, `separator`), plus any
+`<header-button icon="…" on-click="…" [tooltip="…"]/>` children into an
+`actions` array at `app.window.header_bar.actions`. Without that special case
+the repeated `<menu-item>` elements would collapse and all but the last
+would be lost. The header renders the menu as an opt-in far-left hamburger
 (`crates/nemo/src/workspace/header_bar.rs`, `menu_items_from_config` →
-`DropdownButton` + `PopupMenuItem`, each wired to `runtime.call_handler`); the
-element is also declared in the schema surface
+`DropdownButton` + `PopupMenuItem`, each wired to `runtime.call_handler`) and
+the actions as ghost icon buttons left of it (`header_actions_from_config`);
+the elements are also declared in the schema surface
 (`crates/nemo-registry/src/schema_surface.rs`).
 
 # Single-file components (`.nemo` SFCs)

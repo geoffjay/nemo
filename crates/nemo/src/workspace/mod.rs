@@ -27,7 +27,7 @@ use actions::{
     ShowKeyboardShortcuts, ToggleDevPanel, ToggleTheme,
 };
 pub use footer_bar::FooterBar;
-pub use header_bar::{menu_items_from_config, HeaderBar};
+pub use header_bar::{header_actions_from_config, menu_items_from_config, HeaderBar};
 use layout::AppLayout;
 use project_loader::{ProjectLoaderView, ProjectSelected};
 use settings::SettingsView;
@@ -140,6 +140,7 @@ impl Workspace {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
         let menu_items = menu_items_from_config(runtime);
+        let actions = header_actions_from_config(runtime);
         let runtime = Arc::clone(runtime);
         cx.new(|_cx| {
             HeaderBar::new(
@@ -147,6 +148,7 @@ impl Workspace {
                 github_url,
                 theme_toggle,
                 menu_items,
+                actions,
                 runtime,
                 self.dev_mode,
             )
