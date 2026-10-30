@@ -210,3 +210,12 @@ re-embeds. The file watcher continues to hot-reload the main app from either win
 * Builds on the [build system](build-system.md) — reuses its compile functions.
 * Independent of the [page router](page-router.md) — the dev panel is a workspace
   overlay, not a routed view.
+
+# Object browser (added later)
+
+The dev panel gained an **Objects** tab: a live component node tree + details
+pane. Research rejected the accessibility-tree approach (xp via `xa11y`/
+`agent-desktop`): `gpui-pre-apple` registers no AX tree, so a running nemo
+exposes only `application → window → group` (verified). The browser reads
+`LayoutManager` in-process instead — see
+[dev-panel-object-browser](dev-panel-object-browser.md).
