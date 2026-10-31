@@ -1,6 +1,12 @@
 # Knowledge Base Update Log
 
 ## 2026-10-31
+* **Update**: Added the gpui-kit wrapper-shape fact (hand-written
+  `#[derive(IntoElement)]` struct reading `BuiltComponent` props and wrapping
+  the kit element in `div().flex_none()`, keystroke input via
+  `Keystroke::parse_with_os`) to
+  [four-file component workflow](/docs/knowledgebase/patterns/four-file-component-workflow.md),
+  from the `kbd` wrap.
 * **Feature**: Wrapped gpui-kit's `Kbd` as the built-in `<kbd>` component
   (Display category) — `crates/nemo/src/components/kbd.rs`, registered in
   `nemo-registry/src/builtins.rs` (props: `keys` string `cmd-k`, `outline`

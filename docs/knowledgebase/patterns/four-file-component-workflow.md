@@ -35,6 +35,19 @@ Layout styling (width/height/margin/padding/border/background/shadow/rounded) is
 applied uniformly by `apply_layout_styles()` in `app.rs`; individual components
 do not need to handle it.
 
+**Wrapping a gpui-kit component** often means a hand-written wrapper struct like
+`kbd` (`crates/nemo/src/components/kbd.rs`, 2026-10-31): `#[derive(IntoElement)]`
+only, read properties off `BuiltComponent` in `render()`, construct the kit
+element (`gpui_kit::component::kbd::Kbd`), and wrap it in
+`div().flex_none().child(...)` so it doesn't stretch in flex parents (same shape
+as `tag.rs`). Keystroke input uses `Keystroke::parse_with_os(&value,
+cx.platform_info().os)` (the dynamic-input path; plain `Keystroke::parse`
+requires `&'static str`) and falls back to rendering the raw string unstyled
+rather than panicking on unparsable input. Component gallery reference pages
+(`examples/components/templates/pages/*.nemo`) are authored per component; the
+[/implement-component skill](`.agents/skills/implement-component/SKILL.md`)
+automates the full wrap → screenshot-verify → page-update workflow.
+
 **Containers** (`crates/nemo/src/containers/`) follow the same four wiring points,
 with two differences: the implementation file lives under `containers/` (declared
 via `mod containers;` in `main.rs` and re-exported from `containers/mod.rs`), and
