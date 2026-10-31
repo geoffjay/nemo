@@ -1,5 +1,24 @@
 # Knowledge Base Update Log
 
+## 2026-10-31
+* **Feature**: Wrapped gpui-kit's `Kbd` as the built-in `<kbd>` component
+  (Display category) — `crates/nemo/src/components/kbd.rs`, registered in
+  `nemo-registry/src/builtins.rs` (props: `keys` string `cmd-k`, `outline`
+  bool `false`), dispatched in `app.rs`. Uses gpui-kit's
+  `Kbd::format`/platform formatting (macOS symbols, e.g. ⌘⇧P; text labels
+  elsewhere) via `Keystroke::parse_with_os` with the runtime OS — the
+  dynamic-input-parse path the shortcuts dialog already uses; unparsable
+  `keys` renders the raw string unstyled instead of panicking. Gallery page
+  `examples/components/templates/pages/components/kbd.nemo` rewritten with
+  4 examples + properties table (placeholder removed). Verified by fixture
+  screenshots (tokyo-night dark + gruvbox light via the
+  `/implement-component` skill's standalone-fixture recipe; note
+  `tokyo-night` has no light variant, so `--mode light` under it is a
+  no-op — use `gruvbox`/`nord`/`catppuccin` for light-mode captures).
+  Pushed in `75e5cc9`. Created the `/implement-component`
+  (`.agents/skills/implement-component`) workflow this came from, pushed
+  earlier in `e4cc657`.
+
 ## 2026-10-30
 * **Fix**: Repaired all three failing CI jobs (`Test`, `Clippy`, `Validate examples`
   in `.github/workflows/ci.yml`). (1) `Clippy` — Rust 1.99's new
