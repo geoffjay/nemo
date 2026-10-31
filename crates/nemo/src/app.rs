@@ -23,10 +23,10 @@ use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
     ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
-    HeatmapChart, Icon, Image, Label, LineChart, List, MenuItem, Modal, Notification, OptionData,
-    Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart,
-    Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Svg, Switch,
-    TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, MenuItem, Modal, Notification,
+    OptionData, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart,
+    ScatterChart, Select, SidenavBar, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart,
+    Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1730,6 +1730,7 @@ impl App {
                     .into_any_element()
             }
             "tag" => Tag::new(component.clone()).into_any_element(),
+            "kbd" => Kbd::new(component.clone()).into_any_element(),
             "toggle" => {
                 let initial = component
                     .properties

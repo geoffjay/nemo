@@ -375,6 +375,17 @@ fn register_basic_components(registry: &ComponentRegistry) {
             )
             .property("outline", PropertySchema::boolean().with_default(false)),
     );
+
+    reg(
+        registry,
+        "kbd",
+        ComponentCategory::Display,
+        "Kbd",
+        "A tag for displaying keyboard keybindings",
+        ConfigSchema::new("kbd")
+            .property("keys", PropertySchema::string().with_default("cmd-k"))
+            .property("outline", PropertySchema::boolean().with_default(false)),
+    );
 }
 
 fn register_input_components(registry: &ComponentRegistry) {
