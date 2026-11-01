@@ -51,7 +51,8 @@
                 "base.blue": "#7FB4CA",
                 "base.magenta": "#957FB8",
                 "base.magenta.light": "#957FB866",
-                "base.cyan": "#7AA89F"
+                "base.cyan": "#7AA89F",
+                "skeleton.background": "#3e3d3c"
             },
             "highlight": {
                 "editor.foreground": "#DCD7BA",
@@ -445,7 +446,8 @@
                 "base.blue": "#6693bf",
                 "base.magenta": "#b35b79",
                 "base.magenta.light": "#b35b7966",
-                "base.cyan": "#597b75"
+                "base.cyan": "#597b75",
+                "skeleton.background": "#cac094"
             },
             "highlight": {
                 "editor.foreground": "#545464",

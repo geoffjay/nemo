@@ -386,6 +386,16 @@ fn register_basic_components(registry: &ComponentRegistry) {
             .property("keys", PropertySchema::string().with_default("cmd-k"))
             .property("outline", PropertySchema::boolean().with_default(false)),
     );
+
+    reg(
+        registry,
+        "skeleton",
+        ComponentCategory::Display,
+        "Skeleton",
+        "A skeleton loading placeholder with a pulse animation",
+        ConfigSchema::new("skeleton")
+            .property("secondary", PropertySchema::boolean().with_default(false)),
+    );
 }
 
 fn register_input_components(registry: &ComponentRegistry) {

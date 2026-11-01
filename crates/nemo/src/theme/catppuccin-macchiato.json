@@ -52,7 +52,8 @@
                 "base.blue": "#8aadf4",
                 "base.magenta": "#f5bde6",
                 "base.magenta.light": "#f5bde666",
-                "base.cyan": "#8bd5ca"
+                "base.cyan": "#8bd5ca",
+                "skeleton.background": "#545970"
             },
             "highlight": {
                 "editor.foreground": "#cad3f5",
