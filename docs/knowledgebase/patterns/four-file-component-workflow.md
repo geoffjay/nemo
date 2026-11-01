@@ -48,6 +48,13 @@ rather than panicking on unparsable input. Component gallery reference pages
 [/implement-component skill](`.agents/skills/implement-component/SKILL.md`)
 automates the full wrap → screenshot-verify → page-update workflow.
 
+When the kit element paints its own background and is meant to fill its
+container (skeleton, 2026-11-01), return it directly instead of wrapping in
+`div().flex_none()`, and apply any config sizing to the element itself
+(`width`/`height` as px, `rounded` via `theme::tokens::radius_for`) — the
+universal wrapper's sizing/radius from `apply_layout_styles()` frames a wrapper
+div, but cannot reach the kit element's own background.
+
 **Containers** (`crates/nemo/src/containers/`) follow the same four wiring points,
 with two differences: the implementation file lives under `containers/` (declared
 via `mod containers;` in `main.rs` and re-exported from `containers/mod.rs`), and

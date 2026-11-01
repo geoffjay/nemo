@@ -151,8 +151,10 @@ router when `--app-config` is given; a fixture sidesteps both.)
    `target/debug/nemo` silently renders the placeholder).
 4. Iterate: implementation or fixture edits, re-validate, re-capture, until the
    image is correct.
-5. Also capture light mode once (`--theme tokyo-night --mode light`) when the
-   component resolves theme colors, to catch hardcoded-color mistakes.
+5. Also capture light mode once (`--theme gruvbox --mode light`) when the
+   component resolves theme colors, to catch hardcoded-color mistakes
+   (`tokyo-night` is dark-only — use `gruvbox`/`nord`/`catppuccin` for light
+   captures).
 6. Delete the fixture directory when done — it must never be committed
    (`git status` must be clean of `examples/components/fixtures/`).
 

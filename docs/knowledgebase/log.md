@@ -1,5 +1,28 @@
 # Knowledge Base Update Log
 
+## 2026-11-01
+* **Feature**: Wrapped gpui-kit's `Skeleton` as the built-in `<skeleton>`
+  component (Display category) — `crates/nemo/src/components/skeleton.rs`
+  (hand-written `#[derive(IntoElement)]` wrapper returning the kit element
+  directly — its default is full-width/16px and it paints its own background),
+  registered in `nemo-registry/src/builtins.rs` (prop: `secondary` bool
+  `false`), dispatched in `app.rs`. Sizing/rounding come through the universal
+  `width`/`height`/`rounded` attributes applied to the kit element itself (see
+  the element-background note in
+  [four-file component workflow](/docs/knowledgebase/patterns/four-file-component-workflow.md)).
+  Gallery page `examples/components/templates/pages/components/skeleton.nemo`
+  rewritten with 4 examples (Basic / Text Lines / Circle and Rect Placeholders
+  / Secondary Variant) + properties table (placeholder removed).
+* **Fix**: Skeletons were invisible on every nemo theme — gpui-component
+  resolves `cx.theme().skeleton` with a fallback to `tokens.secondary` when a
+  theme does not define `skeleton.background`, which equals the panel/secondary
+  surface color, so the pulsing bar rendered exactly the same color it sat on.
+  Added `skeleton.background` to all 6 bundled theme JSONs
+  (`crates/nemo/src/theme/*.json`, 11 mode entries), chosen as the panel
+  background mixed 20% toward the theme foreground via a throwaway script —
+  visibly distinct in every mode, verified with fixture screenshots in
+  tokyo-night dark + gruvbox light.
+
 ## 2026-10-31
 * **Update**: Added the gpui-kit wrapper-shape fact (hand-written
   `#[derive(IntoElement)]` struct reading `BuiltComponent` props and wrapping
