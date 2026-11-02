@@ -1,10 +1,199 @@
-<!-- message.nemo — placeholder page for the gpui-kit Message component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
 <template name="component-page-message">
   <component-page name="Message" description="Composable chat message rows with avatar, header, content, and footer slots.">
-    <stack id="message_status" direction="vertical" spacing="4" align="start">
-      <label id="message_not_implemented" text="Not implemented" size="lg" />
-      <label id="message_source" text="Source: https://gpui-kit.com/component/message" size="sm" />
-    </stack>
-  </component-page>
+    <component-example label="Basic" id="message_ex_basic">
+      <stack id="message_basic_stack" direction="vertical" spacing="12">
+        <message
+          id="msg_basic_1"
+          sender="Alice"
+          timestamp="10:24 AM"
+          avatar="Alice"
+          text="Can you review this draft?"
+        />
+      </stack>
+      <code-editor
+        id="message_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Alignment" id="message_ex_alignment">
+      <stack id="message_alignment_stack" direction="vertical" spacing="12">
+        <message
+          id="msg_incoming"
+          sender="Alice"
+          timestamp="10:24 AM"
+          avatar="Alice"
+          text="Incoming message"
+        />
+        <message
+          id="msg_outgoing"
+          sender="You"
+          timestamp="10:25 AM"
+          avatar="You"
+          alignment="end"
+          text="Outgoing message"
+          footer="Delivered"
+        />
+      </stack>
+      <code-editor
+        id="message_code_alignment"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ alignment_code }}"
+      />
+    </component-example>
+
+    <component-example label="System notice (ghost)" id="message_ex_ghost">
+      <stack id="message_ghost_stack" direction="vertical" spacing="12">
+        <message
+          id="msg_system"
+          sender="System"
+          timestamp="Just now"
+          variant="ghost"
+          text="The conversation has been archived."
+          footer="No further action required"
+        />
+      </stack>
+      <code-editor
+        id="message_code_ghost"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ ghost_code }}"
+      />
+    </component-example>
+
+    <component-example label="Rich content" id="message_ex_rich">
+      <stack id="message_rich_stack" direction="vertical" spacing="12">
+        <message
+          id="msg_rich"
+          sender="Alice"
+          timestamp="10:26 AM"
+          avatar="Alice"
+          text="The export is ready."
+        />
+        <message id="msg_rich_meta" sender="Alice" timestamp="10:26 AM" avatar="Alice">
+          <stack id="msg_rich_meta_inner" direction="vertical" spacing="4">
+            <label id="msg_rich_meta_file" text="export.zip" size="sm" />
+            <label id="msg_rich_meta_size" text="1.2 MB" size="sm" />
+          </stack>
+        </message>
+      </stack>
+      <code-editor
+        id="message_code_rich"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ rich_code }}"
+      />
+    </component-example>
+      <table slot="properties" id="message_props_table">
+        <table-row is-header="true">
+          <table-cell>Property</table-cell>
+          <table-cell>Type</table-cell>
+          <table-cell>Default</table-cell>
+          <table-cell>Description</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="sender" size="sm" /></table-cell>
+          <table-cell>string</table-cell>
+          <table-cell>none</table-cell>
+          <table-cell>Sender name shown in the header row.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="timestamp" size="sm" /></table-cell>
+          <table-cell>string</table-cell>
+          <table-cell>none</table-cell>
+          <table-cell>Metadata text shown after the sender name.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="avatar" size="sm" /></table-cell>
+          <table-cell>string</table-cell>
+          <table-cell>none</table-cell>
+          <table-cell>Identity for the avatar; omit for no avatar slot.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="text" size="sm" /></table-cell>
+          <table-cell>string</table-cell>
+          <table-cell>none</table-cell>
+          <table-cell>Message text rendered inside the bubble surface.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="alignment" size="sm" /></table-cell>
+          <table-cell>enum</table-cell>
+          <table-cell>start</table-cell>
+          <table-cell>Places the row at the leading (start) or trailing (end) edge.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="variant" size="sm" /></table-cell>
+          <table-cell>enum</table-cell>
+          <table-cell>secondary</table-cell>
+          <table-cell>Bubble surface: filled, secondary, muted, tinted, outline, ghost, or destructive. Defaults to secondary for start rows and filled for end rows.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="footer" size="sm" /></table-cell>
+          <table-cell>string</table-cell>
+          <table-cell>none</table-cell>
+          <table-cell>Footer text such as delivery state.</table-cell>
+        </table-row>
+      </table>
+    </component-page>
 </template>
+
+<script>
+let basic_code = #"<message
+  id="msg_basic_1"
+  sender="Alice"
+  timestamp="10:24 AM"
+  avatar="Alice"
+  text="Can you review this draft?"
+/>"#;
+
+let alignment_code = #"<message
+  id="msg_incoming"
+  sender="Alice"
+  timestamp="10:24 AM"
+  avatar="Alice"
+  text="Incoming message"
+/>
+<message
+  id="msg_outgoing"
+  sender="You"
+  timestamp="10:25 AM"
+  avatar="You"
+  alignment="end"
+  text="Outgoing message"
+  footer="Delivered"
+/>"#;
+
+let ghost_code = #"<message
+  id="msg_system"
+  sender="System"
+  timestamp="Just now"
+  variant="ghost"
+  text="The conversation has been archived."
+  footer="No further action required"
+/>"#;
+
+let rich_code = #"<message
+  id="msg_rich"
+  sender="Alice"
+  timestamp="10:26 AM"
+  avatar="Alice"
+  text="The export is ready."
+/>
+<message id="msg_rich_meta" sender="Alice" timestamp="10:26 AM" avatar="Alice">
+  <stack id="msg_rich_meta_inner" direction="vertical" spacing="4">
+    <label id="msg_rich_meta_file" text="export.zip" size="sm" />
+    <label id="msg_rich_meta_size" text="1.2 MB" size="sm" />
+  </stack>
+</message>"#;
+</script>

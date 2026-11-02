@@ -464,6 +464,38 @@ fn register_basic_components(registry: &ComponentRegistry) {
             )
             .property("text_color", PropertySchema::string()),
     );
+
+    reg(
+        registry,
+        "message",
+        ComponentCategory::Display,
+        "Message",
+        "A chat message row with sender identity, metadata, a bubble body, and a footer",
+        ConfigSchema::new("message")
+            .property("sender", PropertySchema::string())
+            .property("timestamp", PropertySchema::string())
+            .property("avatar", PropertySchema::string())
+            .property("text", PropertySchema::string())
+            .property(
+                "alignment",
+                PropertySchema::string()
+                    .with_default("start")
+                    .one_of(enum_vals(&["start", "end"])),
+            )
+            .property(
+                "variant",
+                PropertySchema::string().one_of(enum_vals(&[
+                    "filled",
+                    "secondary",
+                    "muted",
+                    "tinted",
+                    "outline",
+                    "ghost",
+                    "destructive",
+                ])),
+            )
+            .property("footer", PropertySchema::string()),
+    );
 }
 
 fn register_input_components(registry: &ComponentRegistry) {

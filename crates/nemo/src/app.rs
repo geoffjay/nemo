@@ -23,11 +23,11 @@ use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
     ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
-    HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker, MenuItem, Modal, Notification,
-    OptionData, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart,
-    ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
-    StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text,
-    TextEditor, Textarea, Toggle, Tooltip, Tree,
+    HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker, MenuItem, Message, Modal,
+    Notification, OptionData, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio,
+    RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack,
+    StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table,
+    Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1261,6 +1261,12 @@ impl App {
                     .items(items)
                     .selected_index(tab_state)
                     .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "message" => {
+                let children = self.render_children(component, components, entity_id, window, cx);
+                Message::new(component.clone())
+                    .children(children)
                     .into_any_element()
             }
             "modal" => {
