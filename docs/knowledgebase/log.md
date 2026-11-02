@@ -1,6 +1,24 @@
 # Knowledge Base Update Log
 
 ## 2026-11-02
+* **Feature**: Wrapped gpui-kit's `Pagination` as the built-in `<pagination>`
+  component (Input category) — `crates/nemo/src/components/pagination.rs`
+  (event-bearing wrapper, no children, following the stepper shape),
+  registered in `nemo-registry/src/builtins.rs`, dispatched in `app.rs`.
+  Props: `current-page` / `total-pages` / `visible-pages` (integers; the
+  current page is 1-based and application-owned — the kit clamps it and the
+  ellipsis menu lists hidden pages natively), `compact` (numberless
+  icon-only bar), `size`, and `disabled` (needed the kit's `Disableable`
+  trait import — the method is trait-provided, unlike stepper's inherent
+  one). `on-click` fires the handler with the 1-based target page via
+  `runtime.call_handler(..., &page.to_string())` + `cx.notify`; without a
+  handler the kit leaves navigation unwired, matching upstream's
+  `has_on_change`. Gallery page rewritten with 5 examples (Basic incl.
+  first/middle/end windows · Visible Pages on 25/100/12 · Compact incl.
+  edge-disabled · Sizes · Disabled incl. single-page) + properties and
+  callbacks tables; README placeholder list de-garbled. Verified with dark
+  (tokyo-night), scratch-fixture (sizes + disabled below the fold), and
+  light (gruvbox) screenshots.
 * **Feature**: Wrapped gpui-kit's `Bubble` as the built-in `<bubble>`
   component (Display category) — `crates/nemo/src/components/bubble.rs`
   (children-bearing wrapper returning the kit element directly), registered
