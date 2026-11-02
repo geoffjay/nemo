@@ -1,6 +1,25 @@
 # Knowledge Base Update Log
 
 ## 2026-11-02
+* **Feature**: Wrapped gpui-kit's `Bubble` as the built-in `<bubble>`
+  component (Display category) — `crates/nemo/src/components/bubble.rs`
+  (children-bearing wrapper returning the kit element directly), registered
+  in `nemo-registry/src/builtins.rs`, dispatched in `app.rs`. Props: `text`
+  (plain-text content child), `alignment` (`start`/`end`; unset defers to a
+  parent such as Message), and `variant` (filled/secondary/muted/tinted/
+  outline/ghost/destructive). Wrapped its two container slots as sibling
+  builtins in the same run: `<bubble-group>` (vertical stack of consecutive
+  bubbles; generic children arm) and `<bubble-reactions>` (a
+  `BubbleReactionsData` DTO collected from a `<bubble>` child in the
+  dispatch arm — partitioned by `component_type` like stepper items, with
+  the pill's `side`/`alignment` read from the child and its content children
+  rendered by the parent; elements inside the pill keep their own handlers
+  via the generic child path, so the kit's typed `.action(Button)`
+  pill-radius sharing stays out of scope). Gallery page rewritten with
+  5 examples (Basic Conversation / Variants / Destructive and Ghost / Group
+  / Reactions) + a properties table covering the child-element contract.
+  Verified with dark (tokyo-night), tall-window scratch-fixture (group +
+  top/bottom reaction pills), and light (gruvbox) screenshots.
 * **Feature**: Wrapped gpui-kit's `Message` as the built-in `<message>`
   component (Display category) — `crates/nemo/src/components/message.rs`
   (registered in `nemo-registry/src/builtins.rs`, dispatch arm in
