@@ -23,7 +23,7 @@ use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
     ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
-    HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, MenuItem, Modal, Notification,
+    HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker, MenuItem, Modal, Notification,
     OptionData, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart,
     ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
     StackedColumnChart, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea,
@@ -1732,6 +1732,12 @@ impl App {
             }
             "tag" => Tag::new(component.clone()).into_any_element(),
             "kbd" => Kbd::new(component.clone()).into_any_element(),
+            "marker" => {
+                let children = self.render_children(component, components, entity_id, window, cx);
+                Marker::new(component.clone())
+                    .children(children)
+                    .into_any_element()
+            }
             "skeleton" => Skeleton::new(component.clone()).into_any_element(),
             "toggle" => {
                 let initial = component

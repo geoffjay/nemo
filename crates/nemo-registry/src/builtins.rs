@@ -396,6 +396,35 @@ fn register_basic_components(registry: &ComponentRegistry) {
         ConfigSchema::new("skeleton")
             .property("secondary", PropertySchema::boolean().with_default(false)),
     );
+
+    reg(
+        registry,
+        "marker",
+        ComponentCategory::Display,
+        "Marker",
+        "A compact row for status text, timeline boundaries, unread labels, and system notices",
+        ConfigSchema::new("marker")
+            .property("text", PropertySchema::string())
+            .property("icon", PropertySchema::string())
+            .property(
+                "variant",
+                PropertySchema::string()
+                    .with_default("plain")
+                    .one_of(enum_vals(&["plain", "separator", "border"])),
+            )
+            .property(
+                "alignment",
+                PropertySchema::string().one_of(enum_vals(&["start", "center", "end"])),
+            )
+            .property("loading", PropertySchema::boolean().with_default(false))
+            .property(
+                "loading_style",
+                PropertySchema::string()
+                    .with_default("spinner")
+                    .one_of(enum_vals(&["spinner", "shimmer"])),
+            )
+            .property("text_color", PropertySchema::string()),
+    );
 }
 
 fn register_input_components(registry: &ComponentRegistry) {

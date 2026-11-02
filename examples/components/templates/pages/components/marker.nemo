@@ -1,10 +1,158 @@
-<!-- marker.nemo — placeholder page for the gpui-kit Marker component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let basic_code = #"<marker id="status_synced" icon="circle-check" text="Synced" text-color="theme.success" />
+<marker id="status_failed" icon="circle-x" text="Sync failed" text-color="theme.danger" />"#;
+
+let separator_code = #"<marker id="today" variant="separator" text="Today" />
+<marker id="yesterday" variant="separator" alignment="end" text="Yesterday" />"#;
+
+let border_code = #"<marker id="unread_notice" variant="border" icon="info" text="3 unread messages" />
+<marker id="delivered" alignment="end" text="Delivered" />"#;
+
+let loading_code = #"<marker id="loading_messages" loading="true" text="Loading messages…" />
+<marker id="thinking" loading="true" loading-style="shimmer" text="Thinking…" />"#;
+
+let children_code = #"<marker id="encrypted_notice" icon="info" alignment="center">
+  <label text="Messages are end-to-end encrypted" />
+</marker>"#;
+</script>
+
+<!-- marker.nemo — component reference page for the marker wrapper of
+     gpui-kit's Marker. The spinner/shimmer loading animations are built into
+     the component; children compose arbitrarily (icon and text are the typed
+     slots exposed as the icon/text attributes). -->
 <template name="component-page-marker">
-  <component-page name="Marker" description="A compact, composable row for conversation status and system markers.">
-    <stack id="marker_status" direction="vertical" spacing="4" align="start">
-      <label id="marker_not_implemented" text="Not implemented" size="lg" />
-      <label id="marker_source" text="Source: https://gpui-kit.com/component/marker" size="sm" />
-    </stack>
+  <component-page name="Marker" description="A compact, composable row for conversation status, timeline boundaries, unread labels, and system notices. Compose status and meaning through the icon, text, and text-color attributes plus arbitrary children.">
+    <component-example label="Basic Status">
+      <stack id="marker_basic_stack" direction="vertical" spacing="4" align="start">
+        <marker id="marker_status_synced" icon="circle-check" text="Synced" text-color="theme.success" />
+        <marker id="marker_status_failed" icon="circle-x" text="Sync failed" text-color="theme.danger" />
+        <marker id="marker_status_plain" text="Conversation archived" />
+      </stack>
+      <code-editor
+        id="marker_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Separator">
+      <stack id="marker_separator_stack" direction="vertical" spacing="12">
+        <marker id="marker_today" variant="separator" text="Today" />
+        <marker id="marker_yesterday" variant="separator" alignment="end" text="Yesterday" />
+      </stack>
+      <code-editor
+        id="marker_code_separator"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="3"
+        default-value="{{ separator_code }}"
+      />
+    </component-example>
+
+    <component-example label="Border">
+      <stack id="marker_border_stack" direction="vertical" spacing="12" align="start">
+        <marker id="marker_unread_notice" variant="border" icon="info" text="3 unread messages" />
+        <marker id="marker_delivered" alignment="end" text="Delivered" />
+      </stack>
+      <code-editor
+        id="marker_code_border"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="3"
+        default-value="{{ border_code }}"
+      />
+    </component-example>
+
+    <component-example label="Loading">
+      <stack id="marker_loading_stack" direction="vertical" spacing="4" align="start">
+        <marker id="marker_loading_messages" loading="true" text="Loading messages…" />
+        <marker id="marker_thinking" loading="true" loading-style="shimmer" text="Thinking…" />
+      </stack>
+      <code-editor
+        id="marker_code_loading"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="3"
+        default-value="{{ loading_code }}"
+      />
+    </component-example>
+
+    <component-example label="Arbitrary Children">
+      <stack id="marker_children_stack" direction="vertical" spacing="12">
+        <marker id="marker_encrypted_notice" icon="info" alignment="center">
+          <label id="marker_encrypted_label" text="Messages are end-to-end encrypted" />
+        </marker>
+      </stack>
+      <code-editor
+        id="marker_code_children"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ children_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="120">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="560">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="text" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Label text, added as shimmer-able content; animated when loading-style=shimmer.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="icon" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Icon name for the compact leading slot; suppresses the automatic spinner under loading-style=spinner.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="variant" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>plain</table-cell>
+        <table-cell>Visual treatment: plain (no decoration), separator (label between divider lines), or border (bottom border).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="alignment" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Child placement: start (default), center, or end. Separator defaults to center; an explicit separator alignment keeps only the far-side line.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="loading" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Show the loading effect while keeping the variant and layout unchanged.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="loading-style" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>spinner</table-cell>
+        <table-cell>Loading effect: spinner (compact spinner, omitted when icon is set) or shimmer (highlights text; opacity fade on children).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="text-color" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Label color as theme.x or hex; rows default to the muted foreground.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>
