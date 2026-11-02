@@ -399,6 +399,45 @@ fn register_basic_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "stepper",
+        ComponentCategory::Input,
+        "Stepper",
+        "A step-by-step progress indicator; <stepper-item> children are the steps",
+        ConfigSchema::new("stepper")
+            .property(
+                "selected_index",
+                PropertySchema::integer().with_default(0i64),
+            )
+            .property(
+                "layout",
+                PropertySchema::string()
+                    .with_default("horizontal")
+                    .one_of(enum_vals(&["horizontal", "vertical"])),
+            )
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("medium")
+                    .one_of(enum_vals(&["xsmall", "small", "medium", "large"])),
+            )
+            .property("text_center", PropertySchema::boolean().with_default(false))
+            .property("disabled", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
+        "stepper_item",
+        ComponentCategory::Input,
+        "Stepper Item",
+        "One step of a stepper; `label` is the step text, children override it",
+        ConfigSchema::new("stepper_item")
+            .property("label", PropertySchema::string())
+            .property("icon", PropertySchema::string())
+            .property("disabled", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
         "marker",
         ComponentCategory::Display,
         "Marker",

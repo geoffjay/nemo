@@ -26,8 +26,8 @@ use crate::components::{
     HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker, MenuItem, Modal, Notification,
     OptionData, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart,
     ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
-    StackedColumnChart, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea,
-    Toggle, Tooltip, Tree,
+    StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text,
+    TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1739,6 +1739,53 @@ impl App {
                     .into_any_element()
             }
             "skeleton" => Skeleton::new(component.clone()).into_any_element(),
+            "stepper" => {
+                // Each <stepper-item> child is one step; its children are the
+                // step's label content and its icon/disabled attributes carry
+                // into the kit item.
+                let item_ids: Vec<String> = component
+                    .children
+                    .iter()
+                    .filter(|id| {
+                        components
+                            .get(*id)
+                            .map(|c| c.component_type == "stepper_item")
+                            .unwrap_or(false)
+                    })
+                    .cloned()
+                    .collect();
+
+                let mut items = Vec::new();
+                for item_id in &item_ids {
+                    let Some(item) = components.get(item_id) else {
+                        continue;
+                    };
+                    items.push(StepperItemData {
+                        label: item
+                            .properties
+                            .get("label")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string),
+                        icon: item
+                            .properties
+                            .get("icon")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string),
+                        disabled: item
+                            .properties
+                            .get("disabled")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                        children: self.render_children(item, components, entity_id, window, cx),
+                    });
+                }
+
+                Stepper::new(component.clone())
+                    .items(items)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
             "toggle" => {
                 let initial = component
                     .properties
