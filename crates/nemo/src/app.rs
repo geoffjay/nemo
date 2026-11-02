@@ -24,10 +24,10 @@ use crate::components::{
     BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, CandlestickChart,
     Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart,
     DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
-    MenuItem, Message, Modal, Notification, OptionData, Panel, PieChart, Progress, PyramidChart,
-    RadarChart, Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner,
-    Stack, StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData,
-    Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    MenuItem, Message, Modal, Notification, OptionData, Pagination, Panel, PieChart, Progress,
+    PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton,
+    Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg,
+    Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1832,6 +1832,14 @@ impl App {
 
                 Stepper::new(component.clone())
                     .items(items)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "pagination" => {
+                // The current page is application-owned: `on-click` fires the
+                // handler with the 1-based target page for the app to persist.
+                Pagination::new(component.clone())
                     .runtime(Arc::clone(&self.runtime))
                     .entity_id(entity_id)
                     .into_any_element()

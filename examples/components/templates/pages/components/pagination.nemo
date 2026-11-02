@@ -1,10 +1,166 @@
-<!-- pagination.nemo — placeholder page for the gpui-kit Pagination component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let basic_code = #"<pagination id="list_pages" current-page="5" total-pages="10" on-click="handle_page" />
+
+<pagination id="first_pages" current-page="1" total-pages="10" />
+
+<pagination id="end_pages" current-page="8" total-pages="10" />"#;
+
+let visible_code = #"<pagination id="large_pages" current-page="25" total-pages="100" visible-pages="12" />"#;
+
+let compact_code = #"<pagination id="toolbar_pages" compact="true" current-page="3" total-pages="10" />
+
+<pagination id="toolbar_edge_pages" compact="true" current-page="1" total-pages="10" />"#;
+
+let sizes_code = #"<pagination id="pages_xsmall" size="xsmall" current-page="5" total-pages="10" />
+<pagination id="pages_small" size="small" current-page="5" total-pages="10" />
+<pagination id="pages_large" size="large" current-page="5" total-pages="10" />"#;
+
+let disabled_code = #"<pagination id="one_page" current-page="1" total-pages="1" disabled="true" />"#;
+</script>
+
+<!-- pagination.nemo — component reference page for the pagination wrapper
+     of gpui-kit's Pagination. The current page is 1-based and
+     application-owned: supply current-page from state and update it from
+     the on-click handler. -->
 <template name="component-page-pagination">
-  <component-page name="Pagination" description="Page navigation with an ellipsis menu that lists hidden pages.">
-    <stack id="pagination_status" direction="vertical" spacing="4" align="start">
-      <label id="pagination_not_implemented" text="Not implemented" size="lg" />
-      <label id="pagination_source" text="Source: https://gpui-kit.com/component/pagination" size="sm" />
-    </stack>
+  <component-page name="Pagination" description="Page navigation with page numbers, an ellipsis menu that lists hidden pages, and a compact numberless style. Current page is 1-based and application-owned: the on-click handler receives the target page.">
+    <component-example label="Basic">
+      <stack id="pagination_basic_stack" direction="vertical" spacing="16" align="start">
+        <pagination id="pagination_basic" current-page="5" total-pages="10" />
+        <pagination id="pagination_gap" current-page="1" total-pages="10" />
+        <pagination id="pagination_gap_far" current-page="8" total-pages="10" />
+      </stack>
+      <code-editor
+        id="pagination_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Visible Pages">
+      <stack id="pagination_visible_stack" direction="vertical" spacing="16" align="start">
+        <pagination id="pagination_visible" current-page="25" total-pages="100" visible-pages="12" />
+      </stack>
+      <code-editor
+        id="pagination_code_visible"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="3"
+        default-value="{{ visible_code }}"
+      />
+    </component-example>
+
+    <component-example label="Compact">
+      <stack id="pagination_compact_stack" direction="vertical" spacing="16" align="start">
+        <pagination id="pagination_compact" compact="true" current-page="3" total-pages="10" />
+        <pagination id="pagination_compact_edge" compact="true" current-page="1" total-pages="10" />
+      </stack>
+      <code-editor
+        id="pagination_code_compact"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="3"
+        default-value="{{ compact_code }}"
+      />
+    </component-example>
+
+    <component-example label="Sizes">
+      <stack id="pagination_sizes_stack" direction="vertical" spacing="12" align="start">
+        <pagination id="pagination_xsmall" size="xsmall" current-page="5" total-pages="10" />
+        <pagination id="pagination_small" size="small" current-page="5" total-pages="10" />
+        <pagination id="pagination_large" size="large" current-page="5" total-pages="10" />
+      </stack>
+      <code-editor
+        id="pagination_code_sizes"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="4"
+        default-value="{{ sizes_code }}"
+      />
+    </component-example>
+
+    <component-example label="Disabled">
+      <stack id="pagination_disabled_stack" direction="vertical" spacing="16" align="start">
+        <pagination id="pagination_disabled" current-page="4" total-pages="10" disabled="true" />
+        <pagination id="pagination_single" current-page="1" total-pages="1" disabled="true" />
+      </stack>
+      <code-editor
+        id="pagination_code_disabled"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="3"
+        default-value="{{ disabled_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="560">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="current-page" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>1</table-cell>
+        <table-cell>Current page, 1-based; clamped between 1 and total-pages.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="total-pages" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>1</table-cell>
+        <table-cell>Total number of pages.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="visible-pages" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>5</table-cell>
+        <table-cell>Maximum number of visible page buttons; hidden ranges collapse into an ellipsis menu.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="compact" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Show only the previous and next buttons on the edge with icon like, without page numbers.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="size" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>medium</table-cell>
+        <table-cell>Button size: xsmall, small, medium, or large.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disable every button; prev/next also disable themselves at the ends without this.</table-cell>
+      </table-row>
+    </table>
+
+    <table slot="callbacks" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Handler</table-column>
+        <table-column field="arg" width="120">Argument</table-column>
+        <table-column field="description" width="600">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="on-click" /></table-cell>
+        <table-cell>page (string)</table-cell>
+        <table-cell>Invoked when a page number, the previous or next button, or an ellipsis menu item is clicked; the argument is the target page, 1-based. Update current-page with it.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

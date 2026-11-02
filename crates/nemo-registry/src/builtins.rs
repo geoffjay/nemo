@@ -438,6 +438,32 @@ fn register_basic_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "pagination",
+        ComponentCategory::Input,
+        "Pagination",
+        "Page navigation with prev/next buttons, page numbers, and an ellipsis menu of hidden pages",
+        ConfigSchema::new("pagination")
+            .property(
+                "current_page",
+                PropertySchema::integer().with_default(1i64),
+            )
+            .property("total_pages", PropertySchema::integer().with_default(1i64))
+            .property(
+                "visible_pages",
+                PropertySchema::integer().with_default(5i64),
+            )
+            .property("compact", PropertySchema::boolean().with_default(false))
+            .property("disabled", PropertySchema::boolean().with_default(false))
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("medium")
+                    .one_of(enum_vals(&["xsmall", "small", "medium", "large"])),
+            ),
+    );
+
+    reg(
+        registry,
         "marker",
         ComponentCategory::Display,
         "Marker",
