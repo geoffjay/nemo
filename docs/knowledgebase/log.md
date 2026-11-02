@@ -1,6 +1,27 @@
 # Knowledge Base Update Log
 
 ## 2026-11-01
+* **Feature**: Wrapped gpui-kit's `Stepper` as the built-in `<stepper>`
+  component (Input category) — `crates/nemo/src/components/stepper.rs`,
+  registered in `nemo-registry/src/builtins.rs` together with a
+  `<stepper-item>` child type (label/icon/disabled; tabs-style
+  parent-rendered-children pattern in the `app.rs` dispatch). Props:
+  `selected_index` (integer 0; steps before it render as passed),
+  `layout` horizontal/vertical, `size`, `text_center`, `disabled`,
+  `on-click` handler fired with the clicked step index as event data.
+  Handler wiring detail worth reusing: gpui-kit's generic
+  `on_click<F: Fn(&usize, &mut Window, &mut App)>` bound chokes on a
+  plain closure captured into an `Option::map` (HRTB "implementation of
+  Fn is not general enough") — build the callback through an explicit
+  `type StepClickFn = dyn Fn(&usize, &mut Window, &mut App)` +
+  `Option<Rc<StepClickFn>>`, then forward with a plain closure at the
+  kit call site. Gallery page rewritten (Basic / With Icons / Vertical
+  Layout / Disabled Steps + properties + callbacks tables). Verified by
+  tokyo-night dark + gruvbox light fixture screenshots. Pushed with the
+  next commit; `stepper` placeholder no longer contains "Not
+  implemented".
+
+## 2026-11-01
 * **Feature**: Wrapped gpui-kit's `Marker` as the built-in `<marker>`
   component (Display category) — `crates/nemo/src/components/marker.rs`
   (children-bearing, badge-style wrapper that returns the kit element
