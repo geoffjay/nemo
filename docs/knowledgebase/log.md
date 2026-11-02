@@ -1,6 +1,24 @@
 # Knowledge Base Update Log
 
 ## 2026-11-01
+* **Feature**: Wrapped gpui-kit's `Marker` as the built-in `<marker>`
+  component (Display category) — `crates/nemo/src/components/marker.rs`
+  (children-bearing, badge-style wrapper that returns the kit element
+  directly), registered in `nemo-registry/src/builtins.rs`, dispatched in
+  `app.rs`. The typed slots are exposed as attributes: `text` feeds
+  `MarkerContent::text` so the shimmer loading effect animates it; `icon`
+  feeds a `MarkerIcon` slot via `map_icon_name` and (mirroring upstream)
+  suppresses the automatic spinner under spinner-style loading; `text_color`
+  resolves `theme.*`/hex for status colors. Props: `variant`
+  (plain/separator/border), `alignment` (start/center/end; unset defers to
+  upstream variant defaults), `loading` (bool), `loading-style`
+  (spinner/shimmer). Arbitrary XML children compose via `render_children`
+  (rich content slots). Out of depth on purpose: `ShimmerStyle` and
+  `separator_style` refinements and the a11y `role` override are not bridged.
+  Gallery page `…/components/marker.nemo` rewritten with 5 examples
+  (Basic Status / Separator / Border / Loading / Arbitrary Children) +
+  properties table (placeholder removed). Verified with dark (tokyo-night)
+  and light (gruvbox) fixture screenshots.
 * **Feature**: Wrapped gpui-kit's `Skeleton` as the built-in `<skeleton>`
   component (Display category) — `crates/nemo/src/components/skeleton.rs`
   (hand-written `#[derive(IntoElement)]` wrapper returning the kit element
