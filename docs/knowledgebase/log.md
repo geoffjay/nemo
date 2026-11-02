@@ -1,5 +1,28 @@
 # Knowledge Base Update Log
 
+## 2026-11-02
+* **Feature**: Wrapped gpui-kit's `Message` as the built-in `<message>`
+  component (Display category) — `crates/nemo/src/components/message.rs`
+  (registered in `nemo-registry/src/builtins.rs`, dispatch arm in
+  `crates/nemo/src/app.rs` with `render_children`). Props: `sender`,
+  `timestamp` (both feed `MessageHeader`), `avatar` (kit `Avatar` inside
+  `MessageAvatar`), `text` (one kit `Bubble` in `MessageContent`),
+  `alignment` start/end, `variant` filled/secondary/muted/tinted/outline/
+  ghost/destructive (default secondary for start rows, filled for end
+  rows, per the gpui-kit docs examples), `footer` (`MessageFooter`).
+  Element children render as extra rich content below the bubble, so the
+  kit's ghost-bubble header/footer-inset inheritance works through the
+  typed `MessageContent::bubble()` builder. Gallery page: Basic /
+  Alignment / ghost system notice / Rich content + properties table.
+  Two conventions worth remembering: (1) a properties table must be a
+  direct `<component-page>` child (slot="properties"), not nested inside
+  a `<component-example>` — component.nemo's Properties panel keys on
+  `slot:properties` at page level; (2) `code-editor`'s prop is
+  `searchable`, not `search-able` (kebab→snake normalization makes the
+  latter silently drop). A `<bubble>` builtin (kit Bubble/BubbleVariant,
+  plus reactions via BubbleReactions+Button) remains a placeholder
+  candidate.
+
 ## 2026-11-01
 * **Feature**: Wrapped gpui-kit's `Stepper` as the built-in `<stepper>`
   component (Input category) — `crates/nemo/src/components/stepper.rs`,
