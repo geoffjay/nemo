@@ -21,13 +21,13 @@ use gpui_kit::component::table::Column;
 
 use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
-    BarChart, BubbleChart, Button, CandlestickChart, Checkbox, ClusteredBarChart,
-    ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, DropdownButton, FunnelChart,
-    HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker, MenuItem, Message, Modal,
-    Notification, OptionData, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio,
-    RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack,
-    StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table,
-    Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, CandlestickChart,
+    Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart,
+    DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
+    MenuItem, Message, Modal, Notification, OptionData, Panel, PieChart, Progress, PyramidChart,
+    RadarChart, Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner,
+    Stack, StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData,
+    Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1423,7 +1423,8 @@ impl App {
                     .into_any_element()
             }
             "accordion_item" | "tab_item" | "option" | "menu_item" | "list_item"
-            | "table_header" | "table_column" | "table_row" | "table_cell" | "tree_node" => {
+            | "bubble_reactions" | "table_header" | "table_column" | "table_row" | "table_cell"
+            | "tree_node" => {
                 // These are rendered by their parent container; standalone fallback.
                 div().into_any_element()
             }
@@ -1432,6 +1433,49 @@ impl App {
             "badge" => {
                 let children = self.render_children(component, components, entity_id, window, cx);
                 Badge::new(component.clone())
+                    .children(children)
+                    .into_any_element()
+            }
+            "bubble" => {
+                // Partition the children: content elements go into the
+                // bubble's content slot; a `<bubble-reactions>` child is
+                // collected as data and attached to the bubble edge.
+                let mut children = Vec::new();
+                let mut reactions = None;
+                for child_id in &component.children {
+                    let Some(child) = components.get(child_id) else {
+                        continue;
+                    };
+                    if child.component_type == "bubble_reactions" {
+                        let data = BubbleReactionsData {
+                            side: child
+                                .properties
+                                .get("side")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            alignment: child
+                                .properties
+                                .get("alignment")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            children: self
+                                .render_children(child, components, entity_id, window, cx),
+                        };
+                        reactions = Some(data);
+                    } else {
+                        children
+                            .push(self.render_component(child, components, entity_id, window, cx));
+                    }
+                }
+                let mut bubble = Bubble::new(component.clone()).children(children);
+                if let Some(data) = reactions {
+                    bubble = bubble.reactions(data);
+                }
+                bubble.into_any_element()
+            }
+            "bubble_group" => {
+                let children = self.render_children(component, components, entity_id, window, cx);
+                BubbleGroup::new(component.clone())
                     .children(children)
                     .into_any_element()
             }

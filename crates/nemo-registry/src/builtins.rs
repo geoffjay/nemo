@@ -496,6 +496,64 @@ fn register_basic_components(registry: &ComponentRegistry) {
             )
             .property("footer", PropertySchema::string()),
     );
+
+    reg(
+        registry,
+        "bubble",
+        ComponentCategory::Display,
+        "Bubble",
+        "A chat bubble surface with variants, alignment, and an optional reaction region",
+        ConfigSchema::new("bubble")
+            .property("text", PropertySchema::string())
+            .property(
+                "alignment",
+                PropertySchema::string().one_of(enum_vals(&["start", "end"])),
+            )
+            .property(
+                "variant",
+                PropertySchema::string()
+                    .with_default("filled")
+                    .one_of(enum_vals(&[
+                        "filled",
+                        "secondary",
+                        "muted",
+                        "tinted",
+                        "outline",
+                        "ghost",
+                        "destructive",
+                    ])),
+            ),
+    );
+
+    reg(
+        registry,
+        "bubble_group",
+        ComponentCategory::Display,
+        "Bubble Group",
+        "A vertical stack of consecutive bubbles from one sender",
+        ConfigSchema::new("bubble_group"),
+    );
+
+    reg(
+        registry,
+        "bubble_reactions",
+        ComponentCategory::Display,
+        "Bubble Reactions",
+        "A reaction pill attached to a \u{3c}bubble\u{3e}'s top or bottom edge; rendered by its parent bubble",
+        ConfigSchema::new("bubble_reactions")
+            .property(
+                "side",
+                PropertySchema::string()
+                    .with_default("bottom")
+                    .one_of(enum_vals(&["top", "bottom"])),
+            )
+            .property(
+                "alignment",
+                PropertySchema::string()
+                    .with_default("end")
+                    .one_of(enum_vals(&["start", "end"])),
+            ),
+    );
 }
 
 fn register_input_components(registry: &ComponentRegistry) {
