@@ -1,6 +1,35 @@
 # Knowledge Base Update Log
 
 ## 2026-11-02
+* **Feature**: Wrapped gpui-kit's `Calendar` (via `gpui_kit::component::calendar`,
+  re-exported from the private `time` facade — the component path is NOT
+  `gpui_kit::time::…`, that module doesn't exist on the kit's public surface;
+  it's `gpui_kit::base::calendar` types re-exported through
+  `component::calendar`) as the built-in `<calendar>` date picker (Input
+  category). Entity-stateful: `ComponentState::Calendar { state, last_value }`
+  around gpui_base's `CalendarState` (created with `CalendarState::new(window,
+  cx)`); `get_or_create_calendar_state()` follows the input precedent —
+  subscribes once to `CalendarEvent::Selected(Date)` and mirrors
+  `Date::Single(Some(d))` back into the `value` property (layout-manager
+  write, so `get_component_property` stays live) + fires `on-change` with
+  the ISO string; prop drift re-seeds silently via `set_date`, guarded with
+  a current-date equality check to avoid a spurious notify on click-driven
+  write-back. Props: `value` (yyyy-mm-dd seed), `months` (side-by-side
+  grids), `size`, `first_day` (sun…sat), `min`/`max` + `disabled_days`
+  (weekday indices, 0=Sun…6=Sat) built into ONE combined
+  `Matcher::custom` closure (my first cut used an interval/DayOfWeek
+  if/else — combinations of min/max with disabled_days silently dropped
+  the latter; caught by the restricted-fixture screenshot showing weekends
+  bright). **Keybinding gotcha re-confirmed**: XML attributes are
+  kebab→snake normalized at parse time, so `first-day="mon"` arrives as
+  `first_day` — schema keys must be snake_case (`first-day` in the schema
+  + `props.get("first-day")` read nothing; caught by the first capture
+  rendering Sunday-first). Chrono: `NaiveDate::weekday()` is private in
+  0.4.43 — call `chrono::Datelike::weekday(date)` explicitly. Verified
+  dark/light: value seed (Feb 2026 with dimmed weekends + selected 12th),
+  Monday-first header, two-months side-by-side, small/large sizes.
+  Out of scope: `Date::Range` range selection, `year_range`, clearing via
+  an empty value, custom matcher expressions in config.
 * **Feature**: Wrapped gpui-kit's `Carousel` as the built-in `<carousel>`
   component (Display category) — the first **stateful** wrap needing a
   `ComponentState` entity variant. `crates/nemo/src/components/carousel.rs`
