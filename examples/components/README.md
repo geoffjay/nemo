@@ -1,6 +1,8 @@
 # Component Gallery Example
 
-An interactive showcase of every built-in Nemo component, organized with sidebar navigation.
+An interactive showcase of every built-in Nemo component, hosted in an app-shell
+with an Overview / Styling / Components section menu and a sidebar-driven
+component router.
 
 ![Screenshot](./screenshot.png)
 
@@ -12,32 +14,47 @@ cargo run -- --app-config examples/components/app.nemo
 
 ## What It Shows
 
+- App-shell layout: `<app-shell>` with `<sidenav-item>` page switching, a
+  `<header-bar>` with theme toggle, and a component `<page>` containing the
+  gallery router
 - Sidebar navigation via the chrome-free page router: a `<router>` of `<route>`s
   with a `<nav-link>` per component page — no navigation handler required
-- Every built-in component type:
-    - **Button** -- all variants (`primary`, `secondary`, `danger`, `ghost`, `warning`, `success`, `info`) and disabled state
-    - **Label** -- all sizes (`xs`, `sm`, `md`, `lg`, `xl`)
-    - **Icon** -- named icons at different sizes
-    - **Checkbox** -- checked, unchecked, and disabled states
-    - **Input** -- text fields with placeholders and disabled state
-    - **Select** -- dropdown with options
-    - **Progress** -- progress bars at various values
-    - **Notification** -- `info`, `success`, `warning`, `error` kinds
-    - **Modal** -- toggled open/closed via a button handler
-    - **Text** -- block text content
-    - **List** -- vertical item lists
-    - **Panel** -- styled containers with border, shadow, and padding
-    - **Table** -- tabular data display
-    - **Tree** -- hierarchical view
-    - **Image** -- image display with alt text
-- The router mounts only the active route's body — pages are unmounted when not
-  shown, rather than built-and-hidden
-- Jump straight to any page with `--route` (routes mirror the page ids), e.g.
-  `nemo dev --route /table examples/components/app.nemo` or
-  `nemo screenshot --app-config examples/components/app.nemo --route /charts --out charts.png`
-- Modal open/close toggling through `get_component_property` and `set_component_property`
-- Placeholder pages for gpui-kit components that Nemo does not wrap yet
-  (Attachment, Calendar, Carousel, Command, Data Table, Diff, Dock,
-  Message Scroller, Questionnaire, Settings, Virtual List) — each
-  shows a "Not implemented" label and a link to the component's page on
-  [gpui-kit.com](https://gpui-kit.com)
+- The router mounts only the active route's body — pages are unmounted when
+  not shown, rather than built-and-hidden
+- Every component page is a reusable `<component-page-*>` template that pairs
+  live examples with copy-ready markup in Preview/Code tabs
+- Modal open/close toggling through `get_component_property` and
+  `set_component_property`
+
+## Components
+
+Basic: accordion, alert, avatar, badge, bubble, button, collapsible,
+dropdown-button, icon, image, kbd, label, marker, message, pagination, rating,
+skeleton, spinner, stepper, tag, text, tooltip.
+
+Form: checkbox, code-editor, input, radio, select, slider, switch, text-editor,
+textarea, toggle.
+
+Layout: list, modal, notification, panel & stack.
+
+Advanced: charts, menu, svg, table, tree.
+
+Navigation: sidenav-bar.
+
+## Placeholder pages
+
+gpui-kit components that Nemo does not wrap yet show a "Not implemented"
+placeholder with a link to the component's page on
+[gpui-kit.com](https://gpui-kit.com):
+
+- attachment
+- calendar
+- carousel
+- command
+- data-table
+- diff
+- dock
+- message-scroller
+- questionnaire
+- settings
+- virtual-list

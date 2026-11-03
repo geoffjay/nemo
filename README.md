@@ -104,21 +104,32 @@ A minimal application (`app.nemo` — a single-file component entry):
 - **Scripted logic** -- Event handlers written in RHAI
 - **Theming** -- Built-in themes (Kanagawa, Catppuccin, Tokyo Night, Gruvbox, Nord) with dark/light modes
 - **Extensible** -- Native plugin support via dynamic libraries
+
+## Examples
+
 ```bash
-nemo --app-config examples/basic/app.nemo
-nemo --app-config examples/calculator/app.nemo
-nemo --app-config examples/sfc/app.nemo
-nemo --app-config examples/data-binding/app.nemo     # multi-file <include> example
-nemo --app-config examples/components/app.nemo
+nemo --app-config examples/basic/app.nemo           # minimal single-file app
+nemo --app-config examples/calculator/app.nemo      # calculator with RHAI handlers
+nemo --app-config examples/sfc/app.nemo            # single-file components
+nemo --app-config examples/components/app.nemo     # full component gallery
 ```
 
-Configuations are available in the [examples](examples) directory:
+Configurations are available in the [examples](examples) directory:
 
+- [app-shell](examples/app-shell): Application shell layout (sidenav + pages + header/footer bars)
 - [basic](examples/basic): A minimal application
 - [calculator](examples/calculator): A calculator application
-- [components](examples/components): A component-based application
-- [data-binding](examples/data-binding): A data-binding application
-- [data-streaming](examples/data-streaming): A data-streaming application
+- [complete](examples/complete): Kitchen-sink example with variables, includes, and routing
+- [components](examples/components): The component gallery — every built-in component with live examples
+- [custom-theme](examples/custom-theme): Defining a custom theme
+- [data-binding](examples/data-binding): Data sources (timer, HTTP, MQTT, WebSocket, Redis, NATS) bound to components
+- [data-streaming](examples/data-streaming): A live streaming dashboard
+- [dev-dashboard](examples/dev-dashboard): The Nemo dev dashboard
+- [pid-control](examples/pid-control): A PID control demo
+- [router](examples/router): Client-side routing between pages
+- [sfc](examples/sfc): Single-file components with child components
+- [svg](examples/svg): SVG rendering
+- [task-list](examples/task-list): A task list application
 
 ## Documentation
 
