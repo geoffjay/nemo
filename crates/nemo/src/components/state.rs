@@ -1,4 +1,5 @@
 use gpui::Entity;
+use gpui_kit::component::carousel::CarouselState;
 use gpui_kit::component::input::{EditorState, InputState, TextareaState};
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
@@ -58,6 +59,11 @@ pub enum ComponentState {
     Textarea(Entity<TextareaState>),
     Editor(Entity<EditorState>),
     Slider(Entity<SliderState>),
+    Carousel {
+        state: Entity<CarouselState>,
+        last_count: usize,
+        last_index: i64,
+    },
     Table {
         state: Entity<TableState<NemoTableDelegate>>,
         last_data: Vec<Value>,

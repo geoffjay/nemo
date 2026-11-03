@@ -301,6 +301,26 @@ fn register_basic_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "carousel",
+        ComponentCategory::Display,
+        "Carousel",
+        "A snapping slide viewport; declarative children are the slides in order",
+        ConfigSchema::new("carousel")
+            .property("height", PropertySchema::integer())
+            .property(
+                "axis",
+                PropertySchema::string()
+                    .with_default("horizontal")
+                    .one_of(enum_vals(&["horizontal", "vertical"])),
+            )
+            .property("looping", PropertySchema::boolean().with_default(false))
+            .property("index", PropertySchema::integer().with_default(0i64))
+            .property("controls", PropertySchema::boolean().with_default(true))
+            .property("pagination", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
         "collapsible",
         ComponentCategory::Display,
         "Collapsible",

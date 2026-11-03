@@ -28,7 +28,7 @@ cargo run -- --app-config examples/components/app.nemo
 
 ## Components
 
-Basic: accordion, alert, avatar, badge, bubble, button, collapsible,
+Basic: accordion, alert, avatar, badge, bubble, button, carousel, collapsible,
 dropdown-button, icon, image, kbd, label, marker, message, pagination, rating,
 skeleton, spinner, stepper, tag, text, tooltip.
 

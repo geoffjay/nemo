@@ -1,6 +1,7 @@
 //! GPUI application wrapper.
 
 use gpui::*;
+use gpui_kit::component::carousel::{CarouselEvent, CarouselState};
 use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
@@ -22,13 +23,13 @@ use gpui_kit::component::table::Column;
 use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, CandlestickChart,
-    Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart,
-    DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
-    Menu, MenuEntryData, MenuItem, Message, Modal, Notification, OptionData, Pagination, Panel,
-    PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart, ScatterChart,
-    Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart,
-    Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor,
-    Textarea, Toggle, Tooltip, Tree,
+    Carousel, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible,
+    ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart,
+    List, Marker, Menu, MenuEntryData, MenuItem, Message, Modal, Notification, OptionData,
+    Pagination, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart,
+    ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
+    StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text,
+    TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -604,6 +605,88 @@ impl App {
         } else {
             Some(nodes)
         }
+    }
+
+    /// Gets or creates a `CarouselState` entity for the given `<carousel>`.
+    ///
+    /// Created once with the slide count, axis, looping, and initial index;
+    /// every later render recomputes the props from the component and pushes
+    /// only genuine changes in silently (`set_item_count` /
+    /// `set_selected_index`, which do not emit `CarouselEvent`). The first
+    /// creation also subscribes so that every *user-driven* selection —
+    /// swipe, wheel, keyboard, controls — fires the `on-change` handler with
+    /// the newly selected index.
+    fn get_or_create_carousel_state(
+        &mut self,
+        component: &BuiltComponent,
+        slide_count: usize,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<CarouselState> {
+        let props = &component.properties;
+        let axis = match props.get("axis").and_then(|v| v.as_str()) {
+            Some("vertical") => gpui::Axis::Vertical,
+            _ => gpui::Axis::Horizontal,
+        };
+        let looping = props
+            .get("looping")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        let index = props.get("index").and_then(|v| v.as_i64()).unwrap_or(0);
+
+        if let Some(ComponentState::Carousel {
+            state,
+            last_count,
+            last_index,
+        }) = self.component_states.get_mut(&component.id)
+        {
+            let state = state.clone();
+            if *last_count != slide_count {
+                state.update(cx, |s, cx| s.set_item_count(slide_count, cx));
+                *last_count = slide_count;
+            }
+            if *last_index != index {
+                state.update(cx, |s, cx| s.set_selected_index(index.max(0) as usize, cx));
+                *last_index = index;
+            }
+            return state;
+        }
+
+        let state = cx.new(|_| {
+            CarouselState::new(slide_count)
+                .with_axis(axis)
+                .with_looping(looping)
+                .with_selected_index(index.max(0) as usize)
+        });
+
+        // Subscribe once: every user-driven selection (swipe, wheel, keyboard,
+        // controls) reports the newly selected index to the app so it can
+        // mirror or persist it.
+        let on_change = component.handlers.get("change").cloned();
+        let component_id = component.id.clone();
+        let runtime = Arc::clone(&self.runtime);
+        if let Some(on_change) = on_change {
+            let subscription = cx.subscribe_in(
+                &state,
+                window,
+                move |_this: &mut App, _state, event: &CarouselEvent, _window, cx| {
+                    let CarouselEvent::Change(new_index) = event;
+                    runtime.call_handler(&on_change, &component_id, &new_index.to_string());
+                    cx.notify();
+                },
+            );
+            self._subscriptions.push(subscription);
+        }
+
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Carousel {
+                state: state.clone(),
+                last_count: slide_count,
+                last_index: index,
+            },
+        );
+        state
     }
 
     /// Gets or creates a SliderState entity for the given component.
@@ -1225,6 +1308,15 @@ impl App {
                 .into_any_element(),
             "text" => Text::new(component.clone()).into_any_element(),
             "icon" => Icon::new(component.clone()).into_any_element(),
+            "carousel" => {
+                // Declarative children are the slides, in order; the state
+                // entity (selection, axis, looping) lives in the app and is
+                // subscribed to `CarouselEvent::Change` for `on-change`.
+                let slides = self.render_children(component, components, entity_id, window, cx);
+                let carousel_state =
+                    self.get_or_create_carousel_state(component, slides.len(), window, cx);
+                Carousel::new(component.clone(), carousel_state, slides).into_any_element()
+            }
             "checkbox" => Checkbox::new(component.clone())
                 .runtime(Arc::clone(&self.runtime))
                 .entity_id(entity_id)
