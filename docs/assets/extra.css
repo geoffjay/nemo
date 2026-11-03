@@ -54,7 +54,9 @@
   --md-code-fg-color: var(--ayu-light-code-fg);
   --md-code-hl-color: var(--ayu-light-selection);
 
-  --md-typeset-a-color: var(--ayu-light-primary-dark);
+  --md-typeset-color: var(--md-default-fg-color);
+  --md-admonition-fg-color: var(--md-default-fg-color);
+  --md-admonition-bg-color: var(--md-default-bg-color);
 
   /* Ayu light syntax highlighting (ayu-colors themes/light.yaml) */
   --md-code-hl-tag-color: #55b4d4;
@@ -67,7 +69,7 @@
   --md-code-hl-special-color: #e59645;
   --md-code-hl-comment-color: #adaeb1;
   --md-code-hl-constant-color: #a37acc;
-  --md-code-hl-operator-color: #f2a191;
+  --md-code-hl-operator-color: rgba(2, 10, 18, 0.54);
   --md-code-hl-number-color: #a37acc;
   --md-code-hl-variable-color: #e24e37;
   --md-code-hl-name-color: #ff559a;
@@ -116,6 +118,12 @@
   --md-code-bg-color: var(--ayu-mirage-code-bg);
   --md-code-fg-color: var(--ayu-mirage-code-fg);
   --md-code-hl-color: var(--ayu-mirage-selection);
+
+  /* Root-level vars in the theme resolve at :root, so they must be
+     redeclared per scheme (mirrors what [data-md-color-scheme=slate] does). */
+  --md-typeset-color: var(--md-default-fg-color);
+  --md-admonition-fg-color: var(--md-default-fg-color);
+  --md-admonition-bg-color: var(--md-default-bg-color);
 
   /* Ayu mirage syntax highlighting (ayu-colors themes/mirage.yaml) */
   --md-code-hl-tag-color: #5ccfe6;
