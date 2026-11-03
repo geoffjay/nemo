@@ -41,25 +41,25 @@ fn on_refresh(component_id, event_data) {
 
 | Function | Description |
 |----------|-------------|
-| `set_component_text(id, text)` | Set a component's text/label property |
+| `set_component_text(id, text)` | Set a component's `text` property |
+| `set_component_label(id, label)` | Set a component's `label` property |
+| `get_component_text(id)` | Get a component's `text` property |
+| `get_component_label(id)` | Get a component's `label` property |
 | `get_component_property(id, prop)` | Read any property from a component |
 | `set_component_property(id, prop, value)` | Set any property on a component |
-| `get_component_label(id)` | Get a component's label text |
-| `show_component(id)` | Make a component visible |
-| `hide_component(id)` | Hide a component |
-| `enable_component(id)` | Enable a component |
-| `disable_component(id)` | Disable a component |
+
+There are no dedicated visibility helpers — use `set_component_property` with
+the universal `visible` property:
 
 ```rhai
 fn on_toggle(component_id, event_data) {
     let is_visible = get_component_property("detail_panel", "visible");
     if is_visible == "true" {
-        hide_component("detail_panel");
+        set_component_property("detail_panel", "visible", "false");
     } else {
-        show_component("detail_panel");
+        set_component_property("detail_panel", "visible", "true");
     }
 }
-```
 
 #### Logging
 
@@ -81,17 +81,80 @@ fn on_toggle(component_id, event_data) {
 | `round(f)` | Round to nearest integer |
 | `floor(f)` | Round down |
 | `ceil(f)` | Round up |
+| `pow(x, y)` | Exponentiation |
+| `sqrt(x)` | Square root |
 
 #### String
 
+Registered helpers (in addition to Rhai's [built-in string methods](https://rhai.rs/book/language/strings.html),
+which include `len`, `substring`, `split`, `trim`, `to_upper`, `to_lower`, and
+`index_of`):
+
 | Function | Description |
 |----------|-------------|
-| `len(s)` | String length |
-| `substring(s, start, len)` | Extract substring |
-| `trim(s)` | Remove whitespace |
-| `split(s, sep)` | Split into array |
+| `trim(s)` | Remove leading/trailing whitespace |
+| `replace(s, from, to)` | Replace all occurrences of a substring |
+| `contains(s, sub)` | Substring test |
+| `starts_with(s, prefix)` | Prefix test |
+| `ends_with(s, suffix)` | Suffix test |
 | `parse_float(s)` | Parse string to float |
+| `parse_int(s)` | Parse string to integer |
 | `to_string(v)` | Convert value to string |
+| `to_float(v)` | Convert value to float |
+| `to_int(v)` | Convert value to integer |
+| `to_upper(s)` | Convert to uppercase |
+| `to_lower(s)` | Convert to lowercase |
+
+#### HTTP
+
+| Function | Description |
+|----------|-------------|
+| `http_get(url, [headers])` | GET a URL, returning the parsed JSON body |
+| `http_post(url, body, [headers])` | POST and return the parsed JSON body |
+| `http_put(url, body, [headers])` | PUT and return the parsed JSON body |
+| `http_delete(url, [headers])` | DELETE and return the parsed JSON body |
+
+Each takes an optional trailing headers map — e.g.
+`http_get(url, #{ "Authorization": "Bearer " + token })`.
+
+#### JSON
+
+| Function | Description |
+|----------|-------------|
+| `json_parse(s)` | Parse a JSON string into a Rhai value |
+| `json_stringify(v)` | Serialize a Rhai value to a JSON string |
+
+#### Runtime component lifecycle
+
+Components can be created, updated, and removed from scripts at runtime:
+
+| Function | Description |
+|----------|-------------|
+| `create_component(parent, type, props)` | Build a component under `parent`; returns the generated id (or `""` on failure) |
+| `create_component_with_id(parent, id, type, props)` | Same, with an explicit id |
+| `update_component(id, props)` | Update an existing component's properties |
+| `remove_component(id)` | Remove a component instance |
+
+#### Router navigation
+
+| Function | Description |
+|----------|-------------|
+| `navigate(path)` | Navigate the primary router |
+| `navigate(router, path)` | Navigate an explicit router by id |
+| `back([router])` | Go back in history |
+| `forward([router])` | Go forward in history |
+
+#### Appearance
+
+| Function | Description |
+|----------|-------------|
+| `set_roundness(value)` | Set global UI corner rounding — a named preset (`none`, `square`, `sharp`, `default`, `round`) or a raw pixel radius |
+
+#### Config access
+
+| Function | Description |
+|----------|-------------|
+| `get_config(path)` | Read a value from the application config |
 
 ### Sandbox Limits
 
@@ -104,9 +167,9 @@ RHAI scripts run in a sandboxed environment with the following limits:
 | Max array size | 10,000 elements |
 | Max map size | 10,000 entries |
 | Max call stack depth | 64 |
-| File I/O | Disabled |
-| Network access | Disabled |
-| System calls | Disabled |
+| File I/O | Disabled by default — opt in via `<script features="file-io" />` |
+| Network access | HTTP helpers only (`http_get`/`http_post`/`http_put`/`http_delete`); other sockets disabled |
+| Subprocesses / env vars | Disabled by default — opt in via `<script features="system" />` |
 
 These limits prevent runaway scripts from affecting application performance.
 
@@ -220,17 +283,24 @@ use semver::Version;
 
 fn manifest() -> PluginManifest {
     PluginManifest {
-        name: "my-plugin".to_string(),
+        id: "my-plugin".to_string(),
+        name: "My Plugin".to_string(),
         version: Version::new(0, 1, 0),
         description: "A custom Nemo plugin".to_string(),
+        author: Some("Jane Dev <jane@example.com>".to_string()),
         capabilities: vec![
-            Capability::Component,
-            Capability::DataSource,
+            Capability::Component("my-component".to_string()),
+            Capability::DataSource("sensor".to_string()),
         ],
         permissions: Default::default(),
     }
 }
 ```
+
+Capabilities are tuple variants naming what they provide. The full set:
+`Component(name)`, `DataSource(name)`, `Transform(name)`, `Action(name)`,
+`EventHandler(name)`, and `Settings(name)` — a settings page contributed to
+the app's settings view (see the `demo-settings` plugin for an example).
 
 #### Plugin Context
 
@@ -258,7 +328,7 @@ enum PluginValue {
     Float(f64),
     String(String),
     Array(Vec<PluginValue>),
-    Object(HashMap<String, PluginValue>),
+    Object(IndexMap<String, PluginValue>), // insertion-ordered
 }
 ```
 
@@ -369,18 +439,19 @@ To make a component available in XML configurations, register it in the componen
 Understanding the data flow helps when building complex applications:
 
 ```
-Data Sources (timer, HTTP, MQTT, ...)
+Data Sources (timer, HTTP, MQTT, ...)      -- Tokio async runtime
     |
     v
 DataFlowEngine -- stores in DataRepository
     |
     v
-Dirty flag set (atomic bool)
-    |
-    v  (every 50ms)
-App poll -- apply_pending_data_updates()
+data_notify (tokio::sync::Notify) -- wakes the UI poll task
     |
     v
+App poll task -- apply_pending_navigations(),
+|                  fire_pending_initial_enters(),
+|                  apply_pending_data_updates()
+v
 BindingManager -- propagates through bindings
     |
     v
@@ -393,10 +464,13 @@ GPUI re-renders affected components
 ### Key Points
 
 - Data sources run on a Tokio async runtime, separate from the GPUI render thread
-- The UI polls for data changes every 50ms via an atomic dirty flag
+- The UI is event-driven: sources signal a `Notify` handle and the poll task
+  wakes and applies pending updates (no fixed-interval polling)
 - Bindings track their last value to avoid redundant updates
 - RHAI handlers can both read and write data, triggering new binding updates
 - Component state (like input values) is managed separately from data source state
+- Pending router navigations and roundness changes drain through the same poll
+  task, so ordering between navigation and data projection is deterministic
 
 ---
 
@@ -406,11 +480,12 @@ The Nemo codebase is organized as a Cargo workspace:
 
 | Crate | Purpose |
 |-------|---------|
-| `nemo` | Application shell, GPUI integration, components |
-| `nemo-config` | XML parsing, validation, expression resolution |
+| `nemo` | Application shell, GPUI integration, components, CLI |
+| `nemo-config` | XML parsing, SFC compilation, validation, expression resolution |
+| `nemo-registry` | Component/source/transform/action catalog and schema surface |
+| `nemo-tokens` | Design tokens (spacing/radius/typography/semantic colors), gpui-free |
 | `nemo-layout` | Component tree building, binding management |
-| `nemo-data` | Data sources, repository, binding system |
-| `nemo-registry` | Component/source/transform catalog |
+| `nemo-data` | Data sources (including http-server), repository, binding system |
 | `nemo-events` | Event bus (typed pub/sub) |
 | `nemo-extension` | RHAI engine, plugin host |
 | `nemo-integration` | HTTP, WebSocket, MQTT, Redis, NATS clients |
@@ -419,6 +494,8 @@ The Nemo codebase is organized as a Cargo workspace:
 | `nemo-wasm` | WASM plugin host (Wasmtime-based, loads `.wasm` components) |
 | `nemo-wasm-guest` | WASM plugin guest SDK (re-exports `wit-bindgen`) |
 | `nemo-macros` | `#[derive(NemoComponent)]` proc macro |
+| `xtask` | Dev-only tasks (`design-export`) |
+| `plugins/*` | In-tree example plugins (mock-data, mock-data-wasm, pid-control, streaming-stats, demo-settings) |
 
 ### Building from Source
 

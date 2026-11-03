@@ -1,6 +1,6 @@
 # Nemo
 
-Nemo is a configuration-driven desktop application framework. Define your UI layout, data sources, and event handlers in XML configuration files and RHAI scripts -- Nemo handles rendering, data flow, and state management.
+Nemo is a configuration-driven desktop application framework. Define your UI layout, data sources, and event handlers in `.nemo` single-file components -- Nemo handles rendering, data flow, and state management.
 
 Built on [GPUI](https://gpui.rs), Nemo produces native, GPU-accelerated desktop applications from declarative configuration.
 
@@ -14,26 +14,29 @@ Built on [GPUI](https://gpui.rs), Nemo produces native, GPU-accelerated desktop 
 
 ## Quick Example
 
-A minimal Nemo application consists of a single `app.xml` file:
+A minimal Nemo application is a single `app.nemo` file:
 
 ```xml
-<nemo>
-  <app>
-    <window title="Hello Nemo" />
-    <theme name="kanagawa" mode="dark" />
-  </app>
+<app title="Hello Nemo">
+  <window title="Hello Nemo" width="480" height="240" />
+  <theme name="kanagawa" mode="dark" />
+</app>
 
-  <layout type="stack">
-    <label id="greeting" text="Hello, World!" />
+<script src="./scripts" />
+
+<template name="app">
+  <stack id="main" direction="vertical" spacing="8" padding="16">
+    <label id="greeting" text="Hello, World!" size="xl" />
     <button id="action" label="Click Me" on-click="on_button_click" />
-  </layout>
-</nemo>
+  </stack>
+</template>
 ```
 
-Run it:
+The `<template name="app">` block is the UI tree; `<script src="./scripts" />`
+loads the RHAI handler directory. Run it:
 
 ```bash
-nemo --app-config app.xml
+nemo --app-config app.nemo
 ```
 
 ## Project Structure
@@ -42,7 +45,7 @@ A typical Nemo application looks like this:
 
 ```
 my-app/
-  app.xml            # Main configuration
+  app.nemo            # Application entry (single-file component)
   scripts/
     handlers.rhai     # Event handler scripts
   plugins/            # Optional native plugins

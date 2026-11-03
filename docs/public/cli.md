@@ -21,11 +21,10 @@ Run `nemo <command> --help` for per-command options.
 | `nemo new <name>` | Scaffold a new project from a template |
 | `nemo dev` | Run an application with hot-reload on configuration changes |
 | `nemo validate <file>` | Validate a configuration file and exit |
-
-> **Rollout status:** all subcommands (`nemo new`, `nemo dev`, `nemo validate`)
-> are available, alongside the default (no-command) run path documented below.
-
-## Options
+| `nemo schema` | Export the configuration schema (JSON) and exit |
+| `nemo build <dir>` | Compile a project ahead-of-time (resolve the manifest, print the build plan) |
+| `nemo get` | Fetch remote component-library dependencies into `.nemo/packages` and write `nemo.lock` |
+| `nemo screenshot` | Render an application to a PNG image and exit (macOS-first; requires `--features screenshot`) |
 
 These options apply to the default run path (no command).
 
@@ -38,6 +37,8 @@ These options apply to the default run path (no command).
 | `--verbose` | `-v` | | Enable debug-level logging (global; also works with commands) |
 | `--watch` | | | Watch the config directory and hot-reload on changes (like `nemo dev`) |
 | `--headless` | | | Run without opening a window |
+| `--dist` | | | Load a previously built `dist/` tree instead of the source entry (app.nemo) |
+| `--route <ROUTE>` | | | Start a `<router>` at this route instead of its `default`: `--route /users/42` targets the primary router; `--route settings=/general` targets the router with id `settings` |
 | `--validate-only` | | | Deprecated — prefer `nemo validate`. Parse and validate config, then exit |
 | `--help` | `-h` | | Print help information |
 | `--version` | `-V` | | Print version |
@@ -114,7 +115,56 @@ nemo validate app.nemo --format json
 nemo --app-config app.nemo --headless
 ```
 
-Starts data sources and event handling without opening a window. Useful for background data processing or testing. Press `Ctrl-C` to stop.
+
+### Export the configuration schema
+
+```bash
+nemo schema            # pretty JSON to stdout
+nemo schema --out schema.json
+```
+
+Emits a machine-readable description of the whole config surface — components,
+data sources, transforms, actions, universal style attributes, and the
+`on-*`/`bind-*` attribute families. Deterministic (sorted, version-stamped),
+so CI can diff it. Useful for editor tooling and for checking what a build
+supports.
+
+### Build a project ahead-of-time
+
+```bash
+nemo build my-app/
+```
+
+Resolves the project manifest (`nemo.toml`) and compiles `.nemo` components
+into JSON artifacts, producing a loadable `dist/` tree. Launch the built tree
+with `--dist` (or set `load = "dist"` in the manifest):
+
+```bash
+nemo --app-config my-app --dist
+```
+
+### Fetch remote component libraries
+
+```bash
+nemo get
+```
+
+Fetches the remote component libraries declared by the manifest into
+`.nemo/packages` and writes a `nemo.lock` pinfile. Imported components resolve
+from there via module `<import>`s.
+
+### Render a screenshot
+
+```bash
+cargo run -p nemo --features screenshot -- screenshot \
+  --app-config app.nemo --out shot.png --size 1200x800 --settle-ms 1500
+```
+
+Renders the application offscreen and writes a PNG — handy for visual CI and
+gallery upkeep. `--theme`/`--mode` override the configured theme, and
+`--route` captures a specific router route. Requires a build with the
+`screenshot` feature (it enables GPUI's offscreen render path); the command
+explains this and exits if the feature is absent.
 
 ### Load additional config and extension directories
 
