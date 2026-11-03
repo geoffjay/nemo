@@ -4,22 +4,31 @@ Nemo applications are defined in XML files. This page is a complete reference fo
 
 ## File Structure
 
-A Nemo configuration file contains up to six top-level elements, all wrapped in a `<nemo>` root:
+Nemo applications are defined in `app.nemo` single-file components (SFCs). A
+file contains any of the top-level blocks below — a minimal app is just an
+`<app>` block and a `<template name="app">` UI tree:
 
 ```xml
-<nemo>
-  <variable name="..." ... />       <!-- Variable definitions (0 or more) -->
-  <app>...</app>                     <!-- Application and window settings -->
-  <script src="..." />               <!-- Script loading configuration -->
-  <templates>...</templates>         <!-- Reusable component templates -->
-  <data>...</data>                   <!-- Data source and sink definitions -->
-  <layout>...</layout>               <!-- UI component tree -->
-</nemo>
+<app title="My Application">
+  <window title="Window Title" width="1024" height="768">
+    <header-bar github-url="https://github.com/user/repo" theme-toggle="true" />
+  </window>
+  <theme name="kanagawa" mode="dark" />
+</app>
+
+<variable name="api_base" type="string" default="https://api.example.com" />
+<script src="./scripts" />
+
+<data>...</data>                    <!-- Data source and sink definitions -->
+
+<template name="app">
+  <!-- UI component tree -->
+</template>
 ```
 
-All elements are optional. A minimal valid configuration is `<nemo></nemo>`, though it will produce a blank window.
-
-An `<include src="..." />` directive can appear anywhere a top-level element does; its target file is parsed and merged in place, letting you split a large configuration across multiple files.
+All blocks are optional. An `<include src="..." />` directive can appear
+anywhere a top-level block does; its target file is parsed and merged in place,
+letting you split a large configuration across multiple files.
 
 ---
 
@@ -98,9 +107,41 @@ Application metadata, window settings, and theme configuration.
 | `gruvbox` | dark | Gruvbox |
 | `nord` | dark | Nord |
 
-Theme resolution is case-insensitive. If a theme set has multiple variants, the variant matching the requested mode is selected.
+Theme resolution is case-insensitive. If a theme set has multiple variants, the
+variant matching the requested mode is selected.
 
-The optional `extend` sub-block allows overriding individual theme colors.
+#### Color overrides (`extend`)
+
+The optional `<extend>` sub-block overrides individual theme colors on top of
+the selected theme. Each `<color>` child carries a dotted theme key and a
+hex value:
+
+```xml
+<theme name="aurora" mode="dark">
+  <extend>
+    <color key="primary.background" value="#ff7a45" />
+    <color key="primary.hover.background" value="#ff9466" />
+  </extend>
+</theme>
+```
+
+Overrides win over the base theme's colors.
+
+#### Project themes (`themes`)
+
+Apps can register whole theme sets from JSON files that use the same schema as
+the shipped themes (the easiest way to author one is to copy
+`crates/nemo/src/theme/*.json` and edit its colors):
+
+```xml
+<themes>
+  <theme-set src="themes/aurora.json" />
+</themes>
+```
+
+Project theme sets are consulted **before** the built-in themes, so a project
+can shadow a built-in name. See `examples/custom-theme` for a complete
+example.
 
 ---
 
@@ -110,15 +151,14 @@ Configure where RHAI scripts are loaded from and which optional features they
 may use.
 
 ```xml
-<script src="./scripts" features="file-io" />
+<script src="./scripts" features="file-io" on-load="on_load" />
 ```
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
 | `src` | string | Directory containing `.rhai` script files |
 | `features` | string | Comma-separated list of opt-in script features (default: none) |
-
-All `.rhai` files in the directory are loaded at startup. Scripts are identified by their filename without the extension (e.g., `handlers.rhai` becomes script ID `"handlers"`).
+| `on_load` | string | RHAI function to run once after the layout is built — where an app hydrates its UI from persisted state so the first paint already reflects it |
 
 ### Script features
 
@@ -346,6 +386,29 @@ Reads from the filesystem, optionally watching for changes.
 | `watch` | bool | `false` | Watch for changes |
 | `format` | string | `"raw"` | Parse format: `"raw"`, `"json"`, `"lines"` |
 
+#### `http-server`
+
+Runs a lightweight HTTP/1.1 server inside the data-source machinery. Each
+inbound request becomes a data update at `data.<name>`, and the app's script
+responds via the `on-request` handler:
+
+```xml
+<source name="rest" type="http-server" port="8420" on-request="on_request" />
+```
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `host` | string | `"127.0.0.1"` | Bind address |
+| `port` | int | `8080` | Bind port |
+| `on_request` | string | (required) | Rhai handler invoked per request |
+| `timeout` | int | | Request timeout; unanswered requests get a 408 |
+
+The handler receives the request object (method, path, headers, body, request
+`id`) and answers with the built-in `send_response` mechanism — see
+`examples/task-list` for a complete REST API on app data. Limitations by
+design: HTTP/1.1 only (no TLS, no HTTP/2), Content-Length bodies only, and
+handlers run on the UI thread so keep them light.
+
 ### Data Sink Types
 
 Sinks are destinations for publishing data from scripts.
@@ -370,22 +433,22 @@ Sinks are destinations for publishing data from scripts.
 
 ---
 
-## `layout` Element
+## Layout (`template`)
 
-Defines the UI component tree. The layout element specifies a root layout type and contains nested component elements.
+In an `app.nemo` SFC the UI tree lives in the `<template name="app">` block
+(the `<layout>` wrapper still works inside `<include>` fragments):
 
 ```xml
-<layout type="stack">
+<template name="app">
   <component_type id="id">
     <!-- properties as attributes -->
     <label id="child_id" text="Nested child" />
   </component_type>
-</layout>
+</template>
 ```
 
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `type` | string | Root layout type (typically `"stack"`) |
+Named templates beyond `app` define reusable components (see
+[`templates` Element](#templates-element)); a template's children are its body.
 
 ---
 
@@ -399,11 +462,14 @@ These properties are available on all components:
 |----------|------|-------------|
 | `id` | string | Component identifier for script access. Defaults to the component block label. |
 | `visible` | bool | Show or hide the component. Default: `true`. |
-| `flex` | int | Flex grow factor |
+| `flex` | int/bool | Grow to fill the main axis when truthy (`"1"`/`"true"`) |
+| `scroll` | bool | Scroll along the main axis (stacks); also grows |
 | `width` | int | Fixed width in pixels |
 | `height` | int | Fixed height in pixels |
 | `min_width` | int | Minimum width in pixels |
 | `min_height` | int | Minimum height in pixels |
+| `max_width` | int | Maximum width in pixels |
+| `max_height` | int | Maximum height in pixels |
 
 #### Margin
 
@@ -832,6 +898,82 @@ Overlays a count or dot indicator on a child element.
 
 Badge wraps its child component and renders the indicator in the top-right corner.
 
+### `bubble`
+
+A chat bubble surface with variants and alignment. Consecutive bubbles from one
+sender go in a `bubble_group`; an optional `bubble_reactions` child attaches a
+reaction pill.
+
+```xml
+<bubble id="msg_bubble" text="Hello there!" variant="secondary" />
+<bubble_group id="thread">
+  <bubble id="b1" text="First" />
+  <bubble id="b2" text="Second" alignment="end">
+    <bubble_reactions id="r1" text="👍" />
+  </bubble>
+</bubble_group>
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `text` | string | | Bubble body text |
+| `alignment` | string | | `"start"` or `"end"` within its row |
+| `variant` | string | `"filled"` | `"filled"`, `"secondary"`, `"muted"`, `"tinted"`, `"outline"`, `"ghost"`, `"destructive"` |
+
+`bubble_reactions` takes `side` (`"top"`/`"bottom"`, default `"bottom"`) and
+`alignment` (default `"end"`); its text/children are the reactions shown.
+
+### `kbd`
+
+A tag for displaying keyboard keybindings.
+
+```xml
+<kbd id="shortcut" keys="cmd-k" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `keys` | string | `"cmd-k"` | Key combination (e.g. `"cmd-k"`, `"ctrl-shift-p"`) |
+| `outline` | bool | `false` | Outline style instead of filled |
+
+### `marker`
+
+A compact row for status text, timeline boundaries, unread labels, and system
+notices.
+
+```xml
+<marker id="unread" text="Unread messages" icon="mail" variant="plain" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `text` | string | | Marker text |
+| `icon` | string | | Optional leading icon |
+| `variant` | string | `"plain"` | Visual style |
+| `alignment` | string | | Row alignment |
+| `loading` | bool | `false` | Show a loading indicator instead of the icon |
+| `loading_style` | string | `"spinner"` | `"spinner"` or other indicator style |
+| `text_color` | string | | Text color override (theme ref or hex) |
+
+### `message`
+
+A chat message row with sender identity, metadata, a bubble body, and a footer.
+
+```xml
+<message id="chat_msg" sender="Alice" timestamp="10:42" text="Hey!"
+         alignment="start" footer="Delivered" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `sender` | string | | Sender name |
+| `timestamp` | string | | Timestamp/metadata text |
+| `avatar` | string | | Avatar name (initials are derived) |
+| `text` | string | | Message body |
+| `alignment` | string | `"start"` | `"start"` (incoming) or `"end"` (outgoing) |
+| `variant` | string | | Bubble variant (defaults by alignment) |
+| `footer` | string | | Footer text under the bubble |
+
 ### `collapsible`
 
 A single expandable/collapsible section with a clickable title bar.
@@ -864,7 +1006,45 @@ A button that opens a dropdown menu. Menu entries are declared as `menu-item` ch
 | `label` | string | `"Action"` | Button text |
 | `variant` | string | | Button variant: `"primary"`, `"secondary"`, `"danger"`, etc. |
 
-Each `menu-item` takes a single `label` property.
+### `menu`
+
+A button trigger that opens a popup menu. Entries are built from the same child
+elements as `dropdown_button` — `menu-item`, `menu-label`, `menu-separator`,
+and `menu-submenu` — with more layout control:
+
+```xml
+<menu id="actions" label="Actions" anchor="bottom-left" scrollable="true">
+  <menu-label text="Edit" />
+  <menu-item label="Copy" icon="copy" />
+  <menu-item label="Paste" icon="clipboard" />
+  <menu-separator />
+  <menu-submenu label="Share" icon="share">
+    <menu-item label="Copy link" />
+    <menu-item label="Email" />
+  </menu-submenu>
+</menu>
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `label` | string | `"Menu"` | Trigger button text |
+| `variant` | string | | Button variant |
+| `size` | string | `"medium"` | Trigger size |
+| `anchor` | string | `"top-left"` | Where the popup attaches to the trigger |
+| `scrollable` | bool | `false` | Scroll long menus |
+| `max_height` | int | | Max popup height in pixels (implies scrolling) |
+| `disabled` | bool | `false` | Disable the trigger |
+
+### Menu children
+
+Shared by `menu` and `dropdown_button`:
+
+| Element | Properties | Description |
+|---------|-----------|-------------|
+| `menu-item` | `label`, `icon`, `disabled`, `checked`, `href` | A menu entry; `href` makes it an external link |
+| `menu-label` | `text` | A non-interactive section label |
+| `menu-separator` | — | A separator line |
+| `menu-submenu` | `label`, `icon` | A nested submenu; its children are menu entries |
 
 ### `radio`
 
@@ -911,6 +1091,93 @@ An animated loading indicator.
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
 | `size` | string | `"md"` | Size: `"xs"`, `"sm"`, `"md"`, `"lg"` |
+
+### `skeleton`
+
+A loading placeholder with a pulse animation. Size it with the common
+`width`/`height`/`rounded` properties to match the content it stands in for.
+
+```xml
+<skeleton id="loading_row" width="240" height="16" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `secondary` | bool | `false` | Use the muted (secondary) surface color |
+
+### `svg`
+
+Renders SVG vector graphics from a file/URL (`src`) or embedded inline markup
+(`content`). `currentColor` inside the SVG resolves against the theme.
+
+```xml
+<svg id="logo" src="assets/logo.svg" width="48" height="48" />
+<svg id="icon" content="<svg xmlns='…'><path …/></svg>" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `src` | string | | Path or URL of an `.svg` file |
+| `content` | string | | Inline SVG markup (overrides `src`) |
+
+### `pagination`
+
+Page navigation with prev/next buttons, page numbers, and an ellipsis menu of
+hidden pages. The new page number is handed to the `on-click` handler; the
+app updates `current-page` in response.
+
+```xml
+<pagination id="pager" current-page="1" total-pages="42" on-click="on_page" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `current_page` | int | `1` | Active page |
+| `total_pages` | int | `1` | Number of pages |
+| `visible_pages` | int | `5` | Page numbers shown around the current page |
+| `compact` | bool | `false` | Compact `‹ 3/42 ›` mode |
+| `disabled` | bool | `false` | Disable all controls |
+| `size` | string | `"medium"` | Control size |
+
+### `rating`
+
+A star rating row. Clicking a star updates the value and fires `on-click` with
+the new rating.
+
+```xml
+<rating id="score" value="3" max="5" on-click="on_rate" />
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `value` | int | `0` | Current rating |
+| `max` | int | `5` | Number of stars |
+| `size` | string | `"medium"` | Star size |
+| `color` | string | | Star color (theme ref or hex) |
+| `disabled` | bool | `false` | Read-only |
+
+### `stepper`
+
+A step-by-step progress indicator. `stepper-item` children are the steps;
+`label` is the step text and children override it.
+
+```xml
+<stepper id="setup" selected-index="1">
+  <stepper-item id="s1" label="Account" />
+  <stepper-item id="s2" label="Profile" icon="user" />
+  <stepper-item id="s3" label="Done" disabled="true" />
+</stepper>
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `selected_index` | int | `0` | Index of the current step |
+| `layout` | string | `"horizontal"` | `"horizontal"` or `"vertical"` |
+| `size` | string | `"medium"` | Step size |
+| `text_center` | bool | `false` | Center step labels |
+| `disabled` | bool | `false` | Disable all steps |
+
+Each `stepper-item` takes `label`, `icon`, and `disabled`.
 
 ### `switch`
 
@@ -991,16 +1258,101 @@ A navigation item for use inside a `sidenav_bar`. Displays an icon and a label. 
 
 Items use the `theme.sidebar_foreground` text color and `theme.list_hover` background on hover.
 
-### `table`
+### `app_shell` (App Shell containers)
 
-Tabular data display with columns, sorting, and striped rows.
+A standard application frame: a sidenav of section menu items, switchable
+content pages, and a footer. Six registered types work together:
 
 ```xml
-<table id="users" stripe="true"
-  columns='[{"key": "name", "label": "Name", "width": 150}, {"key": "email", "label": "Email", "width": 220}, {"key": "role", "label": "Role", "width": 120}]'
-  data='[{"name": "Alice", "email": "alice@example.com", "role": "Admin"}, {"name": "Bob", "email": "bob@example.com", "role": "Editor"}]'
+<app_shell id="shell" sidenav-width="220" default-page="overview">
+  <app_sidenav>
+    <sidenav_item id="nav_overview" icon="layout-dashboard" label="Overview" target="overview" />
+    <sidenav_item id="nav_settings" icon="settings" label="Settings" target="settings" />
+  </app_sidenav>
+  <app_content>
+    <page id="overview"><label text="Overview content" /></page>
+    <page id="settings"><label text="Settings content" /></page>
+  </app_content>
+  <app_footer>
+    <stack direction="horizontal"><label text="Ready" /></stack>
+  </app_footer>
+</app_shell>
+```
+
+| Element | Properties | Description |
+|---------|-----------|-------------|
+| `app_shell` | `sidenav_width` (default `200`), `collapsed`, `default_page` | The frame; `collapsed` renders the icon-only sidenav, `default_page` names the initially-active page |
+| `app_sidenav` | — | Sidenav region; holds `sidenav_item` children |
+| `sidenav_item` | `icon` (default `"info"`), `label`, `target` | Menu row; clicking switches to the `<page id>` matching `target` and highlights the item — no handler needed. `on-click` still fires if present |
+| `app_content` | — | Content region; holds `page` children |
+| `page` | — (its `id` is the target) | A content page, shown when its id is the active target |
+| `app_footer` | — | Full-width footer region |
+
+Only the active page's body renders — pages unmount when not shown. Toggle
+`collapsed` at runtime with `set_component_property("shell", "collapsed", ...)`.
+
+### `router` / `route` / `nav_link`
+
+A chrome-free page router: renders one of its `route` children by URL-style
+path, with history, `:param` capture, `*` fallback, and nested routers.
+
+```xml
+<router id="main" default="/home" primary="true">
+  <route path="/home"><label text="Home" /></route>
+  <route path="/users/:id"><label text="User" /></route>
+  <route path="*"><label text="Not found" /></route>
+</router>
+
+<nav_link router="main" route="/home" label="Home" />
+```
+
+| Element | Properties | Description |
+|---------|-----------|-------------|
+| `router` | `default` (default `"/"`), `primary` | The switch; `primary` marks the router targeted by a bare `--route` flag or `navigate(path)` |
+| `route` | `path`, `on_enter`, `on_leave` | A route body; `on-enter`/`on-leave` are Rhai lifecycle hooks fired on navigation |
+| `nav_link` | `route`, `router`, `label` | A clickable link; highlights when its route is active |
+
+Route state projects into the data repository at `data.route.<router-id>.*`
+(path and params), readable from bindings and scripts. Scripts navigate with
+`navigate(path)` / `navigate(router, path)` and `back()` / `forward()`; the CLI
+can start at a route with `--route /path` or `--route <router-id>=/path`.
+Only the active route's body is mounted — inactive routes don't render.
+
+### `table`
+
+Tabular data display with columns, sorting, and striped rows. Two authoring
+styles: **declarative children** (columns and rows as nested elements) or
+**data-driven** (`columns`/`data` JSON arrays).
+
+```xml
+<!-- Declarative: columns, rows, and cells as children. Text content is the
+     cell/column label. -->
+<table id="users" stripe="true" height="220">
+  <table-header>
+    <table-column field="name" width="150">Name</table-column>
+    <table-column field="email" width="220">Email</table-column>
+  </table-header>
+  <table-row>
+    <table-cell>Alice Johnson</table-cell>
+    <table-cell>alice@example.com</table-cell>
+  </table-row>
+</table>
+
+<!-- Data-driven: same table from JSON attributes. -->
+<table id="users2" stripe="true"
+  columns='[{"key": "name", "label": "Name", "width": 150}, {"key": "email", "label": "Email", "width": 220}]'
+  data='[{"name": "Alice", "email": "alice@example.com"}, {"name": "Bob", "email": "bob@example.com"}]'
 />
 ```
+
+Declarative children:
+
+| Element | Properties | Description |
+|---------|-----------|-------------|
+| `table_header` | — | The header row; holds `table-column` children |
+| `table_column` | `field`, `width`, `align` | A column definition; text content is the label |
+| `table_row` | `col_span` | A row; holds `table-cell` children |
+| `table_cell` | `col_span`, `row_span`, `align` | A cell; children are the content, cells are positional |
 
 | Property | Type | Default | Description |
 |----------|------|---------|-------------|
@@ -1015,10 +1367,23 @@ Tabular data display with columns, sorting, and striped rows.
 
 ### `tree`
 
-Hierarchical tree view with expand/collapse and keyboard navigation.
+Hierarchical tree view with expand/collapse and keyboard navigation. Like
+`table`, it can be authored declaratively with nested `tree_node` children
+(text content or non-tree-node children are the node label) or data-driven
+from an `items` JSON array:
 
 ```xml
-<tree id="file_tree" items='[{"id": "src", "label": "src", "expanded": true, "children": [{"id": "src/main.rs", "label": "main.rs"}, {"id": "src/lib.rs", "label": "lib.rs"}]}, {"id": "Cargo.toml", "label": "Cargo.toml"}]' />
+<!-- Declarative. -->
+<tree id="file_tree" height="300">
+  <tree_node id="src" label="src" expanded="true">
+    <tree_node id="main.rs" label="main.rs" />
+    <tree_node id="lib.rs" label="lib.rs" />
+  </tree_node>
+  <tree_node id="Cargo.toml" label="Cargo.toml" />
+</tree>
+
+<!-- Data-driven. -->
+<tree id="file_tree2" items='[{"id": "src", "label": "src", "expanded": true, "children": [{"id": "src/main.rs", "label": "main.rs"}]}, {"id": "Cargo.toml", "label": "Cargo.toml"}]' />
 ```
 
 | Property | Type | Default | Description |
@@ -1291,6 +1656,82 @@ The handler name references a function defined in a RHAI script. By default, Nem
 ```xml
 on-click="utils::format_data"
 ```
+
+---
+
+## Control-Flow Directives
+
+`.nemo` templates support Vue-style namespaced attributes for iteration and
+conditionals:
+
+### `n:if`
+
+Compile-time conditional. The compiler emits a `bind-visible` binding from the
+expression, so the element shows/hides as the bound data changes:
+
+```xml
+<panel id="details" n:if="data.ui.show_details == 'yes'">...</panel>
+```
+
+### `n:for`
+
+Iteration. Over a **static** list it expands at compile time; over a **live
+data source** it becomes a runtime list binding that creates and removes
+component instances as the data changes. `n:key` names the identity field:
+
+```xml
+<!-- Static: one chip per literal, expanded at compile time. -->
+<label id="chip" n:for="tag in ['config', 'sfc', 'runtime']" n:key="tag"
+       text="#${tag}" />
+
+<!-- Live: one row per task in data.tasks, keyed by id. -->
+<stack id="task_list" n:for="task in data.tasks" n:key="task.id">
+  <text>${task.name}</text>
+</stack>
+```
+
+---
+
+## SFC Imports and Components
+
+Single-file components can be imported and used as custom tags. Import an
+explicit file with `<import>`, or a whole directory with `<components dir>`:
+
+```xml
+<imports>
+  <import src="./templates/card.nemo" />
+</imports>
+
+<!-- or: -->
+<components dir="./components" />
+```
+
+Every template defined in an imported SFC becomes a usable element. Imported
+component instances need explicit `id`s prefixed to avoid anonymous-id
+collisions across instances:
+
+```xml
+<template name="app">
+  <card id="my_card">
+    <label id="my_card_title" slot="header" text="A card" />
+  </card>
+</template>
+```
+
+---
+
+## Actions
+
+Actions are named, schema-validated operations registered by the runtime and
+available to tooling via `nemo schema`. The built-ins:
+
+| Action | Key properties | Description |
+|--------|---------------|-------------|
+| `notification` | `message` (required), `type` | Display a notification |
+| `navigate` | `target` (required) | Navigate to a different view |
+| `refresh` | `target` | Refresh data or UI |
+| `http_request` | `url` (required), `method`, `body` | Make an HTTP request |
+| `set_data` | `target` (required), `value` (required) | Set a data value |
 
 ---
 
