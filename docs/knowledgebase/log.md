@@ -1,6 +1,32 @@
 # Knowledge Base Update Log
 
 ## 2026-11-02
+* **Feature**: Wrapped gpui-kit's `Carousel` as the built-in `<carousel>`
+  component (Display category) — the first **stateful** wrap needing a
+  `ComponentState` entity variant. `crates/nemo/src/components/carousel.rs`
+  is a pluming-style wrapper (`source + Entity<CarouselState> + slides`):
+  the declarative XML children are the slides, in order, each handed to the
+  kit inside a `CarouselItem` (its `w_full`+`pl_4` geometry drives the snap
+  measurements). The `CarouselState` entity lives in the app —
+  `get_or_create_carousel_state()` follows the input-state precedent: it
+  subscribes once to `CarouselEvent::Change` (swipe/wheel/keyboard/controls
+  all emit it) and routes it to the `on-change` handler via
+  `runtime.call_handler` + `cx.notify`; on reuse it silently pushes prop
+  drift in with `set_item_count`/`set_selected_index` (which don't emit) —
+  the variant carries `last_count`/`last_index` like Table's `last_data`.
+  Composition: `Carousel > [CarouselContent(xN items) + prev/next +
+  optional CarouselPagination of numbered compact buttons]`. `height` is
+  applied to both the content viewport and each item (the delegate-HTStudio
+  definite-height pitfall — vertical items are `h_full` and would collapse);
+  `controls` (default true) and `pagination` (default false) toggle the
+  kit-supplied overlays/dot row. Gotchas found by screenshots: the
+  vertical carousel's floating chevrons render *outside* the viewport frame
+  and overlap adjacent flow content — the gallery's vertical example uses
+  `controls="false" pagination="true"` instead; and `stack` has no
+  `background` attribute (silently dropped — slides use centered labels,
+  matching the upstream docs examples). Out of scope: multi-items-per-
+  viewport (`flex_basis`/`track_style` paired-spacing model), custom
+  control children, `accessibility_label` overrides, root restyle.
 * **Feature**: Wrapped gpui-kit's `Rating` as the built-in `<rating>`
   component (Input category) — `crates/nemo/src/components/rating.rs`
   (event-bearing wrapper, no children), registered in
