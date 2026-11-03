@@ -1,4 +1,5 @@
 use gpui::Entity;
+use gpui_kit::component::calendar::CalendarState;
 use gpui_kit::component::carousel::CarouselState;
 use gpui_kit::component::input::{EditorState, InputState, TextareaState};
 use gpui_kit::component::slider::SliderState;
@@ -63,6 +64,12 @@ pub enum ComponentState {
         state: Entity<CarouselState>,
         last_count: usize,
         last_index: i64,
+    },
+    /// Active date selection for a calendar, plus the last `value` the
+    /// render pass wrote into it (to detect script-driven re-seeds).
+    Calendar {
+        state: Entity<CalendarState>,
+        last_value: String,
     },
     Table {
         state: Entity<TableState<NemoTableDelegate>>,

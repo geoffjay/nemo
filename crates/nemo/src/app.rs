@@ -1,6 +1,7 @@
 //! GPUI application wrapper.
 
 use gpui::*;
+use gpui_kit::component::calendar::{CalendarEvent, CalendarState, Date as CalendarDate, Matcher};
 use gpui_kit::component::carousel::{CarouselEvent, CarouselState};
 use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
 use gpui_kit::component::slider::SliderState;
@@ -17,19 +18,20 @@ use crate::components::table::{
     DeclaredCell, DeclaredColumn, DeclaredRow, DeclaredTableData, NemoTableDelegate,
 };
 use crate::components::tree::{declared_to_tree_items, values_to_tree_items, DeclaredTreeNode};
+use crate::components::{parse_date, selected_date_string};
 use gpui_kit::component::input::TabSize;
 use gpui_kit::component::table::Column;
 
 use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
-    BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, CandlestickChart,
-    Carousel, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible,
-    ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart,
-    List, Marker, Menu, MenuEntryData, MenuItem, Message, Modal, Notification, OptionData,
-    Pagination, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart,
-    ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
-    StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text,
-    TextEditor, Textarea, Toggle, Tooltip, Tree,
+    BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, Calendar,
+    CandlestickChart, Carousel, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
+    Collapsible, ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label,
+    LineChart, List, Marker, Menu, MenuEntryData, MenuItem, Message, Modal, Notification,
+    OptionData, Pagination, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, Rating,
+    RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack,
+    StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table,
+    Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -689,6 +691,138 @@ impl App {
         state
     }
 
+    /// Gets or creates a `CalendarState` entity for the given `<calendar>`.
+    ///
+    /// Created once with the value window/disabled-day restrictions built
+    /// from the props; the first creation also subscribes so every selection
+    /// writes the ISO date back into the `value` property (making
+    /// `get_component_property(id, "value")` live) and fires the `on-change`
+    /// handler. Every later render pushes script-driven `value` changes back
+    /// in silently via `set_date`.
+    fn get_or_create_calendar_state(
+        &mut self,
+        component: &BuiltComponent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<CalendarState> {
+        let props = &component.properties;
+
+        if let Some(ComponentState::Calendar { state, last_value }) =
+            self.component_states.get_mut(&component.id)
+        {
+            let state = state.clone();
+            let desired = props
+                .get("value")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            if *last_value != desired {
+                if let Some(day) = parse_date(&desired) {
+                    // The selection may already equal `desired` (the event
+                    // handler wrote it back after a click) — avoid a spurious
+                    // re-notify in that case.
+                    let already = match state.read(cx).date() {
+                        CalendarDate::Single(Some(current)) => current == day,
+                        _ => false,
+                    };
+                    if !already {
+                        state.update(cx, |s, cx| {
+                            s.set_date(CalendarDate::Single(Some(day)), window, cx)
+                        });
+                    }
+                }
+                *last_value = desired;
+            }
+            return state;
+        }
+
+        let state = cx.new(|cx| CalendarState::new(window, cx));
+
+        // Build the disabled matcher: dates strictly outside the min/max
+        // window, plus listed weekdays (0 = Sunday…6 = Saturday, matching
+        // the kit's `Matcher::DayOfWeek` indices).
+        let (min, max) = (
+            props
+                .get("min")
+                .and_then(|v| v.as_str())
+                .and_then(parse_date),
+            props
+                .get("max")
+                .and_then(|v| v.as_str())
+                .and_then(parse_date),
+        );
+        let days: Vec<u32> = props
+            .get("disabled_days")
+            .and_then(|v| v.as_str())
+            .map(|list| {
+                list.split(',')
+                    .filter_map(|part| part.trim().parse::<u32>().ok())
+                    .filter(|day| *day < 7)
+                    .collect()
+            })
+            .unwrap_or_default();
+        if min.is_some() || max.is_some() || !days.is_empty() {
+            state.update(cx, |s, cx| {
+                s.set_disabled_matcher(
+                    Matcher::custom(move |date: &chrono::NaiveDate| {
+                        (min.is_some() && *date < min.unwrap())
+                            || (max.is_some() && *date > max.unwrap())
+                            || (!days.is_empty()
+                                && days.contains(
+                                    &chrono::Datelike::weekday(date).num_days_from_sunday(),
+                                ))
+                    }),
+                    window,
+                    cx,
+                );
+            });
+        }
+        // Subscribe once: mirror the selected date back into the `value`
+        // property and route it to the on-change handler.
+        let on_change = component.handlers.get("change").cloned();
+        let component_id = component.id.clone();
+        let runtime = Arc::clone(&self.runtime);
+        if let Some(on_change) = on_change {
+            let subscription = cx.subscribe_in(
+                &state,
+                window,
+                move |_this: &mut App, _state, event: &CalendarEvent, _window, cx| {
+                    let CalendarEvent::Selected(date) = event;
+                    if let Some(iso) = selected_date_string(date) {
+                        if let Ok(mut lm) = runtime.layout_manager.try_write() {
+                            let _ =
+                                lm.set_property(&component_id, "value", Value::String(iso.clone()));
+                        }
+                        runtime.call_handler(&on_change, &component_id, &iso);
+                        cx.notify();
+                    }
+                },
+            );
+            self._subscriptions.push(subscription);
+        }
+
+        let last_value = props
+            .get("value")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let seeded = parse_date(&last_value);
+        if let Some(day) = seeded {
+            state.update(cx, |s, cx| {
+                s.set_date(CalendarDate::Single(Some(day)), window, cx)
+            });
+        }
+
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Calendar {
+                state: state.clone(),
+                last_value,
+            },
+        );
+        state
+    }
+
     /// Gets or creates a SliderState entity for the given component.
     fn get_or_create_slider_state(
         &mut self,
@@ -1316,6 +1450,13 @@ impl App {
                 let carousel_state =
                     self.get_or_create_carousel_state(component, slides.len(), window, cx);
                 Carousel::new(component.clone(), carousel_state, slides).into_any_element()
+            }
+            "calendar" => {
+                // The selected date lives in the app's CalendarState (seeded
+                // from the value prop) and mirrors back into `value`; the
+                // subscription routes selections to `on-change`.
+                let calendar_state = self.get_or_create_calendar_state(component, window, cx);
+                Calendar::new(component.clone(), calendar_state).into_any_element()
             }
             "checkbox" => Checkbox::new(component.clone())
                 .runtime(Arc::clone(&self.runtime))

@@ -301,6 +301,34 @@ fn register_basic_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "calendar",
+        ComponentCategory::Input,
+        "Calendar",
+        "A month-view date picker; selection mirrors back into the value property",
+        ConfigSchema::new("calendar")
+            .property("value", PropertySchema::string())
+            .property("months", PropertySchema::integer().with_default(1i64))
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("medium")
+                    .one_of(enum_vals(&["xsmall", "small", "medium", "large"])),
+            )
+            .property(
+                "first_day",
+                PropertySchema::string()
+                    .with_default("sun")
+                    .one_of(enum_vals(&[
+                        "sun", "mon", "tue", "wed", "thu", "fri", "sat",
+                    ])),
+            )
+            .property("min", PropertySchema::string())
+            .property("max", PropertySchema::string())
+            .property("disabled_days", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
         "carousel",
         ComponentCategory::Display,
         "Carousel",

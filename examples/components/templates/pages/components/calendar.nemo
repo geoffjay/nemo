@@ -1,10 +1,168 @@
-<!-- calendar.nemo — placeholder page for the gpui-kit Calendar component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let basic_code = #"<calendar id="checkout" value="2026-01-15" on-change="handle_date_changed" />"#;
+
+let monday_code = #"<calendar id="week_monday" first-day="mon" />"#;
+
+let months_code = #"<calendar id="quarter" months="2" size="small" />"#;
+
+let size_code = #"<calendar id="compact" size="small" />
+<calendar id="display" size="large" />"#;
+
+let restricted_code = #"<calendar id="business"
+  min="2026-01-05" max="2026-03-27" disabled-days="0,6"
+  value="2026-02-12" />"#;
+</script>
+
+<!-- calendar note: the selection lives in a CalendarState entity in the app
+     (seeded from value); clicking a day mirrors the ISO date back into the
+     value property and fires on-change with it. min/max and disabled-days
+     build the kit's disabled matcher; month/year pickers are kit-internal. -->
 <template name="component-page-calendar">
-  <component-page name="Calendar" description="A calendar view for picking and browsing dates.">
-    <stack id="calendar_status" direction="vertical" spacing="4" align="start">
-      <label id="calendar_not_implemented" text="Not implemented" size="lg" />
-      <label id="calendar_source" text="Source: https://gpui-kit.com/component/calendar/" size="sm" />
-    </stack>
+  <component-page name="Calendar" description="A month-view date picker with day, month, and year navigation. Clicking a day selects it, the month and year names open picker views, and disabled dates (from min, max, and disabled-days) cannot be selected.">
+    <component-example label="Basic">
+      <stack id="calendar_basic_stack" direction="vertical" align="start">
+        <calendar id="calendar_basic" value="2026-01-15" on-change="handle_date_changed" />
+      </stack>
+      <code-editor
+        id="calendar_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Start on Monday">
+      <stack id="calendar_mon_stack" direction="vertical" align="start">
+        <calendar id="calendar_mon" first-day="mon" />
+      </stack>
+      <code-editor
+        id="calendar_code_mon"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ monday_code }}"
+      />
+    </component-example>
+
+    <component-example label="Two Months">
+      <stack id="calendar_months_stack" direction="vertical" align="start">
+        <calendar id="calendar_months" months="2" size="small" />
+      </stack>
+      <code-editor
+        id="calendar_code_months"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="2"
+        default-value="{{ months_code }}"
+      />
+    </component-example>
+
+    <component-example label="Sizes">
+      <stack id="calendar_sizes_stack" direction="vertical" spacing="16" align="start">
+        <calendar id="calendar_small" size="small" />
+        <calendar id="calendar_large" size="large" />
+      </stack>
+      <code-editor
+        id="calendar_code_sizes"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="3"
+        default-value="{{ size_code }}"
+      />
+    </component-example>
+
+    <component-example label="Restricted Selection">
+      <stack id="calendar_restricted_stack" direction="vertical" align="start">
+        <calendar
+          id="calendar_restricted"
+          min="2026-01-05"
+          max="2026-03-27"
+          disabled-days="0,6"
+          value="2026-02-12"
+        />
+      </stack>
+      <code-editor
+        id="calendar_code_restricted"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ restricted_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="560">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="value" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Initially selected date as yyyy-mm-dd; the app mirrors each selection back into this property for scripts to read.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="months" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>1</table-cell>
+        <table-cell>Number of month grids shown side by side.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="size" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>medium</table-cell>
+        <table-cell>Grid and control size: small, medium, or large.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="first-day" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>sun</table-cell>
+        <table-cell>First day of the week: sun, mon, tue, wed, thu, fri, or sat.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="min" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Earliest selectable date (yyyy-mm-dd); earlier days render disabled.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="max" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Latest selectable date (yyyy-mm-dd); later days render disabled.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled-days" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Comma-separated weekdays to disable: 0 is Sunday through 6 is Saturday, so 0,6 pushes weekends out.</table-cell>
+      </table-row>
+    </table>
+
+    <table slot="callbacks" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Handler</table-column>
+        <table-column field="arg" width="120">Argument</table-column>
+        <table-column field="description" width="600">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="on-change" /></table-cell>
+        <table-cell>date (string)</table-cell>
+        <table-cell>Invoked when a selectable day is clicked, with the newly selected date as a yyyy-mm-dd string; the value property is updated before the handler runs.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>
