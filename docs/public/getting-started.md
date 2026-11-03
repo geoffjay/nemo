@@ -156,6 +156,7 @@ Nemo ships with several built-in themes:
 
 | Theme | Variants |
 |-------|----------|
+| Ayu | Light, Mirage |
 | Kanagawa | Wave, Dragon |
 | Catppuccin | Latte, Macchiato |
 | Tokyo Night | Default |

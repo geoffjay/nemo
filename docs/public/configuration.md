@@ -99,6 +99,8 @@ Application metadata, window settings, and theme configuration.
 
 | Theme Name | Mode | Description |
 |------------|------|-------------|
+| `ayu` | light | Ayu Light |
+| `ayu-mirage` | dark | Ayu Mirage |
 | `kanagawa` | dark | Kanagawa Wave |
 | `kanagawa-dragon` | dark | Kanagawa Dragon |
 | `catppuccin` | light | Catppuccin Latte |

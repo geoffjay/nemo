@@ -14,6 +14,7 @@ use tracing::info;
 use tracing::warn;
 
 const THEME_SOURCES: &[&str] = &[
+    include_str!("./ayu.json"),
     include_str!("./catppuccin.json"),
     include_str!("./catppuccin-macchiato.json"),
     include_str!("./kanagawa.json"),
@@ -448,5 +449,19 @@ mod tests {
         assert!(!get_theme_set_names().iter().any(|n| n == "Sample"));
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn bundled_ayu_theme_set_resolves() {
+        // Read-only on the baked-in statics; safe to run beside the overlay test.
+        let (light, dark) = resolve_theme_pair("ayu").expect("ayu set should resolve");
+        assert_eq!(light.name, "Ayu Light");
+        assert_eq!(dark.name, "Ayu Mirage");
+        assert_eq!(light.mode, ThemeMode::Light);
+        assert_eq!(dark.mode, ThemeMode::Dark);
+        assert!(
+            get_theme_set_names().iter().any(|n| n == "Ayu"),
+            "Ayu should appear in the settings picker"
+        );
     }
 }

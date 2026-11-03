@@ -9,7 +9,7 @@ Built on [GPUI](https://gpui.rs), Nemo produces native, GPU-accelerated desktop 
 - **Declarative UI** -- Define component trees in XML instead of writing rendering code
 - **Live Data Binding** -- Connect HTTP APIs, MQTT brokers, Redis, NATS, WebSockets, and timers directly to UI components
 - **Scripted Logic** -- Write event handlers in RHAI, a lightweight embedded scripting language
-- **Theming** -- Ship with built-in themes (Kanagawa, Catppuccin, Tokyo Night, Gruvbox, Nord) or define your own
+- **Theming** -- Ship with built-in themes (Ayu, Kanagawa, Catppuccin, Tokyo Night, Gruvbox, Nord) or define your own
 - **Extensible** -- Add custom components and data sources via native plugins
 
 ## Quick Example
