@@ -334,8 +334,76 @@ fn register_basic_components(registry: &ComponentRegistry) {
         "menu_item",
         ComponentCategory::Display,
         "Menu Item",
-        "A menu entry for use inside a DropdownButton",
-        ConfigSchema::new("menu_item").property("label", PropertySchema::string()),
+        "A menu entry for use inside a DropdownButton or Menu; `href` makes it an external link",
+        ConfigSchema::new("menu_item")
+            .property("label", PropertySchema::string())
+            .property("icon", PropertySchema::string())
+            .property("disabled", PropertySchema::boolean().with_default(false))
+            .property("checked", PropertySchema::boolean())
+            .property("href", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "menu_label",
+        ComponentCategory::Display,
+        "Menu Label",
+        "A non-interactive section label inside a <Menu> group",
+        ConfigSchema::new("menu_label").property("text", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "menu_separator",
+        ComponentCategory::Display,
+        "Menu Separator",
+        "A separator line inside a <Menu> group",
+        ConfigSchema::new("menu_separator"),
+    );
+
+    reg(
+        registry,
+        "menu_submenu",
+        ComponentCategory::Display,
+        "Menu Submenu",
+        "A nested submenu inside a <Menu> group; its children are menu items",
+        ConfigSchema::new("menu_submenu")
+            .property("label", PropertySchema::string())
+            .property("icon", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "menu",
+        ComponentCategory::Input,
+        "Menu",
+        "A button trigger that opens a popup menu built from <menu-item>, <menu-label>, <menu-separator>, and <menu-submenu> children",
+        ConfigSchema::new("menu")
+            .property("label", PropertySchema::string().with_default("Menu"))
+            .property(
+                "variant",
+                PropertySchema::string().one_of(enum_vals(&[
+                    "primary",
+                    "secondary",
+                    "danger",
+                    "ghost",
+                ])),
+            )
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("medium")
+                    .one_of(enum_vals(&["xsmall", "small", "medium", "large"])),
+            )
+            .property(
+                "anchor",
+                PropertySchema::string()
+                    .with_default("top-left")
+                    .one_of(enum_vals(&["top-left", "top-right", "bottom-left", "bottom-right"])),
+            )
+            .property("scrollable", PropertySchema::boolean().with_default(false))
+            .property("max_height", PropertySchema::integer())
+            .property("disabled", PropertySchema::boolean().with_default(false)),
     );
 
     reg(

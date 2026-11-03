@@ -1,10 +1,251 @@
-<!-- menu.nemo — placeholder page for the gpui-kit Menu component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let basic_code = #"<menu id="actions" label="Actions" variant="outline">
+  <menu-item id="new_file" icon="file" label="New File" on-click="handle_menu" />
+  <menu-item id="open" icon="folder-open" label="Open…" on-click="handle_menu" />
+  <menu-separator />
+  <menu-item id="exit" icon="log-out" label="Exit" on-click="handle_menu" />
+</menu>"#;
+
+let groups_code = #"<menu id="edit" label="Edit" anchor="top-left">
+  <menu-label text="Clipboard" />
+  <menu-item id="copy" label="Copy" />
+  <menu-item id="paste" label="Paste" />
+  <menu-separator />
+  <menu-label text="Danger Zone" />
+  <menu-item id="clear" label="Clear All" />
+  <menu-item id="sign_out" label="Sign Out" disabled="true" />
+</menu>"#;
+
+let checks_code = #"<menu id="view" label="View">
+  <menu-item id="sidebar" label="Show Sidebar" checked="true" />
+  <menu-item id="minimap" label="Show Minimap" checked="false" />
+  <menu-separator />
+  <menu-item id="docs" icon="globe" label="Documentation" href="https://gpui-kit.com" />
+</menu>"#;
+
+let submenu_code = #"<menu id="project" label="Project">
+  <menu-submenu id="new" icon="file-plus" label="New">
+    <menu-item id="new_project" icon="folder" label="Project" />
+    <menu-item id="new_workspace" icon="layers" label="Workspace" />
+  </menu-submenu>
+  <menu-separator />
+  <menu-item id="close" label="Close Project" />
+</menu>"#;
+
+let scrollable_code = #"<menu id="many" label="Many Options" scrollable="true" max-height="200">
+  <menu-item id="opt_1" label="Option 1" />
+  <menu-item id="opt_2" label="Option 2" />
+  <menu-item id="opt_3" label="Option 3" />
+  ...
+</menu>"#;
+</script>
+
+<!-- menu.nemo — component reference page for the menu wrapper of gpui-kit's
+     PopupMenu. A menu is a button trigger that opens a popup; entries are
+     declarative children and item actions go through on-click handlers
+     (GPUI's Action/shortcut system is not bridged). -->
 <template name="component-page-menu">
-  <component-page name="Menu" description="Popup, context, and dropdown menus built from menu items.">
-    <stack id="menu_status" direction="vertical" spacing="4" align="start">
-      <label id="menu_not_implemented" text="Not implemented" size="lg" />
-      <label id="menu_source" text="Source: https://gpui-kit.com/component/menu" size="sm" />
-    </stack>
+  <component-page name="Menu" description="A button trigger that opens a popup menu. Entries are declarative child elements — items, section labels, separators, and nested submenus — styled by the theme with keyboard navigation.">
+    <component-example label="Basic">
+      <stack id="menu_basic_stack" direction="vertical" spacing="16" align="start">
+        <menu id="menu_basic" label="Actions" variant="outline">
+          <menu-item id="menu_basic_new" icon="file" label="New File" />
+          <menu-item id="menu_basic_open" icon="folder-open" label="Open…" />
+          <menu-separator id="menu_basic_sep" />
+          <menu-item id="menu_basic_exit" icon="log-out" label="Exit" />
+        </menu>
+        <menu id="menu_primary" label="Primary" variant="primary">
+          <menu-item id="menu_primary_item" label="Deploy" />
+        </menu>
+      </stack>
+      <code-editor
+        id="menu_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="8"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Groups and Labels">
+      <stack id="menu_groups_stack" direction="vertical" spacing="16" align="start">
+        <menu id="menu_groups" label="Edit">
+          <menu-label id="menu_groups_clipboard" text="Clipboard" />
+          <menu-item id="menu_groups_copy" label="Copy" />
+          <menu-item id="menu_groups_paste" label="Paste" />
+          <menu-separator id="menu_groups_sep" />
+          <menu-label id="menu_groups_danger" text="Danger Zone" />
+          <menu-item id="menu_groups_clear" label="Clear All" />
+          <menu-item id="menu_groups_signout" label="Sign Out" disabled="true" />
+        </menu>
+      </stack>
+      <code-editor
+        id="menu_code_groups"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="11"
+        default-value="{{ groups_code }}"
+      />
+    </component-example>
+
+    <component-example label="Checks and Links">
+      <stack id="menu_checks_stack" direction="vertical" spacing="16" align="start">
+        <menu id="menu_checks" label="View">
+          <menu-item id="menu_checks_sidebar" label="Show Sidebar" checked="true" />
+          <menu-item id="menu_checks_minimap" label="Show Minimap" checked="false" />
+          <menu-separator id="menu_checks_sep" />
+          <menu-item id="menu_checks_docs" icon="globe" label="Documentation" href="https://gpui-kit.com" />
+        </menu>
+      </stack>
+      <code-editor
+        id="menu_code_checks"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="7"
+        default-value="{{ checks_code }}"
+      />
+    </component-example>
+
+    <component-example label="Submenu">
+      <stack id="menu_submenu_stack" direction="vertical" spacing="16" align="start">
+        <menu id="menu_submenu" label="Project">
+          <menu-submenu id="menu_submenu_new" icon="file-plus" label="New">
+            <menu-item id="menu_submenu_project" icon="folder" label="Project" />
+            <menu-item id="menu_submenu_workspace" icon="layers" label="Workspace" />
+          </menu-submenu>
+          <menu-separator id="menu_submenu_sep" />
+          <menu-item id="menu_submenu_close" label="Close Project" />
+        </menu>
+      </stack>
+      <code-editor
+        id="menu_code_submenu"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="9"
+        default-value="{{ submenu_code }}"
+      />
+    </component-example>
+
+    <component-example label="Scrollable">
+      <stack id="menu_scrollable_stack" direction="vertical" spacing="16" align="start">
+        <menu id="menu_scrollable" label="Many Options" scrollable="true" max-height="180">
+          <menu-item id="menu_scroll_1" label="Option 1" />
+          <menu-item id="menu_scroll_2" label="Option 2" />
+          <menu-item id="menu_scroll_3" label="Option 3" />
+          <menu-item id="menu_scroll_4" label="Option 4" />
+          <menu-item id="menu_scroll_5" label="Option 5" />
+          <menu-item id="menu_scroll_6" label="Option 6" />
+          <menu-item id="menu_scroll_7" label="Option 7" />
+          <menu-item id="menu_scroll_8" label="Option 8" />
+          <menu-item id="menu_scroll_9" label="Option 9" />
+          <menu-item id="menu_scroll_10" label="Option 10" />
+        </menu>
+      </stack>
+      <code-editor
+        id="menu_code_scrollable"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="7"
+        default-value="{{ scrollable_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="560">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="label" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>Menu</table-cell>
+        <table-cell>Trigger button text.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="variant" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Trigger button look: primary, secondary, danger, or ghost.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="size" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>medium</table-cell>
+        <table-cell>Trigger button size: xsmall, small, medium, or large.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="anchor" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>top-left</table-cell>
+        <table-cell>Corner the popup anchors to: top-left, top-right, bottom-left, or bottom-right.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="scrollable" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Scroll the menu when content exceeds max-height (enabled automatically with it).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="max-height" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Menu height cap in px.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="disabled" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Disable the trigger so the menu cannot open.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="menu-item" /></table-cell>
+        <table-cell>element</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Menu entry; label, optional icon, disabled, checked, href (external link), and on-click.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="menu-label" /></table-cell>
+        <table-cell>element</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Non-interactive section heading; text.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="menu-separator" /></table-cell>
+        <table-cell>element</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Divider line between entries.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="menu-submenu" /></table-cell>
+        <table-cell>element</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Nested submenu with its own items; label and optional icon.</table-cell>
+      </table-row>
+    </table>
+
+    <table slot="callbacks" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Handler</table-column>
+        <table-column field="arg" width="120">Argument</table-column>
+        <table-column field="description" width="600">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="on-click" /></table-cell>
+        <table-cell>menu-item</table-cell>
+        <table-cell>Declared on each menu-item child; invoked when the item is clicked (links with href open the browser instead). Upstream shortcut hints need GPUI actions and are not bridged.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

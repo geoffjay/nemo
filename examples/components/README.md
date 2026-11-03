@@ -37,7 +37,7 @@ cargo run -- --app-config examples/components/app.nemo
   `nemo screenshot --app-config examples/components/app.nemo --route /charts --out charts.png`
 - Modal open/close toggling through `get_component_property` and `set_component_property`
 - Placeholder pages for gpui-kit components that Nemo does not wrap yet
-  (Attachment, Calendar, Carousel, Command, Data Table, Diff, Dock, Menu,
+  (Attachment, Calendar, Carousel, Command, Data Table, Diff, Dock,
   Message Scroller, Questionnaire, Rating, Settings, Virtual List) — each
   shows a "Not implemented" label and a link to the component's page on
   [gpui-kit.com](https://gpui-kit.com)

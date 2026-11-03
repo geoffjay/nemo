@@ -24,10 +24,11 @@ use crate::components::{
     BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, CandlestickChart,
     Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart,
     DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
-    MenuItem, Message, Modal, Notification, OptionData, Pagination, Panel, PieChart, Progress,
-    PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton,
-    Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg,
-    Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    Menu, MenuEntryData, MenuItem, Message, Modal, Notification, OptionData, Pagination, Panel,
+    PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select,
+    SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Stepper,
+    StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea,
+    Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -855,6 +856,73 @@ impl App {
             .collect()
     }
 
+    /// Collects declarative `<menu>` children (items, labels, separators, or
+    /// nested submenus) into render-ready entry data. Submenu children
+    /// recurse; any other child type is ignored by the menu.
+    fn collect_menu_entries(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Vec<MenuEntryData> {
+        component
+            .children
+            .iter()
+            .filter_map(|id| components.get(id))
+            .filter_map(|child| match child.component_type.as_str() {
+                "menu_item" => Some(MenuEntryData::Item {
+                    id: child.id.clone(),
+                    label: child
+                        .properties
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    icon: child
+                        .properties
+                        .get("icon")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string),
+                    disabled: child
+                        .properties
+                        .get("disabled")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false),
+                    checked: child.properties.get("checked").and_then(|v| v.as_bool()),
+                    href: child
+                        .properties
+                        .get("href")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string),
+                    on_click: child.handlers.get("click").cloned(),
+                }),
+                "menu_label" => Some(MenuEntryData::Label(
+                    child
+                        .properties
+                        .get("text")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                )),
+                "menu_separator" => Some(MenuEntryData::Separator),
+                "menu_submenu" => Some(MenuEntryData::Submenu {
+                    label: child
+                        .properties
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("Submenu")
+                        .to_string(),
+                    icon: child
+                        .properties
+                        .get("icon")
+                        .and_then(|v| v.as_str())
+                        .map(str::to_string),
+                    items: self.collect_menu_entries(child, components),
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// Wraps an element in a styled div if layout/decoration properties are present.
     fn apply_layout_styles(
         element: AnyElement,
@@ -1423,8 +1491,8 @@ impl App {
                     .into_any_element()
             }
             "accordion_item" | "tab_item" | "option" | "menu_item" | "list_item"
-            | "bubble_reactions" | "table_header" | "table_column" | "table_row" | "table_cell"
-            | "tree_node" => {
+            | "bubble_reactions" | "menu_label" | "menu_separator" | "menu_submenu"
+            | "table_header" | "table_column" | "table_row" | "table_cell" | "tree_node" => {
                 // These are rendered by their parent container; standalone fallback.
                 div().into_any_element()
             }
@@ -1840,6 +1908,15 @@ impl App {
                 // The current page is application-owned: `on-click` fires the
                 // handler with the 1-based target page for the app to persist.
                 Pagination::new(component.clone())
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "menu" => {
+                // Entries are declarative children; collect them pre-render
+                // (the dropdown builds its PopupMenu lazily while opening).
+                Menu::new(component.clone())
+                    .entries(self.collect_menu_entries(component, components))
                     .runtime(Arc::clone(&self.runtime))
                     .entity_id(entity_id)
                     .into_any_element()
