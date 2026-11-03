@@ -25,10 +25,10 @@ use crate::components::{
     Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart,
     DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
     Menu, MenuEntryData, MenuItem, Message, Modal, Notification, OptionData, Pagination, Panel,
-    PieChart, Progress, PyramidChart, RadarChart, Radio, RealtimeChart, ScatterChart, Select,
-    SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Stepper,
-    StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea,
-    Toggle, Tooltip, Tree,
+    PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart, ScatterChart,
+    Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart,
+    Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor,
+    Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1917,6 +1917,14 @@ impl App {
                 // (the dropdown builds its PopupMenu lazily while opening).
                 Menu::new(component.clone())
                     .entries(self.collect_menu_entries(component, components))
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
+            }
+            "rating" => {
+                // The kit owns the value in its keyed state (seeded from the
+                // value prop); on-click reports the new value to persist.
+                Rating::new(component.clone())
                     .runtime(Arc::clone(&self.runtime))
                     .entity_id(entity_id)
                     .into_any_element()

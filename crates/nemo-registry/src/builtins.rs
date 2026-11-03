@@ -408,6 +408,25 @@ fn register_basic_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "rating",
+        ComponentCategory::Input,
+        "Rating",
+        "A star rating row; clicking stars updates the kit-owned value and fires on-click",
+        ConfigSchema::new("rating")
+            .property("value", PropertySchema::integer().with_default(0i64))
+            .property("max", PropertySchema::integer().with_default(5i64))
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("medium")
+                    .one_of(enum_vals(&["xsmall", "small", "medium", "large"])),
+            )
+            .property("color", PropertySchema::string())
+            .property("disabled", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
         "spinner",
         ComponentCategory::Display,
         "Spinner",
