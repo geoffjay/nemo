@@ -1,6 +1,25 @@
 # Knowledge Base Update Log
 
 ## 2026-11-02
+* **Feature**: Wrapped gpui-kit's `Rating` as the built-in `<rating>`
+  component (Input category) — `crates/nemo/src/components/rating.rs`
+  (event-bearing wrapper, no children), registered in
+  `nemo-registry/src/builtins.rs`, dispatched in `app.rs`. Props: `value`
+  (initial rating, 0..=max) and `max` (default 5), with the kit owning the
+  value in its own keyed window state — clicking an unfilled star sets the
+  value, clicking a filled star steps down by one, hover previews, and
+  prop changes re-seed it — so **no `ComponentState` variant is needed**.
+  Also `size`, `color` (via `resolve_color`; unset → kit theme
+  yellow; for the page's examples used theme.primary/success/warning/
+  danger which all resolve), and `disabled` (read-only). Kit `Rating`'s
+  `color`/`disabled` are inherent methods (not the Sizable/Disableable
+  traits — clippy caught the unused imports). `on-click` fires the handler
+  with the new value (usize → string) via `runtime.call_handler` +
+  `cx.notify`. Gallery page rewritten with 5 examples (Basic incl. unset ·
+  Sizes · Colors incl. primary · Custom Maximum incl. 7/7 saturation ·
+  Read-only) + properties and callbacks tables. Verified with dark
+  (tokyo-night), a scratch fixture for the below-fold read-only row, and
+  light (gruvbox) screenshots.
 * **Feature**: Wrapped gpui-kit's `PopupMenu` as the built-in `<menu>`
   component (Input category) — `crates/nemo/src/components/menu.rs`
   rendered as a kit `Button` trigger wrapped in
