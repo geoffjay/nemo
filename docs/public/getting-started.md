@@ -98,16 +98,15 @@ Components are the building blocks of your UI. Each component has a `type` and a
 <button id="my_button" label="Click Me" variant="primary" on-click="handle_click" />
 ```
 
-Available component types:
+Available component types (see the [Configuration Reference](configuration.md) for the full list and per-component properties):
 
 | Category | Types |
 |----------|-------|
-| Layout | `stack`, `panel`, `collapsible`, `accordion` |
-| Display | `label`, `text`, `icon`, `image`, `progress`, `spinner`, `avatar`, `badge`, `tag`, `alert` |
-| Input | `button`, `input`, `checkbox`, `select`, `radio`, `slider`, `switch`, `toggle`, `dropdown_button` |
-| Data | `list`, `table`, `tree` |
-| Charts | `line_chart`, `bar_chart`, `area_chart`, `pie_chart`, `candlestick_chart` |
-| Overlay | `modal`, `tooltip`, `tabs`, `notification` |
+| Basic | `accordion`, `alert`, `avatar`, `badge`, `bubble`, `button`, `checkbox`, `collapsible`, `dropdown_button`, `icon`, `image`, `kbd`, `label`, `marker`, `menu`, `message`, `pagination`, `progress`, `rating`, `skeleton`, `spinner`, `stepper`, `svg`, `switch`, `tag`, `text`, `toggle`, `tooltip` |
+| Form | `code_editor`, `input`, `radio`, `select`, `slider`, `text_editor`, `textarea` |
+| Layout | `app_shell`, `list`, `modal`, `notification`, `panel`, `router`, `stack` |
+| Data | `table`, `tree` |
+| Charts | `line_chart`, `bar_chart`, `area_chart`, `pie_chart`, `candlestick_chart`, and 12 more |
 
 ### Data Sources
 
@@ -119,7 +118,7 @@ Data sources connect external systems to your UI. When a source emits new data, 
 </data>
 ```
 
-Supported source types: `timer`, `http`, `websocket`, `mqtt`, `redis`, `nats`, `file`.
+Supported source types: `timer`, `http`, `http-server`, `websocket`, `mqtt`, `redis`, `nats`, `file`.
 
 ### Data Binding
 
@@ -177,16 +176,26 @@ The `examples/` directory contains complete applications:
 
 | Example | Description |
 |---------|-------------|
+| `app-shell/` | Application shell layout (sidenav + pages + header/footer bars) |
 | `basic/` | Minimal application with a button and label |
 | `calculator/` | Calculator with digit buttons, operators, and display |
+| `complete/` | Kitchen-sink example with variables, includes, and routing |
 | `components/` | Gallery showcasing every built-in component |
+| `custom-theme/` | Defining a custom theme |
 | `data-binding/` | Live data from timer, HTTP, MQTT, Redis, and NATS sources |
+| `data-streaming/` | A live streaming dashboard |
+| `dev-dashboard/` | Developer tools dashboard (all RHAI extension packages) |
+| `pid-control/` | A PID control demo |
+| `router/` | Client-side routing between pages |
+| `sfc/` | Single-file components, child components, and `n:for`/`n:if` directives |
+| `svg/` | SVG rendering |
+| `task-list/` | A task list app with file persistence and a REST API |
 
 Run any example:
 
 ```bash
 nemo --app-config examples/basic/app.nemo
-nemo --app-config examples/calculator/app.nemo
+nemo --app-config examples/components/app.nemo
 ```
 
 ## Next Steps

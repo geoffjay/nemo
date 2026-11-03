@@ -1,7 +1,6 @@
 # Nemo Architecture Diagrams
 
-> **Project:** Nemo - Configuration-Driven Application Framework  
-> **Created:** February 2026  
+> **Project:** Nemo - Configuration-Driven Application Framework
 > **Location:** `~/Projects/nemo/`
 
 This document contains Mermaid diagrams illustrating Nemo's system architecture at various levels of detail.
@@ -47,30 +46,39 @@ Shows the Rust crate organization and dependencies.
 ```mermaid
 graph TB
     subgraph "Application Layer"
-        nemo[nemo<br/>Application Shell]
+        nemo[nemo<br/>Application Shell + CLI]
+        xtask[xtask<br/>Dev tasks]
     end
-    
+
     subgraph "Core Layer"
         config[nemo-config<br/>Configuration Engine]
         layout[nemo-layout<br/>Layout Engine]
         data[nemo-data<br/>Data Flow Engine]
         registry[nemo-registry<br/>Component Registry]
         events[nemo-events<br/>Event Bus]
+        tokens[nemo-tokens<br/>Design Tokens]
     end
-    
+
     subgraph "Integration Layer"
         integration[nemo-integration<br/>Integration Gateway]
         extension[nemo-extension<br/>Extension Manager]
     end
-    
+
     subgraph "Plugin API"
         plugin_api[nemo-plugin-api<br/>Plugin Author API]
+        plugin[nemo-plugin<br/>Host-side Loading]
         macros[nemo-macros<br/>Proc Macros]
+        wasm[nemo-wasm<br/>WASM Host]
+        wasm_guest[nemo-wasm-guest<br/>WASM Guest SDK]
     end
-    
+
+    subgraph "Example Plugins"
+        plugins[plugins/*<br/>mock-data, pid-control,<br/>streaming-stats, demo-settings]
+    end
+
     subgraph "Foundation"
         gpui[GPUI<br/>GPU UI Framework]
-        gpui_comp[gpui-component<br/>Component Library]
+        gpui_comp[gpui-component<br/>crates.io gpui-kit<br/>Component Library]
         rhai[RHAI<br/>Scripting Engine]
         libloading[libloading<br/>Dynamic Loading]
     end
@@ -81,40 +89,47 @@ graph TB
     nemo --> events
     nemo --> extension
     nemo --> integration
-    
+    nemo --> tokens
+
     layout --> config
     layout --> registry
     layout --> data
     layout --> events
-    
+
     data --> events
     data --> integration
-    
+
     extension --> plugin_api
     extension --> rhai
     extension --> libloading
     extension --> registry
     extension --> events
-    
+
     registry --> config
-    
+
     integration --> events
-    
+
     plugin_api --> macros
-    
+    plugins --> plugin_api
+    wasm --> plugin_api
+
     nemo --> gpui
-    layout --> gpui_comp
-    
+    nemo --> gpui_comp
+
     style nemo fill:#e1f5fe
     style config fill:#fff3e0
     style layout fill:#fff3e0
     style data fill:#fff3e0
     style registry fill:#fff3e0
     style events fill:#fff3e0
+    style tokens fill:#fff3e0
     style integration fill:#e8f5e9
     style extension fill:#e8f5e9
     style plugin_api fill:#fce4ec
+    style plugin fill:#fce4ec
     style macros fill:#fce4ec
+    style wasm fill:#fce4ec
+    style wasm_guest fill:#fce4ec
 ```
 
 ---

@@ -217,6 +217,7 @@ What a plugin provides:
 | `Capability::Transform(name)` | Provides a data transform |
 | `Capability::Action(name)` | Provides a custom action |
 | `Capability::EventHandler(name)` | Provides an event handler |
+| `Capability::Settings(name)` | Registers a settings page in the app's settings view (see the `demo-settings` plugin) |
 
 #### `PluginRegistrar` Trait
 
