@@ -1,6 +1,35 @@
 # Knowledge Base Update Log
 
 ## 2026-11-02
+* **Feature**: Wrapped gpui-kit's `PopupMenu` as the built-in `<menu>`
+  component (Input category) — `crates/nemo/src/components/menu.rs`
+  rendered as a kit `Button` trigger wrapped in
+  `dropdown_menu_with_anchor` (the kit's `DropdownMenu` trait only covers
+  buttons, so the trigger is the surface). Entries are declarative
+  children collected pre-render like stepper items through a recursive
+  `collect_menu_entries` method, then built lazily when the popover opens
+  via a recursive `apply_entries`: `<menu-item>` (label, icon via
+  `map_icon_name`, disabled, checked, href → kit link item that opens the
+  browser, on-click handler wired like dropdown-button's), `<menu-label>`
+  (section heading), `<menu-separator>`, and `<menu-submenu>` (nested
+  entries via `submenu_with_icon`; submenu disabled is out of scope — the
+  kit builder method doesn't expose the item's disabled flag). Trigger
+  props: label, variant (primary/secondary/danger/ghost), size, anchor
+  (four corners), scrollable, max-height scrolling (auto-enables, capped
+  px), disabled. This supersedes nothing—`<dropdown-button>` keeps its
+  simpler item model, and the shared `menu_item` schema was extended with
+  icon/disabled/checked/href (dropdown-button ignores the new optional
+  attributes, and future validate output stays clean). Out of scope:
+  `ContextMenuExt` right-click menus on arbitrary elements, GPUI
+  Action/keyboard-shortcut items (action system not bridged),
+  `check_side`/`external_link_icon`/`min_w`/`max_w`, trigger `on-click`,
+  and the native app menu bar. Gallery page rewritten with 5 examples
+  (Basic + variants · Groups and Labels · Checks and Links · Submenu ·
+  Scrollable) + properties and callbacks tables. Trigger rendering
+  verified dark (tokyo-night) and light (gruvbox); open-popup content
+  builds lazily on interaction and can't be captured headlessly
+  (accepted precedence from pagination's ellipsis menus) — click behavior
+  is manual-check territory.
 * **Feature**: Wrapped gpui-kit's `Pagination` as the built-in `<pagination>`
   component (Input category) — `crates/nemo/src/components/pagination.rs`
   (event-bearing wrapper, no children, following the stepper shape),
