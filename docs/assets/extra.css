@@ -1,0 +1,182 @@
+/* Ayu theme (https://ayutheme.com) — light (day) and mirage variants.
+   Palette source: ayu-theme/ayu-colors themes/light.yaml, themes/mirage.yaml */
+
+:root {
+  --ayu-light-bg: #f8f9fa;
+  --ayu-light-bg-lift: #fcfcfc;
+  --ayu-light-bg-sunk: #ebeef0;
+  --ayu-light-fg: rgba(2, 10, 18, 0.84);
+  --ayu-light-primary: #22a4e6;
+  --ayu-light-primary-light: #3fb3f4;
+  --ayu-light-primary-dark: #1a91cd;
+  --ayu-light-accent: #f29718;
+  --ayu-light-error: #e65050;
+  --ayu-light-code-bg: #e8ebee;
+  --ayu-light-code-fg: #34404e;
+  --ayu-light-selection: rgba(3, 91, 214, 0.15);
+  --ayu-light-panel-bg: #fafafa;
+  --ayu-light-line: rgba(107, 125, 143, 0.12);
+
+  --ayu-mirage-bg: #1f2430;
+  --ayu-mirage-bg-lift: #242936;
+  --ayu-mirage-bg-sunk: #181c26;
+  --ayu-mirage-fg: rgba(254, 250, 236, 0.84);
+  --ayu-mirage-primary: #73d0ff;
+  --ayu-mirage-primary-light: #a2deff;
+  --ayu-mirage-primary-dark: #49c3fa;
+  --ayu-mirage-accent: #ffcc66;
+  --ayu-mirage-error: #ff6666;
+  --ayu-mirage-code-bg: #1a1f29;
+  --ayu-mirage-code-fg: #d3e3fc;
+  --ayu-mirage-selection: rgba(64, 159, 255, 0.25);
+  --ayu-mirage-panel-bg: #282e3b;
+  --ayu-mirage-line: #171b24;
+  --ayu-mirage-popup: #1c212c;
+}
+
+[data-md-color-scheme="ayu-light"] {
+  --md-default-bg-color: var(--ayu-light-bg);
+  --md-default-bg-color--light: var(--ayu-light-bg-lift);
+  --md-default-bg-color--dark: var(--ayu-light-bg-sunk);
+  --md-default-fg-color: var(--ayu-light-fg);
+  --md-default-fg-color--light: rgba(2, 10, 18, 0.54);
+  --md-default-fg-color--dark: rgba(2, 10, 18, 0.94);
+
+  --md-primary-fg-color: var(--ayu-light-primary);
+  --md-primary-fg-color--light: var(--ayu-light-primary-light);
+  --md-primary-fg-color--dark: var(--ayu-light-primary-dark);
+  --md-primary-bg-color: var(--ayu-light-primary);
+
+  --md-accent-fg-color: var(--ayu-light-accent);
+  --md-accent-bg-color: var(--ayu-light-accent);
+
+  --md-code-bg-color: var(--ayu-light-code-bg);
+  --md-code-fg-color: var(--ayu-light-code-fg);
+  --md-code-hl-color: var(--ayu-light-selection);
+
+  --md-typeset-a-color: var(--ayu-light-primary-dark);
+
+  /* Ayu light syntax highlighting (ayu-colors themes/light.yaml) */
+  --md-code-hl-tag-color: #55b4d4;
+  --md-code-hl-func-color: #eba400;
+  --md-code-hl-entity-color: #22a4e6;
+  --md-code-hl-string-color: #86b300;
+  --md-code-hl-regexp-color: #4cbf99;
+  --md-code-hl-markup-color: #f07171;
+  --md-code-hl-keyword-color: #fa8532;
+  --md-code-hl-special-color: #e59645;
+  --md-code-hl-comment-color: #adaeb1;
+  --md-code-hl-constant-color: #a37acc;
+  --md-code-hl-operator-color: #f2a191;
+  --md-code-hl-number-color: #a37acc;
+  --md-code-hl-variable-color: #e24e37;
+  --md-code-hl-name-color: #ff559a;
+}
+
+[data-md-color-scheme="ayu-light"][data-md-color-primary],
+[data-md-color-scheme="ayu-light"][data-md-color-accent] {
+  --md-typeset-a-color: var(--ayu-light-primary-dark);
+}
+
+[data-md-color-scheme="ayu-light"] .md-header {
+  background: var(--ayu-light-primary-dark);
+  box-shadow: 0 0 0.2rem rgba(2, 10, 18, 0.1), 0 0.2rem 0.4rem rgba(2, 10, 18, 0.08);
+}
+
+[data-md-color-scheme="ayu-light"] .md-tabs {
+  background: var(--ayu-light-primary-dark);
+}
+
+[data-md-color-scheme="ayu-light"] ::-moz-selection {
+  background: var(--ayu-light-selection);
+}
+
+[data-md-color-scheme="ayu-light"] ::selection {
+  background: var(--ayu-light-selection);
+}
+
+/* Mirage (dark) */
+[data-md-color-scheme="ayu-mirage"] {
+  --md-default-bg-color: var(--ayu-mirage-bg);
+  --md-default-bg-color--light: var(--ayu-mirage-bg-lift);
+  --md-default-bg-color--dark: var(--ayu-mirage-bg-sunk);
+  --md-default-fg-color: var(--ayu-mirage-fg);
+  --md-default-fg-color--light: rgba(211, 227, 252, 0.45);
+  --md-default-fg-color--dark: rgba(254, 250, 236, 0.94);
+
+  --md-primary-fg-color: var(--ayu-mirage-primary);
+  --md-primary-fg-color--light: var(--ayu-mirage-primary-light);
+  --md-primary-fg-color--dark: var(--ayu-mirage-primary-dark);
+  --md-primary-bg-color: var(--ayu-mirage-primary);
+
+  --md-accent-fg-color: var(--ayu-mirage-accent);
+  --md-accent-bg-color: var(--ayu-mirage-accent);
+  --md-typeset-a-color: var(--ayu-mirage-primary);
+
+  --md-code-bg-color: var(--ayu-mirage-code-bg);
+  --md-code-fg-color: var(--ayu-mirage-code-fg);
+  --md-code-hl-color: var(--ayu-mirage-selection);
+
+  /* Ayu mirage syntax highlighting (ayu-colors themes/mirage.yaml) */
+  --md-code-hl-tag-color: #5ccfe6;
+  --md-code-hl-func-color: #ffcd66;
+  --md-code-hl-entity-color: #73d0ff;
+  --md-code-hl-string-color: #d5ff80;
+  --md-code-hl-regexp-color: #95e6cb;
+  --md-code-hl-markup-color: #f28779;
+  --md-code-hl-keyword-color: #ffa659;
+  --md-code-hl-special-color: #d9be98;
+  --md-code-hl-comment-color: #6e7c8f;
+  --md-code-hl-constant-color: #dfbfff;
+  --md-code-hl-operator-color: #f29e74;
+  --md-code-hl-number-color: #dfbfff;
+  --md-code-hl-variable-color: #f28779;
+  --md-code-hl-name-color: #ff8f40;
+
+  --md-footer-fg-color: var(--ayu-mirage-fg);
+  --md-footer-bg-color: var(--ayu-mirage-primary-dark);
+}
+
+[data-md-color-scheme="ayu-mirage"][data-md-color-primary],
+[data-md-color-scheme="ayu-mirage"][data-md-color-accent] {
+  --md-typeset-a-color: var(--ayu-mirage-primary);
+}
+
+[data-md-color-scheme="ayu-mirage"] .md-header {
+  background: var(--ayu-mirage-bg-sunk);
+  box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.2), 0 0.2rem 0.4rem rgba(0, 0, 0, 0.15);
+}
+
+[data-md-color-scheme="ayu-mirage"] .md-tabs {
+  background: var(--ayu-mirage-bg-sunk);
+}
+
+[data-md-color-scheme="ayu-mirage"] .md-nav--primary .md-nav__item--active > .md-nav__link {
+  color: var(--ayu-mirage-accent);
+}
+
+[data-md-color-scheme="ayu-mirage"] ::-moz-selection {
+  background: var(--ayu-mirage-selection);
+}
+
+[data-md-color-scheme="ayu-mirage"] ::selection {
+  background: var(--ayu-mirage-selection);
+}
+
+[data-md-color-scheme="ayu-mirage"] .md-typeset table:not([class]) {
+  background: var(--ayu-mirage-bg-lift);
+}
+
+[data-md-color-scheme="ayu-mirage"] .md-typeset table:not([class]) th {
+  background: var(--ayu-mirage-panel-bg);
+}
+
+[data-md-color-scheme="ayu-mirage"] .md-typeset .admonition,
+[data-md-color-scheme="ayu-mirage"] .md-typeset details {
+  background-color: var(--ayu-mirage-bg-lift);
+}
+
+[data-md-color-scheme="ayu-mirage"] .md-search__scrollwrap,
+[data-md-color-scheme="ayu-mirage"] .md-search__form {
+  background: var(--ayu-mirage-popup);
+}

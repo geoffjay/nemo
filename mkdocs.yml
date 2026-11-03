@@ -10,19 +10,15 @@ theme:
   name: material
   palette:
     - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: deep purple
-      accent: purple
+      scheme: ayu-light
       toggle:
         icon: material/brightness-7
-        name: Switch to dark mode
+        name: Switch to mirage mode
     - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: deep purple
-      accent: purple
+      scheme: ayu-mirage
       toggle:
         icon: material/brightness-4
-        name: Switch to light mode
+        name: Switch to day mode
   features:
     - navigation.instant
     - navigation.tracking
@@ -33,8 +29,8 @@ theme:
     - search.highlight
     - content.code.copy
     - content.code.annotate
-  icon:
-    repo: fontawesome/brands/github
+  favicon: assets/img/favicon.png
+  logo: assets/img/logo.png
 
 plugins:
   - search
@@ -89,6 +85,9 @@ nav:
   - Architecture: public/architecture.md
   - Development: public/develop.md
   - Packaging & Distribution: public/packaging.md
+
+extra_css:
+  - assets/extra.css
 
 extra:
   social:
