@@ -1,5 +1,22 @@
 # Knowledge Base Update Log
 
+
+## 2026-11-04 (2)
+* **Fix**: `<carousel>` pagination row was overflowing into the next
+  sibling — `apply_layout_styles` clamped the whole carousel (viewport +
+  pagination row) to its `height` prop with `h(..).flex_shrink_0()`, but
+  `height` only means the slide *viewport* height (consumed inside
+  `Carousel::render` on `CarouselContent`/`CarouselItem`); the dots row
+  painted past the wrapper's bottom onto the following section. Carousels
+  now skip `height` in `apply_layout_styles` (like panels skip decoration),
+  so the element grows to fit viewport + controls. Verified via
+  `nemo screenshot` fixtures and `gallery_flow_and_pagination_sizing`
+  (TestAppContext bounds assertions: pagination carousels must be taller
+  than their viewport, sections must stack without overlap). Also: the
+  examples page carousels gained `width="480"` so the gallery frames them.
+  NOTE: enabling `gpui-kit/test-support` (dev-dep) forces `proptest ≥1.12`
+  via `gpui-fast`, so the dev-dependency bump is load-bearing.
+
 ## 2026-11-04
 * **Feature**: Wrapped gpui-kit's `Command` palette (via
   `gpui_kit::component::command::{Command, CommandItem, CommandGroup,

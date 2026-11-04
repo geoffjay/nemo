@@ -1,5 +1,5 @@
 <script>
-let basic_code = #"<carousel id="projects" height="120" on-change="handle_slide_changed">
+let basic_code = #"<carousel id="projects" width="480" height="120" on-change="handle_slide_changed">
   <stack id="p1" direction="vertical" align="center" justify="center">
     <label id="p1_text" size="lg" text="Project one" />
   </stack>
@@ -11,7 +11,7 @@ let basic_code = #"<carousel id="projects" height="120" on-change="handle_slide_
   </stack>
 </carousel>"#;
 
-let pagination_code = #"<carousel id="pager" height="120" controls="false" pagination="true">
+let pagination_code = #"<carousel id="pager" width="480" height="120" controls="false" pagination="true">
   <stack id="pg1" direction="vertical" align="center" justify="center">
     <label id="pg1_text" size="lg" text="Slide 1 of 3" />
   </stack>
@@ -23,7 +23,7 @@ let pagination_code = #"<carousel id="pager" height="120" controls="false" pagin
   </stack>
 </carousel>"#;
 
-let vertical_code = #"<carousel id="vertical" height="220" axis="vertical" controls="false" pagination="true">
+let vertical_code = #"<carousel id="vertical" width="480" height="220" axis="vertical" controls="false" pagination="true">
   <stack id="v1" direction="vertical" align="center" justify="center">
     <label id="v1_text" size="lg" text="Row one" />
   </stack>
@@ -35,7 +35,7 @@ let vertical_code = #"<carousel id="vertical" height="220" axis="vertical" contr
   </stack>
 </carousel>"#;
 
-let looping_code = #"<carousel id="looping" height="120" looping="true" index="2">
+let looping_code = #"<carousel id="looping" width="480" height="120" looping="true" index="2">
   <stack id="l1" direction="vertical" align="center" justify="center">
     <label id="l1_text" size="lg" text="First" />
   </stack>
@@ -56,7 +56,7 @@ let looping_code = #"<carousel id="looping" height="120" looping="true" index="2
   <component-page name="Carousel" description="Displays one or more related items in a snapping viewport. Supports horizontal and vertical layouts, keyboard navigation, pointer and trackpad gestures, looping, and a controlled selection. The prev/next controls disable themselves at the boundaries.">
     <component-example label="Basic">
       <stack id="carousel_basic_stack" direction="vertical" spacing="16">
-        <carousel id="carousel_basic" height="120" on-change="handle_slide_changed">
+        <carousel id="carousel_basic" width="480" height="120" on-change="handle_slide_changed">
           <stack id="carousel_s1" direction="vertical" align="center" justify="center">
             <label id="carousel_s1_text" size="lg" text="Project one" />
           </stack>
@@ -81,7 +81,7 @@ let looping_code = #"<carousel id="looping" height="120" looping="true" index="2
 
     <component-example label="Pagination Indicators">
       <stack id="carousel_pagination_stack" direction="vertical" spacing="16">
-        <carousel id="carousel_pager" height="120" controls="false" pagination="true">
+        <carousel id="carousel_pager" width="480" height="120" controls="false" pagination="true">
           <stack id="carousel_pg1" direction="vertical" align="center" justify="center">
             <label id="carousel_pg1_text" size="lg" text="Slide 1 of 3" />
           </stack>
@@ -106,7 +106,7 @@ let looping_code = #"<carousel id="looping" height="120" looping="true" index="2
 
     <component-example label="Vertical Orientation">
       <stack id="carousel_vertical_stack" direction="vertical" spacing="16">
-        <carousel id="carousel_vertical" height="220" axis="vertical" controls="false" pagination="true">
+        <carousel id="carousel_vertical" width="480" height="220" axis="vertical" controls="false" pagination="true">
           <stack id="carousel_v1" direction="vertical" align="center" justify="center">
             <label id="carousel_v1_text" size="lg" text="Row one" />
           </stack>
@@ -131,7 +131,7 @@ let looping_code = #"<carousel id="looping" height="120" looping="true" index="2
 
     <component-example label="Looping">
       <stack id="carousel_loop_stack" direction="vertical" spacing="16">
-        <carousel id="carousel_looping" height="120" looping="true" index="2">
+        <carousel id="carousel_looping" width="480" height="120" looping="true" index="2">
           <stack id="carousel_l1" direction="vertical" align="center" justify="center">
             <label id="carousel_l1_text" size="lg" text="First" />
           </stack>

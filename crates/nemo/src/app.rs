@@ -1373,6 +1373,18 @@ impl App {
         // for a decoration-only attribute like `border="0"` inserts an
         // intermediate div into the flex chain that an inner scroll stack
         // depends on, which breaks its scrolling.
+        // A carousel's `height` sizes its slide *viewport* (consumed inside
+        // `Carousel::render`), but the element also renders a pagination row
+        // below the viewport and is sized by its content. Clamping the outer
+        // wrapper to `height` would cut the pagination row off (it paints
+        // past the wrapper into the following sibling), so `height` is
+        // consumed by the component and skipped here.
+        let height = if component.component_type == "carousel" {
+            None
+        } else {
+            height
+        };
+
         let has_geometry = [
             width,
             height,

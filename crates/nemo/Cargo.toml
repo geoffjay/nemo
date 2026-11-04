@@ -67,7 +67,10 @@ chrono = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3"
-proptest = "1"
+proptest = "1.12"
+# Enables gpui's TestAppContext / VisualTestContext for headless element
+# interaction tests (bounds + simulated clicks) via the kit's passthrough.
+gpui-kit = { workspace = true, features = ["test-support"] }
 
 # cargo-binstall: resolve prebuilt binaries from GitHub Releases.
 # The `nemo` binary is not published to crates.io (it depends on a git build of
