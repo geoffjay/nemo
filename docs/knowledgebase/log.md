@@ -1,5 +1,40 @@
 # Knowledge Base Update Log
 
+## 2026-11-04
+* **Feature**: Wrapped gpui-kit's `Command` palette (via
+  `gpui_kit::component::command::{Command, CommandItem, CommandGroup,
+  CommandState}`) as the Input builtin `<command>` with `command-item`,
+  `command-group` (heading hides when all items filter out) and
+  `command-separator` children — collected pre-render like menu entries.
+  Entity-stateful (`ComponentState::Command { state, last_query, echo }`
+  around `CommandState::new(window, cx)`) but subscription-free: unlike
+  table/carousel/calendar, the kit re-installs the full model (entries +
+  callbacks) on EVERY Command render via `install_model`, so handlers wire
+  as element-level closures in the wrapper. `on-query` gets the query string
+  AND mirrors it back into the `query` property; `on-select`/`on-confirm`
+  get the kit's `IndexPath` model coordinates as `section:row` (ungrouped
+  items share section 0 with a cross-tree row counter; explicit groups shift
+  by one section when ungrouped items exist, row = the item's index within
+  its group — derived from the kit's flatten loop in command/state.rs);
+  an item's own `on-confirm` handler fires via a `(section,row) →
+  handler` map lookup with the literal payload `confirm`; `on-cancel` gets
+  `cancel`. Actions are optional upstream (the crate's own
+  `actionless_confirm_callback...` test proves confirm fires without one),
+  so no GPUI Action registry needed for item behavior. Two traps: (1)
+  `CommandState::set_query` fires `on_query` even for programmatic writes —
+  the wrapper stages an `Rc<RefCell<Option<String>>>` echo (shared between
+  `get_or_create_command_state` and the ComponentState variant) that the
+  callback consumes to stay silent for script-driven seeds; (2) unknown
+  icon names in `map_icon_name` silently fall back to `IconName::Info` —
+  the first capture showed an info glyph for `file-plus`, swapped to a
+  real name (`plus`). Verified dark/light: group headings + separator,
+  checked indicator, muted disabled rows, `searchable="false"` quick-action
+  palette, and `filterable="false"` external-search mode via a scratch
+  fixture (below the screen clamp on the full page). Out of scope: real
+  Actions + keybinding hints, custom rows (`child`), header/footer/empty
+  slots, `scroll_bounce` override, `set_loading` async search, programmatic
+  focus / `set_selected_index` seeding.
+
 ## 2026-11-02
 * **Feature**: Wrapped gpui-kit's `Calendar` (via `gpui_kit::component::calendar`,
   re-exported from the private `time` facade — the component path is NOT
