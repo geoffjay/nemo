@@ -326,6 +326,51 @@ fn register_basic_components(registry: &ComponentRegistry) {
             .property("max", PropertySchema::string())
             .property("disabled_days", PropertySchema::string()),
     );
+    reg(
+        registry,
+        "command",
+        ComponentCategory::Input,
+        "Command",
+        "Command palette: a search field over filtered, grouped commands; the query mirrors back into the query property",
+        ConfigSchema::new("command")
+            .property("query", PropertySchema::string())
+            .property("placeholder", PropertySchema::string())
+            .property("searchable", PropertySchema::boolean().with_default(true))
+            .property("filterable", PropertySchema::boolean().with_default(true))
+            .property("max_height", PropertySchema::integer().with_default(300i64))
+            .property("bordered", PropertySchema::boolean().with_default(true))
+            .property("width", PropertySchema::integer()),
+    );
+    reg(
+        registry,
+        "command_item",
+        ComponentCategory::Display,
+        "Command Item",
+        "A command entry for use inside a Command palette; `on-confirm` receives the confirm event",
+        ConfigSchema::new("command_item")
+            .property("label", PropertySchema::string())
+            .property("icon", PropertySchema::string())
+            .property("keywords", PropertySchema::string())
+            .property("disabled", PropertySchema::boolean().with_default(false))
+            .property("checked", PropertySchema::boolean())
+            .property("on_confirm", PropertySchema::string()),
+    );
+    reg(
+        registry,
+        "command_group",
+        ComponentCategory::Display,
+        "Command Group",
+        "A titled section of command entries; the heading hides while every item is filtered out",
+        ConfigSchema::new("command_group").property("label", PropertySchema::string()),
+    );
+    reg(
+        registry,
+        "command_separator",
+        ComponentCategory::Display,
+        "Command Separator",
+        "A divider between command palette entries",
+        ConfigSchema::new("command_separator"),
+    );
 
     reg(
         registry,

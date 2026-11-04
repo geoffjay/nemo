@@ -1,10 +1,174 @@
-<!-- command.nemo — placeholder page for the gpui-kit Command component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let basic_code = #"<command id="palette" width="380" placeholder="Type a command or search..." on-confirm="handle_command_confirm">
+  <command-item id="cmd_open" label="Open File" icon="file" on-confirm="handle_open_file" />
+  <command-item id="cmd_search" label="Search…" keywords="find, lookup" />
+  <command-separator />
+  <command-group id="cmd_sg" label="View">
+    <command-item id="cmd_profile" label="Profile" icon="user" />
+    <command-item id="cmd_billing" label="Billing" checked="true" />
+    <command-item id="cmd_deploy" label="Deploy" disabled="true" />
+  </command-group>
+</command>"#;
+
+let quick_code = #"<command id="quick" width="380" searchable="false" max-height="220">
+  <command-item id="new_file" label="New File" icon="plus" />
+  <command-item id="duplicate" label="Duplicate" icon="copy" />
+  <command-item id="trash" label="Move to Trash" icon="trash" on-confirm="handle_trash" />
+</command>"#;
+
+let external_code = #"<command id="remote" width="380" filterable="false" placeholder="Search the index…"
+  on-query="handle_query_changed" max-height="200">
+  <command-item id="r1" label="static result one" />
+  <command-item id="r2" label="static result two" />
+</command>"#;
+</script>
+
+<!-- command note: query and highlight live in the app's CommandState; the
+     palette re-installs entries + handlers per render. on-query gets the
+     query string (mirrored back into the query property), on-select /
+     on-confirm get the item's section:row model coordinates, an item's own
+     on-confirm gets "confirm", on-cancel gets "cancel". Keybinding hints
+     need real GPUI Actions and are out of scope. -->
 <template name="component-page-command">
-  <component-page name="Command" description="A command palette — a search field over a filtered list of commands.">
-    <stack id="command_status" direction="vertical" spacing="4" align="start">
-      <label id="command_not_implemented" text="Not implemented" size="lg" />
-      <label id="command_source" text="Source: https://gpui-kit.com/component/command" size="sm" />
-    </stack>
+  <component-page name="Command" description="A command palette — a search field over a filtered, grouped list of commands. The palette re-installs its entries on every render, so filtering and highlights come from the shared state and any handler fires through your config.">
+    <component-example label="Basic">
+      <stack id="command_basic_stack" direction="vertical" align="start">
+        <command id="command_basic" width="380" placeholder="Type a command or search..." on-confirm="handle_command_confirm">
+          <command-item id="command_open" label="Open File" icon="file" on-confirm="handle_open_file" />
+          <command-item id="command_search" label="Search…" keywords="find, lookup" />
+          <command-separator id="command_sep_1" />
+          <command-group id="command_view" label="View">
+            <command-item id="command_profile" label="Profile" icon="user" />
+            <command-item id="command_billing" label="Billing" checked="true" />
+            <command-item id="command_deploy" label="Deploy" disabled="true" />
+          </command-group>
+        </command>
+      </stack>
+      <code-editor
+        id="command_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="12"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Quick Actions Without Search">
+      <stack id="command_quick_stack" direction="vertical" align="start">
+        <command id="command_quick" width="380" searchable="false" max-height="220">
+          <command-item id="command_new_file" label="New File" icon="plus" />
+          <command-item id="command_duplicate" label="Duplicate" icon="copy" />
+          <command-item id="command_trash" label="Move to Trash" icon="trash" on-confirm="handle_trash" />
+        </command>
+      </stack>
+      <code-editor
+        id="command_code_quick"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="10"
+        default-value="{{ quick_code }}"
+      />
+    </component-example>
+
+    <component-example label="External Search">
+      <stack id="command_remote_stack" direction="vertical" align="start">
+        <command id="command_remote" width="380" filterable="false" placeholder="Search the index…" on-query="handle_query_changed" max-height="200">
+          <command-item id="command_r1" label="static result one" />
+          <command-item id="command_r2" label="static result two" />
+        </command>
+      </stack>
+      <code-editor
+        id="command_code_remote"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        rows="6"
+        default-value="{{ external_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Attribute</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="560">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="query" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Seed the search query; it mirrors back while typing so scripts can read or reset it (a reset re-filters silently).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="placeholder" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Placeholder shown by the query field.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="searchable" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>false turns the palette into a compact action list without a query field.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="filterable" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>false keeps the field (on-query still fires) but shows every item; use for externally backed search.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="max-height" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>300</table-cell>
+        <table-cell>Maximum height of the command list in px.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="bordered" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Draw the surrounding frame and rounding; disable when the palette sits inside your own border.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="width" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Layout width of the palette; the list and query field fill it.</table-cell>
+      </table-row>
+    </table>
+
+    <table slot="callbacks" stripe="true">
+      <table-header>
+        <table-column field="name" width="130">Handler</table-column>
+        <table-column field="arg" width="130">Argument</table-column>
+        <table-column field="description" width="600">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="on-query" /></table-cell>
+        <table-cell>query (string)</table-cell>
+        <table-cell>Invoked when the query changes. The value property is updated before the handler runs. Does not fire for script-driven resets.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-select" /></table-cell>
+        <table-cell>section:row</table-cell>
+        <table-cell>Invoked when the highlighted item changes (arrow keys, refiltering, hover). Coordinates address the full entry model, not the filtered view.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-confirm" /></table-cell>
+        <table-cell>section:row</table-cell>
+        <table-cell>Invoked when an item is confirmed with Enter or a click; the confirmed item's own on-confirm handler also fires with the literal argument confirm.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-cancel" /></table-cell>
+        <table-cell>cancel</table-cell>
+        <table-cell>Invoked when Escape cancels the palette (Escape clears a non-empty query first).</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

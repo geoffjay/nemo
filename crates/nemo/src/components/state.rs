@@ -1,13 +1,16 @@
 use gpui::Entity;
 use gpui_kit::component::calendar::CalendarState;
 use gpui_kit::component::carousel::CarouselState;
+use gpui_kit::component::command::CommandState;
 use gpui_kit::component::input::{EditorState, InputState, TextareaState};
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
 use gpui_kit::component::tree::TreeState;
 use nemo_config::Value;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use super::table::NemoTableDelegate;
@@ -70,6 +73,15 @@ pub enum ComponentState {
     Calendar {
         state: Entity<CalendarState>,
         last_value: String,
+    },
+    /// Live interaction state for a command palette (query text, focus,
+    /// highlighted row), the last `query` the render pass wrote into it,
+    /// and the echo flag that suppresses the reflexive `on_query` a
+    /// script-driven `set_query` would fire.
+    Command {
+        state: Entity<CommandState>,
+        last_query: String,
+        echo: Rc<RefCell<Option<String>>>,
     },
     Table {
         state: Entity<TableState<NemoTableDelegate>>,

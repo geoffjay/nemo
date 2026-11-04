@@ -3,6 +3,7 @@
 use gpui::*;
 use gpui_kit::component::calendar::{CalendarEvent, CalendarState, Date as CalendarDate, Matcher};
 use gpui_kit::component::carousel::{CarouselEvent, CarouselState};
+use gpui_kit::component::command::CommandState;
 use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
@@ -10,7 +11,9 @@ use gpui_kit::component::tree::TreeState;
 use gpui_kit::component::v_flex;
 use gpui_kit::component::ActiveTheme;
 use nemo_config::Value;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use crate::components::state::{ComponentState, ComponentStates};
@@ -18,7 +21,7 @@ use crate::components::table::{
     DeclaredCell, DeclaredColumn, DeclaredRow, DeclaredTableData, NemoTableDelegate,
 };
 use crate::components::tree::{declared_to_tree_items, values_to_tree_items, DeclaredTreeNode};
-use crate::components::{parse_date, selected_date_string};
+use crate::components::{parse_date, selected_date_string, CommandEntryData};
 use gpui_kit::component::input::TabSize;
 use gpui_kit::component::table::Column;
 
@@ -26,8 +29,8 @@ use crate::components::{
     apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
     BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, Calendar,
     CandlestickChart, Carousel, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
-    Collapsible, ColumnChart, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label,
-    LineChart, List, Marker, Menu, MenuEntryData, MenuItem, Message, Modal, Notification,
+    Collapsible, ColumnChart, Command, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd,
+    Label, LineChart, List, Marker, Menu, MenuEntryData, MenuItem, Message, Modal, Notification,
     OptionData, Pagination, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, Rating,
     RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack,
     StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table,
@@ -823,6 +826,64 @@ impl App {
         state
     }
 
+    /// Gets or creates a `CommandState` entity for the given `<command>`.
+    ///
+    /// Created once; the query lives inside the kit state and is seeded (and
+    /// later re-seeded) from the `query` property. The set-agenda callback
+    /// wiring happens per-render in the wrapper, so nothing is subscribed
+    /// here — script-driven seeds route through the shared echo flag so the
+    /// reflexive `on_query` stays silent.
+    fn get_or_create_command_state(
+        &mut self,
+        component: &BuiltComponent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (Entity<CommandState>, Rc<RefCell<Option<String>>>) {
+        let desired = component
+            .properties
+            .get("query")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        if let Some(ComponentState::Command {
+            state,
+            last_query,
+            echo,
+        }) = self.component_states.get_mut(&component.id)
+        {
+            let state = state.clone();
+            let echo = echo.clone();
+            if *last_query != desired {
+                // set_query fires on_query even for programmatic writes;
+                // stage the echo so the callback consumes it silently.
+                *echo.borrow_mut() = Some(desired.clone());
+                state.update(cx, |s, cx| s.set_query(desired.clone(), window, cx));
+                *last_query = desired;
+            }
+            return (state, echo);
+        }
+
+        let state = cx.new(|cx| CommandState::new(window, cx));
+        let echo = Rc::new(RefCell::new(None));
+
+        let last_query = desired.clone();
+        if !desired.is_empty() {
+            *echo.borrow_mut() = Some(desired.clone());
+            state.update(cx, |s, cx| s.set_query(desired, window, cx));
+        }
+
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Command {
+                state: state.clone(),
+                last_query,
+                echo: echo.clone(),
+            },
+        );
+        (state, echo)
+    }
+
     /// Gets or creates a SliderState entity for the given component.
     fn get_or_create_slider_state(
         &mut self,
@@ -1135,6 +1196,69 @@ impl App {
                         .map(str::to_string),
                     items: self.collect_menu_entries(child, components),
                 }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Collects the declarative `<command-item>`, `<command-group>` and
+    /// `<command-separator>` children of a `<command>` palette, mirroring
+    /// `collect_menu_entries`.
+    fn collect_command_entries(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Vec<CommandEntryData> {
+        component
+            .children
+            .iter()
+            .filter_map(|id| components.get(id))
+            .filter_map(|child| match child.component_type.as_str() {
+                "command_item" => {
+                    let keywords = child
+                        .properties
+                        .get("keywords")
+                        .and_then(|v| v.as_str())
+                        .map(|list| {
+                            list.split(',')
+                                .map(|part| part.trim().to_string())
+                                .filter(|part| !part.is_empty())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    Some(CommandEntryData::Item {
+                        id: child.id.clone(),
+                        label: child
+                            .properties
+                            .get("label")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        icon: child
+                            .properties
+                            .get("icon")
+                            .and_then(|v| v.as_str())
+                            .map(str::to_string),
+                        keywords,
+                        disabled: child
+                            .properties
+                            .get("disabled")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                        checked: child.properties.get("checked").and_then(|v| v.as_bool()),
+                        on_confirm: child.handlers.get("confirm").cloned(),
+                    })
+                }
+                "command_group" => Some(CommandEntryData::Group {
+                    label: child
+                        .properties
+                        .get("label")
+                        .and_then(|v| v.as_str())
+                        .filter(|label| !label.is_empty())
+                        .map(str::to_string),
+                    items: self.collect_command_entries(child, components),
+                }),
+                "command_separator" => Some(CommandEntryData::Separator),
                 _ => None,
             })
             .collect()
@@ -1457,6 +1581,17 @@ impl App {
                 // subscription routes selections to `on-change`.
                 let calendar_state = self.get_or_create_calendar_state(component, window, cx);
                 Calendar::new(component.clone(), calendar_state).into_any_element()
+            }
+            "command" => {
+                // Entries are declarative children; the query/highlight state
+                // lives in the app's CommandState (seeded from the query
+                // prop) and the palette re-installs handlers per render.
+                let (command_state, echo) = self.get_or_create_command_state(component, window, cx);
+                Command::new(component.clone(), command_state, echo)
+                    .entries(self.collect_command_entries(component, components))
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
             }
             "checkbox" => Checkbox::new(component.clone())
                 .runtime(Arc::clone(&self.runtime))
