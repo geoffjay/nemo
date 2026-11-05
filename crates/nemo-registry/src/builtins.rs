@@ -771,6 +771,23 @@ fn register_basic_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "message_scroller",
+        ComponentCategory::Data,
+        "Message Scroller",
+        "A virtualized message list with tail-following; declarative children are the rows",
+        ConfigSchema::new("message_scroller")
+            .property("height", PropertySchema::integer().with_default(300i64))
+            .property("scrollbar", PropertySchema::boolean().with_default(true))
+            .property("jump_button", PropertySchema::boolean().with_default(true))
+            .property(
+                "jump_button_label",
+                PropertySchema::string().with_default("Jump to latest"),
+            )
+            .property("bottom_fade", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
         "bubble",
         ComponentCategory::Display,
         "Bubble",

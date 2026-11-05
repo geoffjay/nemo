@@ -3,6 +3,7 @@ use gpui_kit::component::calendar::CalendarState;
 use gpui_kit::component::carousel::CarouselState;
 use gpui_kit::component::command::CommandState;
 use gpui_kit::component::input::{EditorState, InputState, TextareaState};
+use gpui_kit::component::message_scroller::MessageScrollerState;
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
 use gpui_kit::component::tree::TreeState;
@@ -90,6 +91,13 @@ pub enum ComponentState {
     Tree {
         state: Entity<TreeState>,
         last_items: Vec<Value>,
+    },
+    /// Live virtual-list bookkeeping for a message scroller, plus the last
+    /// row count the render pass wrote into it (to detect XML-driven row
+    /// changes and re-reset the list).
+    MessageScroller {
+        state: Entity<MessageScrollerState>,
+        last_count: usize,
     },
     /// Shared open indices for accordion items.
     Accordion(Arc<Mutex<HashSet<usize>>>),

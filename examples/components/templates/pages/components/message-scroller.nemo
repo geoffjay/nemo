@@ -1,10 +1,118 @@
-<!-- message-scroller.nemo — placeholder page for the gpui-kit Message Scroller component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
 <template name="component-page-message-scroller">
-  <component-page name="Message Scroller" description="A virtualized scroller purpose-built for message lists.">
-    <stack id="message_scroller_status" direction="vertical" spacing="4" align="start">
-      <label id="message_scroller_not_implemented" text="Not implemented" size="lg" />
-      <label id="message_scroller_source" text="Source: https://gpui-kit.com/component/message-scroller" size="sm" />
-    </stack>
-  </component-page>
+  <component-page name="Message Scroller" description="A virtualized scroller purpose-built for message lists: tail-following, row virtualization, and a jump-to-latest button.">
+    <component-example label="Basic" id="message_scroller_ex_basic">
+      <stack id="message_scroller_basic_stack" direction="vertical">
+        <message-scroller id="msr_basic" height="220">
+          <message id="msr_basic_1" sender="Alice" timestamp="10:24 AM" avatar="Alice" text="Can you review this draft?" />
+          <message id="msr_basic_2" sender="You" timestamp="10:25 AM" avatar="You" alignment="end" text="On it — comments are in." footer="Delivered" />
+          <message id="msr_basic_3" sender="Alice" timestamp="10:26 AM" avatar="Alice" text="Great. I'll hold the release until Friday either way." />
+          <message id="msr_basic_4" sender="You" timestamp="10:27 AM" avatar="You" alignment="end" text="The scroll state only keeps the virtual list; the messages stay yours." />
+          <message id="msr_basic_5" sender="System" timestamp="10:28 AM" variant="ghost" text="Alice pinned the release checklist." />
+          <message id="msr_basic_6" sender="Alice" timestamp="10:29 AM" avatar="Alice" text="Streaming works too — append a row and it stays visible while you follow the tail." />
+          <message id="msr_basic_7" sender="You" timestamp="10:30 AM" avatar="You" alignment="end" text="Perfect." footer="Delivered" />
+          <message id="msr_basic_8" sender="Alice" timestamp="10:31 AM" avatar="Alice" text="This last row is why the list scrolls. Try scrolling back up — a jump-to-latest button appears." />
+        </message-scroller>
+      </stack>
+      <code-editor
+        id="message_scroller_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Arbitrary rows, no scrollbar" id="message_scroller_ex_rows">
+      <stack id="message_scroller_rows_stack" direction="vertical">
+        <message-scroller id="msr_rows" height="260" scrollbar="false" jump-button-label="Latest messages">
+          <stack id="msr_rows_1" direction="vertical" spacing="2">
+            <label id="msr_rows_1_k" text="Row 1" size="sm" />
+            <label id="msr_rows_1_v" text="Rows can be any component, not just messages." size="sm" />
+          </stack>
+          <stack id="msr_rows_2" direction="vertical" spacing="2">
+            <label id="msr_rows_2_k" text="Row 2" size="sm" />
+            <label id="msr_rows_2_v" text="Row heights are measured, so they may differ freely." size="sm" />
+          </stack>
+          <stack id="msr_rows_3" direction="vertical" spacing="2">
+            <label id="msr_rows_3_k" text="Row 3" size="sm" />
+            <label id="msr_rows_3_v" text="Only visible rows and overdraw render — this list is virtualized." size="sm" />
+          </stack>
+        </message-scroller>
+      </stack>
+      <code-editor
+        id="message_scroller_code_rows"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ rows_code }}"
+      />
+    </component-example>
+
+      <table slot="properties" id="message_scroller_props_table">
+        <table-row is-header="true">
+          <table-cell>Property</table-cell>
+          <table-cell>Type</table-cell>
+          <table-cell>Default</table-cell>
+          <table-cell>Description</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="height" size="sm" /></table-cell>
+          <table-cell>integer</table-cell>
+          <table-cell>300</table-cell>
+          <table-cell>Viewport height in px; the virtualized list needs a definite height.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="scrollbar" size="sm" /></table-cell>
+          <table-cell>bool</table-cell>
+          <table-cell>true</table-cell>
+          <table-cell>Show the built-in vertical scrollbar. Hiding it does not disable scrolling.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="jump-button" size="sm" /></table-cell>
+          <table-cell>bool</table-cell>
+          <table-cell>true</table-cell>
+          <table-cell>Show the built-in jump-to-latest button while the reader is away from the tail.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="jump-button-label" size="sm" /></table-cell>
+          <table-cell>string</table-cell>
+          <table-cell>"Jump to latest"</table-cell>
+          <table-cell>Tooltip text of the jump-to-latest button.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="bottom-fade" size="sm" /></table-cell>
+          <table-cell>color</table-cell>
+          <table-cell>off</table-cell>
+          <table-cell>Fades the bottom edge into this color (`theme.*` or hex) while scrolled away from the tail.</table-cell>
+        </table-row>
+        <table-row>
+          <table-cell><label text="children" size="sm" /></table-cell>
+          <table-cell>components</table-cell>
+          <table-cell>none</table-cell>
+          <table-cell>The rows, in order. Ask the state to change first if rows change height or count while live.</table-cell>
+        </table-row>
+      </table>
+    </component-page>
 </template>
+
+<script>
+let basic_code = #"<message-scroller id="chat" height="220">
+  <message id="msg_1" sender="Alice" timestamp="10:24 AM" avatar="Alice" text="Can you review this draft?" />
+  <message id="msg_2" sender="You" timestamp="10:25 AM" avatar="You" alignment="end" text="On it — comments are in." footer="Delivered" />
+  <message id="msg_3" sender="Alice" timestamp="10:26 AM" avatar="Alice" text="Great. I'll hold the release until Friday either way." />
+  <!-- ... more rows ... -->
+</message-scroller>"#;
+
+let rows_code = #"<message-scroller id="feed" height="260" scrollbar="false" jump-button-label="Latest messages">
+  <stack id="row_1" direction="vertical" spacing="2">
+    <label id="row_1_k" text="Row 1" size="sm" />
+    <label id="row_1_v" text="Rows can be any component, not just messages." size="sm" />
+  </stack>
+  <stack id="row_2" direction="vertical" spacing="2">
+    <label id="row_2_k" text="Row 2" size="sm" />
+    <label id="row_2_v" text="Row heights are measured, so they may differ freely." size="sm" />
+  </stack>
+</message-scroller>"#;
+</script>

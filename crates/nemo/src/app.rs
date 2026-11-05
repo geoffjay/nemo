@@ -5,6 +5,7 @@ use gpui_kit::component::calendar::{CalendarEvent, CalendarState, Date as Calend
 use gpui_kit::component::carousel::{CarouselEvent, CarouselState};
 use gpui_kit::component::command::CommandState;
 use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
+use gpui_kit::component::message_scroller::MessageScrollerState;
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
 use gpui_kit::component::tree::TreeState;
@@ -31,11 +32,11 @@ use crate::components::{
     BubbleGroup, BubbleReactionsData, Button, Calendar, CandlestickChart, Carousel, Checkbox,
     ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, Command,
     DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
-    Menu, MenuEntryData, MenuItem, Message, Modal, Notification, OptionData, Pagination, Panel,
-    PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart, ScatterChart,
-    Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart,
-    Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor,
-    Textarea, Toggle, Tooltip, Tree,
+    Menu, MenuEntryData, MenuItem, Message, MessageScroller, Modal, Notification, OptionData,
+    Pagination, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart,
+    ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
+    StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text,
+    TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -690,6 +691,50 @@ impl App {
                 state: state.clone(),
                 last_count: slide_count,
                 last_index: index,
+            },
+        );
+        state
+    }
+
+    /// Gets or creates a `MessageScrollerState` entity for the given
+    /// `<message-scroller>`.
+    ///
+    /// Created once with the declared row count; a later render that sees a
+    /// different row count re-`reset`s the list (the declarative XML model
+    /// cannot express incremental `append`/`prepend`/`splice` operations, so
+    /// resets intentionally re-engage tail following). The first creation
+    /// also observes the entity: scrolling notifies it, and the observation
+    /// re-renders the app so the jump button and bottom fade track the
+    /// reader leaving and rejoining the live tail.
+    fn get_or_create_message_scroller_state(
+        &mut self,
+        component: &BuiltComponent,
+        row_count: usize,
+        cx: &mut Context<Self>,
+    ) -> Entity<MessageScrollerState> {
+        if let Some(ComponentState::MessageScroller { state, last_count }) =
+            self.component_states.get_mut(&component.id)
+        {
+            if *last_count != row_count {
+                let count = row_count;
+                state.update(cx, |s, cx| s.reset(count, cx));
+                *last_count = count;
+            }
+            return state.clone();
+        }
+
+        let state = cx.new(|cx| MessageScrollerState::new(row_count, cx));
+
+        let subscription = cx.observe(&state, move |_this, _state, cx| {
+            cx.notify();
+        });
+        self._subscriptions.push(subscription);
+
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::MessageScroller {
+                state: state.clone(),
+                last_count: row_count,
             },
         );
         state
@@ -1717,6 +1762,16 @@ impl App {
                 Message::new(component.clone())
                     .children(children)
                     .into_any_element()
+            }
+            "message_scroller" => {
+                // Declarative children are the rows, in order; the scroll
+                // bookkeeping (tail follow, jump button) lives in the app's
+                // MessageScrollerState entity, observed so re-renders track
+                // the reader leaving/rejoining the live tail.
+                let rows = self.render_children(component, components, entity_id, window, cx);
+                let scroller_state =
+                    self.get_or_create_message_scroller_state(component, rows.len(), cx);
+                MessageScroller::new(component.clone(), scroller_state, rows).into_any_element()
             }
             "modal" => {
                 let children = self.render_children(component, components, entity_id, window, cx);
