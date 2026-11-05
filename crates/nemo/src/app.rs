@@ -26,15 +26,16 @@ use gpui_kit::component::input::TabSize;
 use gpui_kit::component::table::Column;
 
 use crate::components::{
-    apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Avatar, Badge,
-    BarChart, Bubble, BubbleChart, BubbleGroup, BubbleReactionsData, Button, Calendar,
-    CandlestickChart, Carousel, Checkbox, ClusteredBarChart, ClusteredColumnChart, CodeEditor,
-    Collapsible, ColumnChart, Command, DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd,
-    Label, LineChart, List, Marker, Menu, MenuEntryData, MenuItem, Message, Modal, Notification,
-    OptionData, Pagination, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, Rating,
-    RealtimeChart, ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack,
-    StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table,
-    Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Attachment,
+    AttachmentContentData, AttachmentMediaData, Avatar, Badge, BarChart, Bubble, BubbleChart,
+    BubbleGroup, BubbleReactionsData, Button, Calendar, CandlestickChart, Carousel, Checkbox,
+    ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, Command,
+    DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
+    Menu, MenuEntryData, MenuItem, Message, Modal, Notification, OptionData, Pagination, Panel,
+    PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart, ScatterChart,
+    Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart,
+    Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor,
+    Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1871,6 +1872,7 @@ impl App {
                     .into_any_element()
             }
             "accordion_item" | "tab_item" | "option" | "menu_item" | "list_item"
+            | "attachment_media" | "attachment_content" | "attachment_actions"
             | "bubble_reactions" | "menu_label" | "menu_separator" | "menu_submenu"
             | "table_header" | "table_column" | "table_row" | "table_cell" | "tree_node" => {
                 // These are rendered by their parent container; standalone fallback.
@@ -1920,6 +1922,77 @@ impl App {
                     bubble = bubble.reactions(data);
                 }
                 bubble.into_any_element()
+            }
+            "attachment" => {
+                // Partition the children into the attachment's typed slots:
+                // `<attachment-media>` and `<attachment-content>` collect as
+                // data; `<attachment-actions>` renders its children as normal
+                // elements (buttons keep their own handlers via the generic
+                // child path). Anything else joins the content slot.
+                let mut media: Option<AttachmentMediaData> = None;
+                let mut content: Option<AttachmentContentData> = None;
+                let mut action_children: Vec<AnyElement> = Vec::new();
+                for child_id in &component.children {
+                    let Some(child) = components.get(child_id) else {
+                        continue;
+                    };
+                    match child.component_type.as_str() {
+                        "attachment_media" => {
+                            media = Some(AttachmentMediaData {
+                                src: child
+                                    .properties
+                                    .get("src")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
+                                icon: child
+                                    .properties
+                                    .get("icon")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
+                                children: self
+                                    .render_children(child, components, entity_id, window, cx),
+                            });
+                        }
+                        "attachment_content" => {
+                            content = Some(AttachmentContentData {
+                                title: child
+                                    .properties
+                                    .get("title")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
+                                description: child
+                                    .properties
+                                    .get("description")
+                                    .and_then(|v| v.as_str())
+                                    .map(|s| s.to_string()),
+                                children: self
+                                    .render_children(child, components, entity_id, window, cx),
+                            });
+                        }
+                        "attachment_actions" => action_children
+                            .extend(self.render_children(child, components, entity_id, window, cx)),
+                        _ => {
+                            content
+                                .get_or_insert_with(AttachmentContentData::default)
+                                .children
+                                .push(
+                                    self.render_component(child, components, entity_id, window, cx),
+                                );
+                        }
+                    }
+                }
+                let mut attachment = Attachment::new(component.clone());
+                if let Some(media) = media {
+                    attachment = attachment.media(media);
+                }
+                if let Some(content) = content {
+                    attachment = attachment.content(content);
+                }
+                attachment
+                    .action_children(action_children)
+                    .runtime(Arc::clone(&self.runtime))
+                    .entity_id(entity_id)
+                    .into_any_element()
             }
             "bubble_group" => {
                 let children = self.render_children(component, components, entity_id, window, cx);

@@ -1,6 +1,7 @@
 mod accordion;
 mod alert;
 mod area_chart;
+mod attachment;
 mod avatar;
 mod badge;
 mod bar_chart;
@@ -203,6 +204,7 @@ pub(crate) fn apply_rounded(base: Div, rounded: Option<&str>, cx: &App) -> Div {
 pub use accordion::{Accordion, AccordionItemData};
 pub use alert::Alert;
 pub use area_chart::AreaChart;
+pub use attachment::{Attachment, AttachmentContentData, AttachmentMediaData};
 pub use avatar::Avatar;
 pub use badge::Badge;
 pub use bar_chart::BarChart;

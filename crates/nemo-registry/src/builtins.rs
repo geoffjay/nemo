@@ -673,6 +673,72 @@ fn register_basic_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "attachment",
+        ComponentCategory::Display,
+        "Attachment",
+        "A file or media attachment card with lifecycle status, preview, metadata, and built-in remove/retry controls",
+        ConfigSchema::new("attachment")
+            .property(
+                "status",
+                PropertySchema::string()
+                    .with_default("complete")
+                    .one_of(enum_vals(&[
+                        "pending",
+                        "uploading",
+                        "processing",
+                        "failed",
+                        "complete",
+                    ])),
+            )
+            .property(
+                "axis",
+                PropertySchema::string()
+                    .with_default("horizontal")
+                    .one_of(enum_vals(&["horizontal", "vertical"])),
+            )
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("md")
+                    .one_of(enum_vals(&["xs", "sm", "md", "lg"])),
+            )
+            .property("progress", PropertySchema::float())
+            .property("tooltip", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "attachment_media",
+        ComponentCategory::Display,
+        "Attachment Media",
+        "Preview slot of an <attachment>; rendered by its parent attachment",
+        ConfigSchema::new("attachment_media")
+            .property("src", PropertySchema::string())
+            .property("icon", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "attachment_content",
+        ComponentCategory::Display,
+        "Attachment Content",
+        "Metadata slot of an <attachment>; rendered by its parent attachment",
+        ConfigSchema::new("attachment_content")
+            .property("title", PropertySchema::string())
+            .property("description", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "attachment_actions",
+        ComponentCategory::Display,
+        "Attachment Actions",
+        "Action slot of an <attachment>; rendered by its parent attachment",
+        ConfigSchema::new("attachment_actions"),
+    );
+
+    reg(
+        registry,
         "message",
         ComponentCategory::Display,
         "Message",
