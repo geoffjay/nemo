@@ -47,6 +47,7 @@ mod rating;
 mod realtime_chart;
 mod scatter_chart;
 mod select;
+mod settings;
 pub(crate) mod sidenav_bar;
 mod skeleton;
 pub(crate) mod slider;
@@ -255,6 +256,11 @@ pub use rating::Rating;
 pub use realtime_chart::RealtimeChart;
 pub use scatter_chart::ScatterChart;
 pub use select::{OptionData, Select};
+pub use settings::{
+    setting_flag_value, setting_number_value, setting_text_value, settings_schema_signature,
+    SettingValue, SettingValues, Settings, SettingsFieldData, SettingsFieldKind, SettingsGroupData,
+    SettingsItemData, SettingsOptionData, SettingsPageData,
+};
 pub use sidenav_bar::SidenavBar;
 pub use skeleton::Skeleton;
 pub use slider::Slider;

@@ -15,6 +15,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use super::settings::SettingValues;
 use super::table::NemoTableDelegate;
 
 /// Per-component runtime state.
@@ -110,6 +111,15 @@ pub enum ComponentState {
         state: Option<Entity<QuestionnaireState>>,
         last_items: String,
         last_current: String,
+    },
+    /// Field values for a `<settings>` widget: the entity keeps each
+    /// declarative field's current value across renders, and its updates
+    /// drive the re-render (gets and sets route through the wrapper's
+    /// closures). `last_schema` mirrors the field collection so XML edits
+    /// re-seed the store from the declared `value` attributes.
+    Settings {
+        values: Option<Entity<SettingValues>>,
+        last_schema: String,
     },
     /// Shared open indices for accordion items.
     Accordion(Arc<Mutex<HashSet<usize>>>),

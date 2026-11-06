@@ -1,10 +1,310 @@
-<!-- settings.nemo — placeholder page for the gpui-kit Settings component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let basic_code = #"<settings id="prefs" on-change="handle_setting_changed" default-page="Editor">
+  <settings-page title="General" icon="settings">
+    <settings-group title="Account">
+      <settings-item title="Display name" description="Shown on share cards.">
+        <settings-field kind="input" property="display_name" value="Ada" />
+      </settings-item>
+      <settings-item title="Accent theme">
+        <settings-field kind="dropdown" property="accent" value="twilight" default="twilight">
+          <settings-option value="twilight" label="Twilight" />
+          <settings-option value="noon" label="Noon" />
+          <settings-option value="midnight" label="Midnight" />
+        </settings-field>
+      </settings-item>
+    </settings-group>
+    <settings-group title="Preferences">
+      <settings-item title="Autosave" description="Persist drafts as you type." keywords="save,drafts">
+        <settings-field kind="switch" property="autosave" value="true" default="false" />
+      </settings-item>
+      <settings-item title="Spell check" description="Underline unknown words.">
+        <settings-field kind="checkbox" property="spellcheck" value="true" default="true" />
+      </settings-item>
+    </settings-group>
+  </settings-page>
+  <settings-page title="Editor" icon="code">
+    <settings-group title="Editing">
+      <settings-item title="Font size">
+        <settings-field kind="number" property="font_size" value="14" default="14" min="10" max="24" step="1" />
+      </settings-item>
+      <settings-item title="Tab width">
+        <settings-field kind="number" property="tab_width" value="4" min="2" max="8" step="2" />
+      </settings-item>
+    </settings-group>
+  </settings-page>
+</settings>"#;
+
+let layout_code = #"<settings id="accessibility" group-variant="outline" size="small">
+  <settings-page title="Accessibility" icon="person">
+    <settings-group title="Reading">
+      <settings-item title="Larger text" description="Scale text up one step across the app."
+        layout="vertical" keywords="big,font,readability">
+        <settings-field kind="switch" property="larger_text" value="false" default="false" />
+      </settings-item>
+      <settings-item title="High contrast" description="Stronger borders and focus rings."
+        layout="vertical">
+        <settings-field kind="switch" property="contrast" value="true" default="false" />
+      </settings-item>
+      <settings-item title="Screen reader hints" disabled="true" layout="vertical"
+        description="Managed by the system accessibility service.">
+        <settings-field kind="switch" property="hints" value="true" default="true" />
+      </settings-item>
+    </settings-group>
+  </settings-page>
+</settings>"#;
+</script>
+
 <template name="component-page-settings">
-  <component-page name="Settings" description="A settings structure with pages, groups, and items for application preferences.">
-    <stack id="settings_status" direction="vertical" spacing="4" align="start">
-      <label id="settings_not_implemented" text="Not implemented" size="lg" />
-      <label id="settings_source" text="Source: https://gpui-kit.com/component/settings" size="sm" />
-    </stack>
+  <component-page name="Settings" description="An application preferences surface: a resizable, searchable sidebar of pages, each page holding titled group cards of labelled setting controls (switch, checkbox, text input, number input, or dropdown). The hierarchy is declared with settings-page children; field edits mirror into the component's property map and fire change handlers.">
+    <component-example label="Pages, groups, and reset" id="settings_ex_basic">
+      <settings
+        id="settings_basic"
+        on-change="handle_setting_changed"
+        default-page="Editor"
+        height="560"
+        sidebar-width="220"
+      >
+        <settings-page id="settings_pg_general" title="General" icon="settings">
+          <settings-group id="settings_g_account" title="Account">
+            <settings-item
+              id="settings_i_name"
+              title="Display name"
+              description="Shown on share cards."
+            >
+              <settings-field
+                id="settings_f_name"
+                kind="input"
+                property="display_name"
+                value="Ada"
+              />
+            </settings-item>
+            <settings-item id="settings_i_accent" title="Accent theme">
+              <settings-field
+                id="settings_f_accent"
+                kind="dropdown"
+                property="accent"
+                value="twilight"
+                default="twilight"
+                on-change="handle_accent_changed"
+              >
+                <settings-option id="settings_o_twilight" value="twilight" label="Twilight" />
+                <settings-option id="settings_o_noon" value="noon" label="Noon" />
+                <settings-option id="settings_o_midnight" value="midnight" label="Midnight" />
+              </settings-field>
+            </settings-item>
+          </settings-group>
+          <settings-group id="settings_g_prefs" title="Preferences">
+            <settings-item
+              id="settings_i_autosave"
+              title="Autosave"
+              description="Persist drafts as you type."
+              keywords="save,drafts"
+            >
+              <settings-field
+                id="settings_f_autosave"
+                kind="switch"
+                property="autosave"
+                value="true"
+                default="false"
+              />
+            </settings-item>
+            <settings-item
+              id="settings_i_spell"
+              title="Spell check"
+              description="Underline unknown words."
+            >
+              <settings-field
+                id="settings_f_spell"
+                kind="checkbox"
+                property="spellcheck"
+                value="true"
+                default="true"
+              />
+            </settings-item>
+          </settings-group>
+        </settings-page>
+        <settings-page id="settings_pg_editor" title="Editor" icon="code">
+          <settings-group id="settings_g_editing" title="Editing">
+            <settings-item id="settings_i_font" title="Font size">
+              <settings-field
+                id="settings_f_font"
+                kind="number"
+                property="font_size"
+                value="14"
+                default="14"
+                min="10"
+                max="24"
+                step="1"
+              />
+            </settings-item>
+            <settings-item id="settings_i_tab" title="Tab width">
+              <settings-field
+                id="settings_f_tab"
+                kind="number"
+                property="tab_width"
+                value="4"
+                min="2"
+                max="8"
+                step="2"
+              />
+            </settings-item>
+          </settings-group>
+        </settings-page>
+      </settings>
+      <label
+        id="settings_basic_note"
+        text="Defaults differ from values on autosave and accent — the page header shows a reset dial; the sidebar lists searchable pages and groups."
+        size="sm"
+      />
+      <code-editor
+        id="settings_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Vertical rows, keywords, disabled" id="settings_ex_layout">
+      <settings id="settings_layout" group-variant="outline" size="small" height="420">
+        <settings-page id="settings_pg_access" title="Accessibility" icon="person">
+          <settings-group id="settings_g_reading" title="Reading">
+            <settings-item
+              id="settings_i_text"
+              title="Larger text"
+              description="Scale text up one step across the app."
+              layout="vertical"
+              keywords="big,font,readability"
+            >
+              <settings-field
+                id="settings_f_text"
+                kind="switch"
+                property="larger_text"
+                value="false"
+                default="false"
+              />
+            </settings-item>
+            <settings-item
+              id="settings_i_contrast"
+              title="High contrast"
+              description="Stronger borders and focus rings."
+              layout="vertical"
+            >
+              <settings-field
+                id="settings_f_contrast"
+                kind="switch"
+                property="contrast"
+                value="true"
+                default="false"
+              />
+            </settings-item>
+            <settings-item
+              id="settings_i_hints"
+              title="Screen reader hints"
+              description="Managed by the system accessibility service."
+              layout="vertical"
+              disabled="true"
+            >
+              <settings-field
+                id="settings_f_hints"
+                kind="switch"
+                property="hints"
+                value="true"
+                default="true"
+              />
+            </settings-item>
+          </settings-group>
+        </settings-page>
+      </settings>
+      <label
+        id="settings_layout_note"
+        text="Vertical rows stack the label above the control; the disabled row trucks in at half opacity and ignores input."
+        size="sm"
+      />
+      <code-editor
+        id="settings_code_layout"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ layout_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" id="settings_props_table">
+      <table-row is-header="true">
+        <table-cell>Property</table-cell>
+        <table-cell>Type</table-cell>
+        <table-cell>Default</table-cell>
+        <table-cell>Description</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_p_height" text="height" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>400</table-cell>
+        <table-cell>Surface height in px; the page lists need a definite height to render.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_p_size" text="size" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>medium</table-cell>
+        <table-cell>Scales the composition: xsmall, small, medium, or large.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_p_sidebar_width" text="sidebar-width" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>250</table-cell>
+        <table-cell>Initial sidebar width in px; the divider is draggable between 160 and 360.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_p_group_variant" text="group-variant" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>normal</table-cell>
+        <table-cell>Default group surface: normal (flat), fill, or outline; per-group variant overrides it.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_p_default_page" text="default-page" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Title of the page selected initially; unknown titles fall back to the first page.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_p_on_change" text="on-change" size="sm" /></table-cell>
+        <table-cell>handler</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Any field changed; receives property=value (for example autosave=true).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_c_page" text="settings-page" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>One sidebar entry: title, description, icon, and default-open; children are settings-group cards.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_c_group" text="settings-group" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>A titled card of items: title, description, and variant (normal, fill, or outline).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_c_item" text="settings-item" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>A labelled row: title, description, keywords (search-only, comma-separated), disabled, and layout (horizontal or vertical).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_c_field" text="settings-field" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>The control: kind (switch, checkbox, input, number, or dropdown — `kind` rather than `type`, which is reserved for the component's own type), property (key for the value store and read-back), value (seed), default (reset), min/max/step (number), and on-change (receives the new value).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="settings_c_option" text="settings-option" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>One dropdown choice: value (stored and reported) and label (displayed).</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

@@ -976,6 +976,115 @@ fn register_input_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "settings",
+        ComponentCategory::Layout,
+        "Settings",
+        "A preferences surface: a searchable sidebar of <settings-page> children, each with <settings-group> cards of <settings-item> rows; field edits mirror into the component's property map and fire on-change handlers",
+        ConfigSchema::new("settings")
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("medium")
+                    .one_of(enum_vals(&["xsmall", "small", "medium", "large"])),
+            )
+            .property("height", PropertySchema::integer().with_default(400i64))
+            .property(
+                "sidebar_width",
+                PropertySchema::integer().with_default(250i64),
+            )
+            .property(
+                "group_variant",
+                PropertySchema::string()
+                    .with_default("normal")
+                    .one_of(enum_vals(&["normal", "fill", "outline"])),
+            )
+            .property("default_page", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "settings_page",
+        ComponentCategory::Layout,
+        "Settings Page",
+        "A sidebar entry of a <settings>; its children are <settings-group> cards",
+        ConfigSchema::new("settings_page")
+            .property("title", PropertySchema::string())
+            .property("description", PropertySchema::string())
+            .property("icon", PropertySchema::string())
+            .property(
+                "default_open",
+                PropertySchema::boolean().with_default(false),
+            ),
+    );
+
+    reg(
+        registry,
+        "settings_group",
+        ComponentCategory::Layout,
+        "Settings Group",
+        "A titled card of <settings-item> rows within a <settings-page>",
+        ConfigSchema::new("settings_group")
+            .property("title", PropertySchema::string())
+            .property("description", PropertySchema::string())
+            .property(
+                "variant",
+                PropertySchema::string().one_of(enum_vals(&["normal", "fill", "outline"])),
+            ),
+    );
+
+    reg(
+        registry,
+        "settings_item",
+        ComponentCategory::Layout,
+        "Settings Item",
+        "A labelled setting row; its single <settings-field> child declares the control (items without one are skipped)",
+        ConfigSchema::new("settings_item")
+            .property("title", PropertySchema::string())
+            .property("description", PropertySchema::string())
+            .property("keywords", PropertySchema::string())
+            .property("disabled", PropertySchema::boolean().with_default(false))
+            .property(
+                "layout",
+                PropertySchema::string()
+                    .with_default("horizontal")
+                    .one_of(enum_vals(&["horizontal", "vertical"])),
+            ),
+    );
+
+    reg(
+        registry,
+        "settings_field",
+        ComponentCategory::Layout,
+        "Settings Field",
+        "The control of a <settings-item>: kind switch, checkbox, input, number (with min/max/step), or dropdown (with <settings-option> children). value seeds the field, default enables reset, edits mirror into the property slot and fire on-change with the new value. The attribute is `kind` because `type` is reserved for the component's own type",
+        ConfigSchema::new("settings_field")
+            .property(
+                "kind",
+                PropertySchema::string()
+                    .with_default("switch")
+                    .one_of(enum_vals(&["switch", "checkbox", "input", "number", "dropdown"])),
+            )
+            .property("property", PropertySchema::string())
+            .property("value", PropertySchema::string())
+            .property("default", PropertySchema::string())
+            .property("min", PropertySchema::float())
+            .property("max", PropertySchema::float())
+            .property("step", PropertySchema::float().with_default(1.0)),
+    );
+
+    reg(
+        registry,
+        "settings_option",
+        ComponentCategory::Layout,
+        "Settings Option",
+        "One selectable option of a dropdown <settings-field>; value is stored and reported, label is displayed",
+        ConfigSchema::new("settings_option")
+            .property("value", PropertySchema::string())
+            .property("label", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
         "textarea",
         ComponentCategory::Input,
         "Textarea",

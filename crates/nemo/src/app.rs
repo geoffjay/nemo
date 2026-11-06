@@ -27,11 +27,13 @@ use crate::components::table::{
 };
 use crate::components::tree::{declared_to_tree_items, values_to_tree_items, DeclaredTreeNode};
 use crate::components::{parse_date, selected_date_string, CommandEntryData};
+use gpui_kit::component::group_box::GroupBoxVariant;
 use gpui_kit::component::input::TabSize;
 use gpui_kit::component::table::Column;
 
 use crate::components::{
     apply_rounded, apply_shadow, questionnaire_schema_signature, serialize_questionnaire_answers,
+    setting_flag_value, setting_number_value, setting_text_value, settings_schema_signature,
     validate_questionnaire_schema, Accordion, AccordionItemData, Alert, AreaChart, Attachment,
     AttachmentContentData, AttachmentMediaData, Avatar, Badge, BarChart, Bubble, BubbleChart,
     BubbleGroup, BubbleReactionsData, Button, Calendar, CandlestickChart, Carousel, Checkbox,
@@ -40,9 +42,11 @@ use crate::components::{
     Menu, MenuEntryData, MenuItem, Message, MessageScroller, Modal, Notification, OptionData,
     Pagination, Panel, PieChart, Progress, PyramidChart, Questionnaire, QuestionnaireChoiceData,
     QuestionnaireInputData, QuestionnaireItemData, RadarChart, Radio, Rating, RealtimeChart,
-    ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
-    StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text,
-    TextEditor, Textarea, Toggle, Tooltip, Tree,
+    ScatterChart, Select, SettingValue, SettingValues, Settings, SettingsFieldData,
+    SettingsFieldKind, SettingsGroupData, SettingsItemData, SettingsOptionData, SettingsPageData,
+    SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Stepper,
+    StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea,
+    Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1669,6 +1673,284 @@ impl App {
             .collect()
     }
 
+    /// Collects the four-level `<settings>` hierarchy: pages → groups →
+    /// items → fields (with dropdown `<settings-option>` children).
+    fn collect_settings_pages(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Vec<SettingsPageData> {
+        component
+            .children
+            .iter()
+            .filter_map(|id| components.get(id))
+            .filter(|child| child.component_type == "settings_page")
+            .map(|page| {
+                let props = &page.properties;
+                let description = props
+                    .get("description")
+                    .and_then(|v| v.as_str())
+                    .filter(|d| !d.is_empty())
+                    .map(str::to_string);
+                let icon = props
+                    .get("icon")
+                    .and_then(|v| v.as_str())
+                    .filter(|d| !d.is_empty())
+                    .map(str::to_string);
+                let default_open = props
+                    .get("default_open")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                let title = props
+                    .get("title")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("Untitled page")
+                    .to_string();
+
+                let groups: Vec<SettingsGroupData> = page
+                    .children
+                    .iter()
+                    .filter_map(|id| components.get(id))
+                    .filter(|child| child.component_type == "settings_group")
+                    .map(|group| {
+                        let variant = match group.properties.get("variant").and_then(|v| v.as_str())
+                        {
+                            Some("fill") => Some(GroupBoxVariant::Fill),
+                            Some("outline") => Some(GroupBoxVariant::Outline),
+                            _ => None,
+                        };
+                        let items: Vec<SettingsItemData> = group
+                            .children
+                            .iter()
+                            .filter_map(|id| components.get(id))
+                            .filter(|child| child.component_type == "settings_item")
+                            .map(|item| self.collect_settings_item(item, components))
+                            .collect();
+                        SettingsGroupData {
+                            title: group
+                                .properties
+                                .get("title")
+                                .and_then(|v| v.as_str())
+                                .filter(|d| !d.is_empty())
+                                .map(str::to_string),
+                            description: group
+                                .properties
+                                .get("description")
+                                .and_then(|v| v.as_str())
+                                .filter(|d| !d.is_empty())
+                                .map(str::to_string),
+                            variant,
+                            items,
+                        }
+                    })
+                    .collect();
+
+                SettingsPageData {
+                    title,
+                    description,
+                    icon,
+                    default_open,
+                    groups,
+                }
+            })
+            .collect()
+    }
+
+    /// Collects one `<settings-item>` row and its `<settings-field>` child.
+    fn collect_settings_item(
+        &self,
+        item: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> SettingsItemData {
+        let props = &item.properties;
+        let field = item
+            .children
+            .iter()
+            .filter_map(|id| components.get(id))
+            .find(|child| child.component_type == "settings_field")
+            .map(|field| self.collect_settings_field(field, components));
+
+        SettingsItemData {
+            title: props
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Untitled setting")
+                .to_string(),
+            description: props
+                .get("description")
+                .and_then(|v| v.as_str())
+                .filter(|d| !d.is_empty())
+                .map(str::to_string),
+            keywords: props
+                .get("keywords")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .split(',')
+                .map(str::trim)
+                .filter(|keyword| !keyword.is_empty())
+                .map(str::to_string)
+                .collect(),
+            disabled: props
+                .get("disabled")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            vertical: props
+                .get("layout")
+                .and_then(|v| v.as_str())
+                .map(|layout| layout == "vertical")
+                .unwrap_or(false),
+            field,
+        }
+    }
+
+    /// Collects one `<settings-field>` control and its `<settings-option>`
+    /// children. The declared `value` seeds the value store and `default`
+    /// enables the page's reset dial; both parse tolerantly because their
+    /// type follows the field's `type`.
+    fn collect_settings_field(
+        &self,
+        field: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> SettingsFieldData {
+        let props = &field.properties;
+        // The control attribute is `kind`, not `type`: the pipeline reserves
+        // the `type` key for the component's own type, and a literal `type`
+        // attribute would clobber it (the element would resolve as, e.g.,
+        // a `dropdown` component).
+        let kind = match props.get("kind").and_then(|v| v.as_str()) {
+            Some("checkbox") => SettingsFieldKind::Checkbox,
+            Some("input") | Some("text") | Some("string") => SettingsFieldKind::Input,
+            Some("number") => SettingsFieldKind::Number,
+            Some("dropdown") | Some("select") => SettingsFieldKind::Dropdown,
+            _ => SettingsFieldKind::Switch,
+        };
+
+        let options: Vec<SettingsOptionData> = field
+            .children
+            .iter()
+            .filter_map(|id| components.get(id))
+            .filter(|child| child.component_type == "settings_option")
+            .map(|option| SettingsOptionData {
+                value: option
+                    .properties
+                    .get("value")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                label: option
+                    .properties
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+            })
+            .collect();
+
+        let initial = match kind {
+            SettingsFieldKind::Switch | SettingsFieldKind::Checkbox => {
+                SettingValue::Flag(setting_flag_value(props.get("value")))
+            }
+            SettingsFieldKind::Number => {
+                SettingValue::Number(setting_number_value(props.get("value"), 0.0))
+            }
+            SettingsFieldKind::Input => SettingValue::Text(setting_text_value(props.get("value"))),
+            SettingsFieldKind::Dropdown => {
+                // The tool stores whatever was declared, but if it is not one
+                // of the options the dropdown renders a foreign value; snap
+                // to the first declared option instead.
+                let text = setting_text_value(props.get("value"));
+                let known = options.iter().any(|option| option.value == text);
+                SettingValue::Text(if known {
+                    text
+                } else {
+                    options
+                        .first()
+                        .map(|option| option.value.clone())
+                        .unwrap_or(text)
+                })
+            }
+        };
+        let default = props.get("default").map(|_| match kind {
+            SettingsFieldKind::Switch | SettingsFieldKind::Checkbox => {
+                SettingValue::Flag(setting_flag_value(props.get("default")))
+            }
+            SettingsFieldKind::Number => {
+                SettingValue::Number(setting_number_value(props.get("default"), 0.0))
+            }
+            SettingsFieldKind::Input | SettingsFieldKind::Dropdown => {
+                SettingValue::Text(setting_text_value(props.get("default")))
+            }
+        });
+
+        SettingsFieldData {
+            id: field.id.clone(),
+            kind,
+            property: props
+                .get("property")
+                .and_then(|v| v.as_str())
+                .filter(|p| !p.is_empty())
+                .unwrap_or(&field.id)
+                .to_string(),
+            initial,
+            default,
+            min: setting_number_value(props.get("min"), f64::MIN),
+            max: setting_number_value(props.get("max"), f64::MAX),
+            step: setting_number_value(props.get("step"), 1.0),
+            options,
+            on_change: field.handlers.get("change").cloned(),
+        }
+    }
+
+    /// Gets or creates the value store entity for a `<settings>`. The store
+    /// keeps live field values across renders; a schema-signature change
+    /// (XML edit to any collected field) re-seeds it from the declared
+    /// `value` attributes. An observer on the store drives the re-render that
+    /// repaints the control after a set-value closure commits an edit.
+    fn get_or_create_settings_state(
+        &mut self,
+        component: &BuiltComponent,
+        pages: &[SettingsPageData],
+        cx: &mut Context<Self>,
+    ) -> Entity<SettingValues> {
+        let signature = settings_schema_signature(pages);
+
+        if let Some(ComponentState::Settings {
+            values,
+            last_schema,
+        }) = self.component_states.get_mut(&component.id)
+        {
+            // Same schema: keep the live values (a re-seed would lose edits).
+            if *last_schema == signature {
+                return values.clone().unwrap();
+            }
+            // Schema changed: drop the cached store and rebuild below.
+            self.component_states.remove(&component.id);
+        }
+
+        let mut initial = HashMap::new();
+        for page in pages {
+            for group in &page.groups {
+                for item in &group.items {
+                    if let Some(field) = &item.field {
+                        initial.insert(field.property.clone(), field.initial.clone());
+                    }
+                }
+            }
+        }
+        let store = cx.new(|_| SettingValues::new(initial));
+        let subscription = cx.observe(&store, |_, _, cx| cx.notify());
+        self._subscriptions.push(subscription);
+
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Settings {
+                values: Some(store.clone()),
+                last_schema: signature,
+            },
+        );
+        store
+    }
+
     /// Wraps an element in a styled div if layout/decoration properties are present.
     fn apply_layout_styles(
         element: AnyElement,
@@ -2140,6 +2422,19 @@ impl App {
                 let items = self.collect_questionnaire_items(component, components);
                 let state = self.get_or_create_questionnaire_state(component, &items, window, cx);
                 Questionnaire::new(component.clone(), items, state).into_any_element()
+            }
+            "settings" => {
+                // Declarative children are the whole hierarchy (pages →
+                // groups → items → fields); the field value store entity is
+                // created in `get_or_create_settings_state`, and field get/set
+                // closures read and write it (the store's observer repaints
+                // the controls after an edit commits).
+                let pages = self.collect_settings_pages(component, components);
+                let values = self.get_or_create_settings_state(component, &pages, cx);
+                Settings::new(component.clone(), pages)
+                    .values(Some(values))
+                    .runtime(Arc::clone(&self.runtime))
+                    .into_any_element()
             }
             "modal" => {
                 let children = self.render_children(component, components, entity_id, window, cx);
