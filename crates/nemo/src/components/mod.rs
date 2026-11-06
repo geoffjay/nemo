@@ -40,6 +40,7 @@ mod panel;
 mod pie_chart;
 mod progress;
 mod pyramid_chart;
+mod questionnaire;
 mod radar_chart;
 mod radio;
 mod rating;
@@ -244,6 +245,10 @@ pub use panel::Panel;
 pub use pie_chart::PieChart;
 pub use progress::Progress;
 pub use pyramid_chart::PyramidChart;
+pub use questionnaire::{
+    questionnaire_schema_signature, serialize_questionnaire_answers, validate_questionnaire_schema,
+    Questionnaire, QuestionnaireChoiceData, QuestionnaireInputData, QuestionnaireItemData,
+};
 pub use radar_chart::RadarChart;
 pub use radio::Radio;
 pub use rating::Rating;

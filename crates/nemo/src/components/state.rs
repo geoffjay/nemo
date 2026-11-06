@@ -4,6 +4,7 @@ use gpui_kit::component::carousel::CarouselState;
 use gpui_kit::component::command::CommandState;
 use gpui_kit::component::input::{EditorState, InputState, TextareaState};
 use gpui_kit::component::message_scroller::MessageScrollerState;
+use gpui_kit::component::questionnaire::QuestionnaireState;
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
 use gpui_kit::component::tree::TreeState;
@@ -99,6 +100,17 @@ pub enum ComponentState {
         state: Entity<MessageScrollerState>,
         last_count: usize,
     },
+    /// A questionnaire flow: the shared state entity (None while the declared
+    /// schema is invalid; its definitions keep the freeform input entities
+    /// alive), the schema identity last built (a change re-creates the state —
+    /// the upstream schema is fixed at construction), and the last active item
+    /// pushed or reported (guards the property-driven navigation from fighting
+    /// user clicks).
+    Questionnaire {
+        state: Option<Entity<QuestionnaireState>>,
+        last_items: String,
+        last_current: String,
+    },
     /// Shared open indices for accordion items.
     Accordion(Arc<Mutex<HashSet<usize>>>),
     /// Shared boolean state (collapsible, switch, toggle).
@@ -132,6 +144,12 @@ impl ComponentStates {
 
     pub fn insert(&mut self, id: String, state: ComponentState) {
         self.0.insert(id, state);
+    }
+
+    /// Drops the entry for `id` (used when a questionnaire's declared schema
+    /// changed and its state must be rebuilt from scratch).
+    pub fn remove(&mut self, id: &str) -> Option<ComponentState> {
+        self.0.remove(id)
     }
 
     #[cfg(test)]

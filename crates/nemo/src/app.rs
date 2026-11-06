@@ -6,6 +6,10 @@ use gpui_kit::component::carousel::{CarouselEvent, CarouselState};
 use gpui_kit::component::command::CommandState;
 use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
 use gpui_kit::component::message_scroller::MessageScrollerState;
+use gpui_kit::component::questionnaire::{
+    QuestionnaireChoiceDefinition, QuestionnaireEvent, QuestionnaireInputDefinition,
+    QuestionnaireItemDefinition, QuestionnaireShortcutMode, QuestionnaireState,
+};
 use gpui_kit::component::slider::SliderState;
 use gpui_kit::component::table::TableState;
 use gpui_kit::component::tree::TreeState;
@@ -27,13 +31,15 @@ use gpui_kit::component::input::TabSize;
 use gpui_kit::component::table::Column;
 
 use crate::components::{
-    apply_rounded, apply_shadow, Accordion, AccordionItemData, Alert, AreaChart, Attachment,
+    apply_rounded, apply_shadow, questionnaire_schema_signature, serialize_questionnaire_answers,
+    validate_questionnaire_schema, Accordion, AccordionItemData, Alert, AreaChart, Attachment,
     AttachmentContentData, AttachmentMediaData, Avatar, Badge, BarChart, Bubble, BubbleChart,
     BubbleGroup, BubbleReactionsData, Button, Calendar, CandlestickChart, Carousel, Checkbox,
     ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, Command,
     DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
     Menu, MenuEntryData, MenuItem, Message, MessageScroller, Modal, Notification, OptionData,
-    Pagination, Panel, PieChart, Progress, PyramidChart, RadarChart, Radio, Rating, RealtimeChart,
+    Pagination, Panel, PieChart, Progress, PyramidChart, Questionnaire, QuestionnaireChoiceData,
+    QuestionnaireInputData, QuestionnaireItemData, RadarChart, Radio, Rating, RealtimeChart,
     ScatterChart, Select, SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart,
     StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text,
     TextEditor, Textarea, Toggle, Tooltip, Tree,
@@ -872,6 +878,247 @@ impl App {
         state
     }
 
+    /// Gets or creates a `QuestionnaireState` entity for the given
+    /// `<questionnaire>`, built from the collected `<questionnaire-item>`
+    /// schema.
+    ///
+    /// The upstream schema is fixed at construction, so the collected
+    /// definition signature acts as a cache key: a change re-creates the state
+    /// (and the freeform input entities, which need a window). An invalid
+    /// schema yields no entity — the wrapper logs the reason at creation and
+    /// renders a placeholder.
+    ///
+    /// The first creation also subscribes: `CurrentItemChanged` mirrors the
+    /// active item into the `current` property, `AnswerChanged` mirrors the
+    /// snapshot into `answers` and fires `on-change` with the changed item's
+    /// serialized answer, and `Submit` fires `on-submit` with the validated
+    /// full snapshot (`Completed` only refreshes `answers`, because the kit
+    /// emits it once per completion alongside the first `Submit`).
+    fn get_or_create_questionnaire_state(
+        &mut self,
+        component: &BuiltComponent,
+        items: &[QuestionnaireItemData],
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Option<Entity<QuestionnaireState>> {
+        let signature = questionnaire_schema_signature(items);
+
+        if let Some(ComponentState::Questionnaire {
+            state,
+            last_items,
+            last_current,
+        }) = self.component_states.get_mut(&component.id)
+        {
+            // Schema changed: drop the cached state and rebuild below.
+            if *last_items != signature {
+                self.component_states.remove(&component.id);
+            } else {
+                // `current-item` property sync: script-driven navigation.
+                let desired = component
+                    .properties
+                    .get("current_item")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                if !desired.is_empty() && desired != *last_current {
+                    let state = state.clone().unwrap();
+                    state.update(cx, |s, cx| {
+                        let _ = s.set_current_item(&desired, window, cx);
+                    });
+                    *last_current = desired;
+                }
+                return state.clone();
+            }
+        }
+
+        if let Err(reason) = validate_questionnaire_schema(items) {
+            tracing::warn!("questionnaire `{}`: {reason}", component.id);
+            self.component_states.insert(
+                component.id.clone(),
+                ComponentState::Questionnaire {
+                    state: None,
+                    last_items: signature,
+                    last_current: String::new(),
+                },
+            );
+            return None;
+        }
+
+        // The freeform answer entities exist before the questionnaire state;
+        // their placeholders come from the XML.
+        let mut inputs = HashMap::new();
+        for item in items {
+            if let Some(input) = &item.input {
+                let entity: Entity<InputState> = cx.new(|cx| {
+                    let mut state = InputState::new(window, cx);
+                    if let Some(placeholder) = &input.placeholder {
+                        state = state.placeholder(placeholder.clone());
+                    }
+                    state
+                });
+                inputs.insert(item.name.clone(), entity);
+            }
+        }
+
+        let definitions: Vec<QuestionnaireItemDefinition> = items
+            .iter()
+            .map(|item| {
+                let mut definition =
+                    QuestionnaireItemDefinition::new(item.name.clone(), item.label.clone())
+                        .with_required(item.required)
+                        .with_multiple(item.multiple)
+                        .with_disabled(item.disabled);
+                if let Some(description) = &item.description {
+                    definition = definition.with_description(description.clone());
+                }
+                definition = definition.with_choices(item.choices.iter().map(|choice| {
+                    let base = QuestionnaireChoiceDefinition::new(
+                        choice.value.clone(),
+                        choice.label.clone(),
+                    )
+                    .with_disabled(choice.disabled);
+                    let base = if choice.default_selected {
+                        base.with_default_selected(true)
+                    } else {
+                        base
+                    };
+                    match &choice.description {
+                        Some(description) => base.with_description(description.clone()),
+                        None => base,
+                    }
+                }));
+                if let Some(input) = &item.input {
+                    definition = definition.with_input(
+                        QuestionnaireInputDefinition::new(
+                            inputs.get(&item.name).unwrap().clone(),
+                            input.label.clone(),
+                        )
+                        .with_disabled(input.disabled),
+                    );
+                }
+                definition
+            })
+            .collect();
+
+        let desired_current = component
+            .properties
+            .get("current_item")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+        let desired_current_known = !desired_current.is_empty()
+            && items
+                .iter()
+                .any(|item| item.name == desired_current && !item.disabled);
+        let shortcuts = match component
+            .properties
+            .get("shortcuts")
+            .and_then(|v| v.as_str())
+        {
+            Some("letters") => Some(QuestionnaireShortcutMode::Letters),
+            Some("numbers") => Some(QuestionnaireShortcutMode::Numbers),
+            _ => None,
+        };
+
+        let state = cx.new(|cx| {
+            match QuestionnaireState::new(definitions, cx) {
+                Ok(state) => {
+                    let state = if let Some(mode) = shortcuts {
+                        state.with_shortcuts(mode)
+                    } else {
+                        state
+                    };
+                    // `with_current_item` only errors on names the schema
+                    // does not define; the existence check above keeps the
+                    // fallback unreachable.
+                    if desired_current_known {
+                        match state.with_current_item(desired_current.clone()) {
+                            Ok(state) => state,
+                            // The existence check makes this unreachable;
+                            // keep the unseeded state on any residual error.
+                            Err(_) => unreachable!("current item validated"),
+                        }
+                    } else {
+                        state
+                    }
+                }
+                // Pre-validation keeps this reserved; treat any residual
+                // schema failure the same way.
+                Err(reason) => {
+                    tracing::warn!("questionnaire `{}`: {reason}", component.id);
+                    unreachable!("schema pre-validated before entity creation")
+                }
+            }
+        });
+
+        let on_change = component.handlers.get("change").cloned();
+        let on_submit = component.handlers.get("submit").cloned();
+        let component_id = component.id.clone();
+        let runtime = Arc::clone(&self.runtime);
+        let subscription = cx.subscribe_in(
+            &state,
+            window,
+            move |this: &mut App, state, event: &QuestionnaireEvent, _window, cx| {
+                let write_property = |_this: &mut App, key: &str, value: String| {
+                    if let Ok(mut lm) = runtime.layout_manager.try_write() {
+                        let _ = lm.set_property(&component_id, key, Value::String(value));
+                    }
+                };
+                match event {
+                    QuestionnaireEvent::CurrentItemChanged { current, .. } => {
+                        let name = current
+                            .as_ref()
+                            .map(|name| name.as_ref().to_string())
+                            .unwrap_or_default();
+                        write_property(this, "current", name.clone());
+                        if let Some(ComponentState::Questionnaire { last_current, .. }) =
+                            this.component_states.get_mut(&component_id)
+                        {
+                            *last_current = name;
+                        }
+                        cx.notify();
+                    }
+                    QuestionnaireEvent::AnswerChanged(change) => {
+                        let snapshot = serialize_questionnaire_answers(&state.read(cx).answers());
+                        write_property(this, "answers", snapshot.clone());
+                        let item = change.item().as_ref().to_string();
+                        if let Some(handler) = &on_change {
+                            runtime.call_handler(handler, &component_id, &item);
+                            cx.notify();
+                        }
+                    }
+                    // Completed transitions emit alongside the first Submit;
+                    // only the snapshot refresh happens here.
+                    QuestionnaireEvent::Completed(_) | QuestionnaireEvent::Submit(_) => {
+                        let snapshot = serialize_questionnaire_answers(&state.read(cx).answers());
+                        write_property(this, "answers", snapshot.clone());
+                        if let QuestionnaireEvent::Submit(_) = event {
+                            if let Some(handler) = &on_submit {
+                                runtime.call_handler(handler, &component_id, snapshot.as_str());
+                                cx.notify();
+                            }
+                        }
+                    }
+                    // The event enum is `#[non_exhaustive]` upstream.
+                    _ => {}
+                }
+            },
+        );
+        self._subscriptions.push(subscription);
+
+        let last_current = desired_current;
+        self.component_states.insert(
+            component.id.clone(),
+            ComponentState::Questionnaire {
+                state: Some(state.clone()),
+                last_items: signature,
+                last_current,
+            },
+        );
+        Some(state)
+    }
+
+    ///
     /// Gets or creates a `CommandState` entity for the given `<command>`.
     ///
     /// Created once; the query lives inside the kit state and is seeded (and
@@ -1306,6 +1553,118 @@ impl App {
                 }),
                 "command_separator" => Some(CommandEntryData::Separator),
                 _ => None,
+            })
+            .collect()
+    }
+
+    /// Collects the declarative `<questionnaire>` schema — `<questionnaire-item>`
+    /// children (with `<questionnaire-choice>` sub-children and an optional
+    /// `<questionnaire-input>`) — into render-ready definition data. Any other
+    /// child type is ignored by the questionnaire.
+    fn collect_questionnaire_items(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Vec<QuestionnaireItemData> {
+        component
+            .children
+            .iter()
+            .filter_map(|id| components.get(id))
+            .filter(|child| child.component_type == "questionnaire_item")
+            .map(|item| QuestionnaireItemData {
+                name: item
+                    .properties
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                label: item
+                    .properties
+                    .get("label")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                description: item
+                    .properties
+                    .get("description")
+                    .and_then(|v| v.as_str())
+                    .filter(|d| !d.is_empty())
+                    .map(str::to_string),
+                required: item
+                    .properties
+                    .get("required")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                multiple: item
+                    .properties
+                    .get("multiple")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                disabled: item
+                    .properties
+                    .get("disabled")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false),
+                choices: item
+                    .children
+                    .iter()
+                    .filter_map(|id| components.get(id))
+                    .filter(|choice| choice.component_type == "questionnaire_choice")
+                    .map(|choice| QuestionnaireChoiceData {
+                        value: choice
+                            .properties
+                            .get("value")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        label: choice
+                            .properties
+                            .get("label")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        description: choice
+                            .properties
+                            .get("description")
+                            .and_then(|v| v.as_str())
+                            .filter(|d| !d.is_empty())
+                            .map(str::to_string),
+                        disabled: choice
+                            .properties
+                            .get("disabled")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                        default_selected: choice
+                            .properties
+                            .get("default_selected")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                    })
+                    .collect(),
+                input: item
+                    .children
+                    .iter()
+                    .filter_map(|id| components.get(id))
+                    .find(|input| input.component_type == "questionnaire_input")
+                    .map(|input| QuestionnaireInputData {
+                        label: input
+                            .properties
+                            .get("label")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("")
+                            .to_string(),
+                        placeholder: input
+                            .properties
+                            .get("placeholder")
+                            .and_then(|v| v.as_str())
+                            .filter(|p| !p.is_empty())
+                            .map(str::to_string),
+                        disabled: input
+                            .properties
+                            .get("disabled")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false),
+                    }),
             })
             .collect()
     }
@@ -1772,6 +2131,15 @@ impl App {
                 let scroller_state =
                     self.get_or_create_message_scroller_state(component, rows.len(), cx);
                 MessageScroller::new(component.clone(), scroller_state, rows).into_any_element()
+            }
+            "questionnaire" => {
+                // Declarative children form the schema; the flow state is a
+                // kit entity created in `get_or_create_questionnaire_state`
+                // (observable answers mirror into `current`/`answers` via its
+                // subscription).
+                let items = self.collect_questionnaire_items(component, components);
+                let state = self.get_or_create_questionnaire_state(component, &items, window, cx);
+                Questionnaire::new(component.clone(), items, state).into_any_element()
             }
             "modal" => {
                 let children = self.render_children(component, components, entity_id, window, cx);

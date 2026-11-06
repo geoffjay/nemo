@@ -905,6 +905,77 @@ fn register_input_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "questionnaire",
+        ComponentCategory::Input,
+        "Questionnaire",
+        "A guided one-question-at-a-time form built from <questionnaire-item> children; the active item name mirrors into the current property and the answer snapshot into answers",
+        ConfigSchema::new("questionnaire")
+            .property(
+                "size",
+                PropertySchema::string()
+                    .with_default("medium")
+                    .one_of(enum_vals(&["xsmall", "small", "medium", "large"])),
+            )
+            .property(
+                "show_progress",
+                PropertySchema::boolean().with_default(true),
+            )
+            .property(
+                "shortcuts",
+                PropertySchema::string().with_default("none").one_of(enum_vals(&[
+                    "none", "letters", "numbers",
+                ])),
+            )
+            .property("show_actions", PropertySchema::boolean().with_default(true))
+            .property("current_item", PropertySchema::string()),
+    );
+
+    reg(
+        registry,
+        "questionnaire_item",
+        ComponentCategory::Input,
+        "Questionnaire Item",
+        "An ordered questionnaire question; its children are <questionnaire-choice> entries and an optional <questionnaire-input>",
+        ConfigSchema::new("questionnaire_item")
+            .property("name", PropertySchema::string())
+            .property("label", PropertySchema::string())
+            .property("description", PropertySchema::string())
+            .property("required", PropertySchema::boolean().with_default(false))
+            .property("multiple", PropertySchema::boolean().with_default(false))
+            .property("disabled", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
+        "questionnaire_choice",
+        ComponentCategory::Input,
+        "Questionnaire Choice",
+        "One selectable answer card inside a <questionnaire-item>",
+        ConfigSchema::new("questionnaire_choice")
+            .property("value", PropertySchema::string())
+            .property("label", PropertySchema::string())
+            .property("description", PropertySchema::string())
+            .property("disabled", PropertySchema::boolean().with_default(false))
+            .property(
+                "default_selected",
+                PropertySchema::boolean().with_default(false),
+            ),
+    );
+
+    reg(
+        registry,
+        "questionnaire_input",
+        ComponentCategory::Input,
+        "Questionnaire Input",
+        "Optional freeform answer field of a <questionnaire-item>; its value joins the item's answers",
+        ConfigSchema::new("questionnaire_input")
+            .property("label", PropertySchema::string())
+            .property("placeholder", PropertySchema::string())
+            .property("disabled", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
         "textarea",
         ComponentCategory::Input,
         "Textarea",

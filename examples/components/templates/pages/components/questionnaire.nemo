@@ -1,10 +1,254 @@
-<!-- questionnaire.nemo — placeholder page for the gpui-kit Questionnaire component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let basic_code = #"<questionnaire id="survey" on-submit="handle_survey_submitted">
+  <questionnaire-item name="direction" label="What should we prototype next?" description="Choose a direction. This question is required." required="true">
+    <questionnaire-choice value="delegation" label="Delegation" description="Show how work moves to a specialist." />
+    <questionnaire-choice value="prompts" label="Question prompts" />
+    <questionnaire-choice value="both" label="Both together" />
+  </questionnaire-item>
+  <questionnaire-item name="detail" label="How much detail should it include?">
+    <questionnaire-choice value="focused" label="Focused" />
+    <questionnaire-choice value="complete" label="Complete flow" default-selected="true" />
+  </questionnaire-item>
+</questionnaire>"#;
+
+let multiple_code = #"<questionnaire id="tools" shortcuts="letters" on-change="handle_survey_changed">
+  <questionnaire-item name="tools" label="Which tools do you use every day?" multiple="true">
+    <questionnaire-choice value="editor" label="Editor" />
+    <questionnaire-choice value="terminal" label="Terminal" default-selected="true" />
+    <questionnaire-choice value="browser" label="Browser" disabled="true" />
+    <questionnaire-input label="Something else" placeholder="Type another answer…" />
+  </questionnaire-item>
+  <questionnaire-item name="plan" label="Which plan fits your team?" required="true">
+    <questionnaire-choice value="plus" label="Plus" default-selected="true" />
+    <questionnaire-choice value="pro" label="Pro" />
+  </questionnaire-item>
+</questionnaire>"#;
+
+let small_code = #"<questionnaire id="trial" size="small" show-progress="false">
+  <questionnaire-item name="signal" label="How is the trial going?" required="true">
+    <questionnaire-choice value="great" label="Great" />
+    <questionnaire-choice value="okay" label="Okay" />
+    <questionnaire-choice value="stuck" label="Stuck" />
+  </questionnaire-item>
+  <questionnaire-item name="why" label="Anything blocking you?" description="Optional — skip if everything works.">
+    <questionnaire-choice value="docs" label="Missing docs" />
+    <questionnaire-choice value="price" label="Pricing" />
+  </questionnaire-item>
+  <questionnaire-item name="contact" label="Can we follow up?" disabled="true">
+    <questionnaire-choice value="yes" label="Yes, via email" />
+    <questionnaire-choice value="no" label="No" />
+  </questionnaire-item>
+</questionnaire>"#;
+</script>
+
 <template name="component-page-questionnaire">
-  <component-page name="Questionnaire" description="Composable questionnaire controls — choices, inputs, validation, and progress.">
-    <stack id="questionnaire_status" direction="vertical" spacing="4" align="start">
-      <label id="questionnaire_not_implemented" text="Not implemented" size="lg" />
-      <label id="questionnaire_source" text="Source: https://gpui-kit.com/component/questionnaire" size="sm" />
-    </stack>
+  <component-page name="Questionnaire" description="A guided one-question-at-a-time form. The schema is declared with questionnaire-item children (choice cards, an optional freeform input); the running flow keeps its answers, validation, navigation, and progress in the component state. The active question is the only one on screen; Previous/Skip/Next/Submit move through the enabled questions.">
+    <component-example label="Basic flow" id="questionnaire_ex_basic">
+      <stack id="questionnaire_basic_stack" direction="vertical" align="start">
+        <questionnaire id="questionnaire_basic" on-submit="handle_survey_submitted">
+          <questionnaire-item
+            id="questionnaire_basic_direction"
+            name="direction"
+            label="What should we prototype next?"
+            description="Choose a direction. This question is required."
+            required="true"
+          >
+            <questionnaire-choice
+              id="questionnaire_basic_delegation"
+              value="delegation"
+              label="Delegation"
+              description="Show how work moves to a specialist."
+            />
+            <questionnaire-choice
+              id="questionnaire_basic_prompts"
+              value="prompts"
+              label="Question prompts"
+            />
+            <questionnaire-choice
+              id="questionnaire_basic_both"
+              value="both"
+              label="Both together"
+            />
+          </questionnaire-item>
+          <questionnaire-item
+            id="questionnaire_basic_detail"
+            name="detail"
+            label="How much detail should it include?"
+          >
+            <questionnaire-choice
+              id="questionnaire_basic_focused"
+              value="focused"
+              label="Focused"
+            />
+            <questionnaire-choice
+              id="questionnaire_basic_complete"
+              value="complete"
+              label="Complete flow"
+              default-selected="true"
+            />
+          </questionnaire-item>
+        </questionnaire>
+        <label
+          id="questionnaire_basic_note"
+          text="Required questions validate on Next and Submit; skipped optional questions count as valid."
+          size="sm"
+        />
+      </stack>
+      <code-editor
+        id="questionnaire_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Multiple choice and freeform answer" id="questionnaire_ex_multiple">
+      <stack id="questionnaire_multiple_stack" direction="vertical" align="start">
+        <questionnaire id="questionnaire_multi" shortcuts="letters" on-change="handle_survey_changed">
+          <questionnaire-item
+            id="questionnaire_multi_tools"
+            name="tools"
+            label="Which tools do you use every day?"
+            multiple="true"
+          >
+            <questionnaire-choice id="questionnaire_multi_editor" value="editor" label="Editor" />
+            <questionnaire-choice id="questionnaire_multi_terminal" value="terminal" label="Terminal" default-selected="true" />
+            <questionnaire-choice id="questionnaire_multi_browser" value="browser" label="Browser" disabled="true" />
+            <questionnaire-input
+              id="questionnaire_multi_other"
+              label="Something else"
+              placeholder="Type another answer…"
+            />
+          </questionnaire-item>
+          <questionnaire-item
+            id="questionnaire_multi_plan"
+            name="plan"
+            label="Which plan fits your team?"
+            required="true"
+          >
+            <questionnaire-choice id="questionnaire_multi_plus" value="plus" label="Plus" default-selected="true" />
+            <questionnaire-choice id="questionnaire_multi_pro" value="pro" label="Pro" />
+          </questionnaire-item>
+        </questionnaire>
+      </stack>
+      <code-editor
+        id="questionnaire_code_multiple"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ multiple_code }}"
+      />
+    </component-example>
+
+    <component-example label="Compact size, no progress line" id="questionnaire_ex_small">
+      <stack id="questionnaire_small_stack" direction="vertical" align="start">
+        <questionnaire id="questionnaire_small" size="small" show-progress="false">
+          <questionnaire-item id="questionnaire_small_signal" name="signal" label="How is the trial going?" required="true">
+            <questionnaire-choice id="questionnaire_small_great" value="great" label="Great" />
+            <questionnaire-choice id="questionnaire_small_okay" value="okay" label="Okay" />
+            <questionnaire-choice id="questionnaire_small_stuck" value="stuck" label="Stuck" />
+          </questionnaire-item>
+          <questionnaire-item id="questionnaire_small_why" name="why" label="Anything blocking you?" description="Optional — skip if everything works.">
+            <questionnaire-choice id="questionnaire_small_docs" value="docs" label="Missing docs" />
+            <questionnaire-choice id="questionnaire_small_price" value="price" label="Pricing" />
+          </questionnaire-item>
+          <questionnaire-item id="questionnaire_small_contact" name="contact" label="Can we follow up?" disabled="true">
+            <questionnaire-choice id="questionnaire_small_yes" value="yes" label="Yes, via email" />
+            <questionnaire-choice id="questionnaire_small_no" value="no" label="No" />
+          </questionnaire-item>
+        </questionnaire>
+        <label
+          id="questionnaire_small_note"
+          text="The disabled third question is excluded from progress, navigation, validation, and submission."
+          size="sm"
+        />
+      </stack>
+      <code-editor
+        id="questionnaire_code_small"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ small_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" id="questionnaire_props_table">
+      <table-row is-header="true">
+        <table-cell>Property</table-cell>
+        <table-cell>Type</table-cell>
+        <table-cell>Default</table-cell>
+        <table-cell>Description</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="size" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>medium</table-cell>
+        <table-cell>Scales the whole composition: xsmall, small, medium, or large.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="show-progress" size="sm" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Show the "Question X of Y" line above the active question.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="show-actions" size="sm" /></table-cell>
+        <table-cell>bool</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Show the built-in Previous/Skip/Next/Submit navigation row.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="current-item" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Name of the item that should be active; writing it from a script navigates the flow. The kit mirrors the active item back into the current property.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="shortcuts" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Keyboard hints on the active question's choices: none, letters (A–Z), or numbers (1–9). Shortcut badges show on the choice cards.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="on-change" size="sm" /></table-cell>
+        <table-cell>handler</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Called when an answer changes; receives the changed item's serialized answer (for example direction=delegation).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="on-submit" size="sm" /></table-cell>
+        <table-cell>handler</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Called after a successful submit; receives the full validated snapshot (item=value pairs joined with ;).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label text="answers" size="sm" /></table-cell>
+        <table-cell>read</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Serialized answer snapshot of all enabled items, refreshed on every answer change or submit.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="questionnaire_props_children" text="questionnaire-item" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>One ordered question: name, label, description, required, multiple, and disabled. Its children are the answer controls.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="questionnaire_props_choice" text="questionnaire-choice" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>One selectable answer card: value (reported in answers), label, description, disabled, and default-selected (one default on single-choice items).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="questionnaire_props_input" text="questionnaire-input" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Optional freeform answer: label (its accessible name), placeholder, and disabled. A non-empty draft joins the item's answers.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>
