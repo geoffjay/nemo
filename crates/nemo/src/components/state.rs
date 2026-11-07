@@ -2,6 +2,7 @@ use gpui::Entity;
 use gpui_kit::component::calendar::CalendarState;
 use gpui_kit::component::carousel::CarouselState;
 use gpui_kit::component::command::CommandState;
+use gpui_kit::component::dock::DockArea as KitDockArea;
 use gpui_kit::component::input::{EditorState, InputState, TextareaState};
 use gpui_kit::component::message_scroller::MessageScrollerState;
 use gpui_kit::component::questionnaire::QuestionnaireState;
@@ -15,6 +16,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
+use super::dock::DeclarativePanel;
 use super::settings::SettingValues;
 use super::table::NemoTableDelegate;
 
@@ -120,6 +122,17 @@ pub enum ComponentState {
     Settings {
         values: Option<Entity<SettingValues>>,
         last_schema: String,
+    },
+    /// A `<dock>` layout: the live area entity (skinned by the kit's
+    /// `DockSkin`), the declarative panel entities keyed by their
+    /// `<dock-panel>` id (bodies are re-deposited into them every render
+    /// pass), and the layout signature last installed on the area — a
+    /// change re-runs `set_center`/`set_dock`; otherwise user drags,
+    /// resizes, toggles and tab picks survive untouched.
+    Dock {
+        area: Entity<KitDockArea>,
+        panels: HashMap<String, Entity<DeclarativePanel>>,
+        last_layout: String,
     },
     /// Shared open indices for accordion items.
     Accordion(Arc<Mutex<HashSet<usize>>>),

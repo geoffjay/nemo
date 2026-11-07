@@ -19,6 +19,7 @@ mod code_editor;
 mod collapsible;
 mod column_chart;
 mod command;
+mod dock;
 mod dropdown_button;
 mod funnel_chart;
 mod heatmap_chart;
@@ -225,6 +226,10 @@ pub use code_editor::CodeEditor;
 pub use collapsible::Collapsible;
 pub use column_chart::ColumnChart;
 pub use command::{Command, CommandEntryData};
+pub(crate) use dock::apply_dock_layout;
+pub use dock::{
+    dock_layout_signature, dock_placement_value, DeclarativePanel, Dock, DockPanelSpec,
+};
 pub use dropdown_button::{DropdownButton, MenuItem};
 pub use funnel_chart::FunnelChart;
 pub use heatmap_chart::HeatmapChart;

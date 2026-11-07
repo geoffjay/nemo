@@ -1,10 +1,202 @@
-<!-- dock.nemo — placeholder page for the gpui-kit Dock component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
-<template name="component-page-dock">
-  <component-page name="Dock" description="A dockable panel layout with tabs, draggable panels, and resize handles.">
-    <stack id="dock_status" direction="vertical" spacing="4" align="start">
-      <label id="dock_not_implemented" text="Not implemented" size="lg" />
-      <label id="dock_source" text="Source: https://gpui-kit.com/component/dock" size="sm" />
+<script>
+let basic_code = #"<dock id="workbench" height="420">
+  <dock-panel id="workbench_files" title="Files" icon="folder-open"
+    placement="left" size="200">
+    <stack id="files_tree" direction="vertical" padding="12" spacing="8" scroll="true">
+      <label id="files_root" text="src/" size="sm" />
+      <label id="files_main" text="  main.rs" size="sm" />
+      <label id="files_app" text="  app.rs" size="sm" />
+      <label id="files_theme" text="  theme.rs" size="sm" />
     </stack>
+  </dock-panel>
+  <dock-panel id="workbench_editor" title="main.rs" icon="file-code"
+    active="true">
+    <stack id="editor_lines" direction="vertical" padding="12" spacing="6" scroll="true">
+      <label id="editor_l1" text="fn main() {" />
+      <label id="editor_l2" text="    nemo::run(assets);" />
+      <label id="editor_l3" text="}" />
+    </stack>
+  </dock-panel>
+  <dock-panel id="workbench_console" title="Console" icon="square-terminal"
+    placement="bottom" size="140">
+    <stack id="console_lines" direction="vertical" padding="12" spacing="6" scroll="true">
+      <label id="console_l1" text="build finished in 2.1s" size="sm" />
+      <label id="console_l2" text="watching for changes…" size="sm" />
+    </stack>
+  </dock-panel>
+</dock>"#;
+
+let tabs_code = #"<dock id="panes" height="360">
+  <dock-panel id="panes_overview" title="Overview">
+    <stack id="overview_body" direction="vertical" padding="12" spacing="8" scroll="true">
+      <label id="overview_p1" text="Two center panels share one tab group." />
+      <label id="overview_p2" text="Drag either tab into another region." />
+    </stack>
+  </dock-panel>
+  <dock-panel id="panes_details" title="Details" active="true">
+    <stack id="details_body" direction="vertical" padding="12" spacing="8" scroll="true">
+      <label id="details_p1" text="active marks the initially displayed tab." />
+    </stack>
+  </dock-panel>
+  <dock-panel id="panes_inspector" title="Inspector" placement="right" size="200">
+    <stack id="inspector_body" direction="vertical" padding="12" spacing="8" scroll="true">
+      <label id="inspector_p1" text="type: stack" size="sm" />
+      <label id="inspector_p2" text="state: steady" size="sm" />
+    </stack>
+  </dock-panel>
+  <dock-panel id="panes_pinned" title="Pinned" placement="right" size="200"
+    closable="false">
+    <stack id="pinned_body" direction="vertical" padding="12" spacing="8" scroll="true">
+      <label id="pinned_p1" text="closable keeps its tab menu entry." size="sm" />
+    </stack>
+  </dock-panel>
+</dock>"#;
+</script>
+
+<template name="component-page-dock">
+  <component-page name="Dock" description="A dockable panel layout: a center region plus left, right, and bottom docks whose panels form tab groups. Panels can be dragged between regions and into splits, docks resize by their handle and collapse via the tab bar, and tabs offer zoom and close through the ellipsis menu.">
+    <component-example label="Center, side, and bottom docks" id="dock_ex_basic">
+      <dock id="dock_basic" height="420">
+        <dock-panel id="dock_b_files" title="Files" icon="folder-open" placement="left" size="200">
+          <stack id="dock_b_files_body" direction="vertical" padding="12" spacing="8" scroll="true">
+            <label id="dock_b_f_root" text="src/" size="sm" />
+            <label id="dock_b_f_main" text="  main.rs" size="sm" />
+            <label id="dock_b_f_app" text="  app.rs" size="sm" />
+            <label id="dock_b_f_theme" text="  theme.rs" size="sm" />
+            <label id="dock_b_f_assets" text="assets/" size="sm" />
+            <label id="dock_b_f_font" text="  fonts" size="sm" />
+          </stack>
+        </dock-panel>
+        <dock-panel id="dock_b_editor" title="main.rs" icon="file-code" active="true">
+          <stack id="dock_b_editor_body" direction="vertical" padding="12" spacing="6" scroll="true">
+            <label id="dock_b_e_l1" text="fn main() {" />
+            <label id="dock_b_e_l2" text="    nemo::run(assets);" />
+            <label id="dock_b_e_l3" text="}" />
+          </stack>
+        </dock-panel>
+        <dock-panel id="dock_b_console" title="Console" icon="square-terminal" placement="bottom" size="140">
+          <stack id="dock_b_console_body" direction="vertical" padding="12" spacing="6" scroll="true">
+            <label id="dock_b_c_l1" text="build finished in 2.1s" size="sm" />
+            <label id="dock_b_c_l2" text="watching for changes…" size="sm" />
+          </stack>
+        </dock-panel>
+      </dock>
+      <label
+        id="dock_basic_note"
+        text="Three regions: a resizable left dock, a center panel titled from its attributes, and a collapsible bottom dock — every region's divider and tab bar is live."
+        size="sm"
+      />
+      <code-editor
+        id="dock_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Tab groups and closable panels" id="dock_ex_tabs">
+      <dock id="dock_tabs" height="360">
+        <dock-panel id="dock_t_overview" title="Overview">
+          <stack id="dock_t_overview_body" direction="vertical" padding="12" spacing="8" scroll="true">
+            <label id="dock_t_o_p1" text="Two center panels share one tab group." />
+            <label id="dock_t_o_p2" text="Drag either tab into another region." />
+          </stack>
+        </dock-panel>
+        <dock-panel id="dock_t_details" title="Details" active="true">
+          <stack id="dock_t_details_body" direction="vertical" padding="12" spacing="8" scroll="true">
+            <label id="dock_t_d_p1" text="active marks the initially displayed tab." />
+          </stack>
+        </dock-panel>
+        <dock-panel id="dock_t_inspector" title="Inspector" placement="right" size="200">
+          <stack id="dock_t_inspector_body" direction="vertical" padding="12" spacing="8" scroll="true">
+            <label id="dock_t_i_p1" text="type: stack" size="sm" />
+            <label id="dock_t_i_p2" text="state: steady" size="sm" />
+          </stack>
+        </dock-panel>
+        <dock-panel id="dock_t_pinned" title="Pinned" placement="right" size="200" closable="false">
+          <stack id="dock_t_pinned_body" direction="vertical" padding="12" spacing="8" scroll="true">
+            <label id="dock_t_p_p1" text="closable keeps its close entry permanently off." size="sm" />
+          </stack>
+        </dock-panel>
+      </dock>
+      <label
+        id="dock_tabs_note"
+        text="Panels sharing a placement form that region's tab group (both dock centers and the right dock here); the right dock's Pinned panel cannot be closed."
+        size="sm"
+      />
+      <code-editor
+        id="dock_code_tabs"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ tabs_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" id="dock_props_table">
+      <table-row is-header="true">
+        <table-cell>Property</table-cell>
+        <table-cell>Type</table-cell>
+        <table-cell>Default</table-cell>
+        <table-cell>Description</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_height" text="height" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>480</table-cell>
+        <table-cell>Area height in px; the kit's tab bars and docks need a definite height to render.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_c_panel" text="dock-panel" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>One panel; its children are the panel body. Panels sharing a placement form that region's tab group.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_title" text="title" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>Untitled panel</table-cell>
+        <table-cell>The tab's title.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_icon" text="icon" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>Icon shown before the tab title.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_placement" text="placement" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>center</table-cell>
+        <table-cell>Region to dock into: center, left, right, or bottom.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_size" text="size" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>240</table-cell>
+        <table-cell>Side/bottom dock width or height in px; the center has no size of its own.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_active" text="active" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>The panel's group shows it initially (first declared panel otherwise).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_closable" text="closable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether the panel may be closed from its tab menu.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="dock_p_visible" text="visible" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether the panel is drawn; a hidden panel keeps its tab and place.</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

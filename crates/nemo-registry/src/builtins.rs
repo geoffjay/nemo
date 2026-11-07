@@ -1085,6 +1085,36 @@ fn register_input_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "dock",
+        ComponentCategory::Layout,
+        "Dock",
+        "A dockable panel layout built from <dock-panel> children: a center region plus left/right/bottom docks; panels drag between regions, docks resize and collapse, and tabs zoom or close",
+        ConfigSchema::new("dock").property("height", PropertySchema::integer().with_default(480i64)),
+    );
+
+    reg(
+        registry,
+        "dock_panel",
+        ComponentCategory::Layout,
+        "Dock Panel",
+        "One panel of a <dock>; its declarative children are the panel body. Panels sharing a placement form that region's tab group, and the active one is its initially displayed tab",
+        ConfigSchema::new("dock_panel")
+            .property("title", PropertySchema::string())
+            .property("icon", PropertySchema::string())
+            .property(
+                "placement",
+                PropertySchema::string()
+                    .with_default("center")
+                    .one_of(enum_vals(&["center", "left", "right", "bottom"])),
+            )
+            .property("size", PropertySchema::integer())
+            .property("active", PropertySchema::boolean().with_default(false))
+            .property("closable", PropertySchema::boolean().with_default(true))
+            .property("visible", PropertySchema::boolean().with_default(true)),
+    );
+
+    reg(
+        registry,
         "textarea",
         ComponentCategory::Input,
         "Textarea",

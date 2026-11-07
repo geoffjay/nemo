@@ -4,6 +4,7 @@ use gpui::*;
 use gpui_kit::component::calendar::{CalendarEvent, CalendarState, Date as CalendarDate, Matcher};
 use gpui_kit::component::carousel::{CarouselEvent, CarouselState};
 use gpui_kit::component::command::CommandState;
+use gpui_kit::component::dock::{DockArea as KitDockArea, DockSkin};
 use gpui_kit::component::input::{EditorState, InputEvent, InputState, TextareaState};
 use gpui_kit::component::message_scroller::MessageScrollerState;
 use gpui_kit::component::questionnaire::{
@@ -32,21 +33,22 @@ use gpui_kit::component::input::TabSize;
 use gpui_kit::component::table::Column;
 
 use crate::components::{
-    apply_rounded, apply_shadow, questionnaire_schema_signature, serialize_questionnaire_answers,
-    setting_flag_value, setting_number_value, setting_text_value, settings_schema_signature,
+    apply_dock_layout, apply_rounded, apply_shadow, dock_layout_signature, dock_placement_value,
+    questionnaire_schema_signature, serialize_questionnaire_answers, setting_flag_value,
+    setting_number_value, setting_text_value, settings_schema_signature,
     validate_questionnaire_schema, Accordion, AccordionItemData, Alert, AreaChart, Attachment,
     AttachmentContentData, AttachmentMediaData, Avatar, Badge, BarChart, Bubble, BubbleChart,
     BubbleGroup, BubbleReactionsData, Button, Calendar, CandlestickChart, Carousel, Checkbox,
     ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, Command,
-    DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
-    Menu, MenuEntryData, MenuItem, Message, MessageScroller, Modal, Notification, OptionData,
-    Pagination, Panel, PieChart, Progress, PyramidChart, Questionnaire, QuestionnaireChoiceData,
-    QuestionnaireInputData, QuestionnaireItemData, RadarChart, Radio, Rating, RealtimeChart,
-    ScatterChart, Select, SettingValue, SettingValues, Settings, SettingsFieldData,
-    SettingsFieldKind, SettingsGroupData, SettingsItemData, SettingsOptionData, SettingsPageData,
-    SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Stepper,
-    StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea,
-    Toggle, Tooltip, Tree,
+    DeclarativePanel, Dock, DockPanelSpec, DropdownButton, FunnelChart, HeatmapChart, Icon, Image,
+    Kbd, Label, LineChart, List, Marker, Menu, MenuEntryData, MenuItem, Message, MessageScroller,
+    Modal, Notification, OptionData, Pagination, Panel, PieChart, Progress, PyramidChart,
+    Questionnaire, QuestionnaireChoiceData, QuestionnaireInputData, QuestionnaireItemData,
+    RadarChart, Radio, Rating, RealtimeChart, ScatterChart, Select, SettingValue, SettingValues,
+    Settings, SettingsFieldData, SettingsFieldKind, SettingsGroupData, SettingsItemData,
+    SettingsOptionData, SettingsPageData, SidenavBar, Skeleton, Slider, Spinner, Stack,
+    StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table,
+    Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -1951,6 +1953,157 @@ impl App {
         store
     }
 
+    /// Collects declarative `<dock-panel>` children (in declaration order,
+    /// which is each region's tab order) into panel specs. Any other child
+    /// type is ignored by the dock.
+    fn collect_dock_panels(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Vec<DockPanelSpec> {
+        component
+            .children
+            .iter()
+            .filter_map(|id| components.get(id))
+            .filter(|child| child.component_type == "dock_panel")
+            .map(|panel| {
+                let props = &panel.properties;
+                DockPanelSpec {
+                    id: panel.id.clone(),
+                    title: props
+                        .get("title")
+                        .and_then(|v| v.as_str())
+                        .filter(|t| !t.is_empty())
+                        .unwrap_or("Untitled panel")
+                        .to_string(),
+                    icon: props
+                        .get("icon")
+                        .and_then(|v| v.as_str())
+                        .filter(|d| !d.is_empty())
+                        .map(str::to_string),
+                    placement: dock_placement_value(
+                        props.get("placement").and_then(|v| v.as_str()),
+                    ),
+                    size: props.get("size").and_then(|v| v.as_i64()),
+                    active: setting_flag_value(props.get("active")),
+                    closable: props
+                        .get("closable")
+                        .map(|v| setting_flag_value(Some(v)))
+                        .unwrap_or(true),
+                    visible: props
+                        .get("visible")
+                        .map(|v| setting_flag_value(Some(v)))
+                        .unwrap_or(true),
+                }
+            })
+            .collect()
+    }
+
+    /// Gets or creates a `<dock>`'s area plus panel state.
+    ///
+    /// The area (skinned by the kit's `DockSkin`) is created once and kept
+    /// across renders; panel entities are keyed by their `<dock-panel>` id
+    /// and rebuilt with the area only when the layout signature changes.
+    /// Declarative panel attributes (title, icon, flags) are mirrored into
+    /// the live entities every pass without touching the layout, so the
+    /// user's own drags, resizes, toggles and tab picks survive.
+    fn get_or_create_dock_state(
+        &mut self,
+        component: &BuiltComponent,
+        specs: &[DockPanelSpec],
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> (
+        Entity<KitDockArea>,
+        HashMap<String, Entity<DeclarativePanel>>,
+    ) {
+        let id = component.id.clone();
+        let signature = dock_layout_signature(specs);
+
+        let existing = match self.component_states.get(&id) {
+            Some(ComponentState::Dock {
+                area,
+                panels,
+                last_layout,
+            }) => Some((area.clone(), panels.clone(), last_layout.clone())),
+            _ => None,
+        };
+
+        let (area, panels) = match existing {
+            Some((area, station, last)) if last == signature => {
+                // Same layout: mirror the presentation attributes and stop.
+                self.mirror_dock_panels(specs, &station, cx);
+                (area, station)
+            }
+            Some((area, station, _)) => {
+                // Layout changed: keep the entities whose ids survive, create
+                // the missing ones, then re-install the layout (displaced
+                // panels hear `on_removed` from the area itself).
+                let mut rebuilt = HashMap::new();
+                for spec in specs {
+                    let entity = match station.get(&spec.id) {
+                        Some(entity) => entity.clone(),
+                        None => cx.new(|cx| DeclarativePanel::new(spec, cx)),
+                    };
+                    rebuilt.insert(spec.id.clone(), entity);
+                }
+                apply_dock_layout(&area, &rebuilt, specs, window, cx);
+                self.mirror_dock_panels(specs, &rebuilt, cx);
+                if let Some(ComponentState::Dock {
+                    panels,
+                    last_layout,
+                    ..
+                }) = self.component_states.get_mut(&id)
+                {
+                    *panels = rebuilt.clone();
+                    *last_layout = signature;
+                }
+                (area, rebuilt)
+            }
+            None => {
+                // First render: create the skinned area, one panel entity per
+                // declared panel, and install the layout.
+                let (area, _skin) =
+                    DockSkin::dock_area(format!("nemo-dock-{id}"), None, window, cx);
+                let mut panels = HashMap::new();
+                for spec in specs {
+                    let entity = cx.new(|cx| DeclarativePanel::new(spec, cx));
+                    panels.insert(spec.id.clone(), entity);
+                }
+                apply_dock_layout(&area, &panels, specs, window, cx);
+                self.component_states.insert(
+                    id,
+                    ComponentState::Dock {
+                        area: area.clone(),
+                        panels: panels.clone(),
+                        last_layout: signature,
+                    },
+                );
+                (area, panels)
+            }
+        };
+
+        (area, panels)
+    }
+
+    /// Mirrors declarative panel attributes into the live panel entities.
+    /// Presentation-only: a changed title or flag must not rebuild the
+    /// layout, or the user's tab picks would reset behind the edit.
+    fn mirror_dock_panels(
+        &self,
+        specs: &[DockPanelSpec],
+        panels: &HashMap<String, Entity<DeclarativePanel>>,
+        cx: &mut Context<Self>,
+    ) {
+        for spec in specs {
+            if let Some(entity) = panels.get(&spec.id) {
+                if !entity.read(cx).matches(spec) {
+                    entity.update(cx, |panel, _cx| panel.apply(spec));
+                }
+            }
+        }
+    }
+
     /// Wraps an element in a styled div if layout/decoration properties are present.
     fn apply_layout_styles(
         element: AnyElement,
@@ -2434,6 +2587,43 @@ impl App {
                 Settings::new(component.clone(), pages)
                     .values(Some(values))
                     .runtime(Arc::clone(&self.runtime))
+                    .into_any_element()
+            }
+            "dock" => {
+                // Declarative <dock-panel> children name the panels; each
+                // panel's body is its own declarative children, rebuilt every
+                // pass into the panel entity's body slot (AnyElement is
+                // one-shot, so the entity owns a same-frame stash the app's
+                // render pass refills and the panel's paint drains). The area
+                // entity and its layout live in `get_or_create_dock_state`.
+                let specs = self.collect_dock_panels(component, components);
+                if specs.is_empty() {
+                    return Dock::new(component.clone()).into_any_element();
+                }
+                let (area, panels) = self.get_or_create_dock_state(component, &specs, window, cx);
+                for spec in &specs {
+                    let Some(entity) = panels.get(&spec.id) else {
+                        continue;
+                    };
+                    let Some(panel) = component
+                        .children
+                        .iter()
+                        .filter_map(|id| components.get(id))
+                        .find(|child| child.component_type == "dock_panel" && child.id == spec.id)
+                    else {
+                        continue;
+                    };
+                    let children = self.render_children(panel, components, entity_id, window, cx);
+                    let body = div()
+                        .flex()
+                        .flex_col()
+                        .flex_1()
+                        .min_h(px(0.))
+                        .children(children);
+                    entity.update(cx, |panel, _cx| panel.set_body(body.into_any_element()));
+                }
+                Dock::new(component.clone())
+                    .area(Some(area))
                     .into_any_element()
             }
             "modal" => {
