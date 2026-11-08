@@ -92,6 +92,16 @@ pub enum ComponentState {
         state: Entity<TableState<NemoTableDelegate>>,
         last_data: Vec<Value>,
     },
+    /// A data table's virtualized state: the kit entity (columns baked into
+    /// its header layout, selection and sort state machine inside), the last
+    /// `data` snapshot installed (updates replace the delegate's rows in
+    /// place), and the last column/behavior schema (a change rebuilds the
+    /// state — its header layout is created at construction).
+    DataTable {
+        state: Entity<TableState<crate::components::data_table::DataTableDelegate>>,
+        last_data: Vec<Value>,
+        last_schema: String,
+    },
     Tree {
         state: Entity<TreeState>,
         last_items: Vec<Value>,

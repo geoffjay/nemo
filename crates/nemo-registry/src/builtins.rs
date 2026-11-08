@@ -1388,6 +1388,46 @@ fn register_data_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "data_table",
+        ComponentCategory::Data,
+        "Data Table",
+        "A virtualized data table with row/cell selection, keyboard navigation, and sortable, resizable, movable, and fixed columns; rows come from the data property, columns from data-table-column children",
+        ConfigSchema::new("data_table")
+            .property("data", PropertySchema::any())
+            .property("height", PropertySchema::integer().with_default(340i64))
+            .property("size", PropertySchema::string().with_default("medium"))
+            .property("stripe", PropertySchema::boolean().with_default(false))
+            .property("bordered", PropertySchema::boolean().with_default(true))
+            .property("scrollbars", PropertySchema::string().with_default("both"))
+            .property("header_row_height", PropertySchema::integer())
+            .property("sortable", PropertySchema::boolean().with_default(true))
+            .property("col_movable", PropertySchema::boolean().with_default(true))
+            .property("col_resizable", PropertySchema::boolean().with_default(true))
+            .property("row_selectable", PropertySchema::boolean().with_default(true))
+            .property("cell_selectable", PropertySchema::boolean().with_default(false))
+            .property("fixed_cols_border", PropertySchema::boolean().with_default(true)),
+    );
+
+    reg(
+        registry,
+        "data_table_column",
+        ComponentCategory::Data,
+        "Data Table Column",
+        "A column definition inside a data-table; key maps the row field, the behavior flags drive sorting, pinning, resizing, and dragging",
+        ConfigSchema::new("data_table_column")
+            .property("field", PropertySchema::string())
+            .property("label", PropertySchema::string())
+            .property("width", PropertySchema::integer())
+            .property("align", PropertySchema::string().with_default("left"))
+            .property("sortable", PropertySchema::boolean().with_default(false))
+            .property("sort", PropertySchema::string())
+            .property("fixed", PropertySchema::string())
+            .property("resizable", PropertySchema::boolean().with_default(true))
+            .property("movable", PropertySchema::boolean().with_default(true)),
+    );
+
+    reg(
+        registry,
         "list",
         ComponentCategory::Data,
         "List",

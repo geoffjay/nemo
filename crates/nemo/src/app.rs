@@ -30,25 +30,27 @@ use crate::components::tree::{declared_to_tree_items, values_to_tree_items, Decl
 use crate::components::{parse_date, selected_date_string, CommandEntryData};
 use gpui_kit::component::group_box::GroupBoxVariant;
 use gpui_kit::component::input::TabSize;
-use gpui_kit::component::table::Column;
+use gpui_kit::component::table::{Column, TableEvent};
 
 use crate::components::{
-    apply_dock_layout, apply_rounded, apply_shadow, dock_layout_signature, dock_placement_value,
+    apply_dock_layout, apply_rounded, apply_shadow, data_table_autodetect_columns,
+    data_table_schema_signature, dock_layout_signature, dock_placement_value,
     questionnaire_schema_signature, serialize_questionnaire_answers, setting_flag_value,
     setting_number_value, setting_text_value, settings_schema_signature,
     validate_questionnaire_schema, Accordion, AccordionItemData, Alert, AreaChart, Attachment,
     AttachmentContentData, AttachmentMediaData, Avatar, Badge, BarChart, Bubble, BubbleChart,
     BubbleGroup, BubbleReactionsData, Button, Calendar, CandlestickChart, Carousel, Checkbox,
     ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, Command,
-    DeclarativePanel, Dock, DockPanelSpec, DropdownButton, FunnelChart, HeatmapChart, Icon, Image,
-    Kbd, Label, LineChart, List, Marker, Menu, MenuEntryData, MenuItem, Message, MessageScroller,
-    Modal, Notification, OptionData, Pagination, Panel, PieChart, Progress, PyramidChart,
-    Questionnaire, QuestionnaireChoiceData, QuestionnaireInputData, QuestionnaireItemData,
-    RadarChart, Radio, Rating, RealtimeChart, ScatterChart, Select, SettingValue, SettingValues,
-    Settings, SettingsFieldData, SettingsFieldKind, SettingsGroupData, SettingsItemData,
-    SettingsOptionData, SettingsPageData, SidenavBar, Skeleton, Slider, Spinner, Stack,
-    StackedBarChart, StackedColumnChart, Stepper, StepperItemData, Svg, Switch, TabItemData, Table,
-    Tabs, Tag, Text, TextEditor, Textarea, Toggle, Tooltip, Tree,
+    DataTable, DataTableColumnData, DataTableDelegate, DeclarativePanel, Dock, DockPanelSpec,
+    DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
+    Menu, MenuEntryData, MenuItem, Message, MessageScroller, Modal, Notification, OptionData,
+    Pagination, Panel, PieChart, Progress, PyramidChart, Questionnaire, QuestionnaireChoiceData,
+    QuestionnaireInputData, QuestionnaireItemData, RadarChart, Radio, Rating, RealtimeChart,
+    ScatterChart, Select, SettingValue, SettingValues, Settings, SettingsFieldData,
+    SettingsFieldKind, SettingsGroupData, SettingsItemData, SettingsOptionData, SettingsPageData,
+    SidenavBar, Skeleton, Slider, Spinner, Stack, StackedBarChart, StackedColumnChart, Stepper,
+    StepperItemData, Svg, Switch, TabItemData, Table, Tabs, Tag, Text, TextEditor, Textarea,
+    Toggle, Tooltip, Tree,
 };
 use crate::containers::{AppShell, NavLink, Router};
 use crate::runtime::NemoRuntime;
@@ -280,6 +282,170 @@ impl App {
             ComponentState::Table {
                 state: state.clone(),
                 last_data: current_data,
+            },
+        );
+        state
+    }
+
+    /// Collects the declared `<data-table-column>` children of a
+    /// `<data-table>` into column definitions (drop-in richer siblings of
+    /// the `<table>` header's columns: per-column sort flags, pinning,
+    /// alignment, resize/move behavior).
+    fn collect_data_table_columns(
+        &self,
+        component: &BuiltComponent,
+        components: &HashMap<String, BuiltComponent>,
+    ) -> Vec<DataTableColumnData> {
+        let mut columns = Vec::new();
+        for child_id in &component.children {
+            let Some(child) = components.get(child_id) else {
+                continue;
+            };
+            if child.component_type != "data_table_column" {
+                continue;
+            }
+            let column = DataTableColumnData::from_properties(&child.properties);
+            if std::env::var("NEMO_DT_DEBUG").is_ok() {
+                eprintln!(
+                    "[dt-debug] type={} props={:?}",
+                    child.component_type, child.properties
+                );
+            }
+            if !column.key.is_empty() {
+                columns.push(column);
+            }
+        }
+        columns
+    }
+
+    /// Gets or creates a `TableState<DataTableDelegate>` for a
+    /// `<data-table>` component.
+    ///
+    /// Column / behavior-flag changes rebuild the state — the kit bakes the
+    /// columns into its header layout at construction. A `data` change never
+    /// rebuilds; it replaces the delegate's rows in place (same contract as
+    /// [`App::get_or_create_table_state`]).
+    ///
+    /// On creation this also subscribes to the kit's `TableEvent` stream:
+    /// row/column/cell selections mirror into the component's
+    /// `selected-row` / `selected-col` / `selected-cell` properties (cleared
+    /// properties become null), and the `on-*` handlers fire with the
+    /// affected indexes as their event data.
+    fn get_or_create_data_table_state(
+        &mut self,
+        component: &BuiltComponent,
+        declared_columns: &[DataTableColumnData],
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<TableState<DataTableDelegate>> {
+        let id = component.id.clone();
+        let current_data = match component.properties.get("data") {
+            Some(Value::Array(arr)) => arr.clone(),
+            _ => Vec::new(),
+        };
+        let schema = data_table_schema_signature(declared_columns, &component.properties);
+
+        if let Some(ComponentState::DataTable {
+            state,
+            last_data,
+            last_schema,
+        }) = self.component_states.get_mut(&id)
+        {
+            if *last_schema == schema {
+                if *last_data != current_data {
+                    let new_data = current_data.clone();
+                    state.update(cx, |s, cx| {
+                        s.delegate_mut().replace_rows(new_data);
+                        s.refresh(cx);
+                    });
+                    *last_data = current_data;
+                }
+                return state.clone();
+            }
+        }
+
+        // A schema change drops the old state (its entity is retired; the
+        // stale subscription no-ops once the entity is unreferenced).
+        self.component_states.remove(&id);
+
+        // No declared columns: auto-detect from the first row object's
+        // fields, in order.
+        let columns = if declared_columns.is_empty() {
+            data_table_autodetect_columns(&current_data)
+        } else {
+            declared_columns.to_vec()
+        };
+        let kit_columns: Vec<Column> = columns.iter().map(|c| c.to_kit_column()).collect();
+        let column_keys: Vec<String> = columns.iter().map(|c| c.key.clone()).collect();
+        let delegate = DataTableDelegate::new(kit_columns, column_keys, current_data.clone());
+        let state = cx.new(|cx| TableState::new(delegate, window, cx));
+
+        // Bridge the kit's event stream: selection state mirrors into
+        // properties so scripts and other components can read it, and the
+        // declarative `on-*` handlers fire with the affected indexes.
+        let handlers = component.handlers.clone();
+        let runtime = Arc::clone(&self.runtime);
+        let sub_id = id.clone();
+        let subscription = cx.subscribe_in(
+            &state,
+            window,
+            move |_this: &mut App, _state, event: &TableEvent, _window, cx| {
+                let record = |key: &str, value: Value| {
+                    if let Ok(mut lm) = runtime.layout_manager.try_write() {
+                        let _ = lm.set_property(&sub_id, key, value);
+                    }
+                };
+                let fire = |event_name: &str, data: String, cx: &mut Context<App>| {
+                    if let Some(handler) = handlers.get(event_name) {
+                        runtime.call_handler(handler, &sub_id, &data);
+                        cx.notify();
+                    }
+                };
+                match event {
+                    TableEvent::SelectRow(row) => {
+                        record("selected_row", Value::Integer(*row as i64));
+                        fire("select_row", format!("row={row}"), cx);
+                    }
+                    TableEvent::DoubleClickedRow(row) => {
+                        fire("double_click_row", format!("row={row}"), cx);
+                    }
+                    TableEvent::SelectColumn(col) => {
+                        record("selected_col", Value::Integer(*col as i64));
+                        fire("select_col", format!("col={col}"), cx);
+                    }
+                    TableEvent::SelectCell(row, col) => {
+                        record("selected_cell", Value::String(format!("{row},{col}")));
+                        fire("select_cell", format!("row={row},col={col}"), cx);
+                    }
+                    TableEvent::DoubleClickedCell(row, col) => {
+                        fire("double_click_cell", format!("row={row},col={col}"), cx);
+                    }
+                    TableEvent::MoveColumn(from, to) => {
+                        fire("move_column", format!("from={from},to={to}"), cx);
+                    }
+                    TableEvent::ClearSelection => {
+                        record("selected_cell", Value::Null);
+                        record("selected_row", Value::Null);
+                        record("selected_col", Value::Null);
+                        fire("clear_selection", String::new(), cx);
+                    }
+                    // Row/cell right-clicks have no declarative menu seam,
+                    // and width changes are pure view state — documented as
+                    // out of scope on the wrapper.
+                    TableEvent::RightClickedRow(_)
+                    | TableEvent::RightClickedCell(..)
+                    | TableEvent::ColumnWidthsChanged(_) => {}
+                }
+            },
+        );
+        self._subscriptions.push(subscription);
+
+        self.component_states.insert(
+            id.clone(),
+            ComponentState::DataTable {
+                state: state.clone(),
+                last_data: current_data,
+                last_schema: schema,
             },
         );
         state
@@ -2658,6 +2824,17 @@ impl App {
                         .table_state(table_state)
                         .into_any_element()
                 }
+            }
+            "data_table" => {
+                // Columns come from declared `<data-table-column>` children
+                // (or are auto-detected from the first data row); the
+                // delegate + kit table state live in the component's state.
+                let columns = self.collect_data_table_columns(component, components);
+                let data_table_state =
+                    self.get_or_create_data_table_state(component, &columns, window, cx);
+                DataTable::new(component.clone())
+                    .table_state(data_table_state)
+                    .into_any_element()
             }
             "list" => {
                 // Each <list-item> child is a row; its own children are the content.

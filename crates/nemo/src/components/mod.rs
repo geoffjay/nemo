@@ -19,6 +19,7 @@ mod code_editor;
 mod collapsible;
 mod column_chart;
 mod command;
+mod data_table;
 mod dock;
 mod dropdown_button;
 mod funnel_chart;
@@ -226,6 +227,10 @@ pub use code_editor::CodeEditor;
 pub use collapsible::Collapsible;
 pub use column_chart::ColumnChart;
 pub use command::{Command, CommandEntryData};
+pub use data_table::{
+    data_table_autodetect_columns, data_table_schema_signature, DataTable, DataTableColumnData,
+    DataTableDelegate,
+};
 pub(crate) use dock::apply_dock_layout;
 pub use dock::{
     dock_layout_signature, dock_placement_value, DeclarativePanel, Dock, DockPanelSpec,

@@ -1,10 +1,324 @@
-<!-- data-table.nemo — placeholder page for the gpui-kit Data Table component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+// Data table page callback demo: reports the picked row.
+fn on_data_table_pick(component_id, event_data) {
+    set_component_property(
+      "data_table_cb_status",
+      "content",
+      "Last pick: " + event_data
+    );
+}
+
+let basic_code = #"<data-table id="issues" height="300" stripe="true"
+  data='[{"issue":"nemo-120","title":"Bindings fire twice","state":"open","priority":"high"},
+         {"issue":"nemo-121","title":"Scrollbar jitters","state":"open","priority":"mid"},
+         {"issue":"nemo-122","title":"Theme token drift","state":"closed","priority":"low"}]'>
+  <data-table-column field="issue" label="Issue" width="120" sortable="true" />
+  <data-table-column field="title" label="Title" width="280" sortable="true" />
+  <data-table-column field="state" label="State" width="100" align="center" />
+  <data-table-column field="priority" label="Priority" width="100" align="center" sortable="true" />
+</data-table>"#;
+
+let fixed_code = #"<data-table id="ledger" height="260" size="small"
+  cell-selectable="true" col-movable="true" col-resizable="true"
+  scrollbars="vertical"
+  data='[{"lang":"Rust","stars":"120k","shard":"core"},
+         {"lang":"Go","stars":"98k","shard":"runtime"},
+         {"lang":"Zig","stars":"31k","shard":"toolchain"},
+         {"lang":"Swift","stars":"73k","shard":"app"}]'>
+  <data-table-column field="lang" label="Language" width="150" sortable="true" fixed="left" />
+  <data-table-column field="stars" label="Stars" width="110" align="right" />
+  <data-table-column field="shard" label="Shard" width="140" />
+</data-table>"#;
+
+let events_code = #"<data-table id="pick" height="220" row-selectable="true"
+  data='[{"name":"Ada Lovelace","role":"architect"},
+         {"name":"Grace Hopper","role":"rear admiral"},
+         {"name":"Katherine Johnson","role":"mathematician"}]'
+  on-select-row="on_pick_row"
+  on-double-click-row="on_pick_row">
+  <data-table-column field="name" label="Name" width="160" />
+  <data-table-column field="role" label="Role" width="140" />
+</data-table>
+
+fn on_pick_row(component_id, event_data) {
+  set_component_property("status", "content", "Picked " + event_data);
+}"#;
+</script>
+
 <template name="component-page-data-table">
-  <component-page name="Data Table" description="A data table with virtual scrolling and column management.">
-    <stack id="data_table_status" direction="vertical" spacing="4" align="start">
-      <label id="data_table_not_implemented" text="Not implemented" size="lg" />
-      <label id="data_table_source" text="Source: https://gpui-kit.com/component/data-table" size="sm" />
-    </stack>
+  <component-page name="Data Table" description="A virtualized data table driven by a data array: row, column, and cell selection with keyboard navigation, sortable headers with the sort applied to the declared rows, drag-resizable and drag-movable columns, and fixed columns that pin while scrolling.">
+    <component-example label="Columns, sorting, and stripes" id="data_table_ex_basic">
+      <data-table
+        id="data_table_basic"
+        height="300"
+        stripe="true"
+        data='[{"issue":"nemo-120","title":"Bindings fire twice","state":"open","priority":"high"},{"issue":"nemo-121","title":"Scrollbar jitters","state":"open","priority":"mid"},{"issue":"nemo-122","title":"Theme token drift","state":"closed","priority":"low"},{"issue":"nemo-123","title":"Focus ring overlap","state":"open","priority":"mid"},{"issue":"nemo-124","title":"List virtualizer skips rows","state":"closed","priority":"high"},{"issue":"nemo-125","title":"Charts clip axis labels","state":"open","priority":"low"},{"issue":"nemo-126","title":"Dock tab dnd stuck","state":"open","priority":"high"},{"issue":"nemo-127","title":"Settings sync delay","state":"closed","priority":"mid"}]'
+      >
+        <data-table-column id="data_table_b_issue" field="issue" label="Issue" width="120" sortable="true" />
+        <data-table-column id="data_table_b_title" field="title" label="Title" width="280" sortable="true" />
+        <data-table-column id="data_table_b_state" field="state" label="State" width="110" align="center" />
+        <data-table-column id="data_table_b_priority" field="priority" label="Priority" width="120" align="center" sortable="true" />
+      </data-table>
+      <label
+        id="data_table_basic_note"
+        text="Click a sortable header to cycle descending → ascending → unsorted (the rows actually reorder); drag column edges to resize and headers to reorder."
+        size="sm"
+      />
+      <code-editor
+        id="data_table_code_basic"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ basic_code }}"
+      />
+    </component-example>
+
+    <component-example label="Fixed column and cell selection" id="data_table_ex_fixed">
+      <data-table
+        id="data_table_fixed"
+        height="260"
+        size="small"
+        scrollbars="vertical"
+        cell-selectable="true"
+        data='[{"lang":"Rust","stars":"120k","shard":"core"},{"lang":"Go","stars":"98k","shard":"runtime"},{"lang":"Zig","stars":"31k","shard":"toolchain"},{"lang":"Swift","stars":"73k","shard":"app"},{"lang":"TypeScript","stars":"95k","shard":"ui"},{"lang":"Python","stars":"180k","shard":"script"}]'
+      >
+        <data-table-column id="data_table_f_lang" field="lang" label="Language" width="150" sortable="true" fixed="left" />
+        <data-table-column id="data_table_f_stars" field="stars" label="Stars" width="110" align="right" />
+        <data-table-column id="data_table_f_shard" field="shard" label="Shard" width="140" />
+      </data-table>
+      <label
+        id="data_table_fixed_note"
+        text="cell-selectable swaps in a row header and keyboard navigation: arrows move the selected cell, including through language into the next column."
+        size="sm"
+      />
+      <code-editor
+        id="data_table_code_fixed"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ fixed_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" id="data_table_props_table">
+      <table-row is-header="true">
+        <table-cell>Property</table-cell>
+        <table-cell>Type</table-cell>
+        <table-cell>Default</table-cell>
+        <table-cell>Description</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_data" text="data" size="sm" /></table-cell>
+        <table-cell>array</table-cell>
+        <table-cell>[]</table-cell>
+        <table-cell>Rows as objects keyed by column field; usually a JSON literal or a &lt;binding&gt;. A change replaces the rows without disturbing the table otherwise.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_height" text="height" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>340</table-cell>
+        <table-cell>Table height in px; virtual scrolling needs a definite height.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_size" text="size" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>medium</table-cell>
+        <table-cell>Density of rows and headers: xsmall, small, medium, or large.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_stripe" text="stripe" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Alternate row background colors.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_bordered" text="bordered" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Border and rounding around the table.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_scrollbars" text="scrollbars" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>both</table-cell>
+        <table-cell>Shown scrollbars: both, vertical, horizontal, or none.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_header_row" text="header-row-height" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>kit</table-cell>
+        <table-cell>Header row height in px.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_sortable" text="sortable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether headers sort at all; sortable="false" turns every column into a plain label.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_col_movable" text="col-movable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether headers can be dragged to reorder columns.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_col_resizable" text="col-resizable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether column edges can be dragged to resize.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_row_selectable" text="row-selectable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether clicking selects the row.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_cell_selectable" text="cell-selectable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Cell-level selection: a row header appears and arrow keys move the selection.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_fixed_cols" text="fixed-cols-border" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether fixed columns draw their right edge.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_selected_row" text="selected-row" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Read-back: the last selected row index (null after clear).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_selected_cell" text="selected-cell" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Read-back: the last selected cell as row,col.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_c_column" text="data-table-column" size="sm" /></table-cell>
+        <table-cell>child</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>One column definition; without any, columns are auto-detected from the first data row.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_key" text="field" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>The row field this column renders (required; key is reserved by the n:for pass).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_label" text="label" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>field</table-cell>
+        <table-cell>Header text.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_width" text="width" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>auto</table-cell>
+        <table-cell>Column width in px; unset columns split the leftover space.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_align" text="align" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>left</table-cell>
+        <table-cell>Cell and header text alignment: left, center, or right.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_c_sortable" text="sortable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Whether the column header is clickable to sort.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_c_sort" text="sort" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Initial direction: ascending or descending; the rows are pre-sorted to match.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_c_fixed" text="fixed" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>left pins the column while scrolling horizontally.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_c_resizable" text="resizable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether this column's edge can be dragged.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="data_table_p_c_movable" text="movable" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Whether this column's header can be dragged.</table-cell>
+      </table-row>
+    </table>
+
+    <table slot="callbacks" id="data_table_callbacks_table" stripe="true">
+      <table-header>
+        <table-column field="name" width="200">Handler</table-column>
+        <table-column field="arg" width="150">Argument</table-column>
+        <table-column field="description" width="500">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="on-select-row" /></table-cell>
+        <table-cell>row=N (string)</table-cell>
+        <table-cell>A row was selected (also mirrored into the selected-row property).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-double-click-row" /></table-cell>
+        <table-cell>row=N (string)</table-cell>
+        <table-cell>A row was double-clicked.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-select-cell" /></table-cell>
+        <table-cell>row=R,col=C (string)</table-cell>
+        <table-cell>A cell was selected or navigated to (also mirrored into selected-cell).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-double-click-cell" /></table-cell>
+        <table-cell>row=R,col=C (string)</table-cell>
+        <table-cell>A cell was double-clicked, e.g. to open a detail editor.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-move-column" /></table-cell>
+        <table-cell>from=F,to=T (string)</table-cell>
+        <table-cell>A header was dragged to a new position.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label size="sm" text="on-clear-selection" /></table-cell>
+        <table-cell>— (empty)</table-cell>
+        <table-cell>The selection was cleared; the selected-* properties read null.</table-cell>
+      </table-row>
+    </table>
+
+    <component-example label="on-select-row / on-double-click-row" slot="callbacks">
+      <data-table
+        id="data_table_picker"
+        height="220"
+        data='[{"name":"Ada Lovelace","role":"architect"},{"name":"Grace Hopper","role":"rear admiral"},{"name":"Katherine Johnson","role":"mathematician"}]'
+        on-select-row="on_data_table_pick"
+        on-double-click-row="on_data_table_pick"
+      >
+        <data-table-column id="data_table_cb_name" field="name" label="Name" width="180" />
+        <data-table-column id="data_table_cb_role" field="role" label="Role" width="160" />
+      </data-table>
+      <text id="data_table_cb_status" content="Last pick: none" />
+      <code-editor
+        id="data_table_code_callbacks"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ events_code }}"
+      />
+    </component-example>
   </component-page>
 </template>
