@@ -1,10 +1,251 @@
-<!-- diff.nemo — placeholder page for the gpui-kit Diff component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+// Diff page callbacks demo: reports the selected line range.
+fn on_diff_select(component_id, event_data) {
+    set_component_property(
+      "diff_cb_status",
+      "content",
+      "Selected: " + event_data
+    );
+}
+
+// Diff pages keep the patch text in a script variable: a literal XML
+// attribute folds newlines to spaces per XML normalization, and a patch
+// needs one source line per line.
+let review_patch = #"--- a/src/theme.rs
++++ b/src/theme.rs
+@@ -1,7 +1,8 @@
+ use gpui::T;
+ 
+ pub struct Palette {
++    dim: T,
+     fg: T,
+     muted: T,
+     accent: T,
+ }
+
+--- a/examples/notes.md
++++ b/examples/notes.md
+@@ -1,3 +1,4 @@
+ # Notes
+ 
++draft: nemo 0.4
+ tasks are tracked here"#;
+
+let split_patch = #"--- a/src/render.rs
++++ b/src/render.rs
+@@ -1,5 +1,6 @@
+ fn layout(tree: &Tree) -> Layout {
+     let width = tree.width();
++    let margin = width / 8;
+     let height = tree.height();
+     Layout::new(width, height)
+ }
+@@ -24,5 +24,6 @@
+ 
+ fn paint(layer: &Layer, frame: &mut Frame) {
+     let brush = layer.brush();
++    let glow = brush.opacity(0.2);
+     layer.paint(frame, brush);
+ }"#;
+
+let unified_code = #"<diff id="review" height="320" diff="{{ review_patch }}" />"#;
+
+let split_code = #"<diff id="layout_diff" height="300" mode="split"
+  hover-highlight="both" hunk-separator="line-info"
+  diff="{{ split_patch }}" />"#;
+
+let events_code = #"fn on_select(component_id, event_data) {
+  set_component_property("status", "content",
+    "Selected: " + event_data);
+}
+
+<diff id="select_demo" height="240"
+  diff="{{ review_patch }}"
+  on-selection-changed="on_select" />"#;
+</script>
+
 <template name="component-page-diff">
-  <component-page name="Diff" description="Source diff presentation with hunks, line markers, and review affordances.">
-    <stack id="diff_status" direction="vertical" spacing="4" align="start">
-      <label id="diff_not_implemented" text="Not implemented" size="lg" />
-      <label id="diff_source" text="Source: https://gpui-kit.com/component/diff" size="sm" />
-    </stack>
+  <component-page name="Diff" description="A readonly unified-diff viewer: a patch parses into files with hunks, paired lines, and syntax emphasis for the detected language, with file headers carrying change counts and a line-number gutter that drives compare-side selection. Modes: one unified column or split side by side.">
+    <component-example label="Unified diff with syntax emphasis" id="diff_ex_unified">
+      <diff id="diff_review" height="340" diff="{{ review_patch }}" />
+      <label
+        id="diff_review_note"
+        text="Two files in one patch: file headers show the path, status, and change counts; the gutter numbers both sides of each changed line. Drag from a line number to select a compare-side range."
+        size="sm"
+      />
+      <code-editor
+        id="diff_code_unified"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ unified_code }}"
+      />
+    </component-example>
+
+    <component-example label="Split view and hunk separators" id="diff_ex_split">
+      <diff
+        id="diff_split"
+        height="320"
+        mode="split"
+        hover-highlight="both"
+        hunk-separator="line-info"
+        diff="{{ split_patch }}"
+      />
+      <label
+        id="diff_split_note"
+        text="mode=&quot;split&quot; shows the original side by side with the modified side; two hunks with an unsupplied gap between them separate on a line-info divider, and the pointer highlights the hovered line with its number."
+        size="sm"
+      />
+      <code-editor
+        id="diff_code_split"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ split_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" id="diff_props_table">
+      <table-row is-header="true">
+        <table-cell>Property</table-cell>
+        <table-cell>Type</table-cell>
+        <table-cell>Default</table-cell>
+        <table-cell>Description</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_diff" text="diff" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>The unified-diff patch text; usually a &lt;script&gt; variable (a literal attribute folds newlines to spaces). A change reloads the files in place and resets the selection.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_height" text="height" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>480</table-cell>
+        <table-cell>View height in px; the row list is virtualized and needs a definite height.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_mode" text="mode" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>unified</table-cell>
+        <table-cell>How the two sides present: unified (one column, deletions before additions) or split (side by side). Configuration — a change rebuilds the state.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_context" text="context-lines" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>3</table-cell>
+        <table-cell>Unchanged context lines around each change; a negative value shows every line the patch supplies. Configuration.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_expansion" text="expansion-lines" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>20</table-cell>
+        <table-cell>Lines added per expand click in collapsed context. Configuration.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_min_collapsed" text="min-collapsed-lines" size="sm" /></table-cell>
+        <table-cell>integer</table-cell>
+        <table-cell>2</table-cell>
+        <table-cell>Hunk gaps collapse only when they exceed this many unsupplied lines. Configuration.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_inline" text="inline-emphasis" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>word</table-cell>
+        <table-cell>Emphasis unit for changed text within paired lines: word (words and punctuation), character (graphemes), or none (whole lines). Configuration.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_line_number" text="line-number" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Shows the original and modified line-number lanes.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_syntax" text="syntax-highlight" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Syntax emphasis; the language is detected from the file path.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_header" text="header-visible" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Header above each file: path, change status, and change counts.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_hover" text="hover-highlight" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>none</table-cell>
+        <table-cell>What the pointer emphasizes: none, line, line-number, or both.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_hunk_sep" text="hunk-separator" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>metadata</table-cell>
+        <table-cell>How a hunk starts: metadata (the @@ header with scope), line-info (count of unsupplied lines), or simple (a thin divider).</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_indicator" text="change-indicator" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>signs</table-cell>
+        <table-cell>Marker beside changed lines: signs, bars, or none.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_change_bg" text="change-background" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>true</table-cell>
+        <table-cell>Tints changed lines with their side color; inline changes stay emphasized either way.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_soft_wrap" text="soft-wrap" size="sm" /></table-cell>
+        <table-cell>boolean</table-cell>
+        <table-cell>false</table-cell>
+        <table-cell>Wraps long lines at the view edge instead of horizontal scrolling.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="diff_p_selected" text="selected-lines" size="sm" /></table-cell>
+        <table-cell>string</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>Read-back: the selected compare-side range as path:start-end (null after clear).</table-cell>
+      </table-row>
+    </table>
+
+    <table slot="callbacks" id="diff_callbacks_table" stripe="true">
+      <table-header>
+        <table-column field="name" width="220">Handler</table-column>
+        <table-column field="arg" width="190">Argument</table-column>
+        <table-column field="description" width="460">Description</table-column>
+      </table-header>
+      <table-row>
+        <table-cell><label size="sm" text="on-selection-changed" /></table-cell>
+        <table-cell>path:start-end (string)</table-cell>
+        <table-cell>The gutter selection moved or ended (also mirrored into selected-lines; an empty string after a clear).</table-cell>
+      </table-row>
+    </table>
+
+    <component-example label="on-selection-changed" slot="callbacks">
+      <diff
+        id="diff_select_demo"
+        height="260"
+        diff="{{ review_patch }}"
+        on-selection-changed="on_diff_select"
+      />
+      <label
+        id="diff_select_note"
+        text="Drag in the line-number gutter (or Shift-click an end line) to select a range on the compare side; the selection clears with Escape."
+        size="sm"
+      />
+      <text id="diff_cb_status" content="Selected: none" />
+      <code-editor
+        id="diff_code_callbacks"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ events_code }}"
+      />
+    </component-example>
   </component-page>
 </template>

@@ -2,6 +2,7 @@ use gpui::Entity;
 use gpui_kit::component::calendar::CalendarState;
 use gpui_kit::component::carousel::CarouselState;
 use gpui_kit::component::command::CommandState;
+use gpui_kit::component::diff::DiffState;
 use gpui_kit::component::dock::DockArea as KitDockArea;
 use gpui_kit::component::input::{EditorState, InputState, TextareaState};
 use gpui_kit::component::message_scroller::MessageScrollerState;
@@ -100,6 +101,16 @@ pub enum ComponentState {
     DataTable {
         state: Entity<TableState<crate::components::data_table::DataTableDelegate>>,
         last_data: Vec<Value>,
+        last_schema: String,
+    },
+    /// A diff viewer's readonly comparison state: the kit entity (files,
+    /// hunks, and the presentation model baked at construction), the last
+    /// `diff` patch text installed (updates replace the files in place), and
+    /// the last configuration schema (mode/context/expansion/inline — a
+    /// change rebuilds the state).
+    Diff {
+        state: Entity<DiffState>,
+        last_data: Option<String>,
         last_schema: String,
     },
     Tree {

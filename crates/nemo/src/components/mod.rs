@@ -20,6 +20,7 @@ mod collapsible;
 mod column_chart;
 mod command;
 mod data_table;
+mod diff;
 mod dock;
 mod dropdown_button;
 mod funnel_chart;
@@ -230,6 +231,10 @@ pub use command::{Command, CommandEntryData};
 pub use data_table::{
     data_table_autodetect_columns, data_table_schema_signature, DataTable, DataTableColumnData,
     DataTableDelegate,
+};
+pub use diff::{
+    diff_context_lines_of, diff_inline_unit_of, diff_mode_of, diff_schema_signature,
+    diff_selection_display, Diff,
 };
 pub(crate) use dock::apply_dock_layout;
 pub use dock::{

@@ -1428,6 +1428,36 @@ fn register_data_components(registry: &ComponentRegistry) {
 
     reg(
         registry,
+        "diff",
+        ComponentCategory::Data,
+        "Diff",
+        "A readonly unified-diff viewer: files with hunks and paired lines, syntax emphasis, file headers with change counts, and gutter line selection",
+        ConfigSchema::new("diff")
+            .property("diff", PropertySchema::string())
+            .property("height", PropertySchema::integer().with_default(480i64))
+            .property("mode", PropertySchema::string().with_default("unified"))
+            .property("context_lines", PropertySchema::integer().with_default(3i64))
+            .property("expansion_lines", PropertySchema::integer().with_default(20i64))
+            .property(
+                "min_collapsed_lines",
+                PropertySchema::integer().with_default(2i64),
+            )
+            .property("inline_emphasis", PropertySchema::string().with_default("word"))
+            .property("line_number", PropertySchema::boolean().with_default(true))
+            .property("syntax_highlight", PropertySchema::boolean().with_default(true))
+            .property("header_visible", PropertySchema::boolean().with_default(true))
+            .property("hover_highlight", PropertySchema::string().with_default("none"))
+            .property(
+                "hunk_separator",
+                PropertySchema::string().with_default("metadata"),
+            )
+            .property("change_indicator", PropertySchema::string().with_default("signs"))
+            .property("change_background", PropertySchema::boolean().with_default(true))
+            .property("soft_wrap", PropertySchema::boolean().with_default(false)),
+    );
+
+    reg(
+        registry,
         "list",
         ComponentCategory::Data,
         "List",

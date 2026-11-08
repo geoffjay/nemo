@@ -28,20 +28,22 @@ use crate::components::table::{
 };
 use crate::components::tree::{declared_to_tree_items, values_to_tree_items, DeclaredTreeNode};
 use crate::components::{parse_date, selected_date_string, CommandEntryData};
+use gpui_kit::component::diff::{DiffEvent, DiffFile, DiffState};
 use gpui_kit::component::group_box::GroupBoxVariant;
 use gpui_kit::component::input::TabSize;
 use gpui_kit::component::table::{Column, TableEvent};
 
 use crate::components::{
     apply_dock_layout, apply_rounded, apply_shadow, data_table_autodetect_columns,
-    data_table_schema_signature, dock_layout_signature, dock_placement_value,
+    data_table_schema_signature, diff_context_lines_of, diff_inline_unit_of, diff_mode_of,
+    diff_schema_signature, diff_selection_display, dock_layout_signature, dock_placement_value,
     questionnaire_schema_signature, serialize_questionnaire_answers, setting_flag_value,
     setting_number_value, setting_text_value, settings_schema_signature,
     validate_questionnaire_schema, Accordion, AccordionItemData, Alert, AreaChart, Attachment,
     AttachmentContentData, AttachmentMediaData, Avatar, Badge, BarChart, Bubble, BubbleChart,
     BubbleGroup, BubbleReactionsData, Button, Calendar, CandlestickChart, Carousel, Checkbox,
     ClusteredBarChart, ClusteredColumnChart, CodeEditor, Collapsible, ColumnChart, Command,
-    DataTable, DataTableColumnData, DataTableDelegate, DeclarativePanel, Dock, DockPanelSpec,
+    DataTable, DataTableColumnData, DataTableDelegate, DeclarativePanel, Diff, Dock, DockPanelSpec,
     DropdownButton, FunnelChart, HeatmapChart, Icon, Image, Kbd, Label, LineChart, List, Marker,
     Menu, MenuEntryData, MenuItem, Message, MessageScroller, Modal, Notification, OptionData,
     Pagination, Panel, PieChart, Progress, PyramidChart, Questionnaire, QuestionnaireChoiceData,
@@ -69,6 +71,10 @@ pub struct App {
     /// `value` property differs from this cached copy do we push it back into
     /// the `InputState`, so we never fight the cursor while the user types.
     input_values: HashMap<String, String>,
+    /// Last parse error for each `<diff>`, keyed by id. An empty entry means
+    /// the current patch parsed clean; the value is shown in place of the
+    /// view when the patch could not be parsed.
+    diff_errors: HashMap<String, String>,
 }
 
 impl App {
@@ -117,6 +123,7 @@ impl App {
             component_states: ComponentStates::new(),
             _subscriptions,
             input_values: HashMap::new(),
+            diff_errors: HashMap::new(),
         }
     }
 
@@ -445,6 +452,160 @@ impl App {
             ComponentState::DataTable {
                 state: state.clone(),
                 last_data: current_data,
+                last_schema: schema,
+            },
+        );
+        state
+    }
+
+    /// Gets or creates a `DiffState` entity for a `<diff>` component.
+    ///
+    /// Mode/context/expansion/inline-emphasis changes rebuild the state (the
+    /// kit bakes them into its row model at creation). A `diff` patch change
+    /// never rebuilds — the parsed files replace the state's rows via
+    /// [`DiffState::set_files`], which resets selection. Parse failures set
+    /// the entry in [`App::diff_errors`] (cleared when a later patch parses)
+    /// and swap in an empty-files state so the render shows the message.
+    ///
+    /// On creation this also subscribes to `DiffEvent`: the gutter/gesture
+    /// selection mirrors into the component's `selected-lines` property (`path:start-end`,
+    /// null on clear) and `on-selection-changed` fires as the selection moves
+    /// and when the gesture ends.
+    fn get_or_create_diff_state(
+        &mut self,
+        component: &BuiltComponent,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) -> Entity<DiffState> {
+        let id = component.id.clone();
+        let current_data = component
+            .properties
+            .get("diff")
+            .and_then(|v| v.as_str())
+            .map(str::to_string);
+
+        // Parse the patch first: a malformed patch never reaches a live
+        // state, and its located error is what the render shows.
+        let parsed = current_data.as_ref().map(|patch| DiffFile::parse(patch));
+
+        let error = match &parsed {
+            Some(Ok(_)) => String::new(),
+            Some(Err(error)) => error.to_string(),
+            None => String::new(),
+        };
+
+        let schema = diff_schema_signature(&component.properties);
+        if error.is_empty() {
+            self.diff_errors.remove(&id);
+        } else {
+            self.diff_errors.insert(id.clone(), error);
+        }
+
+        if let Some(ComponentState::Diff {
+            state,
+            last_data,
+            last_schema,
+        }) = self.component_states.get_mut(&id)
+        {
+            if *last_schema == schema {
+                if *last_data != current_data {
+                    if let Some(Ok(files)) = parsed.as_ref() {
+                        let files = files.clone();
+                        state.update(cx, |s, cx| {
+                            s.set_files(files, cx);
+                        });
+                    }
+                    *last_data = current_data.clone();
+                }
+                return state.clone();
+            }
+        }
+
+        // (Re)build the state from the parsed files (empty on parse failure —
+        // the render shows the located message instead).
+        let files: Vec<DiffFile> = match &parsed {
+            Some(Ok(files)) => files.clone(),
+            _ => Vec::new(),
+        };
+
+        // Per-creation configuration lives in the state (rebuilt on change).
+        let props = &component.properties;
+        let state = cx.new(|cx| {
+            let config = DiffState::new(files, cx)
+                .with_mode(diff_mode_of(props.get("mode").and_then(|v| v.as_str())))
+                .with_context_lines(diff_context_lines_of(props))
+                .with_expansion_lines(
+                    props
+                        .get("expansion_lines")
+                        .and_then(|v| v.as_i64())
+                        .map(|n| n.max(0) as usize)
+                        .unwrap_or(20),
+                )
+                .with_min_collapsed_lines(
+                    props
+                        .get("min_collapsed_lines")
+                        .and_then(|v| v.as_i64())
+                        .map(|n| n.max(0) as usize)
+                        .unwrap_or(2),
+                );
+            match diff_inline_unit_of(props.get("inline_emphasis").and_then(|v| v.as_str())) {
+                Some(unit) => config.with_inline_unit(Some(unit)),
+                None => config.with_inline_unit(None),
+            }
+        });
+
+        // Bridge the kit's event stream: selection state mirrors into the
+        // `selected-lines` property, and the declarative handler fires with
+        // the range (or an empty string when the selection clears).
+        if let Some(handler) = component.handlers.get("selection_changed").cloned() {
+            let runtime = Arc::clone(&self.runtime);
+            let sub_id = id.clone();
+            let subscription = cx.subscribe_in(
+                &state,
+                window,
+                move |_this: &mut App, _state, event: &DiffEvent, _window, cx| {
+                    let record = |value: Option<String>| {
+                        if let Ok(mut lm) = runtime.layout_manager.try_write() {
+                            let value = value.map(Value::String).unwrap_or(Value::Null);
+                            let _ = lm.set_property(&sub_id, "selected_lines", value);
+                        }
+                    };
+                    match event {
+                        DiffEvent::SelectionChanged(range) => {
+                            let message = range
+                                .as_ref()
+                                .map(|r| diff_selection_display(Some(r)))
+                                .unwrap_or_default();
+                            record(range.as_ref().map(|r| diff_selection_display(Some(r))));
+                            runtime.call_handler(handler.as_str(), &sub_id, message.as_str());
+                            cx.notify();
+                        }
+                        DiffEvent::SelectionEnded(range) => {
+                            let message = diff_selection_display(Some(range));
+                            record(Some(message.clone()));
+                            runtime.call_handler(handler.as_str(), &sub_id, message.as_str());
+                            cx.notify();
+                        }
+                        DiffEvent::SelectionStarted(_) => {}
+                        // Expansion and conflict resolution are kit-side view
+                        // state; conflict output has no declarative seam. The
+                        // event set is `#[non_exhaustive]`, so stay forward-
+                        // compatible with unknown variants.
+                        DiffEvent::FileExpanded(_)
+                        | DiffEvent::FileCollapsed(_)
+                        | DiffEvent::ConflictResolved(..)
+                        | _ => {}
+                    }
+                },
+            );
+            self._subscriptions.push(subscription);
+        }
+
+        self.component_states.insert(
+            id.clone(),
+            ComponentState::Diff {
+                state: state.clone(),
+                last_data: current_data.clone(),
                 last_schema: schema,
             },
         );
@@ -2834,6 +2995,19 @@ impl App {
                     self.get_or_create_data_table_state(component, &columns, window, cx);
                 DataTable::new(component.clone())
                     .table_state(data_table_state)
+                    .into_any_element()
+            }
+            "diff" => {
+                // The patch text in `diff` is parsed into files/hunks/paired
+                // lines once per change; mode/context/expansion/inline-
+                // emphasis configuration rebuilds the state. A malformed
+                // patch renders its located parse message instead of the
+                // view.
+                let parse_error = self.diff_errors.get(&component.id).cloned();
+                let diff_state = self.get_or_create_diff_state(component, window, cx);
+                Diff::new(component.clone())
+                    .diff_state(diff_state)
+                    .parse_error(parse_error)
                     .into_any_element()
             }
             "list" => {
