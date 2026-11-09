@@ -1360,6 +1360,7 @@ fn register_data_components(registry: &ComponentRegistry) {
         // table; `key` is reserved by the n:for directive pass.
         ConfigSchema::new("table_column")
             .property("field", PropertySchema::string())
+            .property("content", PropertySchema::string())
             .property("width", PropertySchema::integer())
             .property("align", PropertySchema::string().with_default("left")),
     );
@@ -1381,6 +1382,7 @@ fn register_data_components(registry: &ComponentRegistry) {
         "Table Cell",
         "A cell inside a table-row; children are the cell content; cells are positional",
         ConfigSchema::new("table_cell")
+            .property("content", PropertySchema::string())
             .property("col_span", PropertySchema::integer().with_default(1i64))
             .property("row_span", PropertySchema::integer().with_default(1i64))
             .property("align", PropertySchema::string().with_default("left")),

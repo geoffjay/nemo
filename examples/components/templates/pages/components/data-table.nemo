@@ -102,13 +102,13 @@ fn on_pick_row(component_id, event_data) {
       />
     </component-example>
 
-    <table slot="properties" id="data_table_props_table">
-      <table-row is-header="true">
-        <table-cell>Property</table-cell>
-        <table-cell>Type</table-cell>
-        <table-cell>Default</table-cell>
-        <table-cell>Description</table-cell>
-      </table-row>
+    <table slot="properties" stripe="true" id="data_table_props_table">
+      <table-header>
+        <table-column field="property" width="150">Property</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
       <table-row>
         <table-cell><label id="data_table_p_data" text="data" size="sm" /></table-cell>
         <table-cell>array</table-cell>
@@ -268,32 +268,32 @@ fn on_pick_row(component_id, event_data) {
         <table-column field="description" width="500">Description</table-column>
       </table-header>
       <table-row>
-        <table-cell><label size="sm" text="on-select-row" /></table-cell>
+        <table-cell><label id="data_table_c_on_select_row" text="on-select-row" size="sm" /></table-cell>
         <table-cell>row=N (string)</table-cell>
         <table-cell>A row was selected (also mirrored into the selected-row property).</table-cell>
       </table-row>
       <table-row>
-        <table-cell><label size="sm" text="on-double-click-row" /></table-cell>
+        <table-cell><label id="data_table_c_on_double_click_row" text="on-double-click-row" size="sm" /></table-cell>
         <table-cell>row=N (string)</table-cell>
         <table-cell>A row was double-clicked.</table-cell>
       </table-row>
       <table-row>
-        <table-cell><label size="sm" text="on-select-cell" /></table-cell>
+        <table-cell><label id="data_table_c_on_select_cell" text="on-select-cell" size="sm" /></table-cell>
         <table-cell>row=R,col=C (string)</table-cell>
         <table-cell>A cell was selected or navigated to (also mirrored into selected-cell).</table-cell>
       </table-row>
       <table-row>
-        <table-cell><label size="sm" text="on-double-click-cell" /></table-cell>
+        <table-cell><label id="data_table_c_on_double_click_cell" text="on-double-click-cell" size="sm" /></table-cell>
         <table-cell>row=R,col=C (string)</table-cell>
         <table-cell>A cell was double-clicked, e.g. to open a detail editor.</table-cell>
       </table-row>
       <table-row>
-        <table-cell><label size="sm" text="on-move-column" /></table-cell>
+        <table-cell><label id="data_table_c_on_move_column" text="on-move-column" size="sm" /></table-cell>
         <table-cell>from=F,to=T (string)</table-cell>
         <table-cell>A header was dragged to a new position.</table-cell>
       </table-row>
       <table-row>
-        <table-cell><label size="sm" text="on-clear-selection" /></table-cell>
+        <table-cell><label id="data_table_c_on_clear_selection" text="on-clear-selection" size="sm" /></table-cell>
         <table-cell>— (empty)</table-cell>
         <table-cell>The selection was cleared; the selected-* properties read null.</table-cell>
       </table-row>

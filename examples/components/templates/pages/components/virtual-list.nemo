@@ -70,13 +70,13 @@ let dock_code = #"<dock id="workbench" height="420">
       />
     </component-example>
 
-    <table slot="properties" id="vl_props_table">
-      <table-row is-header="true">
-        <table-cell>Surface</table-cell>
-        <table-cell>Type</table-cell>
-        <table-cell>Tag</table-cell>
-        <table-cell>Description</table-cell>
-      </table-row>
+    <table slot="properties" stripe="true" id="vl_props_table">
+      <table-header>
+        <table-column field="surface" width="150">Surface</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="tag" width="110">Tag</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
       <table-row>
         <table-cell><label id="vl_p_datatable" text="data-table" size="sm" /></table-cell>
         <table-cell>component</table-cell>

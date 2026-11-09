@@ -107,13 +107,13 @@ let events_code = #"fn on_select(component_id, event_data) {
       />
     </component-example>
 
-    <table slot="properties" id="diff_props_table">
-      <table-row is-header="true">
-        <table-cell>Property</table-cell>
-        <table-cell>Type</table-cell>
-        <table-cell>Default</table-cell>
-        <table-cell>Description</table-cell>
-      </table-row>
+    <table slot="properties" stripe="true" id="diff_props_table">
+      <table-header>
+        <table-column field="property" width="150">Property</table-column>
+        <table-column field="type" width="90">Type</table-column>
+        <table-column field="default" width="110">Default</table-column>
+        <table-column field="description" width="520">Description</table-column>
+      </table-header>
       <table-row>
         <table-cell><label id="diff_p_diff" text="diff" size="sm" /></table-cell>
         <table-cell>string</table-cell>
@@ -219,7 +219,7 @@ let events_code = #"fn on_select(component_id, event_data) {
         <table-column field="description" width="460">Description</table-column>
       </table-header>
       <table-row>
-        <table-cell><label size="sm" text="on-selection-changed" /></table-cell>
+        <table-cell><label id="diff_c_on_selection_changed" text="on-selection-changed" size="sm" /></table-cell>
         <table-cell>path:start-end (string)</table-cell>
         <table-cell>The gutter selection moved or ended (also mirrored into selected-lines; an empty string after a clear).</table-cell>
       </table-row>
