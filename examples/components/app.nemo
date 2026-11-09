@@ -88,7 +88,7 @@
 
 <template name="app">
   <!-- App shell: a sidenav of section menu items plus the gallery below. -->
-  <app-shell id="app_shell" sidenav-width="220" default-page="overview">
+  <app-shell id="app_shell" sidenav-width="220" default-page="overview" collapsed="true">
     <app-sidenav>
       <sidenav-item id="nav_overview" icon="layout-dashboard" label="Overview" target="overview" />
       <sidenav-item id="nav_styling" icon="palette" label="Styling" target="styling" />
