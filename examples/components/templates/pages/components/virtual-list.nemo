@@ -1,10 +1,106 @@
-<!-- virtual-list.nemo — placeholder page for the gpui-kit Virtual List component. Not yet
-     wrapped by nemo; the status block below goes away once examples are added. -->
+<script>
+let table_code = #"<data-table id="events" height="340"
+  data='[{"event":"paint","detail":"row 1 of 50,000"},
+         {"event":"layout","detail":"only the visible window renders"},
+         {"event":"composite","detail":"scrolling stays smooth"}]'>
+  <data-table-column field="event" label="Event" width="160" />
+  <data-table-column field="detail" label="Detail" />
+</data-table>"#;
+
+let dock_code = #"<dock id="workbench" height="420">
+  <dock-panel id="workbench_files" title="Files" placement="left" size="200" />
+  <dock-panel id="workbench_main" title="Editor" active="true" />
+  <dock-panel id="workbench_output" title="Output" placement="bottom" size="140" />
+</dock>"#;
+</script>
+
+<!-- virtual-list.nemo — reference note for gpui-kit's VirtualList element.
+     VirtualList is a gpui-base layout primitive (not a gpui-component widget):
+     it takes a view entity and a Rust render closure plus upfront item
+     sizes, so there is no <virtual-list> tag in the config system. The
+     declarative components that need windowed rendering (data-table rows,
+     the dock area) already render through it. -->
 <template name="component-page-virtual-list">
-  <component-page name="Virtual List" description="A list that renders a windowed subset of a large collection.">
-    <stack id="virtual_list_status" direction="vertical" spacing="4" align="start">
-      <label id="virtual_list_not_implemented" text="Not implemented" size="lg" />
-      <label id="virtual_list_source" text="Source: https://gpui-kit.com/component/virtual-list" size="sm" />
+  <component-page name="Virtual List" description="A windowed list element that renders only the visible range of a large collection with per-item sizes. It is a gpui-base layout primitive, not a declarative component: the config system has no <virtual-list> tag — the data-table and dock render through it internally.">
+    <stack id="vl_intro" direction="vertical" spacing="8" align="start">
+      <text id="vl_about" content="Upstream, VirtualList lives in gpui-base and is re-exported by gpui-component purely for its own internals (the data table's rows and the dock area scroll through it). Unlike the other components on these pages it is an element rather than a widget: constructing one requires a view entity, a Rust render closure invoked with the visible line range, and an upfront Rc of per-item pixel sizes." />
+      <text id="vl_no_tag" content="That shape cannot be authored from configuration: nemo renders declarative children eagerly, so handing static children to a windowed element would undo the virtualization it exists to provide. There is therefore no &lt;virtual-list&gt; tag — this page documents where you get it instead." />
     </stack>
+
+    <component-example label="Virtualized rows: data-table" id="vl_ex_table">
+      <data-table id="vl_demo_table" height="300"
+        data='[{"event":"paint","detail":"row 1 of 50,000"},{"event":"layout","detail":"only the visible window renders"},{"event":"composite","detail":"scrolling stays smooth"},{"event":"hit-test","detail":"clipped to the visible range"},{"event":"focus","detail":"keyboard nav follows the window"},{"event":"resize","detail":"re-measures the visible items"},{"event":"sort","detail":"rows reorder inside the window"}]'
+      >
+        <data-table-column id="vl_demo_event" field="event" label="Event" width="160" />
+        <data-table-column id="vl_demo_detail" field="detail" label="Detail" width="940" />
+      </data-table>
+      <label
+        id="vl_demo_note"
+        text="Every &lt;data-table&gt; row list renders through VirtualList: declare the data property and the table windows the rows for you, regardless of size."
+        size="sm"
+      />
+      <code-editor
+        id="vl_code_table"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ table_code }}"
+      />
+    </component-example>
+
+    <component-example label="Virtualized panel content: dock" id="vl_ex_dock">
+      <dock id="vl_demo_dock" height="240">
+        <dock-panel id="vl_dock_files" title="Files" placement="left" size="160" />
+        <dock-panel id="vl_dock_main" title="Editor" active="true" />
+        <dock-panel id="vl_dock_output" title="Output" placement="bottom" size="80" />
+      </dock>
+      <label
+        id="vl_demo_dock_note"
+        text="The dock area's scrolling content uses the same primitive, so panel bodies and tab strips stay windowed while you drag, resize, and scroll."
+        size="sm"
+      />
+      <code-editor
+        id="vl_code_dock"
+        slot="code"
+        language="html"
+        line-number="true"
+        searchable="false"
+        default-value="{{ dock_code }}"
+      />
+    </component-example>
+
+    <table slot="properties" id="vl_props_table">
+      <table-row is-header="true">
+        <table-cell>Surface</table-cell>
+        <table-cell>Type</table-cell>
+        <table-cell>Tag</table-cell>
+        <table-cell>Description</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="vl_p_datatable" text="data-table" size="sm" /></table-cell>
+        <table-cell>component</table-cell>
+        <table-cell>&lt;data-table&gt;</table-cell>
+        <table-cell>Row windowing over a data array — the recommended declarative path for large collections.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="vl_p_dock" text="dock" size="sm" /></table-cell>
+        <table-cell>component</table-cell>
+        <table-cell>&lt;dock&gt;</table-cell>
+        <table-cell>Panel content and tab strips render through the same primitive.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="vl_p_element" text="VirtualList" size="sm" /></table-cell>
+        <table-cell>element</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>gpui-base primitive for custom nemo plugins written in Rust: a view entity, a render closure over the visible range, and upfront per-item sizes.</table-cell>
+      </table-row>
+      <table-row>
+        <table-cell><label id="vl_p_uniform" text="uniform_list" size="sm" /></table-cell>
+        <table-cell>element</table-cell>
+        <table-cell>—</table-cell>
+        <table-cell>gpui's fixed-height variant; kit list widgets with equal row heights use it (table headers, tree sections).</table-cell>
+      </table-row>
+    </table>
   </component-page>
 </template>

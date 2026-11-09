@@ -17,7 +17,8 @@ use nemo_layout::BuiltComponent;
 pub struct DataTableColumnData {
     pub key: String,
     pub label: String,
-    /// Pixel width; columns without one split the leftover space.
+    /// Pixel width; columns without one fall back to the kit's 100px
+    /// track (no auto-fill of the leftover row width).
     pub width: Option<i64>,
     /// `left` (default), `center`, or `right`.
     pub align: String,

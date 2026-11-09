@@ -221,7 +221,7 @@ fn on_pick_row(component_id, event_data) {
         <table-cell><label id="data_table_p_width" text="width" size="sm" /></table-cell>
         <table-cell>integer</table-cell>
         <table-cell>auto</table-cell>
-        <table-cell>Column width in px; unset columns split the leftover space.</table-cell>
+        <table-cell>Column width in px; unset columns use the kit default (a 100px track) and the row area beyond the last column stays blank.</table-cell>
       </table-row>
       <table-row>
         <table-cell><label id="data_table_p_align" text="align" size="sm" /></table-cell>
