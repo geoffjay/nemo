@@ -80,6 +80,7 @@ Application metadata, window settings, and theme configuration.
 | `height` | int | (maximized) | Window height in pixels. Omit for maximized. |
 | `min_width` | int | | Minimum window width |
 | `min_height` | int | | Minimum window height |
+| `mode` | string | `"normal"` | `"kiosk"` opens fullscreen with no resizing and suppresses the header/footer bars. |
 
 ### `app.window.header_bar`
 
@@ -87,6 +88,27 @@ Application metadata, window settings, and theme configuration.
 |-----------|------|---------|-------------|
 | `github_url` | string | | URL for the GitHub link in the header |
 | `theme_toggle` | bool | `false` | Show light/dark mode toggle button |
+
+#### Kiosk mode
+
+Setting `mode="kiosk"` on `<window>` launches the app fullscreen with no window
+resizing and both the header bar and footer bar suppressed — suitable for
+dedicated displays. The `<header-bar>` element is ignored (not an error) while
+kiosk is active, so the same config can run windowed or as a kiosk by changing
+one attribute:
+
+```xml
+<window title="Kiosk" mode="kiosk">
+  <header-bar theme-toggle="true" />  <!-- suppressed in kiosk mode -->
+</window>
+```
+
+Kiosk is a launch-time setting; the mode is read when the window opens and is
+not toggled from scripts or settings. Width/height, when present, become the
+window's restore size.
+
+See [examples/kiosk](https://github.com/geoffjay/nemo/tree/main/examples/kiosk)
+for a complete example.
 
 ### `app.theme`
 

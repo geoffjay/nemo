@@ -39,7 +39,7 @@ mod workspace;
 use args::{Args, Command};
 use config::NemoConfig;
 use project::ActiveProject;
-use window::get_window_options;
+use window::{get_window_options, WindowMode};
 use workspace::actions::{
     CloseProject, CloseSettings, OpenProject, OpenSettings, QuitApp, ReloadConfig,
     ShowKeyboardShortcuts, ToggleDevPanel, ToggleTheme,
@@ -379,7 +379,14 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         }
     });
 
-    // Read window dimensions from runtime config (if available)
+    // Window mode (`app.window.mode`): kiosk opens fullscreen and suppresses
+    // the header/footer chrome. Unrecognized values fall back to Normal.
+    let window_mode = early_runtime
+        .as_ref()
+        .map(|rt| WindowMode::from_config(rt.get_config("app.window.mode")))
+        .unwrap_or_default();
+
+    // Read window dimensions from runtime config (if available).
     let (win_w, win_h, win_min_w, win_min_h) = if let Some(ref rt) = early_runtime {
         let w = rt
             .get_config("app.window.width")
@@ -405,6 +412,16 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         None => (win_w, win_h),
     };
 
+    // Screenshots need deterministic windowed dimensions, so the *bounds* half
+    // of kiosk is downgraded to Normal — but the chrome suppression (header/
+    // footer) must survive so captures reflect kiosk rendering. Keep a copy of
+    // the configured mode for construction below.
+    let kiosk_chrome = window_mode == WindowMode::Kiosk;
+    let bounds_mode = match (window_mode, size_override) {
+        (WindowMode::Kiosk, Some(_)) => WindowMode::Normal,
+        (mode, _) => mode,
+    };
+
     // Bring the app to the foreground and install the native menu bar before the
     // window opens. Without `activate` the process never takes focus (esp. when
     // launched from a terminal); without `set_menus` macOS shows no app menu.
@@ -419,7 +436,7 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
     cx.activate(true);
     cx.set_menus(workspace::menu::app_menus(app_title, dev_mode));
 
-    let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h);
+    let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h, bounds_mode);
 
     let main_window_handle = cx
         .open_window(window_options, |window, cx| {
@@ -460,21 +477,27 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
                             .unwrap_or(false);
                         let menu_items = workspace::menu_items_from_config(&rt);
                         let actions = workspace::header_actions_from_config(&rt);
-                        let header_bar = cx.new(|_cx| {
-                            HeaderBar::new(
-                                title,
-                                github_url,
-                                theme_toggle,
-                                menu_items,
-                                actions,
-                                Arc::clone(&rt),
-                                dev_mode,
-                            )
-                        });
-                        let footer_bar_enabled = rt
-                            .get_config("app.window.footer_bar.enabled")
-                            .and_then(|v| v.as_bool())
-                            .unwrap_or(false);
+                        // Kiosk mode suppresses the header/footer chrome.
+                        let header_bar = if kiosk_chrome {
+                            None
+                        } else {
+                            Some(cx.new(|_cx| {
+                                HeaderBar::new(
+                                    title,
+                                    github_url,
+                                    theme_toggle,
+                                    menu_items,
+                                    actions,
+                                    Arc::clone(&rt),
+                                    dev_mode,
+                                )
+                            }))
+                        };
+                        let footer_bar_enabled = !kiosk_chrome
+                            && rt
+                                .get_config("app.window.footer_bar.enabled")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false);
                         let footer_bar = if footer_bar_enabled {
                             Some(cx.new(|cx| FooterBar::new(window, cx)))
                         } else {

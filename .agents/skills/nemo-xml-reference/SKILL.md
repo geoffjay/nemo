@@ -22,7 +22,9 @@ in a `<template name="app">` body and app-level blocks (`<app>`, `<data>`,
 
   <app title="App Title">
     <window title="Window Title" width="1200" height="800"
-            min-width="400" min-height="300">
+            min-width="400" min-height="300" mode="normal">
+      <!-- mode="kiosk": fullscreen, no resizing, header/footer suppressed.
+           A declared <header-bar> is silently skipped while kiosk is active. -->
       <header-bar github-url="https://..." theme-toggle="true" />
     </window>
     <theme name="kanagawa" mode="dark" />

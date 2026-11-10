@@ -127,7 +127,13 @@ impl Workspace {
         runtime: &Arc<runtime::NemoRuntime>,
         _window: &mut Window,
         cx: &mut Context<Self>,
-    ) -> Entity<HeaderBar> {
+    ) -> Option<Entity<HeaderBar>> {
+        // Kiosk mode (`app.window.mode == "kiosk"`) suppresses the header bar.
+        if crate::window::WindowMode::from_config(runtime.get_config("app.window.mode"))
+            == crate::window::WindowMode::Kiosk
+        {
+            return None;
+        }
         let title = runtime
             .get_config("app.window.title")
             .and_then(|v| v.as_str().map(|s| s.to_string()))
@@ -142,7 +148,7 @@ impl Workspace {
         let menu_items = menu_items_from_config(runtime);
         let actions = header_actions_from_config(runtime);
         let runtime = Arc::clone(runtime);
-        cx.new(|_cx| {
+        Some(cx.new(|_cx| {
             HeaderBar::new(
                 title,
                 github_url,
@@ -152,7 +158,7 @@ impl Workspace {
                 runtime,
                 self.dev_mode,
             )
-        })
+        }))
     }
 
     fn create_footer_bar(
@@ -161,10 +167,12 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Entity<FooterBar>> {
-        let enabled = runtime
-            .get_config("app.window.footer_bar.enabled")
-            .and_then(|v| v.as_bool())
-            .unwrap_or(false);
+        let enabled = crate::window::WindowMode::from_config(runtime.get_config("app.window.mode"))
+            != crate::window::WindowMode::Kiosk
+            && runtime
+                .get_config("app.window.footer_bar.enabled")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
         if enabled {
             Some(cx.new(|cx| FooterBar::new(window, cx)))
         } else {

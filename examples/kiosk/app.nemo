@@ -1,0 +1,15 @@
+<!-- examples/kiosk/app.nemo — kiosk-mode entry: fullscreen, no window chrome. -->
+<app title="Kiosk Example">
+  <window title="Kiosk Example" mode="kiosk">
+    <!-- In kiosk mode the header bar is suppressed even when declared. -->
+    <header-bar theme-toggle="true" />
+  </window>
+  <theme name="kanagawa" mode="dark" />
+</app>
+
+<template name="app">
+  <stack id="root" direction="vertical" spacing="24" padding="48" justify="center" align="center">
+    <label id="status" text="All chrome suppressed — content fills the screen." />
+    <text id="subtitle" content="This window runs fullscreen with no header or footer." />
+  </stack>
+</template>
