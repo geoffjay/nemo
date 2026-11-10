@@ -20,7 +20,7 @@ use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tracing::info;
 use tracing_subscriber::FmtSubscriber;
 
@@ -42,13 +42,22 @@ use project::ActiveProject;
 use window::{get_window_options, WindowMode};
 use workspace::actions::{
     CloseProject, CloseSettings, OpenProject, OpenSettings, QuitApp, ReloadConfig,
-    ShowKeyboardShortcuts, ToggleDevPanel, ToggleTheme,
+    ShowKeyboardShortcuts, ToggleDevPanel, ToggleFullscreen, ToggleTheme,
 };
 use workspace::utils::{apply_theme_from_runtime, create_runtime};
 use workspace::{FooterBar, HeaderBar, Workspace, WorkspaceArgs};
 
 /// Default debounce for `--watch` on the default run path (`nemo dev` sets its own).
 const DEFAULT_WATCH_DEBOUNCE_MS: u64 = 200;
+
+/// Interval for polling window visibility before the fullscreen toggle
+/// (`mode="kiosk"`/`mode="fullscreen"`); AppKit drops the toggle while the
+/// window is still off screen.
+const FULLSCREEN_POLL_MS: u64 = 50;
+
+/// Upper bound on waiting for the window to become visible before toggling
+/// fullscreen anyway (an occluded window reports Hidden forever).
+const FULLSCREEN_POLL_TIMEOUT_MS: u64 = 500;
 
 fn main() -> Result<()> {
     let mut args = Args::parse();
@@ -306,7 +315,7 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
     // `KeyBinding::new` now requires a `&'static str`, so runtime-built
     // keystrokes go through `KeyBinding::load`, which parses with the host
     // OS's keyboard mapper.
-    let bindings: [(String, Box<dyn Action>); 10] = [
+    let bindings: [(String, Box<dyn Action>); 11] = [
         (format!("{primary}-shift-r"), Box::new(ReloadConfig)),
         (format!("{primary}-q"), Box::new(QuitApp)),
         (format!("{primary}-w"), Box::new(CloseProject)),
@@ -317,6 +326,7 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         ("escape".to_string(), Box::new(CloseSettings)),
         ("f10".to_string(), Box::new(ShowKeyboardShortcuts)),
         (format!("{primary}-shift-e"), Box::new(ToggleDevPanel)),
+        (format!("{primary}-shift-f"), Box::new(ToggleFullscreen)),
     ];
     let bindings: Vec<KeyBinding> = bindings
         .into_iter()
@@ -379,8 +389,9 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         }
     });
 
-    // Window mode (`app.window.mode`): kiosk opens fullscreen and suppresses
-    // the header/footer chrome. Unrecognized values fall back to Normal.
+    // Window mode (`app.window.mode`): `fullscreen`/`kiosk` open fullscreen
+    // (kiosk additionally suppresses the header/footer chrome). Unrecognized
+    // values fall back to Normal.
     let window_mode = early_runtime
         .as_ref()
         .map(|rt| WindowMode::from_config(rt.get_config("app.window.mode")))
@@ -412,15 +423,11 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
         None => (win_w, win_h),
     };
 
-    // Screenshots need deterministic windowed dimensions, so the *bounds* half
-    // of kiosk is downgraded to Normal — but the chrome suppression (header/
-    // footer) must survive so captures reflect kiosk rendering. Keep a copy of
-    // the configured mode for construction below.
-    let kiosk_chrome = window_mode == WindowMode::Kiosk;
-    let bounds_mode = match (window_mode, size_override) {
-        (WindowMode::Kiosk, Some(_)) => WindowMode::Normal,
-        (mode, _) => mode,
-    };
+    // Screenshots need deterministic windowed dimensions, so the fullscreen
+    // toggle is skipped under a size override — but the chrome suppression
+    // (header/footer) must survive so captures reflect kiosk rendering.
+    let kiosk_chrome = window_mode.suppresses_chrome();
+    let start_fullscreen = window_mode.is_fullscreen() && size_override.is_none();
 
     // Bring the app to the foreground and install the native menu bar before the
     // window opens. Without `activate` the process never takes focus (esp. when
@@ -436,7 +443,7 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
     cx.activate(true);
     cx.set_menus(workspace::menu::app_menus(app_title, dev_mode));
 
-    let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h, bounds_mode);
+    let window_options = get_window_options(cx, win_w, win_h, win_min_w, win_min_h, window_mode);
 
     let main_window_handle = cx
         .open_window(window_options, |window, cx| {
@@ -571,6 +578,44 @@ pub(crate) fn build_app_window(cx: &mut App, params: BootstrapParams) -> WindowH
             cx.new(|_cx| Root::new(ws, window, _cx))
         })
         .expect("Failed to open window");
+
+    // Fullscreen modes are toggled *after* the window exists. At open-time,
+    // macOS drops a `WindowBounds::Fullscreen`-triggered `toggleFullScreen:`
+    // (see `get_window_options`), and an immediate post-open toggle can fire
+    // while the window is still off screen. Poll until the window is on
+    // screen (bounded), then present fullscreen.
+    if start_fullscreen {
+        let handle = main_window_handle;
+        cx.spawn(async move |cx: &mut AsyncApp| {
+            // Bound the wait: if the window never reports visible (e.g. it is
+            // fully occluded by another app's fullscreen space, which macOS
+            // reports as Hidden), toggle anyway after a settle delay rather
+            // than never presenting.
+            let deadline = Instant::now() + Duration::from_millis(FULLSCREEN_POLL_TIMEOUT_MS);
+            while Instant::now() < deadline {
+                cx.background_executor()
+                    .timer(Duration::from_millis(FULLSCREEN_POLL_MS))
+                    .await;
+                let visible = handle
+                    .update(cx, |_, window, _| window.is_visible())
+                    .unwrap_or(true);
+                if visible {
+                    break;
+                }
+            }
+            let _ = handle.update(cx, |_, window, _| {
+                // macOS: simple fullscreen (borderless, fills the display
+                // including the menu bar) — the native `toggleFullScreen:` is
+                // dropped for windows opened without a titlebar. Other
+                // platforms present via the native toggle.
+                #[cfg(target_os = "macos")]
+                window.toggle_simple_fullscreen();
+                #[cfg(not(target_os = "macos"))]
+                window.toggle_fullscreen();
+            });
+        })
+        .detach();
+    }
 
     *main_window_id.borrow_mut() = Some(AnyWindowHandle::from(main_window_handle).window_id());
     main_window_handle

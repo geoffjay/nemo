@@ -24,7 +24,7 @@ pub mod utils;
 pub mod xml_edit;
 use actions::{
     CloseProject, CloseSettings, OpenProject, OpenSettings, QuitApp, ReloadConfig,
-    ShowKeyboardShortcuts, ToggleDevPanel, ToggleTheme,
+    ShowKeyboardShortcuts, ToggleDevPanel, ToggleFullscreen, ToggleTheme,
 };
 pub use footer_bar::FooterBar;
 pub use header_bar::{header_actions_from_config, menu_items_from_config, HeaderBar};
@@ -128,10 +128,10 @@ impl Workspace {
         _window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Entity<HeaderBar>> {
-        // Kiosk mode (`app.window.mode == "kiosk"`) suppresses the header bar.
-        if crate::window::WindowMode::from_config(runtime.get_config("app.window.mode"))
-            == crate::window::WindowMode::Kiosk
-        {
+        // Kiosk mode (`app.window.mode == "kiosk"`) suppresses the header bar;
+        // fullscreen mode keeps it.
+        let mode = crate::window::WindowMode::from_config(runtime.get_config("app.window.mode"));
+        if mode.suppresses_chrome() {
             return None;
         }
         let title = runtime
@@ -167,12 +167,13 @@ impl Workspace {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Option<Entity<FooterBar>> {
-        let enabled = crate::window::WindowMode::from_config(runtime.get_config("app.window.mode"))
-            != crate::window::WindowMode::Kiosk
-            && runtime
-                .get_config("app.window.footer_bar.enabled")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
+        let enabled =
+            !crate::window::WindowMode::from_config(runtime.get_config("app.window.mode"))
+                .suppresses_chrome()
+                && runtime
+                    .get_config("app.window.footer_bar.enabled")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
         if enabled {
             Some(cx.new(|cx| FooterBar::new(window, cx)))
         } else {
@@ -428,6 +429,22 @@ impl Workspace {
         }
     }
 
+    fn toggle_fullscreen(
+        &mut self,
+        _: &ToggleFullscreen,
+        window: &mut Window,
+        _cx: &mut Context<Self>,
+    ) {
+        // Toggles the OS-level fullscreen presentation only; the app's own
+        // header/footer chrome is untouched (kiosk suppression is a
+        // launch-time config concern). On macOS, simple (borderless)
+        // fullscreen is used — see `build_app_window`.
+        #[cfg(target_os = "macos")]
+        window.toggle_simple_fullscreen();
+        #[cfg(not(target_os = "macos"))]
+        window.toggle_fullscreen();
+    }
+
     fn toggle_dev_panel(
         &mut self,
         _: &ToggleDevPanel,
@@ -469,6 +486,7 @@ impl Workspace {
                         .child(row("Open Settings", format!("{primary}-p")))
                         .child(row("Toggle Light/Dark Theme", format!("{primary}-shift-t")))
                         .child(row("Reload Configuration", format!("{primary}-shift-r")))
+                        .child(row("Toggle Fullscreen", format!("{primary}-shift-f")))
                         .child(row("Keyboard Shortcuts", format!("{primary}-k")))
                         .child(row(
                             "Toggle Dev Panel (dev mode)",
@@ -736,6 +754,7 @@ impl Render for Workspace {
             .on_action(cx.listener(Self::open_settings))
             .on_action(cx.listener(Self::close_settings))
             .on_action(cx.listener(Self::toggle_dev_panel))
+            .on_action(cx.listener(Self::toggle_fullscreen))
             .child(routes);
 
         // Dialog/notification layers are mounted automatically by the Root

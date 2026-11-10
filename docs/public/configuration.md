@@ -80,7 +80,7 @@ Application metadata, window settings, and theme configuration.
 | `height` | int | (maximized) | Window height in pixels. Omit for maximized. |
 | `min_width` | int | | Minimum window width |
 | `min_height` | int | | Minimum window height |
-| `mode` | string | `"normal"` | `"kiosk"` opens fullscreen with no resizing and suppresses the header/footer bars. |
+| `mode` | string | `"normal"` | `"fullscreen"` or `"kiosk"` — see below. |
 
 ### `app.window.header_bar`
 
@@ -89,13 +89,20 @@ Application metadata, window settings, and theme configuration.
 | `github_url` | string | | URL for the GitHub link in the header |
 | `theme_toggle` | bool | `false` | Show light/dark mode toggle button |
 
-#### Kiosk mode
+#### Window modes (`fullscreen`, `kiosk`)
 
-Setting `mode="kiosk"` on `<window>` launches the app fullscreen with no window
-resizing and both the header bar and footer bar suppressed — suitable for
-dedicated displays. The `<header-bar>` element is ignored (not an error) while
-kiosk is active, so the same config can run windowed or as a kiosk by changing
-one attribute:
+`mode="fullscreen"` and `mode="kiosk"` both launch the app fullscreen on the
+display the window opens on: the window fills the screen and macOS window
+decorations (close/minimize/maximize buttons) are not shown. The difference:
+
+| `mode` | Window presentation | Header/footer bars |
+|--------|--------------------|--------------------|
+| `normal` | Windowed or maximized | Per `<header-bar>` / footer config |
+| `fullscreen` | Fullscreen, no OS decorations | **Kept** |
+| `kiosk` | Fullscreen, no OS decorations | **Suppressed** |
+
+In kiosk mode the `<header-bar>` element is ignored (not an error), so the same
+config can run windowed or as a kiosk by changing one attribute:
 
 ```xml
 <window title="Kiosk" mode="kiosk">
@@ -103,9 +110,11 @@ one attribute:
 </window>
 ```
 
-Kiosk is a launch-time setting; the mode is read when the window opens and is
-not toggled from scripts or settings. Width/height, when present, become the
-window's restore size.
+The mode is a launch-time setting, read when the window opens. Any window can
+toggle the fullscreen *presentation* at runtime with
+<kbd>⌘</kbd><kbd>shift</kbd><kbd>f</kbd> (macOS) /
+<kbd>ctrl</kbd><kbd>shift</kbd><kbd>f</kbd> (elsewhere) — this only changes
+the window presentation; it never shows or hides the header/footer bars.
 
 See [examples/kiosk](https://github.com/geoffjay/nemo/tree/main/examples/kiosk)
 for a complete example.
