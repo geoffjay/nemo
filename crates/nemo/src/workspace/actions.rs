@@ -12,5 +12,6 @@ actions!(
         OpenSettings,
         CloseSettings,
         ToggleDevPanel,
+        ToggleFullscreen,
     ]
 );

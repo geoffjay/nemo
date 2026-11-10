@@ -22,6 +22,28 @@
   nemo-bin test modules cannot glob-import `use super::*` — macro recursion
   limit; import specific items). Docs: `docs/public/configuration.md` window
   table + Kiosk mode section; example `examples/kiosk/app.nemo`.
+* **Fix**: Kiosk/fullscreen presentation actually filling the display (PR #96
+  shipped the mode plumbing, but the window launched windowed with traffic
+  lights). **Root causes (verified live via CGWindowList + pixel analysis):**
+  (1) passing `WindowBounds::Fullscreen` at open is a race — gpui dispatches
+  `toggleFullScreen:` before AppKit has the window on screen and macOS drops
+  it; (2) the same `toggleFullScreen:` is ALSO dropped later for windows
+  opened **without a titlebar** (six retries at 1s intervals never presented;
+  removing the `titlebar` options was needed to kill the traffic lights, and
+  that's what broke the native toggle); (3) gpui's `window.is_visible()` is
+  occlusion-based — a window behind another app's fullscreen space reports
+  Hidden forever, so a naive "wait until visible" gate never fires.
+  **Fix:** `mode="fullscreen"` (presentation only, header/footer kept) and
+  `mode="kiosk"` (presentation + chrome suppressed) both open windowed and
+  toggle **after** a bounded visibility poll (50ms ticks, 500ms deadline,
+  toggle-anyway fallback) — on macOS via `window.toggle_simple_fullscreen()`
+  (gpui's borderless style-mask+frame swap, which works without AppKit
+  fullscreen machinery); other platforms use the native toggle.
+  `is_resizable` stays true even in fullscreen modes (AppKit fullscreen is
+  unreliable without the Resizable mask). New `ToggleFullscreen` action
+  (cmd/ctrl-shift-f) wired in `workspace/mod.rs` + shortcuts dialog, same
+  macOS simple-fullscreen path. Live-verified: window reports 1512×982 at
+  (0,0), zero traffic-light pixels, no menu bar, content at all four corners.
 
 ## 2026-11-04 (2)
 * **Fix**: `<carousel>` pagination row was overflowing into the next
