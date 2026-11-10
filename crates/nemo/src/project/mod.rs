@@ -13,7 +13,7 @@ impl Global for ActiveProject {}
 pub struct ActiveProject {
     pub runtime: Arc<runtime::NemoRuntime>,
     pub app_entity: Entity<app::App>,
-    pub header_bar: Entity<HeaderBar>,
+    pub header_bar: Option<Entity<HeaderBar>>,
     pub footer_bar: Option<Entity<FooterBar>>,
     pub settings_view: Option<Entity<workspace::settings::SettingsView>>,
 }

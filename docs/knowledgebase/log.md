@@ -1,6 +1,28 @@
 # Knowledge Base Update Log
 
 
+## 2026-11-10
+* **Feature**: Kiosk mode via `mode="kiosk"` on `<window>` (design choice over
+  `kiosk="true"`/`<kiosk>` wrapper: a mode is a preset of orthogonal window
+  behaviors with room for future variants; a wrapper would be a window-level
+  setting posing as a layout node). New `WindowMode` in
+  `crates/nemo/src/window.rs` (parses `app.window.mode`, case-insensitive,
+  unrecognized → Normal so typos never brick a launch). `get_window_options`
+  takes the mode: Kiosk opens `WindowBounds::Fullscreen` (configured
+  width/height become the restore size) with `is_resizable`/`is_minimizable`
+  false; a `--size` screenshot override forces Normal for deterministic
+  captures. Header bar is now `Option<Entity<HeaderBar>>` in `ActiveProject`
+  and `AppLayout` — `create_header_bar` and the main bootstrap arm return
+  `None` under kiosk (a declared `<header-bar>` is silently skipped, not an
+  error), and `create_footer_bar`/bootstrap footer treat kiosk as disabled.
+  Both project-load paths (CLI `--app-config` early runtime and
+  workspace `load_project`/`perform_reload`) covered. `mode` lands at
+  `app.window.mode` free via attribute snake-casing — no parser change; added
+  `test_parse_window_mode` (nemo-config) and a `WindowMode` unit test (note:
+  nemo-bin test modules cannot glob-import `use super::*` — macro recursion
+  limit; import specific items). Docs: `docs/public/configuration.md` window
+  table + Kiosk mode section; example `examples/kiosk/app.nemo`.
+
 ## 2026-11-04 (2)
 * **Fix**: `<carousel>` pagination row was overflowing into the next
   sibling — `apply_layout_styles` clamped the whole carousel (viewport +

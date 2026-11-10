@@ -2781,6 +2781,26 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_window_mode() {
+        let xml = r#"
+        <nemo>
+            <app title="Kiosk App">
+                <window title="Test" mode="kiosk" />
+            </app>
+        </nemo>
+        "#;
+
+        let parser = XmlParser::new();
+        let value = parser.parse(xml).unwrap();
+
+        let window = value.get("app").unwrap().get("window").unwrap();
+        assert_eq!(
+            window.get("mode"),
+            Some(&Value::String("kiosk".to_string()))
+        );
+    }
+
+    #[test]
     fn test_parse_header_bar_menu_items() {
         let xml = r#"
         <nemo>
