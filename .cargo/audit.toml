@@ -77,8 +77,6 @@ ignore = [
     # 0.22 / rustls-webpki 0.102 instances also arrive via async-nats/rumqttc
     # in nemo-data (bump-deferred, moves with the TLS stack). No upgrade path
     # inside the snapshot pins without forking upstream.
-    "RUSTSEC-2026-0037",
-    "RUSTSEC-2026-0185",
     "RUSTSEC-2026-0049",
     "RUSTSEC-2026-0098",
     "RUSTSEC-2026-0099",
@@ -87,7 +85,6 @@ ignore = [
     "RUSTSEC-2026-0285",
     "RUSTSEC-2026-0338",
     "RUSTSEC-2026-0339",
-    "RUSTSEC-2026-0340",
     "RUSTSEC-2026-0342",
     "RUSTSEC-2026-0346",
     "RUSTSEC-2026-0348",
@@ -96,7 +93,6 @@ ignore = [
 
     # --- crossbeam-epoch, thin-vec: via gpui.
     "RUSTSEC-2026-0204",
-    "RUSTSEC-2026-0103",
 
     # --- quick-xml: our direct dep is 0.37; 0.30/0.39 instances are
     # transitive. Upgrading our own to >=0.41 is feasible in isolation
